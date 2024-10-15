@@ -1,7 +1,7 @@
 mod direction;
 mod random;
 
-pub extern crate rand;
+// pub extern crate rand;
 
 pub use crate::direction::Direction;
 pub use crate::random::gen_range;

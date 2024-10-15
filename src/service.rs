@@ -74,7 +74,7 @@ impl MutationRoot {
     async fn start_game(&self) -> Vec<u8> {
         let runtime = self.runtime.try_lock().unwrap();
         let seed = runtime.next_block_height().to_string();
-        let new_seed = gen_range(&seed, 0, 1);
+        let new_seed = gen_range(&seed, 0, 1000);
         bcs::to_bytes(&Operation::StartGame { seed: new_seed }).unwrap()
     }
 

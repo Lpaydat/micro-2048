@@ -1647,11 +1647,9 @@ version = "0.1.0"
 dependencies = [
  "async-graphql",
  "env_logger",
- "getrandom",
  "lazy_static",
  "linera-sdk",
  "log",
- "rand",
  "serde",
 ]
 
