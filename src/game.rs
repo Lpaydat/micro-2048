@@ -146,6 +146,7 @@ lazy_static! {
 /// back into the board at the right position is the output board.
 pub struct Game {
     pub board: u64,
+    pub seed: u32,
 }
 impl Game {
     /// Constructs a new `tfe::Game`.
@@ -171,13 +172,14 @@ impl Game {
     /// let mut game = Game::new();
     /// println!("{:016x}", game.board);
     /// ```
-    pub fn new() -> Self {
+    pub fn new(seed: u32) -> Self {
         let mut game = Game {
             board: 0x0000_0000_0000_0000_u64,
+            seed,
         };
 
-        game.board |= Self::spawn_tile(game.board);
-        game.board |= Self::spawn_tile(game.board);
+        game.board |= Self::spawn_tile(game.board, game.seed);
+        game.board |= Self::spawn_tile(game.board, game.seed);
 
         game
     }
@@ -207,8 +209,8 @@ impl Game {
     /// assert_eq!(board, 0x0000_0000_0022_1100);
     /// assert_eq!(moved, 0x0000_0000_3000_2000);
     /// ```
-    pub fn execute(board: u64, directions: &Vec<Direction>) -> u64 {
-        let mut current_board = board;
+    pub fn execute(&mut self, directions: &Vec<Direction>) -> u64 {
+        let mut current_board = self.board;
         for direction in directions {
             current_board = match direction {
                 Direction::Left => Self::move_left(current_board),
@@ -217,7 +219,7 @@ impl Game {
                 Direction::Up => Self::move_up(current_board),
             };
         }
-        current_board
+        Self::spawn_tile(current_board, self.seed)
     }
 
     /// Returns a transposed board where rows are transformed into columns and vice versa.
@@ -403,8 +405,8 @@ impl Game {
     }
 
     /// Returns a `2` with 90% chance and `4` with 10% chance.
-    pub fn tile() -> u64 {
-        if gen_range("", 0, 10) == 10 {
+    pub fn tile(seed: u32) -> u64 {
+        if gen_range(&seed.to_string(), 0, 10) == 10 {
             2
         } else {
             1
@@ -412,10 +414,10 @@ impl Game {
     }
 
     /// Returns a `1` shifted to the position of any `0` bit in `board` randomly.
-    pub fn spawn_tile(board: u64) -> u64 {
+    pub fn spawn_tile(board: u64, seed: u32) -> u64 {
         let mut tmp = board;
-        let mut idx = gen_range("", 0, Self::count_empty(board));
-        let mut t = Self::tile();
+        let mut idx = gen_range(&seed.to_string(), 0, Self::count_empty(board));
+        let mut t = Self::tile(seed);
 
         loop {
             while (tmp & 0xF) != 0 {

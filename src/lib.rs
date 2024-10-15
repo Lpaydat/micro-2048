@@ -27,7 +27,7 @@ impl ServiceAbi for Game2048Abi {
 #[derive(Debug, Deserialize, Serialize, GraphQLMutationRoot)]
 pub enum Operation {
     StartGame {
-        seed: u32,
+        init_seed: u32,
     },
     // ForfeitGame {
     //     game_id: u32,

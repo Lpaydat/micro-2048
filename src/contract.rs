@@ -11,7 +11,7 @@ use linera_sdk::{
 };
 
 use self::state::Game2048;
-use game2048::Operation;
+use game2048::{gen_range, Operation};
 
 pub struct Game2048Contract {
     state: Game2048,
@@ -27,7 +27,7 @@ impl WithContractAbi for Game2048Contract {
 impl Contract for Game2048Contract {
     type Message = ();
     type Parameters = ();
-    type InstantiationArgument = u64;
+    type InstantiationArgument = u32;
 
     async fn load(runtime: ContractRuntime<Self>) -> Self {
         log::info!("Hello World!");
@@ -37,13 +37,13 @@ impl Contract for Game2048Contract {
         Game2048Contract { state, runtime }
     }
 
-    async fn instantiate(&mut self, _args: Self::InstantiationArgument) {
+    async fn instantiate(&mut self, seed: Self::InstantiationArgument) {
         self.runtime.application_parameters();
 
         log::info!("Instantiating game");
 
         // Initialize a default game entry if it doesn't exist
-        let game_id = 2; // Example game ID
+        let game_id = seed; // Example game ID
         if self
             .state
             .games
@@ -59,27 +59,35 @@ impl Contract for Game2048Contract {
 
     async fn execute_operation(&mut self, operation: Self::Operation) -> Self::Response {
         match operation {
-            Operation::StartGame { seed } => {
-                let game_id: u32 = seed;
-                log::info!("Game ID: {:?}", game_id);
-                let new_board = Game::new().board;
-                let game = self.state.games.load_entry_mut(&game_id).await.unwrap();
+            Operation::StartGame { init_seed } => {
+                let seed = if init_seed != 0 {
+                    init_seed
+                } else {
+                    let block_height = self.runtime.block_height().to_string();
+                    gen_range(&block_height, 0, u32::MAX)
+                };
+                log::info!("Game ID++: {:?}", seed);
+                let new_board = Game::new(seed).board;
+                let game = self.state.games.load_entry_mut(&seed).await.unwrap();
 
-                game.game_id.set(game_id);
+                game.game_id.set(seed);
                 game.board.set(new_board);
             }
             Operation::MakeMove {
                 game_id,
                 directions,
             } => {
+                let block_height = self.runtime.block_height().to_string();
+                let seed = gen_range(&block_height, 0, u32::MAX);
                 let board = self.state.games.load_entry_mut(&game_id).await.unwrap();
-                let game = Game {
+                let mut game = Game {
                     board: *board.board.get(),
+                    seed,
                 };
                 log::info!("Game board: {:016x}", game.board);
                 log::info!("Game ID: {:?}", game_id);
                 log::info!("Directions: {:?}", directions);
-                let new_board = Game::execute(game.board, &directions);
+                let new_board = Game::execute(&mut game, &directions);
                 board.board.set(new_board);
             }
         }

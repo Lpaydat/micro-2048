@@ -2,16 +2,16 @@
 
 mod state;
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use self::state::Game2048;
 use async_graphql::{EmptySubscription, Object, Schema};
-use game2048::{gen_range, Direction, Operation};
+use game2048::{Direction, Operation};
 use linera_sdk::{base::WithServiceAbi, bcs, views::View, Service, ServiceRuntime};
 
 pub struct Game2048Service {
     state: Arc<Game2048>,
-    runtime: Arc<Mutex<ServiceRuntime<Self>>>,
+    // runtime: Arc<Mutex<ServiceRuntime<Self>>>,
 }
 
 linera_sdk::service!(Game2048Service);
@@ -29,7 +29,7 @@ impl Service for Game2048Service {
             .expect("Failed to load state");
         Game2048Service {
             state: Arc::new(state),
-            runtime: Arc::new(Mutex::new(runtime)),
+            // runtime: Arc::new(Mutex::new(runtime)),
         }
     }
 
@@ -39,9 +39,7 @@ impl Service for Game2048Service {
                 state: self.state.clone(),
                 // runtime: self.runtime.clone(),
             },
-            MutationRoot {
-                runtime: self.runtime.clone(),
-            },
+            MutationRoot,
             EmptySubscription,
         )
         .finish();
@@ -65,17 +63,13 @@ impl QueryRoot {
     }
 }
 
-struct MutationRoot {
-    runtime: Arc<Mutex<ServiceRuntime<Game2048Service>>>,
-}
+struct MutationRoot;
 
 #[Object]
 impl MutationRoot {
-    async fn start_game(&self) -> Vec<u8> {
-        let runtime = self.runtime.try_lock().unwrap();
-        let seed = runtime.next_block_height().to_string();
-        let new_seed = gen_range(&seed, 0, 1000);
-        bcs::to_bytes(&Operation::StartGame { seed: new_seed }).unwrap()
+    async fn start_game(&self, init_seed: Option<u32>) -> Vec<u8> {
+        let seed = init_seed.unwrap_or(0);
+        bcs::to_bytes(&Operation::StartGame { init_seed: seed }).unwrap()
     }
 
     async fn make_move(&self, game_id: u32, directions: Vec<Direction>) -> Vec<u8> {
