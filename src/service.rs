@@ -73,10 +73,18 @@ impl MutationRoot {
     }
 
     async fn make_move(&self, game_id: u32, directions: Vec<Direction>) -> Vec<u8> {
-        bcs::to_bytes(&Operation::MakeMove {
-            game_id,
-            directions,
-        })
-        .unwrap()
+        let operation = if directions.len() == 1 {
+            Operation::MakeMove {
+                game_id,
+                direction: directions[0].clone(),
+            }
+        } else {
+            Operation::MakeMoves {
+                game_id,
+                directions,
+            }
+        };
+
+        bcs::to_bytes(&operation).unwrap()
     }
 }

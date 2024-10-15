@@ -73,7 +73,21 @@ impl Contract for Game2048Contract {
                 game.game_id.set(seed);
                 game.board.set(new_board);
             }
-            Operation::MakeMove {
+            Operation::MakeMove { game_id, direction } => {
+                let block_height = self.runtime.block_height().to_string();
+                let seed = gen_range(&block_height, 0, u32::MAX);
+                let board = self.state.games.load_entry_mut(&game_id).await.unwrap();
+                let mut game = Game {
+                    board: *board.board.get(),
+                    seed,
+                };
+                log::info!("Game board: {:016x}", game.board);
+                log::info!("Game ID: {:?}", game_id);
+                log::info!("Direction: {:?}", direction);
+                let new_board = Game::execute(&mut game, &[direction]);
+                board.board.set(new_board);
+            }
+            Operation::MakeMoves {
                 game_id,
                 directions,
             } => {

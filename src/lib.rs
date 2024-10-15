@@ -34,6 +34,10 @@ pub enum Operation {
     // },
     MakeMove {
         game_id: u32,
+        direction: Direction,
+    },
+    MakeMoves {
+        game_id: u32,
         directions: Vec<Direction>,
     },
 }

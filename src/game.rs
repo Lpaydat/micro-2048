@@ -184,7 +184,7 @@ impl Game {
         game
     }
 
-    /// Returns `board` moved in given `direction`.
+    /// Returns `board` moved in given `direction(s)`.
     ///
     /// - When `Direction::Left`, return board moved left
     /// - When `Direction::Right`, return board moved right
@@ -199,7 +199,7 @@ impl Game {
     /// use tfe::{Game, Direction};
     ///
     /// let board = 0x0000_0000_0022_1100;
-    /// let moved = Game::execute(board, &Direction::Left);
+    /// let moved = Game::execute(board, &[Direction::Left]);
     ///
     /// // | 0 | 0 | 0 | 0 |      | 0 | 0 | 0 | 0 |
     /// // | 0 | 0 | 0 | 0 |  =>  | 0 | 0 | 0 | 0 |
@@ -209,7 +209,7 @@ impl Game {
     /// assert_eq!(board, 0x0000_0000_0022_1100);
     /// assert_eq!(moved, 0x0000_0000_3000_2000);
     /// ```
-    pub fn execute(&mut self, directions: &Vec<Direction>) -> u64 {
+    pub fn execute(&mut self, directions: &[Direction]) -> u64 {
         let mut current_board = self.board;
         for direction in directions {
             current_board = match direction {
@@ -219,7 +219,13 @@ impl Game {
                 Direction::Up => Self::move_up(current_board),
             };
         }
-        Self::spawn_tile(current_board, self.seed)
+
+        // Spawn a tile only if a single direction is provided
+        if directions.len() == 1 {
+            current_board = Self::spawn_tile(current_board, self.seed);
+        }
+
+        current_board
     }
 
     /// Returns a transposed board where rows are transformed into columns and vice versa.
