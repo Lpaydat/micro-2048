@@ -179,7 +179,7 @@ impl Game {
         };
 
         game.board |= Self::spawn_tile(game.board, game.seed);
-        game.board |= Self::spawn_tile(game.board, game.seed);
+        game.board |= Self::spawn_tile(game.board, game.seed + 1);
 
         game
     }
@@ -222,8 +222,10 @@ impl Game {
 
         // Spawn a tile only if a single direction is provided
         if directions.len() == 1 {
-            current_board = Self::spawn_tile(current_board, self.seed);
+            current_board = current_board | Self::spawn_tile(current_board, self.seed);
         }
+
+        log::info!("Current board: {:016x}", current_board);
 
         current_board
     }
