@@ -74,7 +74,6 @@ impl MutationRoot {
 
     async fn make_move(&self, game_id: u32, direction: Direction) -> Vec<u8> {
         let operation = Operation::MakeMove { game_id, direction };
-
         bcs::to_bytes(&operation).unwrap()
     }
 }

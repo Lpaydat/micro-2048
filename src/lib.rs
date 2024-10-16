@@ -1,9 +1,11 @@
 mod direction;
+mod moves;
 mod random;
 
 // pub extern crate rand;
 
 pub use crate::direction::Direction;
+pub use crate::moves::{Moves, COL_MASK, ROW_MASK};
 pub use crate::random::gen_range;
 use async_graphql::{Request, Response};
 use linera_sdk::{

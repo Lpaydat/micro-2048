@@ -1,22 +1,7 @@
-use game2048::{gen_range, Direction};
+use game2048::{gen_range, Direction, ROW_MASK};
 use lazy_static::lazy_static;
 use std::ops::Add;
-
-// #[derive(Clone, PartialEq, Debug)]
-// pub enum Direction {
-//     Left,
-//     Right,
-//     Up,
-//     Down,
-// }
-
-/// A mask with a single section of 16 bits set to 0.
-/// Used to extract a "horizontal slice" out of a 64 bit integer.
-pub static ROW_MASK: u64 = 0xFFFF;
-
-/// A `u64` mask with 4 sections each starting after the n * 16th bit.
-/// Used to extract a "vertical slice" out of a 64 bit integer.
-pub static COL_MASK: u64 = 0x000F_000F_000F_000F_u64;
+include!("../moves_data.rs");
 
 /// Struct that contains all available moves per row for up, down, right and left.
 /// Also stores the score for a given row.
@@ -24,19 +9,12 @@ pub static COL_MASK: u64 = 0x000F_000F_000F_000F_u64;
 /// Moves are stored as power values for tiles.
 /// if a power value is `> 0`, print the tile value using `2 << tile` where tile is any 4-bit
 /// "nybble" otherwise print a `0` instead.
-struct Moves {
-    pub left: Vec<u64>,
-    pub right: Vec<u64>,
-    pub down: Vec<u64>,
-    pub up: Vec<u64>,
-    pub scores: Vec<u64>,
-}
-
-impl Moves {
-    /// Returns the 4th bit from each row in given board OR'd.
-    pub fn column_from(board: u64) -> u64 {
-        (board | (board << 12) | (board << 24) | (board << 36)) & COL_MASK
-    }
+pub struct Moves {
+    pub left: &'static [u64; 65536],
+    pub right: &'static [u64; 65536],
+    pub down: &'static [u64; 65536],
+    pub up: &'static [u64; 65536],
+    pub scores: &'static [u64; 65536],
 }
 
 lazy_static! {
@@ -49,89 +27,13 @@ lazy_static! {
     ///  The score of a row is the sum of the tile and all intermediate tile merges.
     ///  e.g. row `0x0002` has a score of `4` and row `0x0003` has a score of `16`.
     static ref MOVES: Moves = {
-        // initialization of move tables
-        let mut left_moves  = vec![0; 65536];
-        let mut right_moves = vec![0; 65536];
-        let mut up_moves    = vec![0; 65536];
-        let mut down_moves  = vec![0; 65536];
-        let mut scores      = vec![0; 65536];
-
-        for row in 0 .. 65536 {
-            // break row into cells
-            let mut line = [
-                (row) & 0xF,
-                (row >>  4) & 0xF,
-                (row >>  8) & 0xF,
-                (row >> 12) & 0xF
-            ];
-
-            // calculate score for given row
-            let mut s = 0;
-
-            for &tile in &line {
-                if tile > 1 { s += (tile - 1) * (2 << tile) }
-            }
-
-            scores[row as usize] = s;
-
-            let mut i = 0;
-
-            // perform a move to the left using current {row} as board
-            // generates 4 output moves for up, down, left and right by transposing and reversing
-            // this result.
-            while i < 3 {
-                // initial counter for the cell next to the current one (j)
-                let mut j = i + 1;
-
-                // find the next non-zero cell index
-                while j < 4 {
-                    if line[j] != 0 { break };
-                    j += 1;
-                };
-
-                // if j is out of bounds (> 3), all other cells are empty and we are done looping
-                if j == 4 { break };
-
-                // this is the part responsible for skipping empty (0 value) cells
-                // if the current cell is zero, shift the next non-zero cell to position i
-                // and retry this entry until line[i] becomes non-zero
-                if line[i] == 0 {
-                    line[i] = line[j];
-                    line[j] = 0;
-                    continue;
-
-                // otherwise, if the current cell and next cell are the same, merge them
-                } else if line[i] == line[j] {
-                    if line[i] != 0xF { line[i] += 1 };
-                    line[j] = 0;
-                }
-
-                // finally, move to the next (or current, if i was 0) row
-                i += 1;
-            }
-
-            // put the new row after merging back together into a "merged" row
-            let result = (line[0]) |
-                         (line[1] <<  4) |
-                         (line[2] <<  8) |
-                         (line[3] << 12);
-
-            // right and down use normal row and result variables.
-            // for left and up, we create a reverse of the row and result.
-            let rev_row = (row    >> 12) & 0x000F | (row    >> 4) & 0x00F0 | (row    << 4) & 0x0F00 | (row    << 12) & 0xF000;
-            let rev_res = (result >> 12) & 0x000F | (result >> 4) & 0x00F0 | (result << 4) & 0x0F00 | (result << 12) & 0xF000;
-
-            // results are keyed by row / reverse row index.
-            let row_idx = row     as usize;
-            let rev_idx = rev_row as usize;
-
-            right_moves[row_idx] = row                         ^ result;
-            left_moves[rev_idx]  = rev_row                     ^ rev_res;
-            up_moves[rev_idx]    = Moves::column_from(rev_row) ^ Moves::column_from(rev_res);
-            down_moves[row_idx]  = Moves::column_from(row)     ^ Moves::column_from(result);
-        };
-
-        Moves { left: left_moves, right: right_moves, down: down_moves, up: up_moves, scores }
+        Moves {
+            left: &LEFT_MOVES,
+            right: &RIGHT_MOVES,
+            down: &DOWN_MOVES,
+            up: &UP_MOVES,
+            scores: &SCORES,
+        }
     };
 }
 
@@ -184,7 +86,7 @@ impl Game {
         game
     }
 
-    /// Returns `board` moved in given `direction(s)`.
+    /// Returns `board` moved in given `direction`.
     ///
     /// - When `Direction::Left`, return board moved left
     /// - When `Direction::Right`, return board moved right
@@ -209,23 +111,20 @@ impl Game {
     /// assert_eq!(board, 0x0000_0000_0022_1100);
     /// assert_eq!(moved, 0x0000_0000_3000_2000);
     /// ```
-    pub fn execute(&mut self, directions: &[Direction]) -> u64 {
+    pub fn execute(&mut self, direction: Direction) -> u64 {
         let mut current_board = self.board;
-        for direction in directions {
-            current_board = match direction {
-                Direction::Left => Self::move_left(current_board),
-                Direction::Right => Self::move_right(current_board),
-                Direction::Down => Self::move_down(current_board),
-                Direction::Up => Self::move_up(current_board),
-            };
-        }
+        current_board = match direction {
+            Direction::Left => Self::move_left(current_board),
+            Direction::Right => Self::move_right(current_board),
+            Direction::Down => Self::move_down(current_board),
+            Direction::Up => Self::move_up(current_board),
+        };
 
-        // Spawn a tile only if a single direction is provided
-        if directions.len() == 1 {
-            current_board = current_board | Self::spawn_tile(current_board, self.seed);
-        }
+        log::info!("empty tiles: {}", Self::count_empty(current_board));
 
-        log::info!("Current board: {:016x}", current_board);
+        if current_board != self.board {
+            current_board = current_board | Self::spawn_tile(current_board, self.seed)
+        }
 
         current_board
     }
@@ -409,7 +308,7 @@ impl Game {
     /// Returns the score of a given `board`.
     /// The score of a single tile is the sum of the tile value and all intermediate merged tiles.
     pub fn score(board: u64) -> u64 {
-        Self::table_helper(board, &MOVES.scores)
+        Self::table_helper(board, MOVES.scores)
     }
 
     /// Returns a `2` with 90% chance and `4` with 10% chance.

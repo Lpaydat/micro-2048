@@ -23,6 +23,10 @@ path = "src/contract.rs"
 name = "game2048_service"
 path = "src/service.rs"
 
+[[bin]]
+name = "precompute_moves"
+path = "scripts/precompute_moves.rs"
+
 [profile.release]
 debug = true
 lto = true

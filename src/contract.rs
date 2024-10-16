@@ -84,7 +84,7 @@ impl Contract for Game2048Contract {
                 log::info!("Game board: {:016x}", game.board);
                 log::info!("Game ID: {:?}", game_id);
                 log::info!("Direction: {:?}", direction);
-                let new_board = Game::execute(&mut game, &[direction]);
+                let new_board = Game::execute(&mut game, direction);
                 board.board.set(new_board);
             }
         }
