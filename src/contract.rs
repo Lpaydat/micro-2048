@@ -3,15 +3,17 @@
 mod game;
 mod state;
 
+use std::str::FromStr;
+
 use crate::game::Game;
 use linera_sdk::{
-    base::WithContractAbi,
+    base::{ChainId, WithContractAbi},
     views::{RootView, View},
     Contract, ContractRuntime,
 };
 
 use self::state::Game2048;
-use game2048::{gen_range, Operation};
+use game2048::{gen_range, Message, Operation};
 
 pub struct Game2048Contract {
     state: Game2048,
@@ -25,12 +27,11 @@ impl WithContractAbi for Game2048Contract {
 }
 
 impl Contract for Game2048Contract {
-    type Message = ();
+    type Message = Message;
     type Parameters = ();
     type InstantiationArgument = u32;
 
     async fn load(runtime: ContractRuntime<Self>) -> Self {
-        log::info!("Hello World!");
         let state = Game2048::load(runtime.root_view_storage_context())
             .await
             .expect("Failed to load state");
@@ -39,8 +40,6 @@ impl Contract for Game2048Contract {
 
     async fn instantiate(&mut self, seed: Self::InstantiationArgument) {
         self.runtime.application_parameters();
-
-        log::info!("Instantiating game");
 
         // Initialize a default game entry if it doesn't exist
         let game_id = seed; // Example game ID
@@ -59,50 +58,77 @@ impl Contract for Game2048Contract {
 
     async fn execute_operation(&mut self, operation: Self::Operation) -> Self::Response {
         match operation {
-            Operation::StartGame { init_seed } => {
-                let seed = if init_seed != 0 {
-                    init_seed
-                } else {
-                    let block_height = self.runtime.block_height().to_string();
-                    gen_range(&block_height, 0, u32::MAX)
-                };
-                log::info!("Game ID++: {:?}", seed);
+            Operation::StartGame { seed } => {
+                let seed = self.get_seed(seed);
                 let new_board = Game::new(seed).board;
                 let game = self.state.games.load_entry_mut(&seed).await.unwrap();
 
                 game.game_id.set(seed);
                 game.board.set(new_board);
+
+                self.send_message(seed, new_board, 0, false);
+            }
+            Operation::EndGame { game_id } => {
+                let board = self.state.games.load_entry_mut(&game_id).await.unwrap();
+                board.is_ended.set(true);
             }
             Operation::MakeMove { game_id, direction } => {
-                let block_height = self.runtime.block_height().to_string();
-                let seed = gen_range(&block_height, 0, u32::MAX);
+                let seed = self.get_seed(0);
                 let board = self.state.games.load_entry_mut(&game_id).await.unwrap();
                 let mut game = Game {
                     board: *board.board.get(),
                     seed,
                 };
-                log::info!("Game board: {:016x}", game.board);
-                log::info!("Game ID: {:?}", game_id);
-                log::info!("Direction: {:?}", direction);
-                let new_board = Game::execute(&mut game, direction);
-                board.board.set(new_board);
+
+                let is_ended = Game::count_empty(game.board) == 0;
+                if !is_ended {
+                    let new_board = Game::execute(&mut game, direction);
+                    let is_ended = Game::count_empty(new_board) == 0;
+                    let score = Game::score(new_board);
+
+                    board.board.set(new_board);
+                    board.score.set(score);
+                    if is_ended {
+                        board.is_ended.set(true);
+                    }
+
+                    self.send_message(game_id, new_board, score, is_ended);
+                }
             }
         }
     }
 
-    async fn execute_message(&mut self, _message: Self::Message) {}
+    async fn execute_message(&mut self, message: Self::Message) {
+        log::info!("ChainId: {:?}", self.runtime.chain_id());
+        log::info!("Message: {:?}", message);
+    }
 
     async fn store(mut self) {
         self.state.save().await.expect("Failed to save state");
     }
 }
 
-// impl Game2048Contract {
-//     fn start_game(&mut self, game_id: u32) {
-//         let new_board = Game::new().board;
-//         let game = self.state.games.load_entry_mut(&game_id).await.unwrap();
+impl Game2048Contract {
+    fn get_seed(&mut self, init_seed: u32) -> u32 {
+        if init_seed != 0 {
+            init_seed
+        } else {
+            let block_height = self.runtime.block_height().to_string();
+            gen_range(&block_height, 0, u32::MAX)
+        }
+    }
 
-//         game.game_id.set(game_id);
-//         game.board.set(new_board);
-//     }
-// }
+    fn send_message(&mut self, game_id: u32, board: u64, score: u64, is_ended: bool) {
+        let chain_id =
+            ChainId::from_str("256e1dbc00482ddd619c293cc0df94d366afe7980022bb22d99e33036fd465dd")
+                .unwrap();
+        self.runtime
+            .prepare_message(Message::Game {
+                game_id,
+                board,
+                score,
+                is_ended,
+            })
+            .send_to(chain_id);
+    }
+}

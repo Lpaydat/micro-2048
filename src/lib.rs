@@ -2,8 +2,6 @@ mod direction;
 mod moves;
 mod random;
 
-// pub extern crate rand;
-
 pub use crate::direction::Direction;
 pub use crate::moves::{Moves, COL_MASK, ROW_MASK};
 pub use crate::random::gen_range;
@@ -28,9 +26,17 @@ impl ServiceAbi for Game2048Abi {
 
 #[derive(Debug, Deserialize, Serialize, GraphQLMutationRoot)]
 pub enum Operation {
-    StartGame { init_seed: u32 },
-    // ForfeitGame {
-    //     game_id: u32,
-    // },
+    StartGame { seed: u32 },
+    EndGame { game_id: u32 },
     MakeMove { game_id: u32, direction: Direction },
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub enum Message {
+    Game {
+        game_id: u32,
+        board: u64,
+        score: u64,
+        is_ended: bool,
+    },
 }

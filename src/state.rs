@@ -10,7 +10,6 @@ pub enum GameStatus {
     Active,
     Ended,
 }
-
 scalar!(GameStatus);
 
 #[derive(View, SimpleObject)]
@@ -18,8 +17,8 @@ scalar!(GameStatus);
 pub struct GameState {
     pub game_id: RegisterView<u32>,
     pub board: RegisterView<u64>,
-    // pub score: RegisterView<u32>,
-    // pub status: RegisterView<GameStatus>,
+    pub score: RegisterView<u64>,
+    pub is_ended: RegisterView<bool>,
 }
 
 #[derive(RootView, SimpleObject)]

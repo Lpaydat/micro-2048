@@ -120,8 +120,6 @@ impl Game {
             Direction::Up => Self::move_up(current_board),
         };
 
-        log::info!("empty tiles: {}", Self::count_empty(current_board));
-
         if current_board != self.board {
             current_board = current_board | Self::spawn_tile(current_board, self.seed)
         }

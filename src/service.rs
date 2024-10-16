@@ -5,7 +5,7 @@ mod state;
 use std::sync::Arc;
 
 use self::state::Game2048;
-use async_graphql::{EmptySubscription, Object, Schema};
+use async_graphql::{EmptySubscription, Object, Schema, SimpleObject};
 use game2048::{Direction, Operation};
 use linera_sdk::{base::WithServiceAbi, bcs, views::View, Service, ServiceRuntime};
 
@@ -52,11 +52,25 @@ struct QueryRoot {
     // runtime: Arc<Mutex<ServiceRuntime<Game2048Service>>>,
 }
 
+#[derive(SimpleObject)]
+struct GameState {
+    game_id: u32,
+    board: u64,
+    is_ended: bool,
+    score: u64,
+}
+
 #[Object]
 impl QueryRoot {
-    async fn game(&self, game_id: u32) -> Option<u64> {
+    async fn game(&self, game_id: u32) -> Option<GameState> {
         if let Ok(Some(game)) = self.state.games.try_load_entry(&game_id).await {
-            Some(*game.board.get())
+            let game_state = GameState {
+                game_id: *game.game_id.get(),
+                board: *game.board.get(),
+                is_ended: *game.is_ended.get(),
+                score: *game.score.get(),
+            };
+            Some(game_state)
         } else {
             None
         }
@@ -67,9 +81,9 @@ struct MutationRoot;
 
 #[Object]
 impl MutationRoot {
-    async fn start_game(&self, init_seed: Option<u32>) -> Vec<u8> {
-        let seed = init_seed.unwrap_or(0);
-        bcs::to_bytes(&Operation::StartGame { init_seed: seed }).unwrap()
+    async fn start_game(&self, seed: Option<u32>) -> Vec<u8> {
+        let seed = seed.unwrap_or(0);
+        bcs::to_bytes(&Operation::StartGame { seed }).unwrap()
     }
 
     async fn make_move(&self, game_id: u32, direction: Direction) -> Vec<u8> {
