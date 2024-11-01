@@ -422,7 +422,11 @@ impl Contract for Game2048Contract {
 
                             let is_round_ended = eliminated_players.is_empty();
                             if is_round_ended {
-                                panic!("No player to eliminate");
+                                if current_round == elimination_game.total_round.get() {
+                                    elimination_game.status.set(EliminationGameStatus::Ended);
+                                } else {
+                                    panic!("No player to eliminate");
+                                }
                             }
 
                             // End game for eliminated players
