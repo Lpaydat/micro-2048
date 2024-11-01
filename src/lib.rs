@@ -1,8 +1,12 @@
 mod direction;
+mod elimination_game;
+mod game;
 mod moves;
 mod random;
 
 pub use crate::direction::Direction;
+pub use crate::elimination_game::{EliminationGameSettings, MultiplayerGameAction};
+pub use crate::game::Game;
 pub use crate::moves::{Moves, COL_MASK, ROW_MASK};
 pub use crate::random::gen_range;
 use async_graphql::{Request, Response};
@@ -26,17 +30,34 @@ impl ServiceAbi for Game2048Abi {
 
 #[derive(Debug, Deserialize, Serialize, GraphQLMutationRoot)]
 pub enum Operation {
-    StartGame { seed: u32 },
-    EndGame { game_id: u32 },
-    MakeMove { game_id: u32, direction: Direction },
+    NewBoard {
+        seed: u32,
+    },
+    EndBoard {
+        board_id: String,
+    },
+    MakeMove {
+        board_id: String,
+        direction: Direction,
+    },
+    // Elimination Game
+    CreateEliminationGame {
+        game_id: String,
+        settings: EliminationGameSettings,
+    },
+    EliminationGameAction {
+        game_id: String,
+        action: MultiplayerGameAction,
+        player: String,
+        timestamp: u64,
+    },
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub enum Message {
-    Game {
-        game_id: u32,
+    Board {
+        board_id: String,
         board: u64,
         score: u64,
-        is_ended: bool,
     },
 }

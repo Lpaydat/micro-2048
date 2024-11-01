@@ -1,19 +1,18 @@
 #![cfg_attr(target_arch = "wasm32", no_main)]
 
-mod game;
 mod state;
 
 use std::str::FromStr;
 
-use crate::game::Game;
 use linera_sdk::{
     base::{ChainId, WithContractAbi},
     views::{RootView, View},
     Contract, ContractRuntime,
 };
+use state::EliminationGameStatus;
 
 use self::state::Game2048;
-use game2048::{gen_range, Message, Operation};
+use game2048::{gen_range, Game, Message, MultiplayerGameAction, Operation};
 
 pub struct Game2048Contract {
     state: Game2048,
@@ -38,61 +37,414 @@ impl Contract for Game2048Contract {
         Game2048Contract { state, runtime }
     }
 
-    async fn instantiate(&mut self, seed: Self::InstantiationArgument) {
+    async fn instantiate(&mut self, _seed: Self::InstantiationArgument) {
         self.runtime.application_parameters();
 
         // Initialize a default game entry if it doesn't exist
-        let game_id = seed; // Example game ID
-        if self
-            .state
-            .games
-            .load_entry_or_insert(&game_id)
-            .await
-            .is_err()
-        {
-            let game = self.state.games.load_entry_mut(&game_id).await.unwrap();
-            game.game_id.set(game_id);
-            game.board.set(0); // Set a default board value, e.g., an empty board
-        }
+        // let board_id = seed.to_string(); // Example game ID
+        // if self
+        //     .state
+        //     .boards
+        //     .load_entry_or_insert(&board_id)
+        //     .await
+        //     .is_err()
+        // {
+        //     let boards = self.state.boards.load_entry_mut(&board_id).await.unwrap();
+        //     boards.board_id.set(board_id);
+        //     boards.board.set(0); // Set a default board value, e.g., an empty board
+        // }
+
+        // let elimination_games = self.state.elimination_games.load_entry_or_insert(&board_id).await.unwrap();
     }
 
     async fn execute_operation(&mut self, operation: Self::Operation) -> Self::Response {
         match operation {
-            Operation::StartGame { seed } => {
+            Operation::NewBoard { seed } => {
                 let seed = self.get_seed(seed);
-                let new_board = Game::new(seed).board;
-                let game = self.state.games.load_entry_mut(&seed).await.unwrap();
+                let new_board = Game::new(&seed).board;
+                let game = self
+                    .state
+                    .boards
+                    .load_entry_mut(&seed.to_string())
+                    .await
+                    .unwrap();
 
-                game.game_id.set(seed);
+                game.board_id.set(seed.to_string());
                 game.board.set(new_board);
 
-                self.send_message(seed, new_board, 0, false);
+                self.send_message(seed.to_string(), new_board, 0);
             }
-            Operation::EndGame { game_id } => {
-                let board = self.state.games.load_entry_mut(&game_id).await.unwrap();
+            Operation::EndBoard { board_id } => {
+                let board = self.state.boards.load_entry_mut(&board_id).await.unwrap();
+                if *board.is_ended.get() {
+                    panic!("Game is already ended");
+                }
                 board.is_ended.set(true);
             }
-            Operation::MakeMove { game_id, direction } => {
+            Operation::MakeMove {
+                board_id,
+                direction,
+            } => {
                 let seed = self.get_seed(0);
-                let board = self.state.games.load_entry_mut(&game_id).await.unwrap();
-                let mut game = Game {
-                    board: *board.board.get(),
-                    seed,
-                };
+                let board = self.state.boards.load_entry_mut(&board_id).await.unwrap();
 
-                let is_ended = Game::count_empty(game.board) == 0;
+                let is_ended = board.is_ended.get();
                 if !is_ended {
+                    let mut game = Game {
+                        board: *board.board.get(),
+                        seed,
+                    };
+
                     let new_board = Game::execute(&mut game, direction);
-                    let is_ended = Game::count_empty(new_board) == 0;
                     let score = Game::score(new_board);
+
+                    if *board.board.get() == new_board {
+                        panic!("No move");
+                    }
 
                     board.board.set(new_board);
                     board.score.set(score);
-                    if is_ended {
-                        board.is_ended.set(true);
+
+                    if !board_id.contains(":") {
+                        let is_ended = Game::is_ended(new_board);
+                        if is_ended {
+                            board.is_ended.set(true);
+                        }
+                    } else {
+                        let (game_id, round_id, player_id) =
+                            self.parse_elimination_game_id(&board_id).await.unwrap();
+
+                        if !game_id.is_empty() && round_id != 0 && !player_id.is_empty() {
+                            let elimination_game = self
+                                .state
+                                .elimination_games
+                                .load_entry_mut(&game_id)
+                                .await
+                                .unwrap();
+
+                            let leaderboard = elimination_game
+                                .round_leaderboard
+                                .load_entry_mut(&round_id)
+                                .await
+                                .unwrap();
+                            leaderboard.players.insert(&player_id, score).unwrap();
+                        }
                     }
 
-                    self.send_message(game_id, new_board, score, is_ended);
+                    self.send_message(board_id, new_board, score);
+                } else {
+                    panic!("Game is ended");
+                }
+            }
+            Operation::CreateEliminationGame { game_id, settings } => {
+                if settings.total_round < 1 {
+                    panic!("Total round must be greater than 0");
+                }
+                if settings.max_players < 2 {
+                    panic!("Max players must be greater than 1");
+                }
+                if settings.eliminated_per_trigger < 1 {
+                    panic!("Eliminated per trigger must be greater than 0");
+                }
+                if settings.trigger_interval_seconds < 5 {
+                    panic!("Trigger interval must be greater than 5 seconds");
+                }
+
+                let elimination_game = self
+                    .state
+                    .elimination_games
+                    .load_entry_mut(&game_id)
+                    .await
+                    .unwrap();
+                let created_time = settings.created_time.parse::<u64>().unwrap();
+                self.state.waiting_rooms.insert(&game_id, true).unwrap();
+
+                elimination_game.game_id.set(game_id);
+                elimination_game.chain_id.set(settings.chain_id);
+                elimination_game.game_name.set(settings.game_name);
+                elimination_game.players.set(vec![settings.host.clone()]);
+                elimination_game.host.set(settings.host);
+                elimination_game.status.set(EliminationGameStatus::Waiting);
+                elimination_game.total_round.set(settings.total_round);
+                elimination_game.current_round.set(0);
+                elimination_game.total_players.set(settings.max_players);
+                elimination_game
+                    .eliminated_per_trigger
+                    .set(settings.eliminated_per_trigger);
+                elimination_game
+                    .trigger_interval_seconds
+                    .set(settings.trigger_interval_seconds);
+                elimination_game.created_time.set(created_time);
+                elimination_game.last_updated_time.set(created_time);
+
+                // TODO: send message to host
+            }
+            Operation::EliminationGameAction {
+                game_id,
+                action,
+                player,
+                timestamp,
+            } => {
+                let elimination_game = self
+                    .state
+                    .elimination_games
+                    .load_entry_mut(&game_id)
+                    .await
+                    .unwrap();
+
+                match action {
+                    MultiplayerGameAction::Start => {
+                        if elimination_game.status.get() != &EliminationGameStatus::Waiting {
+                            panic!("Game is not in waiting state");
+                        }
+                        if elimination_game.host.get() != &player {
+                            panic!("Only host can start the game");
+                        }
+                        self.state.waiting_rooms.remove(&game_id).unwrap();
+                        elimination_game.status.set(EliminationGameStatus::Active);
+                        elimination_game.current_round.set(1);
+                        elimination_game.last_updated_time.set(timestamp);
+
+                        let players = elimination_game.players.get();
+                        let round_leaderboard = elimination_game
+                            .round_leaderboard
+                            .load_entry_mut(&1)
+                            .await
+                            .unwrap();
+                        for player in players {
+                            let board_id = format!("{}:{}:{}", game_id, 1, player);
+                            let game = self.state.boards.load_entry_mut(&board_id).await.unwrap();
+                            let new_board = Game::new(&board_id).board;
+
+                            game.board_id.set(board_id);
+                            game.board.set(new_board);
+                            round_leaderboard.players.insert(player, 0).unwrap();
+                            elimination_game.game_leaderboard.insert(player, 0).unwrap();
+                        }
+                    }
+                    MultiplayerGameAction::End => {
+                        if elimination_game.status.get() == &EliminationGameStatus::Ended {
+                            panic!("Game is already ended");
+                        }
+                        if elimination_game.host.get() != &player {
+                            panic!("Only host can end the game");
+                        }
+                        elimination_game.status.set(EliminationGameStatus::Ended);
+                        elimination_game.last_updated_time.set(timestamp);
+                    }
+                    MultiplayerGameAction::Join => {
+                        // Check if game hasn't started yet
+                        if elimination_game.status.get() != &EliminationGameStatus::Waiting {
+                            panic!("You cannot join the game after it started");
+                        }
+
+                        let players = elimination_game.players.get_mut();
+
+                        // Check if player is already in the game
+                        if players.contains(&player) {
+                            panic!("Player is already in the game");
+                        }
+
+                        // Check if game is not full
+                        if players.len() >= *elimination_game.total_players.get() as usize {
+                            panic!("Game is full");
+                        }
+
+                        players.append(&mut vec![player]);
+                        elimination_game.last_updated_time.set(timestamp);
+                    }
+                    MultiplayerGameAction::Leave => {
+                        // Check if game is in waiting state
+                        if elimination_game.status.get() != &EliminationGameStatus::Waiting {
+                            panic!("Can only leave game in waiting state");
+                        }
+
+                        if elimination_game.host.get() == &player {
+                            panic!("Host cannot leave the game");
+                        }
+
+                        let players = elimination_game.players.get_mut();
+                        if !players.contains(&player) {
+                            panic!("Player is not in the game");
+                        }
+
+                        players.retain(|p| p != &player);
+                        elimination_game.last_updated_time.set(timestamp);
+                    }
+                    MultiplayerGameAction::NextRound => {
+                        if elimination_game.status.get() != &EliminationGameStatus::Active {
+                            panic!("Game is not in active state");
+                        }
+
+                        if elimination_game.host.get() != &player
+                            && elimination_game.last_updated_time.get() + 5000 > timestamp
+                        {
+                            panic!("Only host can early start next round");
+                        }
+
+                        let current_round = elimination_game.current_round.get_mut();
+                        let leaderboard = elimination_game
+                            .round_leaderboard
+                            .load_entry_mut(current_round)
+                            .await
+                            .unwrap();
+
+                        let mut is_round_ended = true;
+                        leaderboard
+                            .players
+                            .for_each_index(|_key| {
+                                is_round_ended = false;
+                                Ok(())
+                            })
+                            .await
+                            .unwrap();
+
+                        if is_round_ended {
+                            let mut players: Vec<String> = Vec::new();
+                            leaderboard
+                                .eliminated_players
+                                .for_each_index_value(|username, _score| {
+                                    players.push(username);
+                                    Ok(())
+                                })
+                                .await
+                                .unwrap();
+                            *current_round += 1;
+                            let total_round = elimination_game.total_round.get();
+
+                            if *current_round <= *total_round {
+                                elimination_game.last_updated_time.set(timestamp);
+
+                                // create boards
+                                for player in players {
+                                    let board_id =
+                                        format!("{}:{}:{}", game_id, current_round, player);
+                                    let game =
+                                        self.state.boards.load_entry_mut(&board_id).await.unwrap();
+                                    let new_board = Game::new(&board_id).board;
+
+                                    game.board_id.set(board_id);
+                                    game.board.set(new_board);
+                                }
+
+                                let mut player_round_scores = std::collections::HashMap::new();
+                                leaderboard
+                                    .eliminated_players
+                                    .for_each_index_value(|username, score| {
+                                        player_round_scores.insert(username, score);
+                                        Ok(())
+                                    })
+                                    .await
+                                    .unwrap();
+
+                                let new_round_leaderboard = elimination_game
+                                    .round_leaderboard
+                                    .load_entry_mut(current_round)
+                                    .await
+                                    .unwrap();
+
+                                for player in player_round_scores {
+                                    let prev_score = elimination_game
+                                        .game_leaderboard
+                                        .get(&player.0)
+                                        .await
+                                        .unwrap();
+                                    elimination_game
+                                        .game_leaderboard
+                                        .insert(&player.0, player.1 + prev_score.unwrap_or(0))
+                                        .unwrap();
+                                    new_round_leaderboard.players.insert(&player.0, 0).unwrap();
+                                }
+                            } else {
+                                elimination_game.status.set(EliminationGameStatus::Ended);
+                                elimination_game.last_updated_time.set(timestamp);
+                            }
+                        } else {
+                            panic!("Round is not ended");
+                        }
+
+                        // Update timestamp
+                        elimination_game.last_updated_time.set(timestamp);
+                    }
+                    MultiplayerGameAction::Trigger => {
+                        let last_updated = elimination_game.last_updated_time.get();
+                        let trigger_interval = elimination_game.trigger_interval_seconds.get();
+
+                        if timestamp >= last_updated + (*trigger_interval as u64) * 1000 {
+                            elimination_game.last_updated_time.set(timestamp);
+
+                            // Get current leaderboard
+                            let current_round = elimination_game.current_round.get();
+                            let leaderboard = elimination_game
+                                .round_leaderboard
+                                .load_entry_mut(current_round)
+                                .await
+                                .unwrap();
+
+                            // Sort players by score and get lowest scoring players
+                            let mut player_scores: Vec<(String, u64)> = Vec::new();
+                            let mut zero_score_players: u8 = 0;
+
+                            leaderboard
+                                .players
+                                .for_each_index_value(|username, score| {
+                                    player_scores.push((username, score));
+                                    if score == 0 {
+                                        zero_score_players += 1;
+                                    }
+                                    Ok(())
+                                })
+                                .await
+                                .unwrap();
+                            player_scores.sort_by_key(|k| k.1);
+
+                            // Eliminate lowest scoring players
+                            let base_eliminate_count =
+                                *elimination_game.eliminated_per_trigger.get() as usize;
+                            let eliminate_count =
+                                base_eliminate_count + zero_score_players as usize;
+
+                            // If only one more player than elimination count, eliminate all
+                            let eliminated_players: Vec<(String, u64)> =
+                                if player_scores.len() <= eliminate_count + 1 {
+                                    player_scores.clone() // Eliminate all remaining players
+                                } else {
+                                    // Find the score threshold
+                                    let threshold_score = player_scores[eliminate_count - 1].1;
+
+                                    // Take all players with scores less than or equal to the threshold
+                                    player_scores
+                                        .iter()
+                                        .take_while(|(_, score)| *score <= threshold_score)
+                                        .cloned()
+                                        .collect()
+                                };
+
+                            let is_round_ended = eliminated_players.is_empty();
+                            if is_round_ended {
+                                panic!("No player to eliminate");
+                            }
+
+                            // End game for eliminated players
+                            for player in eliminated_players {
+                                // End the player's board
+                                let board_id =
+                                    format!("{}:{}:{}", game_id, current_round, player.0);
+                                let board =
+                                    self.state.boards.load_entry_mut(&board_id).await.unwrap();
+                                board.is_ended.set(true);
+
+                                // Move player to eliminated players
+                                leaderboard.players.remove(&player.0).unwrap();
+                                leaderboard
+                                    .eliminated_players
+                                    .insert(&player.0, player.1)
+                                    .unwrap();
+                            }
+                        } else {
+                            panic!("Trigger too early");
+                        }
+                    }
                 }
             }
         }
@@ -118,17 +470,28 @@ impl Game2048Contract {
         }
     }
 
-    fn send_message(&mut self, game_id: u32, board: u64, score: u64, is_ended: bool) {
+    fn send_message(&mut self, board_id: String, board: u64, score: u64) {
         let chain_id =
             ChainId::from_str("256e1dbc00482ddd619c293cc0df94d366afe7980022bb22d99e33036fd465dd")
                 .unwrap();
         self.runtime
-            .prepare_message(Message::Game {
-                game_id,
+            .prepare_message(Message::Board {
+                board_id,
                 board,
                 score,
-                is_ended,
             })
             .send_to(chain_id);
+    }
+
+    async fn parse_elimination_game_id(&mut self, board_id: &str) -> Option<(String, u8, String)> {
+        let parts: Vec<&str> = board_id.split(':').collect();
+        if parts.len() == 3 {
+            let game_id = parts[0].to_string();
+            if let Ok(round_id) = parts[1].parse::<u8>() {
+                let player_id = parts[2].to_string();
+                return Some((game_id, round_id, player_id));
+            }
+        }
+        None
     }
 }
