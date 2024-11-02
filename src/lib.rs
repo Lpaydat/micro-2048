@@ -30,8 +30,13 @@ impl ServiceAbi for Game2048Abi {
 
 #[derive(Debug, Deserialize, Serialize, GraphQLMutationRoot)]
 pub enum Operation {
+    RegisterPlayer {
+        username: String,
+        password_hash: String,
+    },
     NewBoard {
         seed: u32,
+        player: String,
     },
     EndBoard {
         board_id: String,
@@ -43,6 +48,7 @@ pub enum Operation {
     // Elimination Game
     CreateEliminationGame {
         game_id: String,
+        player: String,
         settings: EliminationGameSettings,
     },
     EliminationGameAction {
@@ -55,9 +61,11 @@ pub enum Operation {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub enum Message {
-    Board {
-        board_id: String,
-        board: u64,
-        score: u64,
-    },
+    Ping,
+    CloseChain,
+    // Board {
+    //     board_id: String,
+    //     board: u64,
+    //     score: u64,
+    // },
 }

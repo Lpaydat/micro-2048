@@ -93,8 +93,25 @@ struct EliminationGameRoundLeaderboard {
     eliminated_players: Vec<LeaderboardEntry>,
 }
 
+#[derive(SimpleObject)]
+struct Player {
+    username: String,
+    chain_id: String,
+}
+
 #[Object]
 impl QueryRoot {
+    async fn player(&self, username: String) -> Option<Player> {
+        if let Ok(Some(player)) = self.state.players.try_load_entry(&username).await {
+            Some(Player {
+                username: player.username.get().to_string(),
+                chain_id: player.chain_id.get().to_string(),
+            })
+        } else {
+            None
+        }
+    }
+
     async fn board(&self, board_id: String) -> Option<BoardState> {
         if let Ok(Some(game)) = self.state.boards.try_load_entry(&board_id).await {
             let game_state = BoardState {
@@ -219,9 +236,17 @@ struct MutationRoot;
 
 #[Object]
 impl MutationRoot {
-    async fn new_board(&self, seed: Option<u32>) -> Vec<u8> {
+    async fn register_player(&self, username: String, password_hash: String) -> Vec<u8> {
+        let operation = Operation::RegisterPlayer {
+            username,
+            password_hash,
+        };
+        bcs::to_bytes(&operation).unwrap()
+    }
+
+    async fn new_board(&self, seed: Option<u32>, player: String) -> Vec<u8> {
         let seed = seed.unwrap_or(0);
-        bcs::to_bytes(&Operation::NewBoard { seed }).unwrap()
+        bcs::to_bytes(&Operation::NewBoard { seed, player }).unwrap()
     }
 
     async fn make_move(&self, board_id: String, direction: Direction) -> Vec<u8> {
@@ -235,9 +260,14 @@ impl MutationRoot {
     async fn create_elimination_game(
         &self,
         game_id: String,
+        player: String,
         settings: EliminationGameSettings,
     ) -> Vec<u8> {
-        let operation = Operation::CreateEliminationGame { game_id, settings };
+        let operation = Operation::CreateEliminationGame {
+            game_id,
+            player,
+            settings,
+        };
         bcs::to_bytes(&operation).unwrap()
     }
 

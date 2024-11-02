@@ -31,11 +31,20 @@ scalar!(GameMode);
 
 #[derive(View, SimpleObject)]
 #[view(context = "ViewStorageContext")]
+pub struct Player {
+    pub username: RegisterView<String>,
+    pub password_hash: RegisterView<String>,
+    pub chain_id: RegisterView<String>,
+}
+
+#[derive(View, SimpleObject)]
+#[view(context = "ViewStorageContext")]
 pub struct BoardState {
     pub board_id: RegisterView<String>,
     pub board: RegisterView<u64>,
     pub score: RegisterView<u64>,
     pub is_ended: RegisterView<bool>,
+    pub player: RegisterView<String>,
 }
 
 #[derive(View, SimpleObject)]
@@ -72,4 +81,5 @@ pub struct Game2048 {
     pub boards: CollectionView<String, BoardState>,
     pub elimination_games: CollectionView<String, EliminationGame>, // game_id
     pub waiting_rooms: MapView<String, bool>,
+    pub players: CollectionView<String, Player>,
 }

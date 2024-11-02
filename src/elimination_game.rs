@@ -14,11 +14,9 @@ pub enum MultiplayerGameAction {
 scalar!(MultiplayerGameAction);
 
 // Define a struct for elimination game settings
-#[derive(Debug, Deserialize, Serialize, InputObject)]
+#[derive(Debug, Deserialize, Serialize, InputObject, Clone)]
 pub struct EliminationGameSettings {
-    pub chain_id: String,
     pub game_name: String,
-    pub host: String,
     pub total_round: u8,
     pub max_players: u8,
     pub eliminated_per_trigger: u8,

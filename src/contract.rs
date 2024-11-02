@@ -5,7 +5,7 @@ mod state;
 use std::str::FromStr;
 
 use linera_sdk::{
-    base::{ChainId, WithContractAbi},
+    base::{Amount, ApplicationPermissions, ChainId, WithContractAbi},
     views::{RootView, View},
     Contract, ContractRuntime,
 };
@@ -59,7 +59,31 @@ impl Contract for Game2048Contract {
 
     async fn execute_operation(&mut self, operation: Self::Operation) -> Self::Response {
         match operation {
-            Operation::NewBoard { seed } => {
+            Operation::RegisterPlayer {
+                username,
+                password_hash,
+            } => {
+                if username.is_empty() {
+                    panic!("Username cannot be empty");
+                }
+                self.check_player_registered(&username).await;
+
+                let player = self.state.players.load_entry_mut(&username).await.unwrap();
+
+                let chain_ownership = self.runtime.chain_ownership();
+                let application_permissions = ApplicationPermissions::default();
+                let amount = Amount::from_tokens(0);
+                let (_, chain_id) =
+                    self.runtime
+                        .open_chain(chain_ownership, application_permissions, amount);
+
+                player.username.set(username);
+                player.password_hash.set(password_hash);
+                player.chain_id.set(chain_id.to_string());
+            }
+            Operation::NewBoard { seed, player } => {
+                self.check_player_registered(&player).await;
+
                 let seed = self.get_seed(seed);
                 let new_board = Game::new(&seed).board;
                 let game = self
@@ -71,8 +95,9 @@ impl Contract for Game2048Contract {
 
                 game.board_id.set(seed.to_string());
                 game.board.set(new_board);
+                game.player.set(player.clone());
 
-                self.send_message(seed.to_string(), new_board, 0);
+                self.ping_player(&player).await;
             }
             Operation::EndBoard { board_id } => {
                 let board = self.state.boards.load_entry_mut(&board_id).await.unwrap();
@@ -80,6 +105,9 @@ impl Contract for Game2048Contract {
                     panic!("Game is already ended");
                 }
                 board.is_ended.set(true);
+
+                let player = board.player.get().clone();
+                self.ping_player(&player).await;
             }
             Operation::MakeMove {
                 board_id,
@@ -97,6 +125,7 @@ impl Contract for Game2048Contract {
 
                     let new_board = Game::execute(&mut game, direction);
                     let score = Game::score(new_board);
+                    let player = board.player.get().clone();
 
                     if *board.board.get() == new_board {
                         panic!("No move");
@@ -128,15 +157,23 @@ impl Contract for Game2048Contract {
                                 .await
                                 .unwrap();
                             leaderboard.players.insert(&player_id, score).unwrap();
+
+                            self.ping_game(&game_id).await;
                         }
                     }
 
-                    self.send_message(board_id, new_board, score);
+                    self.ping_player(&player).await;
                 } else {
                     panic!("Game is ended");
                 }
             }
-            Operation::CreateEliminationGame { game_id, settings } => {
+            Operation::CreateEliminationGame {
+                game_id,
+                player,
+                settings,
+            } => {
+                self.check_player_registered(&player).await;
+
                 if settings.total_round < 1 {
                     panic!("Total round must be greater than 0");
                 }
@@ -146,8 +183,8 @@ impl Contract for Game2048Contract {
                 if settings.eliminated_per_trigger < 1 {
                     panic!("Eliminated per trigger must be greater than 0");
                 }
-                if settings.trigger_interval_seconds < 5 {
-                    panic!("Trigger interval must be greater than 5 seconds");
+                if settings.trigger_interval_seconds < 1 {
+                    panic!("Trigger interval must be greater than 0 seconds");
                 }
 
                 let elimination_game = self
@@ -159,11 +196,19 @@ impl Contract for Game2048Contract {
                 let created_time = settings.created_time.parse::<u64>().unwrap();
                 self.state.waiting_rooms.insert(&game_id, true).unwrap();
 
+                let chain_ownership = self.runtime.chain_ownership();
+                let app_id = self.runtime.application_id().forget_abi();
+                let application_permissions = ApplicationPermissions::new_single(app_id);
+                let amount = Amount::from_tokens(0);
+                let (_, chain_id) =
+                    self.runtime
+                        .open_chain(chain_ownership, application_permissions, amount);
+
                 elimination_game.game_id.set(game_id);
-                elimination_game.chain_id.set(settings.chain_id);
+                elimination_game.chain_id.set(chain_id.to_string());
                 elimination_game.game_name.set(settings.game_name);
-                elimination_game.players.set(vec![settings.host.clone()]);
-                elimination_game.host.set(settings.host);
+                elimination_game.players.set(vec![player.clone()]);
+                elimination_game.host.set(player.clone());
                 elimination_game.status.set(EliminationGameStatus::Waiting);
                 elimination_game.total_round.set(settings.total_round);
                 elimination_game.current_round.set(0);
@@ -177,7 +222,7 @@ impl Contract for Game2048Contract {
                 elimination_game.created_time.set(created_time);
                 elimination_game.last_updated_time.set(created_time);
 
-                // TODO: send message to host
+                self.ping_player(&player).await;
             }
             Operation::EliminationGameAction {
                 game_id,
@@ -218,6 +263,7 @@ impl Contract for Game2048Contract {
 
                             game.board_id.set(board_id);
                             game.board.set(new_board);
+                            game.player.set(player.clone());
                             round_leaderboard.players.insert(player, 0).unwrap();
                             elimination_game.game_leaderboard.insert(player, 0).unwrap();
                         }
@@ -245,13 +291,28 @@ impl Contract for Game2048Contract {
                             panic!("Player is already in the game");
                         }
 
+                        if self
+                            .state
+                            .players
+                            .load_entry_or_insert(&player)
+                            .await
+                            .unwrap()
+                            .username
+                            .get()
+                            == ""
+                        {
+                            panic!("Player is not registered");
+                        }
+
                         // Check if game is not full
                         if players.len() >= *elimination_game.total_players.get() as usize {
                             panic!("Game is full");
                         }
 
-                        players.append(&mut vec![player]);
+                        players.append(&mut vec![player.clone()]);
                         elimination_game.last_updated_time.set(timestamp);
+
+                        self.ping_player(&player).await;
                     }
                     MultiplayerGameAction::Leave => {
                         // Check if game is in waiting state
@@ -325,6 +386,7 @@ impl Contract for Game2048Contract {
 
                                     game.board_id.set(board_id);
                                     game.board.set(new_board);
+                                    game.player.set(player.clone());
                                 }
 
                                 let mut player_round_scores = std::collections::HashMap::new();
@@ -450,13 +512,19 @@ impl Contract for Game2048Contract {
                         }
                     }
                 }
+
+                self.ping_game(&game_id).await;
             }
         }
     }
 
     async fn execute_message(&mut self, message: Self::Message) {
-        log::info!("ChainId: {:?}", self.runtime.chain_id());
-        log::info!("Message: {:?}", message);
+        match message {
+            Message::CloseChain => self.runtime.close_chain().unwrap(),
+            Message::Ping => {
+                log::info!("Ping received");
+            }
+        }
     }
 
     async fn store(mut self) {
@@ -474,20 +542,55 @@ impl Game2048Contract {
         }
     }
 
-    fn send_message(&mut self, board_id: String, board: u64, score: u64) {
-        let chain_id =
-            ChainId::from_str("256e1dbc00482ddd619c293cc0df94d366afe7980022bb22d99e33036fd465dd")
-                .unwrap();
+    async fn ping_player(&mut self, player: &str) {
+        let chain_id = self
+            .state
+            .players
+            .load_entry_or_insert(player)
+            .await
+            .unwrap()
+            .chain_id
+            .get()
+            .clone();
+        self.ping_chain(chain_id);
+    }
+
+    async fn ping_game(&mut self, game_id: &str) {
+        let chain_id = self
+            .state
+            .elimination_games
+            .load_entry_or_insert(game_id)
+            .await
+            .unwrap()
+            .chain_id
+            .get()
+            .clone();
+        self.ping_chain(chain_id);
+    }
+
+    fn ping_chain(&mut self, chain_id: String) {
+        let chain_id = ChainId::from_str(&chain_id).unwrap();
         self.runtime
-            .prepare_message(Message::Board {
-                board_id,
-                board,
-                score,
-            })
+            .prepare_message(Message::Ping)
             .send_to(chain_id);
     }
 
-    async fn parse_elimination_game_id(&mut self, board_id: &str) -> Option<(String, u8, String)> {
+    async fn check_player_registered(&mut self, player: &str) {
+        let username = self
+            .state
+            .players
+            .load_entry_or_insert(player)
+            .await
+            .unwrap()
+            .username
+            .get();
+
+        if !username.is_empty() {
+            panic!("Player already registered");
+        }
+    }
+
+    async fn parse_elimination_game_id(&self, board_id: &str) -> Option<(String, u8, String)> {
         let parts: Vec<&str> = board_id.split(':').collect();
         if parts.len() == 3 {
             let game_id = parts[0].to_string();
