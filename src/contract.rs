@@ -167,11 +167,7 @@ impl Contract for Game2048Contract {
                     panic!("Game is ended");
                 }
             }
-            Operation::CreateEliminationGame {
-                game_id,
-                player,
-                settings,
-            } => {
+            Operation::CreateEliminationGame { player, settings } => {
                 self.check_player_registered(&player).await;
 
                 if settings.total_round < 1 {
@@ -187,6 +183,15 @@ impl Contract for Game2048Contract {
                     panic!("Trigger interval must be greater than 0 seconds");
                 }
 
+                let chain_ownership = self.runtime.chain_ownership();
+                let app_id = self.runtime.application_id().forget_abi();
+                let application_permissions = ApplicationPermissions::new_single(app_id);
+                let amount = Amount::from_tokens(0);
+                let (game_id, chain_id) =
+                    self.runtime
+                        .open_chain(chain_ownership, application_permissions, amount);
+                let game_id = game_id.to_string();
+
                 let elimination_game = self
                     .state
                     .elimination_games
@@ -195,14 +200,6 @@ impl Contract for Game2048Contract {
                     .unwrap();
                 let created_time = settings.created_time.parse::<u64>().unwrap();
                 self.state.waiting_rooms.insert(&game_id, true).unwrap();
-
-                let chain_ownership = self.runtime.chain_ownership();
-                let app_id = self.runtime.application_id().forget_abi();
-                let application_permissions = ApplicationPermissions::new_single(app_id);
-                let amount = Amount::from_tokens(0);
-                let (_, chain_id) =
-                    self.runtime
-                        .open_chain(chain_ownership, application_permissions, amount);
 
                 elimination_game.game_id.set(game_id);
                 elimination_game.chain_id.set(chain_id.to_string());
@@ -277,6 +274,8 @@ impl Contract for Game2048Contract {
                         }
                         elimination_game.status.set(EliminationGameStatus::Ended);
                         elimination_game.last_updated_time.set(timestamp);
+
+                        self.close_chain(&game_id).await;
                     }
                     MultiplayerGameAction::Join => {
                         // Check if game hasn't started yet
@@ -483,13 +482,6 @@ impl Contract for Game2048Contract {
                                 };
 
                             let is_round_ended = eliminated_players.is_empty();
-                            if is_round_ended {
-                                if current_round == elimination_game.total_round.get() {
-                                    elimination_game.status.set(EliminationGameStatus::Ended);
-                                } else {
-                                    panic!("No player to eliminate");
-                                }
-                            }
 
                             // End game for eliminated players
                             for player in eliminated_players {
@@ -506,6 +498,15 @@ impl Contract for Game2048Contract {
                                     .eliminated_players
                                     .insert(&player.0, player.1)
                                     .unwrap();
+                            }
+
+                            if is_round_ended {
+                                if current_round == elimination_game.total_round.get() {
+                                    elimination_game.status.set(EliminationGameStatus::Ended);
+                                    self.close_chain(&game_id).await;
+                                } else {
+                                    panic!("No player to eliminate");
+                                }
                             }
                         } else {
                             panic!("Trigger too early");
@@ -572,6 +573,22 @@ impl Game2048Contract {
         let chain_id = ChainId::from_str(&chain_id).unwrap();
         self.runtime
             .prepare_message(Message::Ping)
+            .send_to(chain_id);
+    }
+
+    async fn close_chain(&mut self, game_id: &str) {
+        let chain_id = self
+            .state
+            .elimination_games
+            .load_entry_or_insert(game_id)
+            .await
+            .unwrap()
+            .chain_id
+            .get()
+            .clone();
+        let chain_id = ChainId::from_str(&chain_id).unwrap();
+        self.runtime
+            .prepare_message(Message::CloseChain)
             .send_to(chain_id);
     }
 

@@ -259,15 +259,10 @@ impl MutationRoot {
 
     async fn create_elimination_game(
         &self,
-        game_id: String,
         player: String,
         settings: EliminationGameSettings,
     ) -> Vec<u8> {
-        let operation = Operation::CreateEliminationGame {
-            game_id,
-            player,
-            settings,
-        };
+        let operation = Operation::CreateEliminationGame { player, settings };
         bcs::to_bytes(&operation).unwrap()
     }
 

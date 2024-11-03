@@ -47,7 +47,6 @@ pub enum Operation {
     },
     // Elimination Game
     CreateEliminationGame {
-        game_id: String,
         player: String,
         settings: EliminationGameSettings,
     },
