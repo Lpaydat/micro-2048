@@ -1,7 +1,7 @@
 <script lang="ts">
+    import Brand from "../molecules/Brand.svelte";
 	import Game from "../organisms/Game.svelte";
 	import MainTemplate from "../organisms/MainTemplate.svelte";
-    import Brand from "../organisms/Brand.svelte";
     import Leaderboard from "../organisms/Leaderboard.svelte";
 
     let isSinglePlayer = true;

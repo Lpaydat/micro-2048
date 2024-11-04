@@ -1,1 +1,1 @@
-<div>Elimination Game Play</div>
+<div>Elimination Waiting Room</div>

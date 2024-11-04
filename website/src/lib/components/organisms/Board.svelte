@@ -1,7 +1,7 @@
 <script lang="ts">
-  export let board: number[][];
-
   import BoardTile from "../atoms/BoardTile.svelte";
+
+  export let board: number[][];
 </script>
 
 <style>

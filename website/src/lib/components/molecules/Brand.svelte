@@ -1,4 +1,4 @@
-<div class="text-center p-6 w-80 rounded-lg bg-[#faf8ef] shadow-lg max-w-md mx-auto">
+<div class="text-center p-6 w-80 rounded-lg bg-[#faf8ef] shadow-md max-w-md mx-auto">
     <h1 class="text-[80px] leading-tight font-bold text-[#776e65] mb-2 tracking-tight">
         2048
     </h1>

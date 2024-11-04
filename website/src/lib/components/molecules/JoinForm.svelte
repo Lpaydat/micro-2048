@@ -1,6 +1,6 @@
 <script lang="ts">
-  import Input from "$lib/components/atoms/Input.svelte";
-  import Button from "$lib/components/atoms/Button.svelte";
+  import Input from "../atoms/Input.svelte";
+  import Button from "../atoms/Button.svelte";
 
   let username = '';
   let password = '';
@@ -19,7 +19,7 @@
 
 <form 
   on:submit|preventDefault={handleSubmit}
-  class="max-w-md w-full mx-auto p-6 rounded-md bg-[#FAF8EF] shadow-lg"
+  class="max-w-md w-full mx-auto p-6 rounded-md bg-[#FAF8EF] shadow-md"
 >
   <div class="space-y-6">
     <!-- Title -->

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import NavLink from '../atoms/NavLink.svelte';
+	import NavLink from "../atoms/NavLink.svelte";
 </script>
 
 <div class="nav-container mt-5 me-5">

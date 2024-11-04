@@ -1,11 +1,11 @@
 <script lang="ts">
-  const chainId = import.meta.env.VITE_CHAIN_ID;
-  const applicationId = import.meta.env.VITE_APPLICATION_ID;
-  const port = import.meta.env.VITE_PORT;
-
   import { setContextClient } from '@urql/svelte';
   import { getClient } from '$lib/client';
   import Game from '$lib/components/organisms/Game.svelte';
+
+  const chainId = import.meta.env.VITE_CHAIN_ID;
+  const applicationId = import.meta.env.VITE_APPLICATION_ID;
+  const port = import.meta.env.VITE_PORT;
 
   const client = getClient(chainId, applicationId, port);
   setContextClient(client);

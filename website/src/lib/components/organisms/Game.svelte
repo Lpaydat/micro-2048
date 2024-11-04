@@ -1,7 +1,7 @@
 <script lang="ts">
   import { queryStore, mutationStore, subscriptionStore, gql, getContextClient } from '@urql/svelte';
-  import Header from "./BoardHeader.svelte";
   import { onMount } from "svelte";
+  import Header from "./BoardHeader.svelte";
   import Board from './Board.svelte';
   import { getSubscriptionId } from '$lib/getSubscriptionId';
 

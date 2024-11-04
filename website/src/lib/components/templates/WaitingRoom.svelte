@@ -1,8 +1,8 @@
 <script lang="ts">
+	import Brand from "../molecules/Brand.svelte";
 	import MainTemplate from "../organisms/MainTemplate.svelte";
-    import GameSettingsDetails from '../organisms/GameSettingsDetails.svelte'
+    import GameSettingsDetails from "../organisms/GameSettingsDetails.svelte"
 	import WaitingPlayers from "../organisms/WaitingPlayers.svelte";
-	import Brand from "../organisms/Brand.svelte";
 
     let isHost = false;
     let gameName = "";
