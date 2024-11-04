@@ -3,5 +3,5 @@
 </script>
 
 <div class="flex justify-center items-center">
-    <Board board={[[0, 3, 5, 8], [7, 1, 4, 6], [2, 5, 0, 3], [4, 6, 7, 1]]} />
+    <Board board={[[3, 6, 2, 8], [1, 0, 4, 5], [2, 5, 2, 3], [1, 4, 2, 1]]} />
 </div>

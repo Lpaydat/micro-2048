@@ -8,7 +8,7 @@
         hostName: string,
         createdAt: Date,
         totalRounds: number,
-        eliminatedPerRound: number
+        eliminatedPerTrigger: number
     }> = [];
 </script>
 
@@ -23,7 +23,7 @@
                     hostName={game.hostName}
                     createdAt={game.createdAt}
                     totalRounds={game.totalRounds}
-                    eliminatedPerRound={game.eliminatedPerRound}
+                    eliminatedPerTrigger={game.eliminatedPerTrigger}
                 />
             </li>
         {/each}

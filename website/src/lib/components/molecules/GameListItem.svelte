@@ -7,7 +7,7 @@
     export let hostName: string;
     export let createdAt: Date;
     export let totalRounds: number;
-    export let eliminatedPerRound: number;
+    export let eliminatedPerTrigger: number;
 
     // Format the created time to show how long ago the game was created
     $: timeAgo = `${Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60))} minutes ago`;
@@ -30,7 +30,7 @@
             <div class="flex items-center gap-2">
                 <span>{totalRounds} rounds</span>
                 <span>•</span>
-                <span>{eliminatedPerRound} eliminated/round</span>
+                <span>{eliminatedPerTrigger} eliminated/trigger</span>
             </div>
         </div>
     </div>
