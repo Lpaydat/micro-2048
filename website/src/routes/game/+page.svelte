@@ -5,7 +5,7 @@
 
   import { setContextClient } from '@urql/svelte';
   import { getClient } from '$lib/client';
-  import Game from '$lib/components/Game.svelte';
+  import Game from '$lib/components/organisms/Game.svelte';
 
   const client = getClient(chainId, applicationId, port);
   setContextClient(client);

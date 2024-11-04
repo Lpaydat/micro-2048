@@ -1,9 +1,8 @@
 <script lang="ts">
   import { queryStore, mutationStore, subscriptionStore, gql, getContextClient } from '@urql/svelte';
-  import Header from "./Header.svelte";
+  import Header from "./BoardHeader.svelte";
   import { onMount } from "svelte";
-  import Board from './molecules/Board.svelte';
-  import MoveLogs from './molecules/MoveLogs.svelte';
+  import Board from './Board.svelte';
   import { getSubscriptionId } from '$lib/getSubscriptionId';
 
   // GraphQL queries, mutations, and subscriptions
@@ -153,8 +152,6 @@
     <Board board={[[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]} />
   {/if}
 </div>
-
-<MoveLogs hashes={logs} />
 
 <style>
   .game-container {
