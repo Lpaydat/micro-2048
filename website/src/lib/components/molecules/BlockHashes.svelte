@@ -41,7 +41,7 @@
 </style>
 
 <div class="sidebar">
-  <div class="log-title">Blockhashes</div>
+  <div class="log-title">Block Hashes</div>
   {#each hashes as { hash, timestamp }}
     <div class="log-item">
       <div><strong>Hash:</strong> {formatHash(hash)}</div>

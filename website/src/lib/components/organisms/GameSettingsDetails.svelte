@@ -18,27 +18,27 @@
         <div class="flex flex-wrap items-center gap-4 text-sm">
             <div class="flex items-center gap-2">
                 <span class="text-[#bbada0]">Host</span>
-                <span class="text-[#776e65]">{data.hostName}</span>
+                <span class="font-bold text-[#776e65]">{data.hostName}</span>
             </div>
 
             <div class="flex items-center gap-2">
                 <span class="text-[#bbada0]">Created</span>
-                <span class="text-[#776e65]">{timeAgo}</span>
+                <span class="font-bold text-[#776e65]">{timeAgo}</span>
             </div>
 
             <div class="flex items-center gap-2">
                 <span class="text-[#bbada0]">Rounds</span>
-                <span class="text-[#776e65]">{data.totalRounds}</span>
+                <span class="font-bold text-[#776e65]">{data.totalRounds}</span>
             </div>
 
             <div class="flex items-center gap-2">
                 <span class="text-[#bbada0]">Eliminated</span>
-                <span class="text-[#776e65]">{data.eliminatedPerTrigger}/trigger</span>
+                <span class="font-bold text-[#776e65]">{data.eliminatedPerTrigger} per trigger</span>
             </div>
 
             <div class="flex items-center gap-2">
                 <span class="text-[#bbada0]">Interval</span>
-                <span class="text-[#776e65]">{data.triggerInterval}s</span>
+                <span class="font-bold text-[#776e65]">{data.triggerInterval}s</span>
             </div>
         </div>
     </div>

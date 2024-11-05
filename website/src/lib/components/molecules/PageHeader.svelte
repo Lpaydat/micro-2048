@@ -1,8 +1,11 @@
 <script lang="ts">
     export let title: string;
+    export let prevPage: string | undefined = undefined;
+
+    let headerRound = !prevPage ? 'rounded-bl-lg' : '';
 </script>
 
-<div class="h2 mb-4 font-bold flex items-center gap-4 bg-gradient-to-r from-warning-500 to-warning-600 text-white rounded-bl-lg p-4 shadow-md transition-all">
+<div class="h2 font-bold flex items-center gap-4 bg-gradient-to-r from-warning-500 to-warning-600 text-white {headerRound} p-4 shadow-md transition-all relative">
     {#if $$slots.icon}
         <slot name="icon" />
     {/if}
@@ -11,3 +14,9 @@
         <slot name="actions" />
     {/if}
 </div>
+
+{#if prevPage}
+    <a href={prevPage} class="inline-block p-2 text-white rounded-t-none rounded-md bg-surface-400 card hover:bg-surface-800 transition-colors">
+        Back
+    </a>
+{/if}

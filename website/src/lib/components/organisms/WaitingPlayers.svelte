@@ -2,7 +2,6 @@
     import PlayerListItem from '../molecules/PlayerListItem.svelte';
     
     export let players: Array<string> = [];
-    export let maxPlayers: number;
 
     // Convert simple string array to object array with default values
     $: playerObjects = players.map((name, index) => ({

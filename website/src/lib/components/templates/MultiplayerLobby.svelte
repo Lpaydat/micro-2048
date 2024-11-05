@@ -5,7 +5,7 @@
     import MainTemplate from "../organisms/MainTemplate.svelte";
 	import UserSidebar from "../organisms/UserSidebar.svelte";
 	import WaitingGames from "../organisms/WaitingGames.svelte";
-	import type { EliminationGameDetails } from '$lib/types/eliminationGameSettings';
+	import type { EliminationGameDetails } from '$lib/types/eliminationGame';
 
     export let username = 'lpaydat';
 
@@ -50,7 +50,7 @@
     </svelte:fragment>
 
     <svelte:fragment slot="main">
-        <PageHeader title="ELIMINATION GAME">
+        <PageHeader title="ELIMINATION GAME" prevPage="/">
             <svelte:fragment slot="icon">
                 <Swords size={28} />
             </svelte:fragment>

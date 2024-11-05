@@ -6,7 +6,7 @@
 
 <a
 	class="nav-link font-bold text-lg no-underline transition-colors duration-200
-	text-[#776e65] hover:text-[#473d35] active:text-[#473d35]"
+	text-[#e0d7d1] hover:text-white active:text-[#b3a9a1]"
 	{href}
 	{target}
 	{rel}

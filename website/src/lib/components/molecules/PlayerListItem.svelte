@@ -11,16 +11,16 @@
 
 <BaseListItem>
     <div slot="left-content">
-        <div class="flex items-center gap-2 mb-1">
-            <h3 class="text-lg font-semibold">{playerName}</h3>
-            {#if isHost}
-                <span class="text-sm bg-warning-500 px-2 py-0.5 rounded-full text-white">
-                    Host
-                </span>
-            {/if}
-        </div>
-        <div class="flex items-center gap-4 text-sm text-surface-700">
+        <div class="flex items-center justify-between gap-2 mb-1">
             <div class="flex items-center gap-2">
+                <h3 class="text-lg font-semibold">{playerName}</h3>
+                {#if isHost}
+                    <span class="text-sm bg-warning-500 px-2 py-0.5 rounded-full text-white">
+                        Host
+                    </span>
+                {/if}
+            </div>
+            <div class="flex items-center gap-2 text-sm text-surface-700">
                 <div class="w-4 h-4 bg-warning-500 rounded"></div>
                 <span>{timeAgo}</span>
             </div>

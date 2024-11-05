@@ -1,9 +1,22 @@
 <script lang="ts">
   import { queryStore, mutationStore, subscriptionStore, gql, getContextClient } from '@urql/svelte';
   import { onMount } from "svelte";
-  import Header from "./BoardHeader.svelte";
-  import Board from './Board.svelte';
+
   import { getSubscriptionId } from '$lib/getSubscriptionId';
+  import Header from "../molecules/BoardHeader.svelte";
+  import Board from './Board.svelte';
+
+  export let canStartNewGame: boolean = true;
+  export let canMakeMove: boolean = true;
+
+  // accept chainId for subscription
+  // gameId if it's multiplayer
+  // boardId for queries
+  // player name for queries
+
+  // use combination of playerChainId and gameChainId for subscription
+  // playerChainId used for game board queries
+  // gameChainId used for game state queries
 
   // GraphQL queries, mutations, and subscriptions
   const GET_GAME_STATE = gql`
@@ -66,6 +79,8 @@
   };
 
   const makeMoveMutation = ({ gameId, direction }: { gameId: number, direction: string }) => {
+    if (!canMakeMove) return;
+
     const formattedDirection = direction.replace('Arrow', '');
     if (!Object.values(directionList).includes(formattedDirection)) {
       console.error('Invalid direction:', direction);
@@ -138,7 +153,7 @@
 
 
 <div class="game-container">
-  <Header value={$game.data?.game?.score || 0} on:click={newGame} />
+  <Header {canStartNewGame} value={$game.data?.game?.score || 0} on:click={newGame} />
   {#if $game.data?.game}
     <div class="game-board">
       <Board board={$game.data?.game?.board} />
@@ -155,7 +170,7 @@
 
 <style>
   .game-container {
-    max-width: 600px;
+    max-width: 554px;
     margin: 0 auto;
     text-align: center;
   }

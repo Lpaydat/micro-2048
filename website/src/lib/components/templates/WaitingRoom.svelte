@@ -10,6 +10,9 @@
 	import type { EliminationGameDetails } from '$lib/types/eliminationGame';
 
     export let data: EliminationGameDetails;
+    export let onStartGame: () => void;
+    export let onEndGame: () => void;
+    export let onLeaveGame: () => void;
 
     let isHost = true;
     let username: string | undefined = 'lpaydat';
@@ -28,14 +31,16 @@
             </svelte:fragment>
             <svelte:fragment slot="actions">
                 {#if isHost}
-                    <ActionButton icon="plus" label="START GAME" on:click />
-                    <ActionButton icon="plus" label="END GAME" hoverColor="danger" on:click />
+                    <ActionButton icon="plus" label="START GAME" on:click={onStartGame} />
+                    <ActionButton icon="plus" label="END GAME" hoverColor="danger" on:click={onEndGame} />
                 {:else}
-                    <ActionButton icon="plus" label="LEAVE GAME" on:click />
+                    <ActionButton icon="plus" label="LEAVE GAME" on:click={onLeaveGame} />
                 {/if}
             </svelte:fragment>
         </PageHeader>
-        <GameSettingsDetails {data} />
-        <WaitingPlayers {players} maxPlayers={data.maxPlayers} />
+        <div class="p-8">
+            <GameSettingsDetails {data} />
+            <WaitingPlayers {players} />
+        </div>
     </svelte:fragment>
 </MainTemplate>
