@@ -1,30 +1,15 @@
 <script lang="ts">
     import GameListItem from '../molecules/GameListItem.svelte';
-    
-    export let games: Array<{
-        name: string,
-        playerCount: number,
-        maxPlayers: number,
-        hostName: string,
-        createdAt: Date,
-        totalRounds: number,
-        eliminatedPerTrigger: number
-    }> = [];
+	import type { EliminationGameDetails } from '$lib/types/eliminationGame';
+
+    export let games: Array<EliminationGameDetails> = [];
 </script>
 
 <ul class="flex flex-col gap-4 mt-8 max-w-4xl mx-auto h-full">
     {#if games.length > 0}
         {#each games as game}
             <li>
-                <GameListItem 
-                    gameName={game.name}
-                    playerCount={game.playerCount}
-                    maxPlayers={game.maxPlayers}
-                    hostName={game.hostName}
-                    createdAt={game.createdAt}
-                    totalRounds={game.totalRounds}
-                    eliminatedPerTrigger={game.eliminatedPerTrigger}
-                />
+                <GameListItem data={game} />
             </li>
         {/each}
     {:else}

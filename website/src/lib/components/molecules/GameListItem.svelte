@@ -1,22 +1,19 @@
 <script lang="ts">
+    import BaseListItem from './BaseListItem.svelte';
     import ActionButton from '../atoms/ActionButton.svelte';
+	import type { EliminationGameDetails } from '$lib/types/eliminationGame';
 
-    export let gameName: string;
-    export let playerCount: number;
-    export let maxPlayers: number;
-    export let hostName: string;
-    export let createdAt: Date;
-    export let totalRounds: number;
-    export let eliminatedPerTrigger: number;
+    export let data: EliminationGameDetails;
 
-    // Format the created time to show how long ago the game was created
+    let { name, playerCount, maxPlayers, hostName, createdAt, totalRounds, eliminatedPerTrigger, triggerInterval } = data;
+
     $: timeAgo = `${Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60))} minutes ago`;
 </script>
 
-<div class="flex items-center justify-between p-4 bg-surface-50-900-token rounded-lg hover:bg-surface-100-800-token border-4 hover:border-warning-900 transition-all">
-    <div class="flex-1">
+<BaseListItem>
+    <div slot="left-content">
         <div class="flex items-center gap-2 mb-1">
-            <h3 class="text-lg font-semibold">{gameName}</h3>
+            <h3 class="text-lg font-semibold">{name}</h3>
             <span class="text-sm bg-surface-300-600-token px-2 py-0.5 rounded-full">
                 {playerCount}/{maxPlayers} players
             </span>
@@ -31,20 +28,24 @@
                 <span>{totalRounds} rounds</span>
                 <span>•</span>
                 <span>{eliminatedPerTrigger} eliminated/trigger</span>
+                <span>•</span>
+                <span>{triggerInterval}s interval</span>
             </div>
         </div>
     </div>
-    {#if playerCount >= maxPlayers}
-        <ActionButton 
-            label="Full" 
-            disabled={true} 
-            color="disabled" 
-        />
-    {:else}
-        <ActionButton 
-            label="Join Game" 
-            color="warning" 
-            on:click
-        />
-    {/if}
-</div>
+    <div slot="right-content">
+        {#if playerCount >= maxPlayers}
+            <ActionButton 
+                label="Full" 
+                disabled={true} 
+                color="disabled" 
+            />
+        {:else}
+            <ActionButton 
+                label="Join Game" 
+                color="warning" 
+                on:click
+            />
+        {/if}
+    </div>
+</BaseListItem>
