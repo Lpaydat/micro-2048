@@ -16,7 +16,7 @@
 </div>
 
 {#if prevPage}
-    <a href={prevPage} class="inline-block p-2 text-white rounded-t-none rounded-md bg-surface-400 card hover:bg-surface-800 transition-colors">
+    <a href={prevPage} class="inline-block text-sm px-3 py-2 text-white rounded-t-none rounded-md bg-surface-400 card hover:bg-surface-800 transition-colors">
         Back
     </a>
 {/if}

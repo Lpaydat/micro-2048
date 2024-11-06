@@ -55,7 +55,7 @@
   `;
 
   // Initialize client and game state
-  let client = getContextClient();
+  const client = getContextClient();
 
   // Reactive statement for game state
   $: game = queryStore({

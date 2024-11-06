@@ -1,8 +1,11 @@
 <script lang="ts">
+	import { getContextClient, gql, mutationStore } from "@urql/svelte";
+	import { getModalStore } from "@skeletonlabs/skeleton";
+	import { getContext } from "svelte";
+
     import Input from "../atoms/Input.svelte";
     import Button from "../atoms/Button.svelte";
 
-    export let host: string;
     let totalRound = '';
     let eliminatedPerTrigger = '';
     let triggerInterval = '';
@@ -10,11 +13,45 @@
     let name = '';
     let loading = false;
 
+    const client = getContextClient();
+    const modalStore = getModalStore();
+    const { username }: { username: string } = getContext('player');
+
+    const CREATE_GAME = gql`
+        mutation CreateEliminationGame($player: String!, $settings: EliminationGameSettings!) {
+            createEliminationGame(player: $player, settings: $settings)
+        }
+    `;
+
     const handleSubmit = async () => {
         loading = true;
         try {
+            // Validate inputs
+            if (!name.trim()) {
+                alert("Game name cannot be empty.");
+                return;
+            }
+            if (parseInt(totalRound) < 1 || parseInt(maxPlayer) < 1 || parseInt(eliminatedPerTrigger) < 1 || parseInt(triggerInterval) < 1) {
+                alert("All numeric fields must be at least 1.");
+                return;
+            }
+
+            const settings = {
+                gameName: name,
+                totalRound: parseInt(totalRound),
+                maxPlayers: parseInt(maxPlayer),
+                eliminatedPerTrigger: parseInt(eliminatedPerTrigger), 
+                triggerIntervalSeconds: parseInt(triggerInterval),
+                createdTime: Date.now().toString()
+            };
+
+            mutationStore({
+                client,
+                query: CREATE_GAME,
+                variables: { player: username, settings }
+            });
             await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-            console.log('Form submitted:', { totalRound, eliminatedPerTrigger, triggerInterval, maxPlayer, name });
+            modalStore.close();
         } finally {
             loading = false;
         }
@@ -52,6 +89,7 @@
                 placeholder="Enter total rounds"
                 required
                 type="number"
+                min="1"
             />
         </div>
 
@@ -64,6 +102,7 @@
                 placeholder="Enter number of eliminations per trigger"
                 required
                 type="number"
+                min="1"
             />
         </div>
 
@@ -76,6 +115,7 @@
                 placeholder="Enter trigger interval in seconds"
                 required
                 type="number"
+                min="1"
             />
         </div>
 
@@ -88,6 +128,7 @@
                 placeholder="Enter maximum number of players"
                 required
                 type="number"
+                min="2"
             />
         </div>
 

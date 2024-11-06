@@ -68,3 +68,8 @@ pub enum Message {
     //     score: u64,
     // },
 }
+
+pub enum RegistrationCheck {
+    EnsureRegistered,
+    EnsureNotRegistered,
+}

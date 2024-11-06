@@ -12,7 +12,7 @@ use linera_sdk::{
 use state::EliminationGameStatus;
 
 use self::state::Game2048;
-use game2048::{gen_range, Game, Message, MultiplayerGameAction, Operation};
+use game2048::{gen_range, Game, Message, MultiplayerGameAction, Operation, RegistrationCheck};
 
 pub struct Game2048Contract {
     state: Game2048,
@@ -66,7 +66,8 @@ impl Contract for Game2048Contract {
                 if username.is_empty() {
                     panic!("Username cannot be empty");
                 }
-                self.check_player_registered(&username).await;
+                self.check_player_registered(&username, RegistrationCheck::EnsureNotRegistered)
+                    .await;
 
                 let player = self.state.players.load_entry_mut(&username).await.unwrap();
 
@@ -82,7 +83,8 @@ impl Contract for Game2048Contract {
                 player.chain_id.set(chain_id.to_string());
             }
             Operation::NewBoard { seed, player } => {
-                self.check_player_registered(&player).await;
+                self.check_player_registered(&player, RegistrationCheck::EnsureRegistered)
+                    .await;
 
                 let seed = self.get_seed(seed);
                 let new_board = Game::new(&seed).board;
@@ -168,7 +170,8 @@ impl Contract for Game2048Contract {
                 }
             }
             Operation::CreateEliminationGame { player, settings } => {
-                self.check_player_registered(&player).await;
+                self.check_player_registered(&player, RegistrationCheck::EnsureRegistered)
+                    .await;
 
                 if settings.total_round < 1 {
                     panic!("Total round must be greater than 0");
@@ -209,7 +212,7 @@ impl Contract for Game2048Contract {
                 elimination_game.status.set(EliminationGameStatus::Waiting);
                 elimination_game.total_round.set(settings.total_round);
                 elimination_game.current_round.set(0);
-                elimination_game.total_players.set(settings.max_players);
+                elimination_game.max_players.set(settings.max_players);
                 elimination_game
                     .eliminated_per_trigger
                     .set(settings.eliminated_per_trigger);
@@ -304,7 +307,7 @@ impl Contract for Game2048Contract {
                         }
 
                         // Check if game is not full
-                        if players.len() >= *elimination_game.total_players.get() as usize {
+                        if players.len() >= *elimination_game.max_players.get() as usize {
                             panic!("Game is full");
                         }
 
@@ -592,7 +595,7 @@ impl Game2048Contract {
             .send_to(chain_id);
     }
 
-    async fn check_player_registered(&mut self, player: &str) {
+    async fn check_player_registered(&mut self, player: &str, check: RegistrationCheck) {
         let username = self
             .state
             .players
@@ -602,8 +605,16 @@ impl Game2048Contract {
             .username
             .get();
 
-        if !username.is_empty() {
-            panic!("Player already registered");
+        let is_registered = !username.is_empty();
+
+        match check {
+            RegistrationCheck::EnsureRegistered if !is_registered => {
+                panic!("Player not registered");
+            }
+            RegistrationCheck::EnsureNotRegistered if is_registered => {
+                panic!("Player already registered");
+            }
+            _ => {}
         }
     }
 

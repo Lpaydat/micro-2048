@@ -66,7 +66,7 @@ pub struct EliminationGame {
     pub status: RegisterView<EliminationGameStatus>,
     pub total_round: RegisterView<u8>,
     pub current_round: RegisterView<u8>,
-    pub total_players: RegisterView<u8>,
+    pub max_players: RegisterView<u8>,
     pub eliminated_per_trigger: RegisterView<u8>,
     pub trigger_interval_seconds: RegisterView<u16>,
     pub round_leaderboard: CollectionView<u8, Leaderboard>,
