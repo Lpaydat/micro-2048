@@ -4,6 +4,7 @@ export type EliminationGameDetails = {
 	maxPlayers: number;
 	hostName: string;
 	createdAt: Date;
+	currentRound?: number;
 	totalRounds: number;
 	eliminatedPerTrigger: number;
 	triggerInterval: number;

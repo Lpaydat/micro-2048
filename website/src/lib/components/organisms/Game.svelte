@@ -171,8 +171,10 @@
 <style>
   .game-container {
     max-width: 554px;
+    background-color: transparent;;
     margin: 0 auto;
     text-align: center;
+    overflow: visible;
   }
 
   .game-board {

@@ -3,6 +3,7 @@
 
 	export let value: number;
 	export let canStartNewGame: boolean = true;
+	export let showBestScore: boolean = true;
 
 	let bestScore: number = 0;
 
@@ -35,9 +36,11 @@
 			<div class="text-xs text-[#eee4da] text-{scoreLabelAlign}">Score</div>
 			<div class="text-2xl text-center">{value}</div>
 		</div>
-		<div class="flex flex-col bg-[#bbada0] p-2 font-bold rounded-md text-white ml-2 mb-2 min-w-16">
-			<div class="text-xs text-[#eee4da] text-{bestScoreLabelAlign}">Best</div>
-			<div class="text-2xl text-center">{bestScoreValue}</div>
-		</div>
+		{#if showBestScore}
+			<div class="flex flex-col bg-[#bbada0] p-2 font-bold rounded-md text-white ml-2 mb-2 min-w-16">
+				<div class="text-xs text-[#eee4da] text-{bestScoreLabelAlign}">Best</div>
+				<div class="text-2xl text-center">{bestScoreValue}</div>
+			</div>
+		{/if}
 	</div>
 </div>

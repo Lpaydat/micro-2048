@@ -38,9 +38,7 @@
                 {/if}
             </svelte:fragment>
         </PageHeader>
-        <div class="p-8">
-            <GameSettingsDetails {data} />
-            <WaitingPlayers {players} />
-        </div>
+        <GameSettingsDetails {data} numberA={data.playerCount} numberB={data.maxPlayers} />
+        <WaitingPlayers {players} />
     </svelte:fragment>
 </MainTemplate>
