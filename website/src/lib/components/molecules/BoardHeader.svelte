@@ -1,14 +1,41 @@
 <script lang="ts">
+	import { getContextClient, mutationStore, gql } from "@urql/svelte";
 	import { onMount } from "svelte";
 
+	export let player: string;
 	export let value: number;
 	export let canStartNewGame: boolean = true;
 	export let showBestScore: boolean = true;
 
 	let bestScore: number = 0;
+	let client = getContextClient();
+
+	const NEW_BOARD = gql`
+		mutation NewBoard($seed: Int!, $player: String!) {
+		newBoard(seed: $seed, player: $player)
+		}
+	`;
+
+	// Mutation functions
+	const newGameMutation = ({ seed }: { seed: number }) => {
+		mutationStore({
+		client,
+		query: NEW_BOARD,
+		variables: { seed, player },
+		});
+	};
+
+	const newSingleGame = () => {
+		if (!canStartNewGame) return;
+		newGameMutation({ seed: Math.floor(Math.random() * 1000000) });
+	}
 
 	onMount(() => {
 		bestScore = Number(localStorage.getItem("best"));
+
+		setTimeout(() => {
+			newSingleGame();
+		}, 50);
 	});
 
 	$: if (bestScore < value) {
@@ -26,7 +53,7 @@
 
 <div class="flex justify-between items-center w-[555px]">
 	<button 
-		on:click 
+		on:click={newSingleGame}
 		class="bg-[#8f7a66] rounded-md px-5 text-[#f9f6f2] h-10 text-center border-none font-bold 
 		{canStartNewGame ? 'visible' : 'invisible'}">
 		New Game

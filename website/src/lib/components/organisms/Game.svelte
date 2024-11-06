@@ -4,13 +4,19 @@
 
   import { getSubscriptionId } from '$lib/getSubscriptionId';
   import Header from "../molecules/BoardHeader.svelte";
-  import Board from './Board.svelte';
+  import Board from '../molecules/Board.svelte';
+
+  export let player: string;
+  export let playerChainId: string;
+  export let gameChainId: string | undefined;
+  export let boardId: string | undefined = undefined;
 
   export let canStartNewGame: boolean = true;
   export let canMakeMove: boolean = true;
+  export let showBestScore: boolean = true;
 
   // accept chainId for subscription
-  // gameId if it's multiplayer
+  // boardId if it's multiplayer
   // boardId for queries
   // player name for queries
 
@@ -19,10 +25,10 @@
   // gameChainId used for game state queries
 
   // GraphQL queries, mutations, and subscriptions
-  const GET_GAME_STATE = gql`
-    query GetGameState($gameId: Int!) {
-      game(gameId: $gameId) {
-        gameId
+  const GET_BOARD_STATE = gql`
+    query BoardState($boardId: Int!) {
+      board(boardId: $boardId) {
+        boardId
         board
         score
         isEnded
@@ -30,19 +36,19 @@
     }
   `;
 
-  const NEW_BOARD = gql`
-    mutation NewBoard($seed: Int!, $subscriptionId: String!) {
-      newBoard(seed: $seed, subscriptionId: $subscriptionId)
-    }
-  `;
-
   const MAKE_MOVE = gql`
-    mutation MakeMove($gameId: ID!, $direction: String!, $subscriptionId: String!) {
-      makeMove(gameId: $gameId, direction: $direction, subscriptionId: $subscriptionId)
+    mutation MakeMove($boardId: ID!, $direction: String!) {
+      makeMove(boardId: $boardId, direction: $direction)
     }
   `;
 
-  const NOTIFICATION_SUBSCRIPTION = gql`
+  const GAME_PING_SUBSCRIPTION = gql`
+    subscription Notifications($chainId: ID!) {
+      notifications(chainId: $chainId)
+    }
+  `;
+
+  const PLAYER_PING_SUBSCRIPTION = gql`
     subscription Notifications($chainId: ID!) {
       notifications(chainId: $chainId)
     }
@@ -50,14 +56,12 @@
 
   // Initialize client and game state
   let client = getContextClient();
-  let gameId = 0;
-  let subscriptionId = getSubscriptionId();
 
   // Reactive statement for game state
   $: game = queryStore({
     client,
-    query: GET_GAME_STATE,
-    variables: { gameId },
+    query: GET_BOARD_STATE,
+    variables: { boardId },
     requestPolicy: 'network-only',
   });
 
@@ -70,15 +74,7 @@
   }
 
   // Mutation functions
-  const newGameMutation = ({ seed }: { seed: number }) => {
-    mutationStore({
-      client,
-      query: NEW_BOARD,
-      variables: { seed, subscriptionId },
-    });
-  };
-
-  const makeMoveMutation = ({ gameId, direction }: { gameId: number, direction: string }) => {
+  const makeMoveMutation = ({ boardId, direction }: { boardId: string, direction: string }) => {
     if (!canMakeMove) return;
 
     const formattedDirection = direction.replace('Arrow', '');
@@ -89,33 +85,26 @@
     mutationStore({
       client,
       query: MAKE_MOVE,
-      variables: { gameId, direction: formattedDirection, subscriptionId },
+      variables: { boardId, direction: formattedDirection },
     });
   };
 
   // Subscription for notifications
-  const messages = subscriptionStore({
+  const gameMessages = subscriptionStore({
     client,
-    query: NOTIFICATION_SUBSCRIPTION,
-    variables: { chainId: subscriptionId },
+    query: GAME_PING_SUBSCRIPTION,
+    variables: { chainId: gameChainId },
   });
 
-  // Game initialization and lifecycle
-  const newGame = () => {
-    gameId = Math.floor(Math.random() * 65536) + 1;
-    logs = []
-    newGameMutation({ seed: gameId });
-  };
-
-  onMount(() => {
-    setTimeout(() => {
-      newGame();
-    }, 50);
+  const playerMessages = subscriptionStore({
+    client,
+    query: PLAYER_PING_SUBSCRIPTION,
+    variables: { chainId: playerChainId },
   });
 
   // Reactive statements for block height and rendering
   let blockHeight = 0;
-  $: bh = $messages.data?.notifications?.reason?.NewBlock?.height;
+  $: bh = $gameMessages.data?.notifications?.reason?.NewBlock?.height;
   $: if (bh && bh !== blockHeight) {
     blockHeight = bh;
     game.reexecute({ requestPolicy: 'network-only' });
@@ -129,12 +118,12 @@
   // Logs for move history
   let logs: { hash: string, timestamp: string }[] = [];
   let lastHash = '';
-  $: isCurrentGame = $game.data?.game?.gameId === gameId;
-  $: if ($messages.data?.notifications?.reason?.NewBlock?.hash
-    && lastHash !== $messages.data.notifications.reason.NewBlock.hash
+  $: isCurrentGame = $game.data?.game?.boardId === boardId;
+  $: if ($gameMessages.data?.notifications?.reason?.NewBlock?.hash
+    && lastHash !== $gameMessages.data.notifications.reason.NewBlock.hash
     && isCurrentGame)
   {
-    lastHash = $messages.data.notifications.reason.NewBlock.hash;
+    lastHash = $gameMessages.data.notifications.reason.NewBlock.hash;
     logs = [{ hash: lastHash, timestamp: new Date().toISOString() }, ...logs];
   }
 
@@ -142,8 +131,8 @@
   const hasWon = (board: number[][]) => board.some(row => row.includes(11));
 
   const handleKeydown = (event: KeyboardEvent) => {
-    if ($game.data?.game?.isEnded) return;
-    makeMoveMutation({ gameId, direction: event.key });
+    if ($game.data?.game?.isEnded || !boardId) return;
+    makeMoveMutation({ boardId, direction: event.key });
   };
 
   const getOverlayMessage = (board: number[][]) => hasWon(board) ? "Congratulations! You Won!" : "Game Over! You Lost!";
@@ -153,7 +142,7 @@
 
 
 <div class="game-container">
-  <Header {canStartNewGame} value={$game.data?.game?.score || 0} on:click={newGame} />
+  <Header {canStartNewGame} {showBestScore} {player} value={$game.data?.game?.score || 0} />
   {#if $game.data?.game}
     <div class="game-board">
       <Board board={$game.data?.game?.board} />

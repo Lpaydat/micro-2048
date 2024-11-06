@@ -1,5 +1,5 @@
 <script>
-	import Board from "../organisms/Board.svelte";
+	import Board from "./Board.svelte";
 </script>
 
 <div class="flex justify-center items-center">

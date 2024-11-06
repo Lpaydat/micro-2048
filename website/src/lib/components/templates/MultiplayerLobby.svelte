@@ -1,13 +1,28 @@
 <script lang="ts">
+    import { getModalStore } from '@skeletonlabs/skeleton';
     import Swords from 'lucide-svelte/icons/swords';
+
 	import ActionButton from '../atoms/ActionButton.svelte';
 	import PageHeader from "../molecules/PageHeader.svelte";
     import MainTemplate from "../organisms/MainTemplate.svelte";
-	import UserSidebar from "../organisms/UserSidebar.svelte";
+	import UserSidebar from '../organisms/UserSidebar.svelte';
 	import WaitingGames from "../organisms/WaitingGames.svelte";
+    import EliminationGameForm from '../organisms/EliminationGameForm.svelte';
 	import type { EliminationGameDetails } from '$lib/types/eliminationGame';
+	import type { ModalSettings, ModalStore } from '@skeletonlabs/skeleton';
 
     export let username = 'lpaydat';
+
+    const modal: ModalSettings = {
+        type: 'component',
+        component: { ref: EliminationGameForm }
+    }
+
+    const modalStore: ModalStore = getModalStore();
+
+    const hostGame = () => {
+        modalStore.trigger(modal);
+    }
 
     const mockGames: Array<EliminationGameDetails & { playerCount: number }> = [
         {
@@ -55,7 +70,7 @@
                 <Swords size={28} />
             </svelte:fragment>
             <svelte:fragment slot="actions">
-                <ActionButton icon="plus" label="HOST GAME" on:click />
+                <ActionButton icon="plus" label="HOST GAME" on:click={hostGame} />
             </svelte:fragment>
         </PageHeader>
         <WaitingGames games={mockGames} />
