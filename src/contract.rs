@@ -210,7 +210,7 @@ impl Contract for Game2048Contract {
                 elimination_game.players.set(vec![player.clone()]);
                 elimination_game.host.set(player.clone());
                 elimination_game.status.set(EliminationGameStatus::Waiting);
-                elimination_game.total_round.set(settings.total_round);
+                elimination_game.total_rounds.set(settings.total_round);
                 elimination_game.current_round.set(0);
                 elimination_game.max_players.set(settings.max_players);
                 elimination_game
@@ -373,7 +373,7 @@ impl Contract for Game2048Contract {
                                 .await
                                 .unwrap();
                             *current_round += 1;
-                            let total_round = elimination_game.total_round.get();
+                            let total_round = elimination_game.total_rounds.get();
 
                             if *current_round <= *total_round {
                                 elimination_game.last_updated_time.set(timestamp);
@@ -504,7 +504,7 @@ impl Contract for Game2048Contract {
                             }
 
                             if is_round_ended {
-                                if current_round == elimination_game.total_round.get() {
+                                if current_round == elimination_game.total_rounds.get() {
                                     elimination_game.status.set(EliminationGameStatus::Ended);
                                     self.close_chain(&game_id).await;
                                 } else {

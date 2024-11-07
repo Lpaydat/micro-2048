@@ -1,12 +1,65 @@
 <script lang="ts">
-    import GameListItem from '../molecules/GameListItem.svelte';
+	import { getContextClient, gql, queryStore } from '@urql/svelte';
+	import { onMount } from 'svelte';
 	import type { EliminationGameDetails } from '$lib/types/eliminationGame';
+    import GameListItem from '../molecules/GameListItem.svelte';
 
-    export let games: Array<EliminationGameDetails> = [];
+    let games: Array<EliminationGameDetails> = [];
+
+    const GET_WAITING_GAMES = gql`
+        query GetWaitingGames {
+            waitingRooms {
+                gameId
+                chainId
+                gameName
+                host
+                players
+                maxPlayers
+                totalRounds
+                triggerIntervalSeconds
+                eliminatedPerTrigger
+                createdTime
+            }
+        }
+    `;
+
+    const client = getContextClient();
+    $: waitingGames = queryStore({
+        client,
+        query: GET_WAITING_GAMES,
+    });
+
+    onMount(() => {
+        waitingGames.reexecute({ requestPolicy: 'network-only' }); // Initial fetch
+        const interval = setInterval(() => {
+            waitingGames.reexecute({ requestPolicy: 'network-only' }); // Fetch every second
+        }, 1000); // Fetch every second
+
+        return () => {
+            clearInterval(interval); // Cleanup interval on component destroy
+        };
+    });
+
+    let initialFetch = true;
+    $: if (initialFetch && !$waitingGames.fetching) {
+        initialFetch = false;
+    }
+
+    $: {
+        games = ($waitingGames.data?.waitingRooms ?? []).map((game: any) => ({
+            ...game,
+            playerCount: game.players.length,
+            createdTime: new Date(parseInt(game.createdTime))
+        }));
+    }
 </script>
 
 <ul class="flex flex-col gap-4 mt-8 max-w-4xl mx-auto h-full">
-    {#if games.length > 0}
+    {#if initialFetch}
+        <li class="text-center p-8">
+            <div class="font-bold text-2xl text-[#776e65]">Loading...</div> <!-- Using 2048 game's yellow text color -->
+        </li>
+    {:else if games.length > 0}
         {#each games as game}
             <li>
                 <GameListItem data={game} />

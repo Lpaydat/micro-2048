@@ -64,7 +64,7 @@ pub struct EliminationGame {
     pub host: RegisterView<String>,
     pub players: RegisterView<Vec<String>>, // board_id = game_id:round:username
     pub status: RegisterView<EliminationGameStatus>,
-    pub total_round: RegisterView<u8>,
+    pub total_rounds: RegisterView<u8>,
     pub current_round: RegisterView<u8>,
     pub max_players: RegisterView<u8>,
     pub eliminated_per_trigger: RegisterView<u8>,

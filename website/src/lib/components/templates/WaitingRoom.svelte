@@ -25,7 +25,7 @@
     </svelte:fragment>
 
     <svelte:fragment slot="main">
-        <PageHeader title={data.name}>
+        <PageHeader title={data.gameName}>
             <svelte:fragment slot="icon">
                 <Clock size={28} />
             </svelte:fragment>

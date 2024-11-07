@@ -5,9 +5,9 @@
 
     export let data: EliminationGameDetails;
 
-    let { name, playerCount, maxPlayers, hostName, createdAt, totalRounds, eliminatedPerTrigger, triggerInterval } = data;
+    let { gameName: name, playerCount, maxPlayers, host: hostName, createdAt, totalRounds, eliminatedPerTrigger, triggerIntervalSeconds: triggerInterval } = data;
 
-    $: timeAgo = `${Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60))} minutes ago`;
+    // $: timeAgo = `${Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60))} minutes ago`;
 </script>
 
 <BaseListItem>
@@ -22,7 +22,7 @@
             <div class="flex items-center gap-2">
                 <div class="w-4 h-4 bg-warning-500 rounded"></div>
                 <span>{hostName}</span>
-                <span>{timeAgo}</span>
+                <!-- <span>{timeAgo}</span> -->
             </div>
             <div class="flex items-center gap-2">
                 <span>{totalRounds} rounds</span>
