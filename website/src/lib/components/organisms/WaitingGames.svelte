@@ -1,6 +1,7 @@
 <script lang="ts">
+	import { getContext, onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	import { getContextClient, gql, queryStore } from '@urql/svelte';
-	import { onMount } from 'svelte';
 	import type { EliminationGameDetails } from '$lib/types/eliminationGame';
     import GameListItem from '../molecules/GameListItem.svelte';
 
@@ -24,6 +25,8 @@
     `;
 
     const client = getContextClient();
+    const { username }: { username: string } = getContext('player');
+
     $: waitingGames = queryStore({
         client,
         query: GET_WAITING_GAMES,
@@ -46,11 +49,17 @@
     }
 
     $: {
-        games = ($waitingGames.data?.waitingRooms ?? []).map((game: any) => ({
-            ...game,
-            playerCount: game.players.length,
-            createdTime: new Date(parseInt(game.createdTime))
-        }));
+        games = ($waitingGames.data?.waitingRooms ?? []).map((game: any) => {
+            if (game.players.includes(username)) {
+                goto(`/elimination/${game.gameId}`);
+            }
+
+            return {
+                ...game,
+                playerCount: game.players.length,
+                createdTime: new Date(parseInt(game.createdTime))
+            }
+        });
     }
 </script>
 

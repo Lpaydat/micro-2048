@@ -24,6 +24,7 @@
 
     const client = getContextClient();
     const { username }: { username: string } = getContext('player');
+    let loading = false;
 
     const JOIN_GAME = gql`
         mutation JoinEliminationGame($player: String!, $gameId: String!) {
@@ -32,6 +33,7 @@
     `;
 
     const joinGame = (gameId: string) => {
+        loading = true;
         mutationStore({
             client, query: JOIN_GAME, variables: { player: username, gameId }
         });
@@ -82,6 +84,7 @@
             <ActionButton 
                 label="Join Game" 
                 color="warning" 
+                loading={loading}
                 on:click={() => joinGame(gameId)}
             />
         {/if}
