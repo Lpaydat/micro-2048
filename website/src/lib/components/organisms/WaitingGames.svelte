@@ -20,6 +20,7 @@
                 triggerIntervalSeconds
                 eliminatedPerTrigger
                 createdTime
+                status
             }
         }
     `;
@@ -48,19 +49,16 @@
         initialFetch = false;
     }
 
-    $: {
-        games = ($waitingGames.data?.waitingRooms ?? []).map((game: any) => {
-            if (game.players.includes(username)) {
-                goto(`/elimination/${game.gameId}`);
-            }
+    $: games = ($waitingGames.data?.waitingRooms ?? []).map((game: any) => {
+        if (game.players.includes(username) && game.status === 'Waiting') {
+            goto(`/elimination/${game.gameId}`);
+        }
 
-            return {
-                ...game,
-                playerCount: game.players.length,
-                createdTime: new Date(parseInt(game.createdTime))
-            }
-        });
-    }
+        return {
+            ...game,
+            playerCount: game.players.length,
+        }
+    });
 </script>
 
 <ul class="flex flex-col gap-4 mt-8 max-w-4xl mx-auto h-full">

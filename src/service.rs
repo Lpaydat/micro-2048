@@ -8,7 +8,6 @@ use self::state::Game2048;
 use async_graphql::{EmptySubscription, Object, Schema, SimpleObject};
 use game2048::{Direction, EliminationGameSettings, Game, MultiplayerGameAction, Operation};
 use linera_sdk::{base::WithServiceAbi, bcs, views::View, Service, ServiceRuntime};
-use state::EliminationGameStatus;
 
 pub struct Game2048Service {
     state: Arc<Game2048>,
@@ -164,12 +163,13 @@ impl QueryRoot {
         waiting_rooms
     }
 
-    async fn elimination_game(&self, game_id: String, round: u8) -> Option<EliminationGameState> {
+    async fn elimination_game(
+        &self,
+        game_id: String,
+        round: Option<u8>,
+    ) -> Option<EliminationGameState> {
+        let round = round.unwrap_or(0);
         if let Ok(Some(game)) = self.state.elimination_games.try_load_entry(&game_id).await {
-            if *game.status.get() == EliminationGameStatus::Waiting {
-                return None;
-            }
-
             let mut game_leaderboard: Vec<LeaderboardEntry> = Vec::new();
             game.game_leaderboard
                 .for_each_index_value(|username, score| {

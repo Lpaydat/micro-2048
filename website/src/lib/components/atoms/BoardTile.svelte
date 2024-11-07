@@ -36,6 +36,7 @@
 
 <style>
   .tile {
+    font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
     text-align: center;
     line-height: 120px;
     position: absolute;

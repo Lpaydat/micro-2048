@@ -136,7 +136,7 @@ impl Contract for Game2048Contract {
                     board.board.set(new_board);
                     board.score.set(score);
 
-                    if !board_id.contains(":") {
+                    if !board_id.contains("-") {
                         let is_ended = Game::is_ended(new_board);
                         if is_ended {
                             board.is_ended.set(true);
@@ -190,10 +190,10 @@ impl Contract for Game2048Contract {
                 let app_id = self.runtime.application_id().forget_abi();
                 let application_permissions = ApplicationPermissions::new_single(app_id);
                 let amount = Amount::from_tokens(0);
-                let (game_id, chain_id) =
+                let (_, chain_id) =
                     self.runtime
                         .open_chain(chain_ownership, application_permissions, amount);
-                let game_id = game_id.to_string();
+                let game_id = chain_id.to_string();
 
                 let elimination_game = self
                     .state
@@ -257,7 +257,7 @@ impl Contract for Game2048Contract {
                             .await
                             .unwrap();
                         for player in players {
-                            let board_id = format!("{}:{}:{}", game_id, 1, player);
+                            let board_id = format!("{}-{}-{}", game_id, 1, player);
                             let game = self.state.boards.load_entry_mut(&board_id).await.unwrap();
                             let new_board = Game::new(&board_id).board;
 
@@ -277,6 +277,9 @@ impl Contract for Game2048Contract {
                         }
                         elimination_game.status.set(EliminationGameStatus::Ended);
                         elimination_game.last_updated_time.set(timestamp);
+
+                        // Remove the game from the waiting_rooms list
+                        self.state.waiting_rooms.remove(&game_id).unwrap();
 
                         self.close_chain(&game_id).await;
                     }
@@ -381,7 +384,7 @@ impl Contract for Game2048Contract {
                                 // create boards
                                 for player in players {
                                     let board_id =
-                                        format!("{}:{}:{}", game_id, current_round, player);
+                                        format!("{}-{}-{}", game_id, current_round, player);
                                     let game =
                                         self.state.boards.load_entry_mut(&board_id).await.unwrap();
                                     let new_board = Game::new(&board_id).board;
@@ -490,7 +493,7 @@ impl Contract for Game2048Contract {
                             for player in eliminated_players {
                                 // End the player's board
                                 let board_id =
-                                    format!("{}:{}:{}", game_id, current_round, player.0);
+                                    format!("{}-{}-{}", game_id, current_round, player.0);
                                 let board =
                                     self.state.boards.load_entry_mut(&board_id).await.unwrap();
                                 board.is_ended.set(true);
@@ -619,7 +622,7 @@ impl Game2048Contract {
     }
 
     async fn parse_elimination_game_id(&self, board_id: &str) -> Option<(String, u8, String)> {
-        let parts: Vec<&str> = board_id.split(':').collect();
+        let parts: Vec<&str> = board_id.split('-').collect();
         if parts.len() == 3 {
             let game_id = parts[0].to_string();
             if let Ok(round_id) = parts[1].parse::<u8>() {

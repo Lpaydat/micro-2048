@@ -1,10 +1,11 @@
 <script lang="ts">
-  import { queryStore, mutationStore, subscriptionStore, gql, getContextClient } from '@urql/svelte';
+  import { queryStore, subscriptionStore, gql, getContextClient } from '@urql/svelte';
   import { onMount } from "svelte";
 
   import { getSubscriptionId } from '$lib/getSubscriptionId';
   import Header from "../molecules/BoardHeader.svelte";
   import Board from '../molecules/Board.svelte';
+	import { makeMove } from '$lib/graphql/mutations/makeMove';
 
   export let player: string;
   export let playerChainId: string;
@@ -36,12 +37,6 @@
     }
   `;
 
-  const MAKE_MOVE = gql`
-    mutation MakeMove($boardId: ID!, $direction: String!) {
-      makeMove(boardId: $boardId, direction: $direction)
-    }
-  `;
-
   const GAME_PING_SUBSCRIPTION = gql`
     subscription Notifications($chainId: ID!) {
       notifications(chainId: $chainId)
@@ -65,28 +60,11 @@
     requestPolicy: 'network-only',
   });
 
-  // Enum for move directions
-  const directionList = {
-    Up: "Up",
-    Down: "Down",
-    Left: "Left",
-    Right: "Right"
-  }
-
   // Mutation functions
   const makeMoveMutation = ({ boardId, direction }: { boardId: string, direction: string }) => {
     if (!canMakeMove) return;
 
-    const formattedDirection = direction.replace('Arrow', '');
-    if (!Object.values(directionList).includes(formattedDirection)) {
-      console.error('Invalid direction:', direction);
-      return;
-    }
-    mutationStore({
-      client,
-      query: MAKE_MOVE,
-      variables: { boardId, direction: formattedDirection },
-    });
+    makeMove(client, boardId, direction);
   };
 
   // Subscription for notifications

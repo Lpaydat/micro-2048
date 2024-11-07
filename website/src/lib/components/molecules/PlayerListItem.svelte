@@ -1,8 +1,10 @@
 <script lang="ts">
+    import Smile from 'lucide-svelte/icons/smile';
     import BaseListItem from './BaseListItem.svelte';
     
     export let playerName: string;
     export let isHost: boolean = false;
+    export let isYou: boolean = false;
     export let joinedAt: Date;
 
     // Format the joined time to show how long ago the player joined
@@ -15,9 +17,11 @@
             <div class="flex items-center gap-2">
                 <h3 class="text-lg font-semibold">{playerName}</h3>
                 {#if isHost}
-                    <span class="text-sm bg-warning-500 px-2 py-0.5 rounded-full text-white">
-                        Host
+                    <span class="text-xs font-semibold bg-orange-500 px-2 py-0.5 rounded-full text-white">
+                        HOST
                     </span>
+                {:else if isYou}
+                    <Smile size={20} />
                 {/if}
             </div>
             <div class="flex items-center gap-2 text-sm text-surface-700">

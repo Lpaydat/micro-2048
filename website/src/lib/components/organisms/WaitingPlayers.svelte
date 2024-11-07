@@ -1,12 +1,16 @@
 <script lang="ts">
+	import { getContext } from 'svelte';
     import PlayerListItem from '../molecules/PlayerListItem.svelte';
     
     export let players: Array<string> = [];
+
+    let { username }: { username: string } = getContext('player');
 
     // Convert simple string array to object array with default values
     $: playerObjects = players.map((name, index) => ({
         name,
         isHost: index === 0, // Assuming first player is host
+        isYou: name === username,
         joinedAt: new Date() // You might want to pass this as actual data
     }));
 </script>
@@ -19,6 +23,7 @@
                     <PlayerListItem 
                         playerName={player.name}
                         isHost={player.isHost}
+                        isYou={player.isYou}
                         joinedAt={player.joinedAt}
                     />
                 </li>

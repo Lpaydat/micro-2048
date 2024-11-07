@@ -1,12 +1,11 @@
 <script lang="ts">
     import type { EliminationGameDetails } from '$lib/types/eliminationGame';
+	import TimeAgo from '../atoms/TimeAgo.svelte';
 
     export let data: EliminationGameDetails;
     export let numberLabel: string = 'Players';
     export let numberA: number | undefined = 1;
     export let numberB: number;
-
-    $: timeAgo = `${Math.floor((Date.now() - new Date(data.createdTime).getTime()) / (1000 * 60))} minutes ago`;
 </script>
 
 <div class="game-details bg-[#faf8ef] p-4 mt-8 rounded-lg shadow-md max-w-2xl mx-auto">
@@ -26,7 +25,7 @@
 
             <div class="flex items-center gap-2">
                 <span class="text-[#bbada0]">Created</span>
-                <span class="font-bold text-[#776e65]">{timeAgo}</span>
+                <span class="font-bold text-[#776e65]"><TimeAgo time={data.createdTime} /></span>
             </div>
 
             <div class="flex items-center gap-2">

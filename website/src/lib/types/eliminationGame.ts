@@ -9,4 +9,5 @@ export type EliminationGameDetails = {
 	totalRounds: number;
 	eliminatedPerTrigger: number;
 	triggerIntervalSeconds: number;
+	status: 'Waiting' | 'Active' | 'Ended';
 };

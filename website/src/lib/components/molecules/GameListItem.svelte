@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { gql, getContextClient, mutationStore } from '@urql/svelte';
+	import { getContextClient } from '@urql/svelte';
     import BaseListItem from './BaseListItem.svelte';
     import ActionButton from '../atoms/ActionButton.svelte';
+	import TimeAgo from '../atoms/TimeAgo.svelte';
+	import { joinGame } from '$lib/graphql/mutations/joinGame';
 	import type { EliminationGameDetails } from '$lib/types/eliminationGame';
 
     export let data: EliminationGameDetails;
@@ -17,30 +19,26 @@
         createdTime,
         totalRounds,
         eliminatedPerTrigger,
-        triggerIntervalSeconds
+        triggerIntervalSeconds,
+        status
     } = data;
-
-    $: timeAgo = `${Math.floor((Date.now() - new Date(createdTime).getTime()) / (1000 * 60))} minutes ago`;
 
     const client = getContextClient();
     const { username }: { username: string } = getContext('player');
     let loading = false;
 
-    const JOIN_GAME = gql`
-        mutation JoinEliminationGame($player: String!, $gameId: String!) {
-            joinEliminationGame(player: $player, gameId: $gameId)
-        }
-    `;
-
-    const joinGame = (gameId: string) => {
+    const handleJoinGame = (gameId: string) => {
         loading = true;
-        mutationStore({
-            client, query: JOIN_GAME, variables: { player: username, gameId }
-        });
+        joinGame(client, username, gameId);
     }
 
     const enterGame = (gameId: string) => {
-        goto(`/elimination/${gameId}`);
+        console.log('status', status);
+        if (status === 'Waiting') {
+            goto(`/elimination/${gameId}`);
+        } else if (status === 'Active') {
+            goto(`/game/${gameId}`);
+        }
     }
 </script>
 
@@ -56,7 +54,7 @@
             <div class="flex items-center gap-2">
                 <div class="w-4 h-4 bg-warning-500 rounded"></div>
                 <span>{host}</span>
-                <span>{timeAgo}</span>
+                <TimeAgo time={createdTime} />
             </div>
             <div class="flex items-center gap-2">
                 <span>{totalRounds} rounds</span>
@@ -85,7 +83,7 @@
                 label="Join Game" 
                 color="warning" 
                 loading={loading}
-                on:click={() => joinGame(gameId)}
+                on:click={() => handleJoinGame(gameId)}
             />
         {/if}
     </div>

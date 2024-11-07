@@ -15,14 +15,14 @@
     };
 
     const hoverColorClasses = {
-        default: 'hover:bg-orange-500',
+        default: 'hover:bg-orange-500 hover:text-black',
         important: 'hover:bg-orange-600',
         warning: 'hover:bg-warning-600',
         danger: 'hover:bg-error-800',
         disabled: ''
     };
 
-    $: colorClass = baseColorClasses[color];
+    $: colorClass = baseColorClasses[disabled ? 'disabled' : color];
     $: hoverClass = !disabled && !loading ? hoverColorClasses[hoverColor || color] : '';
     $: loadingClass = loading ? 'cursor-not-allowed text-surface-400' : '';
 </script>

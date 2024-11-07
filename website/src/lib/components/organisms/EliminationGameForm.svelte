@@ -1,10 +1,11 @@
 <script lang="ts">
-	import { getContextClient, gql, mutationStore } from "@urql/svelte";
+	import { getContextClient } from "@urql/svelte";
 	import { getModalStore } from "@skeletonlabs/skeleton";
 	import { getContext } from "svelte";
 
     import Input from "../atoms/Input.svelte";
     import Button from "../atoms/Button.svelte";
+	import { createEliminationGame, type EliminationGameSettings } from "$lib/graphql/mutations/createEliminationGame";
 
     let totalRound = '';
     let eliminatedPerTrigger = '';
@@ -16,12 +17,6 @@
     const client = getContextClient();
     const modalStore = getModalStore();
     const { username }: { username: string } = getContext('player');
-
-    const CREATE_GAME = gql`
-        mutation CreateEliminationGame($player: String!, $settings: EliminationGameSettings!) {
-            createEliminationGame(player: $player, settings: $settings)
-        }
-    `;
 
     const handleSubmit = async () => {
         loading = true;
@@ -36,7 +31,7 @@
                 return;
             }
 
-            const settings = {
+            const settings: EliminationGameSettings = {
                 gameName: name,
                 totalRound: parseInt(totalRound),
                 maxPlayers: parseInt(maxPlayer),
@@ -45,11 +40,7 @@
                 createdTime: Date.now().toString()
             };
 
-            mutationStore({
-                client,
-                query: CREATE_GAME,
-                variables: { player: username, settings }
-            });
+            createEliminationGame(client, username, settings);
             await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
             modalStore.close();
         } finally {

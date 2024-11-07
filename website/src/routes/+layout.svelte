@@ -8,7 +8,7 @@
 	initializeStores();
 
 	const chainId = 'e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65';
-	const applicationId = 'b75ac543c34884fdb003813dc1026cff269e89a43fc04624b755fe5772254dc92b1cd3b485592ab64d3132ef6c5b7acead6a1e6b4e0be50e2f4c9f8c46a77282e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65b50100000000000000000000';
+	const applicationId = '2d2aabc26288a3e34d0fc0397f3987c18226e2ea049b46eef36039c719279f7dfab91bcfbb308a1d35f377c5b12caaf18c27ffeb9f8bf475ec99d3052f09deaee476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65310200000000000000000000';
 	const port = '8080';
 
 	const client = getClient(chainId, applicationId, port);
@@ -22,4 +22,4 @@
 
 <Modal />
 
-<slot></slot>
+<slot />
