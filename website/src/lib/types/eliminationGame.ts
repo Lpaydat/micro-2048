@@ -1,4 +1,5 @@
 export type EliminationGameDetails = {
+	gameId: string;
 	gameName: string;
 	playerCount: number;
 	maxPlayers: number;

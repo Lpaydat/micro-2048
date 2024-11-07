@@ -2,11 +2,13 @@
     export let icon: string = '';
     export let label: string = '';
     export let disabled: boolean = false;
-    export let color: 'default' | 'warning' | 'danger' | 'disabled' = 'default';
-    export let hoverColor: 'default' | 'warning' | 'danger' | 'disabled' = 'default';
+    export let color: 'default' | 'important' | 'warning' | 'danger' | 'disabled' = 'default';
+    export let hoverColor: 'default' | 'important' | 'warning' | 'danger' | 'disabled' = 'default';
+    export let loading: boolean = false;
 
     const baseColorClasses = {
-        default: 'bg-white/20',
+        default: 'bg-orange-500/50',
+        important: 'text-orange-600 variant-outline-primary hover:text-white',
         warning: 'bg-warning-500',
         danger: 'bg-error-500',
         disabled: 'bg-surface-300-600-token text-surface-600-300-token cursor-not-allowed'
@@ -14,22 +16,42 @@
 
     const hoverColorClasses = {
         default: 'hover:bg-orange-500',
+        important: 'hover:bg-orange-600',
         warning: 'hover:bg-warning-600',
         danger: 'hover:bg-error-800',
         disabled: ''
     };
 
     $: colorClass = baseColorClasses[color];
-    $: hoverClass = !disabled ? hoverColorClasses[hoverColor] : '';
+    $: hoverClass = !disabled && !loading ? hoverColorClasses[hoverColor || color] : '';
+    $: loadingClass = loading ? 'cursor-not-allowed text-surface-400' : '';
 </script>
 
 <button 
-    class="flex items-center rounded-lg px-4 py-2 text-sm font-bold transition-all {colorClass} {hoverClass} {!disabled && 'hover:shadow-md'}"
+    class="flex items-center justify-center rounded-lg px-4 py-2 text-sm font-bold transition-all {colorClass} {hoverClass} {loading ? 'cursor-not-allowed' : ''}"
     on:click
-    {disabled}
+    disabled={disabled || loading}
 >
-    {#if icon}
+    {#if loading}
+        <div class="loading-spinner mr-2"></div>
+    {:else if icon}
         <i class="fas fa-{icon}"></i>
     {/if}
-    <span class="tracking-wider">{label}</span>
+    <span class="tracking-wider {loadingClass}">{label}</span>
 </button> 
+
+<style>
+    .loading-spinner {
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-top: 4px solid #fff;
+        border-radius: 50%;
+        width: 16px;
+        height: 16px;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>

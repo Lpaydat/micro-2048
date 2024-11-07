@@ -50,7 +50,7 @@
                 query: CREATE_GAME,
                 variables: { player: username, settings }
             });
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+            await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
             modalStore.close();
         } finally {
             loading = false;

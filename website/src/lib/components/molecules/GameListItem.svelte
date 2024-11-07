@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { getContext } from 'svelte';
+	import { goto } from '$app/navigation';
+	import { gql, getContextClient, mutationStore } from '@urql/svelte';
     import BaseListItem from './BaseListItem.svelte';
     import ActionButton from '../atoms/ActionButton.svelte';
 	import type { EliminationGameDetails } from '$lib/types/eliminationGame';
@@ -6,6 +9,7 @@
     export let data: EliminationGameDetails;
 
     let {
+        gameId,
         gameName,
         playerCount,
         maxPlayers,
@@ -17,6 +21,25 @@
     } = data;
 
     $: timeAgo = `${Math.floor((Date.now() - new Date(createdTime).getTime()) / (1000 * 60))} minutes ago`;
+
+    const client = getContextClient();
+    const { username }: { username: string } = getContext('player');
+
+    const JOIN_GAME = gql`
+        mutation JoinEliminationGame($player: String!, $gameId: String!) {
+            joinEliminationGame(player: $player, gameId: $gameId)
+        }
+    `;
+
+    const joinGame = (gameId: string) => {
+        mutationStore({
+            client, query: JOIN_GAME, variables: { player: username, gameId }
+        });
+    }
+
+    const enterGame = (gameId: string) => {
+        goto(`/elimination/${gameId}`);
+    }
 </script>
 
 <BaseListItem>
@@ -43,7 +66,13 @@
         </div>
     </div>
     <div slot="right-content">
-        {#if playerCount >= maxPlayers}
+        {#if username === host}
+            <ActionButton 
+                label="Enter Game" 
+                color="important"
+                on:click={() => enterGame(gameId)} 
+            />
+        {:else if playerCount >= maxPlayers}
             <ActionButton 
                 label="Full" 
                 disabled={true} 
@@ -53,7 +82,7 @@
             <ActionButton 
                 label="Join Game" 
                 color="warning" 
-                on:click
+                on:click={() => joinGame(gameId)}
             />
         {/if}
     </div>
