@@ -3,7 +3,7 @@ export type EliminationGameDetails = {
 	playerCount: number;
 	maxPlayers: number;
 	host: string;
-	createdAt: Date;
+	createdTime: string;
 	currentRound?: number;
 	totalRounds: number;
 	eliminatedPerTrigger: number;

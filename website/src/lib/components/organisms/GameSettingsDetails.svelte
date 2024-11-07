@@ -6,7 +6,7 @@
     export let numberA: number | undefined = 1;
     export let numberB: number;
 
-    $: timeAgo = `${Math.floor((Date.now() - new Date(data.createdAt).getTime()) / (1000 * 60))} minutes ago`;
+    $: timeAgo = `${Math.floor((Date.now() - new Date(data.createdTime).getTime()) / (1000 * 60))} minutes ago`;
 </script>
 
 <div class="game-details bg-[#faf8ef] p-4 mt-8 rounded-lg shadow-md max-w-2xl mx-auto">
