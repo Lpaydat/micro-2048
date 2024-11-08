@@ -35,27 +35,6 @@
         variables: { chainId: gameId },
     });
 
-    onDestroy(() => {
-        gameMessages.pause();
-    })
-
-    const handleJoinGame = () => {
-        joinGame(client, username, gameId);
-    }
-
-    const handleLeaveGame = () => {
-        leaveGame(client, username, gameId);
-    }
-
-    const handleStartGame = () => {
-        if (data?.playerCount < 2) return;
-        startGame(client, gameId, username);
-    }
-
-    const handleEndGame = () => {
-        endGame(client, gameId, username);
-    }
-
     $: game = getGameDetails(client, gameId);
     $: data = $game.data?.eliminationGame && !$game.fetching 
         ? {
@@ -86,6 +65,28 @@
     $: if (bh && bh !== blockHeight) {
         blockHeight = bh;
         game.reexecute({ requestPolicy: 'network-only' });
+    }
+
+    onDestroy(() => {
+        gameMessages.pause();
+    })
+
+    const handleJoinGame = () => {
+        joinGame(client, username, gameId);
+        game.reexecute({ requestPolicy: 'network-only' });
+    }
+
+    const handleLeaveGame = () => {
+        leaveGame(client, username, gameId);
+    }
+
+    const handleStartGame = () => {
+        if (data?.playerCount < 2) return;
+        startGame(client, gameId, username);
+    }
+
+    const handleEndGame = () => {
+        endGame(client, gameId, username);
     }
 </script>
 

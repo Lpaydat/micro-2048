@@ -1,8 +1,6 @@
 <script lang="ts">
   import { queryStore, subscriptionStore, gql, getContextClient } from '@urql/svelte';
-  import { onMount } from "svelte";
 
-  import { getSubscriptionId } from '$lib/getSubscriptionId';
   import Header from "../molecules/BoardHeader.svelte";
   import Board from '../molecules/Board.svelte';
 	import { makeMove } from '$lib/graphql/mutations/makeMove';
@@ -55,9 +53,18 @@
 
   $: console.log('game', !$game.fetching && $game.data);
 
+  let moveTimeout: NodeJS.Timeout | null = null;
+
   // Mutation functions
   const makeMoveMutation = ({ boardId, direction }: { boardId: string, direction: string }) => {
     if (!canMakeMove) return;
+
+    canMakeMove = false;
+
+    // Set a timeout to re-enable moves after 200ms
+    moveTimeout = setTimeout(() => {
+      canMakeMove = true;
+    }, 150);
 
     makeMove(client, boardId, direction);
   };
@@ -74,6 +81,10 @@
   $: bh = $playerMessages.data?.notifications?.reason?.NewBlock?.height;
   $: if (bh && bh !== blockHeight) {
     blockHeight = bh;
+    canMakeMove = true;
+    if (moveTimeout) {
+      clearTimeout(moveTimeout); // Clear the timeout if a new block height is received
+    }
     game.reexecute({ requestPolicy: 'network-only' });
   }
 
@@ -98,7 +109,7 @@
   const hasWon = (board: number[][]) => board.some(row => row.includes(11));
 
   const handleKeydown = (event: KeyboardEvent) => {
-    if ($game.data?.game?.isEnded || !boardId) return;
+    if ($game.data?.board?.isEnded || !boardId) return;
     makeMoveMutation({ boardId, direction: event.key });
   };
 
@@ -109,8 +120,8 @@
 
 
 <div class="game-container">
-  <Header {canStartNewGame} {showBestScore} {player} value={$game.data?.game?.score || 0} />
-  {#if !$game.fetching}
+  <Header {canStartNewGame} {showBestScore} {player} value={$game.data?.board?.score || 0} />
+  {#if rendered}
     <div class="game-board">
       <Board board={$game.data?.board?.board} />
       {#if $game.data?.board?.isEnded}
@@ -126,7 +137,7 @@
 
 <style>
   .game-container {
-    max-width: 554px;
+    max-width: 555px;
     background-color: transparent;;
     margin: 0 auto;
     text-align: center;

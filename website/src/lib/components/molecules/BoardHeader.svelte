@@ -19,9 +19,9 @@
 	// Mutation functions
 	const newGameMutation = ({ seed }: { seed: number }) => {
 		mutationStore({
-		client,
-		query: NEW_BOARD,
-		variables: { seed, player },
+			client,
+			query: NEW_BOARD,
+			variables: { seed, player },
 		});
 	};
 
@@ -56,7 +56,7 @@
 			New Game
 		</button>
 	{:else}
-		<div class="flex items-center justify-center text-2xl text-[#f67c5f] font-bold">
+		<div class="flex items-center justify-center text-2xl text-[#f67c5f] font-bold" style="font-family: 'Clear Sans', 'Arial', sans-serif;">
 			{player}
 		</div>
 	{/if}

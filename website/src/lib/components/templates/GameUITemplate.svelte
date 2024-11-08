@@ -41,7 +41,6 @@
         variables: { chainId: playerChainId },
     });
 
-    $: console.log('gameId', gameId);
     $: game = getGameDetails(client, gameId, parseInt(round));
     $: data = $game.data?.eliminationGame && !$game.fetching 
         ? {
@@ -49,8 +48,6 @@
             playerCount: $game.data.eliminationGame.players.length
         }
         : {};
-
-    $: console.log('data', data);
 
     // plans
     // use this component to check for ping messages
@@ -87,7 +84,7 @@
         <div class="flex justify-center items-center h-full">
             <div class="w-full max-w-2xl pb-28">
                 <Game
-                    player={username}
+                    player={player}
                     playerChainId={playerChainId}
                     boardId={boardId}
                     canStartNewGame={!isMultiplayer}

@@ -37,8 +37,6 @@
 		"globals": "^15.0.0",
 		"graphql": "^16.9.0",
 		"graphql-ws": "^5.16.0",
-		"houdini": "^1.3.0",
-		"houdini-svelte": "^2.0.0",
 		"lucide-svelte": "^0.454.0",
 		"prettier": "^3.1.1",
 		"prettier-plugin-svelte": "^3.1.2",
@@ -54,5 +52,8 @@
 		"vitest": "^2.0.0",
 		"wrangler": "^3.83.0"
 	},
-	"type": "module"
+	"type": "module",
+	"dependencies": {
+		"@urql/exchange-throw-on-error": "^0.1.0"
+	}
 }
