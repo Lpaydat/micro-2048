@@ -3,24 +3,18 @@
   import type { PopupSettings } from '@skeletonlabs/skeleton';
   import ListItem from '../molecules/LeaderboardItem.svelte'
   import { ChevronDown } from 'lucide-svelte';
+	import type { PlayerStats, RoundResults } from '$lib/types/leaderboard';
 
   export let currentRound: number = 1;
+  export let gameLeaderboard: PlayerStats[] = [];
+  export let roundLeaderboard: RoundResults = {
+    round: 0,
+    players: [],
+    eliminatedPlayers: []
+  };
 
   let selectedRound = currentRound;
-  let activeTab = 0;
-
-  // Mock data - replace with real data
-  const gameLeaderboard = [
-    { rank: 1, name: 'lpaydat', score: 1000 },
-    { rank: 2, name: 'Life Goes On', score: 800 },
-    { rank: 3, name: 'RoyCrypto', score: 600 },
-  ];
-
-  const roundLeaderboard = [
-    { rank: 1, name: 'Player 2', score: 300 },
-    { rank: 2, name: 'Player 1', score: 250 },
-    { rank: 3, name: 'Player 3', score: 200 },
-  ];
+  let activeTab = 1;
 
   const blockHashes = [
     { block: 1, hash: '0x1234567890abcdef...' },
@@ -32,14 +26,24 @@
     target: 'popupRoundSelect',
     placement: 'bottom'
   };
+
+  $: sortedGameLeaderboard = gameLeaderboard
+    .slice() // Create a shallow copy to avoid mutating the original array
+    .sort((a, b) => b.score - a.score) // Sort by score in descending order
+    .map((player, index) => ({ ...player, rank: index + 1 })); // Add rank based on sorted position
+
+  $: combinedRoundLeaderboard = [...roundLeaderboard.players, ...roundLeaderboard.eliminatedPlayers]
+    .map(player => ({ ...player, isEliminated: roundLeaderboard.eliminatedPlayers.includes(player) }))
+    .sort((a, b) => b.score - a.score)
+    .map((player, index) => ({ ...player, rank: index + 1 }));
 </script>
 
 <div class="text-center p-6 w-80 rounded-lg bg-[#FAF8EF] shadow-md max-w-md mx-auto">
   <header class="flex flex-col items-center mb-4">
     <h1 class="text-3xl font-bold text-[#776E65] mb-2">Leaderboard</h1>
     <TabGroup>
-      <Tab bind:group={activeTab} name="tab1" value={0}>Game</Tab>
-      <Tab bind:group={activeTab} name="tab2" value={1}>
+      <Tab class="hover:bg-transparent" bind:group={activeTab} name="tab1" value={0}>Game</Tab>
+      <Tab class="hover:bg-transparent" bind:group={activeTab} name="tab2" value={1}>
         Round {currentRound}
         <button 
           class="ml-2"
@@ -48,7 +52,7 @@
           <ChevronDown size={18} />
         </button>
       </Tab>
-      <Tab bind:group={activeTab} name="tab3" value={2}>Blocks</Tab>
+      <Tab class="hover:bg-transparent" bind:group={activeTab} name="tab3" value={2}>Blocks</Tab>
     </TabGroup>
     {#if selectedRound !== currentRound}
       <p class="text-sm text-gray-600 mt-2">Viewing Round {selectedRound}</p>
@@ -58,14 +62,14 @@
   <div class="overflow-y-auto h-[calc(100%-3rem)]">
     {#if activeTab === 0}
       <ul class="list-none p-0 border-sm">
-        {#each gameLeaderboard as {rank, name, score}}
-          <ListItem {rank} {name} {score} />
+        {#each sortedGameLeaderboard as {rank, username, score}}
+          <ListItem {rank} name={username} {score} />
         {/each}
       </ul>
     {:else if activeTab === 1}
       <ul class="list-none p-0 border-sm">
-        {#each roundLeaderboard as {rank, name, score}}
-          <ListItem {rank} {name} {score} />
+        {#each combinedRoundLeaderboard as {rank, username, score, isEliminated}}
+          <ListItem {rank} name={username} {score} {isEliminated} />
         {/each}
       </ul>
     {:else if activeTab === 2}

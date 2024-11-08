@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { getContextClient, gql, queryStore, subscriptionStore } from '@urql/svelte';
-	import { getContext } from 'svelte';
+	import { getContextClient, gql, subscriptionStore } from '@urql/svelte';
+	import { getContext, onDestroy } from 'svelte';
     import Clock from 'lucide-svelte/icons/clock-4';
     import { page } from '$app/stores';
 
@@ -15,26 +15,9 @@
 	import { startGame } from '$lib/graphql/mutations/startGame';
 	import { endGame } from '$lib/graphql/mutations/endGame';
 	import { goto } from '$app/navigation';
+	import { getGameDetails } from '$lib/graphql/queries/getGameDetails';
 
     const gameId = $page.params.gameId;
-    const GET_GAME = gql`
-        query GetEliminationGameDetails($gameId: String!) {
-            eliminationGame(gameId: $gameId) {
-                gameId
-                chainId
-                gameName
-                host
-                players
-                maxPlayers
-                currentRound
-                totalRounds
-                triggerIntervalSeconds
-                eliminatedPerTrigger
-                createdTime
-                status
-            }
-        }
-    `;
 
     const client = getContextClient();
     let { username }: { username: string } = getContext('player');
@@ -51,6 +34,10 @@
         query: GAME_PING_SUBSCRIPTION,
         variables: { chainId: gameId },
     });
+
+    onDestroy(() => {
+        gameMessages.pause();
+    })
 
     const handleJoinGame = () => {
         joinGame(client, username, gameId);
@@ -69,7 +56,7 @@
         endGame(client, gameId, username);
     }
 
-    $: game = queryStore({ client, query: GET_GAME, variables: { gameId } });
+    $: game = getGameDetails(client, gameId);
     $: data = $game.data?.eliminationGame && !$game.fetching 
         ? {
             ...$game.data.eliminationGame,
@@ -108,7 +95,7 @@
     </svelte:fragment>
 
     <svelte:fragment slot="main">
-        <PageHeader title={gameName}>
+        <PageHeader title={gameName} prevPage={data?.status === 'Ended' ? '/elimination': undefined}>
             <svelte:fragment slot="icon">
                 <Clock size={28} />
             </svelte:fragment>

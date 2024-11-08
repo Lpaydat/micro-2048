@@ -47,17 +47,19 @@
 	$: bestScoreLabelAlign = bestScoreValue.toString().length > 3 ? 'left' : 'center';
 </script>
 
-<style>
-	/* Tailwind CSS is used, so no custom styles are needed here */
-</style>
-
 <div class="flex justify-between items-center w-[555px]">
-	<button 
-		on:click={newSingleGame}
-		class="bg-[#8f7a66] rounded-md px-5 text-[#f9f6f2] h-10 text-center border-none font-bold 
-		{canStartNewGame ? 'visible' : 'invisible'}">
-		New Game
-	</button>
+	{#if canStartNewGame}
+		<button 
+			on:click={newSingleGame}
+			class="bg-[#8f7a66] rounded-md px-5 text-[#f9f6f2] h-10 text-center border-none font-bold 
+			{canStartNewGame ? 'visible' : 'invisible'}">
+			New Game
+		</button>
+	{:else}
+		<div class="flex items-center justify-center text-2xl text-[#f67c5f] font-bold">
+			{player}
+		</div>
+	{/if}
 	<div class="flex flex-row items-center transition-all">
 		<div class="flex flex-col bg-[#bbada0] p-2 font-bold rounded-md text-white ml-2 mb-2 min-w-16">
 			<div class="text-xs text-[#eee4da] text-{scoreLabelAlign}">Score</div>

@@ -9,7 +9,6 @@
 
   export let player: string;
   export let playerChainId: string;
-  export let gameChainId: string | undefined;
   export let boardId: string | undefined = undefined;
 
   export let canStartNewGame: boolean = true;
@@ -37,12 +36,6 @@
     }
   `;
 
-  const GAME_PING_SUBSCRIPTION = gql`
-    subscription Notifications($chainId: ID!) {
-      notifications(chainId: $chainId)
-    }
-  `;
-
   const PLAYER_PING_SUBSCRIPTION = gql`
     subscription Notifications($chainId: ID!) {
       notifications(chainId: $chainId)
@@ -60,6 +53,8 @@
     requestPolicy: 'network-only',
   });
 
+  $: console.log('game', !$game.fetching && $game.data);
+
   // Mutation functions
   const makeMoveMutation = ({ boardId, direction }: { boardId: string, direction: string }) => {
     if (!canMakeMove) return;
@@ -68,12 +63,6 @@
   };
 
   // Subscription for notifications
-  const gameMessages = subscriptionStore({
-    client,
-    query: GAME_PING_SUBSCRIPTION,
-    variables: { chainId: gameChainId },
-  });
-
   const playerMessages = subscriptionStore({
     client,
     query: PLAYER_PING_SUBSCRIPTION,
@@ -82,7 +71,7 @@
 
   // Reactive statements for block height and rendering
   let blockHeight = 0;
-  $: bh = $gameMessages.data?.notifications?.reason?.NewBlock?.height;
+  $: bh = $playerMessages.data?.notifications?.reason?.NewBlock?.height;
   $: if (bh && bh !== blockHeight) {
     blockHeight = bh;
     game.reexecute({ requestPolicy: 'network-only' });
@@ -97,11 +86,11 @@
   let logs: { hash: string, timestamp: string }[] = [];
   let lastHash = '';
   $: isCurrentGame = $game.data?.game?.boardId === boardId;
-  $: if ($gameMessages.data?.notifications?.reason?.NewBlock?.hash
-    && lastHash !== $gameMessages.data.notifications.reason.NewBlock.hash
+  $: if ($playerMessages.data?.notifications?.reason?.NewBlock?.hash
+    && lastHash !== $playerMessages.data.notifications.reason.NewBlock.hash
     && isCurrentGame)
   {
-    lastHash = $gameMessages.data.notifications.reason.NewBlock.hash;
+    lastHash = $playerMessages.data.notifications.reason.NewBlock.hash;
     logs = [{ hash: lastHash, timestamp: new Date().toISOString() }, ...logs];
   }
 
@@ -121,12 +110,12 @@
 
 <div class="game-container">
   <Header {canStartNewGame} {showBestScore} {player} value={$game.data?.game?.score || 0} />
-  {#if $game.data?.game}
+  {#if !$game.fetching}
     <div class="game-board">
-      <Board board={$game.data?.game?.board} />
-      {#if $game.data?.game?.isEnded}
+      <Board board={$game.data?.board?.board} />
+      {#if $game.data?.board?.isEnded}
         <div class="overlay">
-          <p>{getOverlayMessage($game.data?.game?.board)}</p>
+          <p>{getOverlayMessage($game.data?.board?.board)}</p>
         </div>
       {/if}
     </div>
