@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { getContextClient } from '@urql/svelte';
     import BaseListItem from './BaseListItem.svelte';
@@ -33,7 +32,6 @@
     }
 
     const enterGame = (gameId: string) => {
-        console.log('status', status);
         if (status === 'Waiting') {
             goto(`/elimination/${gameId}`);
         } else if (status === 'Active') {

@@ -30,7 +30,7 @@
   };
 
   $: sortedGameLeaderboard = gameLeaderboard
-    .slice() // Create a shallow copy to avoid mutating the original array
+    ?.slice() // Create a shallow copy to avoid mutating the original array
     .sort((a, b) => b.score - a.score) // Sort by score in descending order
     .map((player, index) => ({ ...player, rank: index + 1 })); // Add rank based on sorted position
 

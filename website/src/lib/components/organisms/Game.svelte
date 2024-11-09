@@ -5,6 +5,7 @@
   import Board from '../molecules/Board.svelte';
 	import { makeMove } from '$lib/graphql/mutations/makeMove';
 	import { onDestroy } from 'svelte';
+	import { getMessageBlockheight } from '$lib/utils/getMessageBlockheight';
 
   export let player: string;
   export let score: number = 0;
@@ -84,7 +85,7 @@
 
   // Reactive statements for block height and rendering
   let blockHeight = 0;
-  $: bh = $playerMessages.data?.notifications?.reason?.NewBlock?.height;
+  $: bh = getMessageBlockheight($playerMessages.data);
   $: if (bh && bh !== blockHeight) {
     blockHeight = bh;
     canMakeMove = true;
@@ -100,6 +101,7 @@
   }
 
   // Logs for move history
+  // TODO: check this out, I don't think it's working
   let logs: { hash: string, timestamp: string }[] = [];
   let lastHash = '';
   $: isCurrentGame = $game.data?.game?.boardId === boardId;

@@ -17,6 +17,7 @@
 	import { goto } from '$app/navigation';
 	import { getGameDetails } from '$lib/graphql/queries/getGameDetails';
 	import { userStore } from '$lib/stores/userStore';
+	import { getMessageBlockheight } from '$lib/utils/getMessageBlockheight';
 
     const gameId = $page.params.gameId;
 
@@ -62,7 +63,7 @@
 
     // Reactive statements for block height and game query reexecution
     let blockHeight = 0;
-    $: bh = $gameMessages.data?.notifications?.reason?.NewBlock?.height;
+    $: bh = getMessageBlockheight($gameMessages.data);
     $: if (bh && bh !== blockHeight) {
         blockHeight = bh;
         game.reexecute({ requestPolicy: 'network-only' });
@@ -74,7 +75,7 @@
 
     const handleJoinGame = () => {
         joinGame(client, username, gameId);
-        game.reexecute({ requestPolicy: 'network-only' });
+        // game.reexecute({ requestPolicy: 'network-only' });
     }
 
     const handleLeaveGame = () => {
@@ -88,7 +89,10 @@
 
     const handleEndGame = () => {
         endGame(client, gameId, username);
+        // game.reexecute({ requestPolicy: 'network-only' });
     }
+
+    $: prevPage = data?.status === 'Ended' ? '/elimination' : undefined;
 </script>
 
 <MainTemplate>
@@ -97,7 +101,7 @@
     </svelte:fragment>
 
     <svelte:fragment slot="main">
-        <PageHeader title={gameName} prevPage={data?.status === 'Ended' ? '/elimination': undefined}>
+        <PageHeader title={gameName} {prevPage}>
             <svelte:fragment slot="icon">
                 <Clock size={28} />
             </svelte:fragment>

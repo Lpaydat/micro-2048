@@ -1,12 +1,10 @@
 <script lang="ts">
-	import { onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { getContextClient, gql, queryStore, subscriptionStore } from '@urql/svelte';
+	import { getContextClient, gql, queryStore } from '@urql/svelte';
 	import type { EliminationGameDetails } from '$lib/types/eliminationGame';
     import GameListItem from '../molecules/GameListItem.svelte';
 	import { userStore } from '$lib/stores/userStore';
-	import { page } from '$app/stores';
-	import { PING_SUBSCRIPTION } from '$lib/graphql/subscriptions/subscriptions';
 
     let games: Array<EliminationGameDetails> = [];
 
@@ -28,9 +26,6 @@
         }
     `;
 
-    const gameId = $page.params.gameId;
-    let lastHash = '';
-
     const client = getContextClient();
 
     $: waitingGames = queryStore({
@@ -38,31 +33,18 @@
         query: GET_WAITING_GAMES,
     });
 
-    // Subscription for notifications
-    const gameMessages = subscriptionStore({
-        client,
-        query: PING_SUBSCRIPTION,
-        variables: { chainId: gameId },
-    });
+    let intervalId: NodeJS.Timeout;
 
-    // Check for new game messages every second
-    setInterval(() => {
-        if ($gameMessages.data?.notifications?.reason?.NewBlock?.hash && 
-            $gameMessages.data.notifications.reason.NewBlock.hash !== lastHash) {
-            lastHash = $gameMessages.data.notifications.reason.NewBlock.hash;
-            waitingGames.reexecute({ requestPolicy: 'network-only' });
-        }
-    }, 1000);
-
-    let blockHeight = 0;
-    $: bh = $gameMessages.data?.notifications?.reason?.NewBlock?.height;
-    $: if (bh && bh !== blockHeight) {
-        blockHeight = bh;
+    onMount(() => {
         waitingGames.reexecute({ requestPolicy: 'network-only' });
-    }
 
-    onDestroy(() => {
-        gameMessages.pause();
+        intervalId = setInterval(() => {
+            waitingGames.reexecute({ requestPolicy: 'network-only' });
+        }, 1000);
+
+        return () => {
+            clearInterval(intervalId);
+        };
     });
 
     let initialFetch = true;
@@ -70,16 +52,20 @@
         initialFetch = false;
     }
 
-    $: games = ($waitingGames.data?.waitingRooms ?? []).map((game: any) => {
-        if (game.players.includes($userStore.username) && game.status === 'Waiting') {
-            goto(`/elimination/${game.gameId}`);
-        }
+    $: {
+        setTimeout(() => {
+            games = ($waitingGames.data?.waitingRooms ?? []).map((game: any) => {
+                if (game.players.includes($userStore.username) && game.status === 'Waiting') {
+                    goto(`/elimination/${game.gameId}`);
+                }
 
-        return {
-            ...game,
-            playerCount: game.players.length,
-        }
-    });
+                return {
+                    ...game,
+                    playerCount: game.players.length,
+                }
+            });
+        }, 1000);
+    }
 </script>
 
 <ul class="flex flex-col gap-4 mt-8 max-w-4xl mx-auto h-full">

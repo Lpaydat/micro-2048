@@ -2,7 +2,7 @@
     export let title: string;
     export let prevPage: string | undefined = undefined;
 
-    let headerRound = !prevPage ? 'rounded-bl-lg' : '';
+    $: headerRound = !prevPage ? 'rounded-bl-lg' : '';
 </script>
 
 <div class="h2 font-bold flex items-center gap-4 bg-gradient-to-r from-warning-500 to-warning-600 text-white {headerRound} p-4 shadow-md transition-all relative">

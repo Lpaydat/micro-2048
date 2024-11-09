@@ -111,6 +111,14 @@ impl QueryRoot {
         }
     }
 
+    async fn check_player(&self, username: String, password_hash: String) -> Option<bool> {
+        if let Ok(Some(player)) = self.state.players.try_load_entry(&username).await {
+            Some(*player.password_hash.get().to_string() == password_hash)
+        } else {
+            return None;
+        }
+    }
+
     async fn board(&self, board_id: String) -> Option<BoardState> {
         if let Ok(Some(game)) = self.state.boards.try_load_entry(&board_id).await {
             let game_state = BoardState {

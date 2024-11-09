@@ -107,7 +107,7 @@
 
   // Reactive statements for block height and rendering
   let blockHeight = 0;
-  $: bh = $messages.data?.notifications?.reason?.NewBlock?.height;
+  $: bh = getMessageBlockheight($messages.data);
   $: if (bh && bh !== blockHeight) {
     blockHeight = bh;
     game.reexecute({ requestPolicy: 'network-only' });
@@ -139,6 +139,11 @@
   };
 
   const getOverlayMessage = (board: number[][]) => hasWon(board) ? "Congratulations! You Won!" : "Game Over! You Lost!";
+
+
+  function getMessageBlockheight(data: any): any {
+    throw new Error('Function not implemented.');
+  }
 </script>
 
 <svelte:window on:keydown={handleKeydown} />

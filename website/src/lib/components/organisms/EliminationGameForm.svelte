@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { getContextClient } from "@urql/svelte";
 	import { getModalStore } from "@skeletonlabs/skeleton";
-	import { getContext } from "svelte";
 
     import Input from "../atoms/Input.svelte";
     import Button from "../atoms/Button.svelte";
@@ -41,7 +40,7 @@
             };
 
             createEliminationGame(client, $userStore.username, settings);
-            await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
             modalStore.close();
         } finally {
             loading = false;
