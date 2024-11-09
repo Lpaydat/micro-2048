@@ -1,16 +1,55 @@
 <script lang="ts">
+	import { getContextClient, mutationStore, gql } from "@urql/svelte";
   import Input from "../atoms/Input.svelte";
   import Button from "../atoms/Button.svelte";
+	import { hashPassword } from "$lib/utils/hashPassword";
+	import { userStore } from "$lib/stores/userStore";
+	import { getPlayerInfo } from "$lib/graphql/queries/getPlayerInfo";
 
   let username = '';
+  let submittedUsername = '';
+  let passwordHash = '';
   let password = '';
   let loading = false;
 
+  const REGISTER_PLAYER = gql`
+    mutation RegisterPlayer($username: String!, $passwordHash: String!) {
+      registerPlayer(username: $username, passwordHash: $passwordHash)
+    }
+  `;
+
+  const client = getContextClient();
+
+  $: player = getPlayerInfo(client, submittedUsername)
+
+  // TODO: make it loginable and check if user already exists
+  $: if (!$player.fetching && $player.data?.player) {
+    userStore.update(store => ({
+      ...store,
+      username: $player.data.player.username,
+      chainId: $player.data.player.chainId
+    }));
+  }
+
+  const registerPlayer = async () => {
+    passwordHash = await hashPassword(password);
+    mutationStore({
+      client,
+      query: REGISTER_PLAYER,
+      variables: { username, passwordHash }
+    })
+  };
+
   const handleSubmit = async () => {
     loading = true;
+    submittedUsername = username;
     try {
+      registerPlayer()
       await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      console.log('Form submitted:', { username, password });
+      // localStorage.setItem('username', username);
+      username = '';
+      password = '';
+      player.reexecute({ requestPolicy: 'network-only' });
     } finally {
       loading = false;
     }

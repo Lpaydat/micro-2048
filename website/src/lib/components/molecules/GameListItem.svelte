@@ -7,6 +7,7 @@
 	import TimeAgo from '../atoms/TimeAgo.svelte';
 	import { joinGame } from '$lib/graphql/mutations/joinGame';
 	import type { EliminationGameDetails } from '$lib/types/eliminationGame';
+	import { userStore } from '$lib/stores/userStore';
 
     export let data: EliminationGameDetails;
 
@@ -24,12 +25,11 @@
     } = data;
 
     const client = getContextClient();
-    const { username }: { username: string } = getContext('player');
     let loading = false;
 
     const handleJoinGame = (gameId: string) => {
         loading = true;
-        joinGame(client, username, gameId);
+        joinGame(client, $userStore.username, gameId);
     }
 
     const enterGame = (gameId: string) => {
@@ -66,7 +66,7 @@
         </div>
     </div>
     <div slot="right-content">
-        {#if username === host}
+        {#if $userStore.username === host}
             <ActionButton 
                 label="Enter Game" 
                 color="important"

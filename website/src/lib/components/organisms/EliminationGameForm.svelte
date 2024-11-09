@@ -6,6 +6,7 @@
     import Input from "../atoms/Input.svelte";
     import Button from "../atoms/Button.svelte";
 	import { createEliminationGame, type EliminationGameSettings } from "$lib/graphql/mutations/createEliminationGame";
+	import { userStore } from "$lib/stores/userStore";
 
     let totalRound = '';
     let eliminatedPerTrigger = '';
@@ -16,7 +17,6 @@
 
     const client = getContextClient();
     const modalStore = getModalStore();
-    const { username }: { username: string } = getContext('player');
 
     const handleSubmit = async () => {
         loading = true;
@@ -40,7 +40,7 @@
                 createdTime: Date.now().toString()
             };
 
-            createEliminationGame(client, username, settings);
+            createEliminationGame(client, $userStore.username, settings);
             await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
             modalStore.close();
         } finally {

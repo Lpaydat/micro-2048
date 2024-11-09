@@ -16,8 +16,8 @@
 
 	setContext('player', {
 		chainId,
-		username: 'mint'
-	})
+		username: 'lpaydat'
+	});
 </script>
 
 <Modal />

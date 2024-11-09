@@ -6,6 +6,8 @@
 	import type { PlayerStats, RoundResults } from '$lib/types/leaderboard';
 
   export let currentRound: number = 1;
+  export let player: string;
+  export let currentPlayerScore: number = 0; // round score
   export let gameLeaderboard: PlayerStats[] = [];
   export let roundLeaderboard: RoundResults = {
     round: 0,
@@ -33,12 +35,16 @@
     .map((player, index) => ({ ...player, rank: index + 1 })); // Add rank based on sorted position
 
   $: combinedRoundLeaderboard = [...roundLeaderboard.players, ...roundLeaderboard.eliminatedPlayers]
-    .map(player => ({ ...player, isEliminated: roundLeaderboard.eliminatedPlayers.includes(player) }))
+    .map(p => ({
+      ...p,
+      isEliminated: roundLeaderboard.eliminatedPlayers.includes(p),
+      score: p.username === player ? currentPlayerScore : p.score
+    }))
     .sort((a, b) => b.score - a.score)
     .map((player, index) => ({ ...player, rank: index + 1 }));
 </script>
 
-<div class="text-center p-6 w-80 rounded-lg bg-[#FAF8EF] shadow-md max-w-md mx-auto">
+<div class="text-center p-6 w-80 mt-6 max-h-full rounded-lg bg-[#FAF8EF] shadow-md max-w-md mx-auto">
   <header class="flex flex-col items-center mb-4">
     <h1 class="text-3xl font-bold text-[#776E65] mb-2">Leaderboard</h1>
     <TabGroup>
@@ -59,23 +65,23 @@
     {/if}
   </header>
 
-  <div class="overflow-y-auto h-[calc(100%-3rem)]">
+  <div class="list-container overflow-y-auto overflow-x-hidden h-[calc(100%-3rem)]">
     {#if activeTab === 0}
       <ul class="list-none p-0 border-sm">
         {#each sortedGameLeaderboard as {rank, username, score}}
-          <ListItem {rank} name={username} {score} />
+          <ListItem {rank} name={username} isCurrentPlayer={username === player} {score} />
         {/each}
       </ul>
     {:else if activeTab === 1}
       <ul class="list-none p-0 border-sm">
         {#each combinedRoundLeaderboard as {rank, username, score, isEliminated}}
-          <ListItem {rank} name={username} {score} {isEliminated} />
+          <ListItem {rank} name={username} isCurrentPlayer={username === player} {score} {isEliminated} />
         {/each}
       </ul>
     {:else if activeTab === 2}
       <ul class="list-none p-0 border-sm">
         {#each blockHashes as {block, hash}}
-          <li class="flex justify-between">
+          <li class="flex justify-between snap-start">
             <span>Block {block}</span>
             <span>{hash}</span>
           </li>
@@ -96,5 +102,15 @@
 
   .border-sm {
     border-radius: 6px !important;
+  }
+
+  .list-container {
+    max-height: calc(100vh - 10rem); /* Adjust the height as needed */
+    overflow-y: auto;
+    scroll-snap-type: y mandatory; /* Enable vertical snapping */
+  }
+
+  .snap-start {
+    scroll-snap-align: start; /* Align items to the start of the container */
   }
 </style> 

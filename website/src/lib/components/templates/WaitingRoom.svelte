@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContextClient, gql, subscriptionStore } from '@urql/svelte';
-	import { getContext, onDestroy } from 'svelte';
+	import { onDestroy } from 'svelte';
     import Clock from 'lucide-svelte/icons/clock-4';
     import { page } from '$app/stores';
 
@@ -16,11 +16,12 @@
 	import { endGame } from '$lib/graphql/mutations/endGame';
 	import { goto } from '$app/navigation';
 	import { getGameDetails } from '$lib/graphql/queries/getGameDetails';
+	import { userStore } from '$lib/stores/userStore';
 
     const gameId = $page.params.gameId;
 
     const client = getContextClient();
-    let { username }: { username: string } = getContext('player');
+    $: username = $userStore.username;
 
     const GAME_PING_SUBSCRIPTION = gql`
         subscription Notifications($chainId: ID!) {

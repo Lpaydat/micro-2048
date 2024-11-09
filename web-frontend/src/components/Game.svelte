@@ -2,7 +2,7 @@
   // Import necessary modules and components
   import { queryStore, mutationStore, subscriptionStore, gql, getContextClient } from '@urql/svelte';
   import Header from "./Header.svelte";
-  import { onMount } from "svelte";
+  import { onDestroy, onMount } from "svelte";
   import Board from './Board.svelte';
   import MoveLogs from './MoveLogs.svelte';
   import Introduction from './Introduction.svelte';
@@ -86,6 +86,10 @@
     client,
     query: NOTIFICATION_SUBSCRIPTION,
     variables: { chainId: subscriptionId },
+  });
+
+  onDestroy(() => {
+    messages.pause();
   });
 
   // Game initialization and lifecycle

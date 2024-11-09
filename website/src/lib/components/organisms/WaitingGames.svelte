@@ -4,6 +4,7 @@
 	import { getContextClient, gql, queryStore } from '@urql/svelte';
 	import type { EliminationGameDetails } from '$lib/types/eliminationGame';
     import GameListItem from '../molecules/GameListItem.svelte';
+	import { userStore } from '$lib/stores/userStore';
 
     let games: Array<EliminationGameDetails> = [];
 
@@ -26,7 +27,6 @@
     `;
 
     const client = getContextClient();
-    const { username }: { username: string } = getContext('player');
 
     $: waitingGames = queryStore({
         client,
@@ -50,7 +50,7 @@
     }
 
     $: games = ($waitingGames.data?.waitingRooms ?? []).map((game: any) => {
-        if (game.players.includes(username) && game.status === 'Waiting') {
+        if (game.players.includes($userStore.username) && game.status === 'Waiting') {
             goto(`/elimination/${game.gameId}`);
         }
 

@@ -6,21 +6,16 @@
 	import Brand from '../molecules/Brand.svelte';
 	import GameSettingsDetails from '../organisms/GameSettingsDetails.svelte';
 	import UserSidebar from '../organisms/UserSidebar.svelte';
-	import { getContext } from "svelte";
+	import { onDestroy } from "svelte";
 	import { page } from "$app/stores";
 	import { getGameDetails } from "$lib/graphql/queries/getGameDetails";
+	import { userStore } from "$lib/stores/userStore";
+	import { getPlayerInfo } from "$lib/graphql/queries/getPlayerInfo";
 
-    let { username, chainId: playerChainId }: { username: string, chainId: string } = getContext('player');
     const boardId = $page.params.boardId;
-    const [gameId, round, player] = boardId.split('-');
+    const [gameId, round, username] = boardId.split('-');
 
     const GAME_PING_SUBSCRIPTION = gql`
-        subscription Notifications($chainId: ID!) {
-            notifications(chainId: $chainId)
-        }
-    `;
-
-    const PLAYER_PING_SUBSCRIPTION = gql`
         subscription Notifications($chainId: ID!) {
             notifications(chainId: $chainId)
         }
@@ -35,12 +30,7 @@
         variables: { chainId: gameId },
     });
 
-    const playerMessages = subscriptionStore({
-        client,
-        query: PLAYER_PING_SUBSCRIPTION,
-        variables: { chainId: playerChainId },
-    });
-
+    $: player = getPlayerInfo(client, username);
     $: game = getGameDetails(client, gameId, parseInt(round));
     $: data = $game.data?.eliminationGame && !$game.fetching 
         ? {
@@ -49,13 +39,23 @@
         }
         : {};
 
-    // plans
-    // use this component to check for ping messages
-    // pass new block hight to each child components to trigger reload
-    // - leaderboard (listened to game ping messages)
-    // - game (board, listened to player ping messages)
-    // - player score will update leaderboard score too
     const isMultiplayer = boardId.includes('-');
+    let currentPlayerScore = 0;
+    let lastHash = '';
+
+
+    // Check for new game messages every second
+    setInterval(() => {
+        if ($gameMessages.data?.notifications?.reason?.NewBlock?.hash && 
+            $gameMessages.data.notifications.reason.NewBlock.hash !== lastHash) {
+            lastHash = $gameMessages.data.notifications.reason.NewBlock.hash;
+            game.reexecute({ requestPolicy: 'network-only' });
+        }
+    }, 1000);
+
+    onDestroy(() => {
+        gameMessages.pause();
+    });
 </script>
 
 <MainTemplate>
@@ -63,12 +63,14 @@
         {#if isMultiplayer}
             <Brand />
             <Leaderboard
+                player={username}
                 currentRound={data?.currentRound}
                 gameLeaderboard={data?.gameLeaderboard}
                 roundLeaderboard={data?.roundLeaderboard?.[0]}
+                {currentPlayerScore}
             />
         {:else}
-            <UserSidebar bind:username />
+            <UserSidebar username={$userStore.username} />
         {/if}
     </svelte:fragment>
 
@@ -84,12 +86,13 @@
         <div class="flex justify-center items-center h-full">
             <div class="w-full max-w-2xl pb-28">
                 <Game
-                    player={player}
-                    playerChainId={playerChainId}
+                    player={username}
+                    playerChainId={$player.data?.player?.chainId}
                     boardId={boardId}
                     canStartNewGame={!isMultiplayer}
                     showBestScore={!isMultiplayer}
-                    canMakeMove={player === username}
+                    canMakeMove={username === $userStore.username}
+                    bind:score={currentPlayerScore}
                 />
             </div>
         </div>

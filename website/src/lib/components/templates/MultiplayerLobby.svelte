@@ -9,8 +9,7 @@
 	import WaitingGames from "../organisms/WaitingGames.svelte";
     import EliminationGameForm from '../organisms/EliminationGameForm.svelte';
 	import type { ModalSettings, ModalStore } from '@skeletonlabs/skeleton';
-
-    export let username = 'lpaydat';
+	import { userStore } from '$lib/stores/userStore';
 
     const modal: ModalSettings = {
         type: 'component',
@@ -26,7 +25,7 @@
 
 <MainTemplate>
     <svelte:fragment slot="sidebar">
-        <UserSidebar bind:username />
+        <UserSidebar username={$userStore.username} />
     </svelte:fragment>
 
     <svelte:fragment slot="main">

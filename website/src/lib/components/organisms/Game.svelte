@@ -4,8 +4,10 @@
   import Header from "../molecules/BoardHeader.svelte";
   import Board from '../molecules/Board.svelte';
 	import { makeMove } from '$lib/graphql/mutations/makeMove';
+	import { onDestroy } from 'svelte';
 
   export let player: string;
+  export let score: number = 0;
   export let playerChainId: string;
   export let boardId: string | undefined = undefined;
 
@@ -50,8 +52,7 @@
     variables: { boardId },
     requestPolicy: 'network-only',
   });
-
-  $: console.log('game', !$game.fetching && $game.data);
+  $: score = $game.data?.board?.score || 0;
 
   let moveTimeout: NodeJS.Timeout | null = null;
 
@@ -75,6 +76,11 @@
     query: PLAYER_PING_SUBSCRIPTION,
     variables: { chainId: playerChainId },
   });
+
+  onDestroy(() => {
+    playerMessages.pause();
+  });
+
 
   // Reactive statements for block height and rendering
   let blockHeight = 0;
@@ -120,7 +126,7 @@
 
 
 <div class="game-container">
-  <Header {canStartNewGame} {showBestScore} {player} value={$game.data?.board?.score || 0} />
+  <Header {canStartNewGame} {showBestScore} {player} value={score} />
   {#if rendered}
     <div class="game-board">
       <Board board={$game.data?.board?.board} />
