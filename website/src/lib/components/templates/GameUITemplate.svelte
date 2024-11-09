@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { gql, subscriptionStore, getContextClient } from "@urql/svelte";
+	import { subscriptionStore, getContextClient } from "@urql/svelte";
 	import Game from "../organisms/Game.svelte";
 	import MainTemplate from "../organisms/MainTemplate.svelte";
 	import Leaderboard from '../organisms/Leaderboard.svelte';
@@ -11,22 +11,17 @@
 	import { getGameDetails } from "$lib/graphql/queries/getGameDetails";
 	import { userStore } from "$lib/stores/userStore";
 	import { getPlayerInfo } from "$lib/graphql/queries/getPlayerInfo";
+	import { PING_SUBSCRIPTION } from "$lib/graphql/subscriptions/subscriptions";
 
     const boardId = $page.params.boardId;
     const [gameId, round, username] = boardId.split('-');
-
-    const GAME_PING_SUBSCRIPTION = gql`
-        subscription Notifications($chainId: ID!) {
-            notifications(chainId: $chainId)
-        }
-    `;
 
     const client = getContextClient();
 
     // Subscription for notifications
     const gameMessages = subscriptionStore({
         client,
-        query: GAME_PING_SUBSCRIPTION,
+        query: PING_SUBSCRIPTION,
         variables: { chainId: gameId },
     });
 

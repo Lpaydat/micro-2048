@@ -1,10 +1,12 @@
 <script lang="ts">
-	import { getContext, onMount } from 'svelte';
+	import { onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { getContextClient, gql, queryStore } from '@urql/svelte';
+	import { getContextClient, gql, queryStore, subscriptionStore } from '@urql/svelte';
 	import type { EliminationGameDetails } from '$lib/types/eliminationGame';
     import GameListItem from '../molecules/GameListItem.svelte';
 	import { userStore } from '$lib/stores/userStore';
+	import { page } from '$app/stores';
+	import { PING_SUBSCRIPTION } from '$lib/graphql/subscriptions/subscriptions';
 
     let games: Array<EliminationGameDetails> = [];
 
@@ -26,6 +28,9 @@
         }
     `;
 
+    const gameId = $page.params.gameId;
+    let lastHash = '';
+
     const client = getContextClient();
 
     $: waitingGames = queryStore({
@@ -33,15 +38,31 @@
         query: GET_WAITING_GAMES,
     });
 
-    onMount(() => {
-        waitingGames.reexecute({ requestPolicy: 'network-only' }); // Initial fetch
-        const interval = setInterval(() => {
-            waitingGames.reexecute({ requestPolicy: 'network-only' }); // Fetch every second
-        }, 1000); // Fetch every second
+    // Subscription for notifications
+    const gameMessages = subscriptionStore({
+        client,
+        query: PING_SUBSCRIPTION,
+        variables: { chainId: gameId },
+    });
 
-        return () => {
-            clearInterval(interval); // Cleanup interval on component destroy
-        };
+    // Check for new game messages every second
+    setInterval(() => {
+        if ($gameMessages.data?.notifications?.reason?.NewBlock?.hash && 
+            $gameMessages.data.notifications.reason.NewBlock.hash !== lastHash) {
+            lastHash = $gameMessages.data.notifications.reason.NewBlock.hash;
+            waitingGames.reexecute({ requestPolicy: 'network-only' });
+        }
+    }, 1000);
+
+    let blockHeight = 0;
+    $: bh = $gameMessages.data?.notifications?.reason?.NewBlock?.height;
+    $: if (bh && bh !== blockHeight) {
+        blockHeight = bh;
+        waitingGames.reexecute({ requestPolicy: 'network-only' });
+    }
+
+    onDestroy(() => {
+        gameMessages.pause();
     });
 
     let initialFetch = true;

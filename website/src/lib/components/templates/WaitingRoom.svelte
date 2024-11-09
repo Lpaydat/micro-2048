@@ -102,7 +102,7 @@
                 <Clock size={28} />
             </svelte:fragment>
             <svelte:fragment slot="actions">
-                {#if isLoaded && data?.status === 'Waiting'}
+                {#if isLoaded && $userStore.username && data?.status === 'Waiting'}
                     {#if isHost}
                         <ActionButton label="START GAME" on:click={handleStartGame} disabled={data.playerCount < 2} />
                         <ActionButton label="END GAME" hoverColor="danger" on:click={handleEndGame} />

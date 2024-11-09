@@ -20,7 +20,8 @@
                     <span class="text-xs font-semibold bg-orange-500 px-2 py-0.5 rounded-full text-white">
                         HOST
                     </span>
-                {:else if isYou}
+                {/if}
+                {#if isYou}
                     <Smile size={20} />
                 {/if}
             </div>
