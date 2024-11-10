@@ -1,10 +1,15 @@
 <script lang="ts">
+	import { userStore } from "$lib/stores/userStore";
     import Button from "../atoms/Button.svelte";
 
-    export let username = '';
+    const handleLogout = () => {
+        $userStore.chainId = undefined;
+        $userStore.username = undefined;
+        $userStore.passwordHash = undefined;
+    }
 </script>
 
-<div class="max-w-md w-full mx-auto p-6 rounded-md bg-[#FAF8EF] shadow-md border-[8px] border-[#BBADA0]">
+<div class="container w-full mx-auto p-6 rounded-md bg-[#FAF8EF] shadow-md border-[8px] border-[#BBADA0]">
     <div class="space-y-6">
         <!-- Title -->
         <div class="text-center">
@@ -17,7 +22,7 @@
                 LOGGED IN AS
             </p>
             <p class="text-[#f9f6f2] font-bold text-xl text-center game-font tracking-wide">
-                {username}
+                {$userStore.username}
             </p>
         </div>
         
@@ -33,7 +38,7 @@
             <Button
                 variant="default"
                 size="sm"
-                on:click
+                on:click={handleLogout}
             >
                 Logout
             </Button>
@@ -49,7 +54,7 @@
 
     /* Responsive padding */
     @media (max-width: 640px) {
-        div.max-w-md {
+        div.container {
             border-width: 4px;
             margin: 0 1rem;
         }

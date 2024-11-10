@@ -74,22 +74,23 @@
     })
 
     const handleJoinGame = () => {
+        if (!username) return;
         joinGame(client, username, gameId);
-        // game.reexecute({ requestPolicy: 'network-only' });
     }
 
     const handleLeaveGame = () => {
+        if (!username) return;
         leaveGame(client, username, gameId);
     }
 
     const handleStartGame = () => {
-        if (data?.playerCount < 2) return;
+        if (data?.playerCount < 2 || !username) return;
         startGame(client, gameId, username);
     }
 
     const handleEndGame = () => {
+        if (!username) return;
         endGame(client, gameId, username);
-        // game.reexecute({ requestPolicy: 'network-only' });
     }
 
     $: prevPage = data?.status === 'Ended' ? '/elimination' : undefined;
@@ -97,7 +98,7 @@
 
 <MainTemplate>
     <svelte:fragment slot="sidebar">
-        <UserSidebar bind:username />
+        <UserSidebar />
     </svelte:fragment>
 
     <svelte:fragment slot="main">

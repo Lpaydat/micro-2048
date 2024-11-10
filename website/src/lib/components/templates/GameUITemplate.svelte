@@ -85,7 +85,7 @@
                 {currentPlayerScore}
             />
         {:else}
-            <UserSidebar username={$userStore.username} />
+            <UserSidebar />
         {/if}
     </svelte:fragment>
 

@@ -29,6 +29,10 @@
                 alert("All numeric fields must be at least 1.");
                 return;
             }
+            if (!$userStore.username) {
+                alert("Please login first.");
+                return;
+            }
 
             const settings: EliminationGameSettings = {
                 gameName: name,

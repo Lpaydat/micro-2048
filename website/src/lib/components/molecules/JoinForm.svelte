@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContextClient, mutationStore, gql } from "@urql/svelte";
+	import { getContextClient, mutationStore, gql, queryStore } from "@urql/svelte";
   import Input from "../atoms/Input.svelte";
   import Button from "../atoms/Button.svelte";
 	import { hashPassword } from "$lib/utils/hashPassword";
@@ -11,6 +11,7 @@
   let passwordHash = '';
   let password = '';
   let loading = false;
+  let canLogin = false;
 
   const REGISTER_PLAYER = gql`
     mutation RegisterPlayer($username: String!, $passwordHash: String!) {
@@ -18,21 +19,23 @@
     }
   `;
 
+  const CHECK_PLAYER = gql`
+    query CheckPlayer($username: String!, $passwordHash: String!) {
+      checkPlayer(username: $username, passwordHash: $passwordHash)
+    }
+  `;
+
   const client = getContextClient();
 
   $: player = getPlayerInfo(client, submittedUsername)
-
-  // TODO: make it loginable and check if user already exists
-  $: if (!$player.fetching && $player.data?.player) {
-    userStore.update(store => ({
-      ...store,
-      username: $player.data.player.username,
-      chainId: $player.data.player.chainId
-    }));
-  }
+  $: playerOnChain = queryStore({
+    client,
+    query: CHECK_PLAYER,
+    variables: { username, passwordHash },
+    requestPolicy: 'network-only'
+  })
 
   const registerPlayer = async () => {
-    passwordHash = await hashPassword(password);
     mutationStore({
       client,
       query: REGISTER_PLAYER,
@@ -40,20 +43,86 @@
     })
   };
 
-  const handleSubmit = async () => {
-    loading = true;
+  const checkPlayer = async () => {
     submittedUsername = username;
-    try {
-      registerPlayer()
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      // localStorage.setItem('username', username);
-      username = '';
-      password = '';
-      player.reexecute({ requestPolicy: 'network-only' });
-    } finally {
-      loading = false;
+    playerOnChain.reexecute({ requestPolicy: 'network-only' });
+  }
+
+  const handleRegisterPlayer = async () => {
+    registerPlayer()
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+    username = '';
+    password = '';
+    player.reexecute({ requestPolicy: 'network-only' });
+  }
+
+  let errorMessage = '';
+
+  const validateInput = (username: string, password: string) => {
+    let errors = [];
+
+    if (username.length < 3) {
+      errors.push('Username too short.');
     }
+    if (/\s/.test(username)) {
+      errors.push('No spaces in username.');
+    }
+    if (password.length < 3) {
+      errors.push('Password too short.');
+    }
+    if (/\s/.test(password)) {
+      errors.push('No spaces in password.');
+    }
+
+    return errors;
   };
+
+  const handleSubmit = async () => {
+    // Reset error message
+    errorMessage = '';
+
+    // Validate inputs
+    const errors = validateInput(username, password);
+    if (errors.length > 0) {
+      errorMessage = errors[0];
+      return;
+    }
+
+    const encoder = new TextEncoder();
+    passwordHash = await hashPassword(password, encoder.encode(username));
+    loading = true;
+
+    await checkPlayer();
+  };
+
+  $: {
+    if (loading && username && !$playerOnChain.fetching) {
+      try {
+        const value = $playerOnChain.data?.checkPlayer;
+        if (value === true) {
+          canLogin = true;
+          player.reexecute({ requestPolicy: 'network-only' });
+        } else if (value === false) {
+          errorMessage = 'Invalid password';
+        } else if (value === null) {
+          canLogin = true;
+          handleRegisterPlayer();
+        }
+      } finally {
+        loading = false;
+      }
+    }
+  }
+
+  $: if (!$player.fetching && $player.data?.player && canLogin) {
+    userStore.update(store => ({
+      ...store,
+      username: $player.data.player.username,
+      chainId: $player.data.player.chainId,
+      ...(passwordHash && { passwordHash })
+    }));
+    canLogin = false;
+  }
 </script>
 
 <form 
@@ -66,6 +135,13 @@
       <h2 class="text-[#776E65] text-2xl font-bold game-font">Join Game</h2>
       <p class="text-[#776E65]/80 mt-2 game-font">Sign in to save your progress</p>
     </div>
+
+    <!-- Error Message -->
+    {#if errorMessage}
+      <div class="error-message shake-animation">
+        {errorMessage}
+      </div>
+    {/if}
 
     <!-- Username Field -->
     <div class="form-field">
@@ -125,6 +201,28 @@
   :global(.game-font) {
     font-family: "Clear Sans", "Helvetica Neue", Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
+  }
+
+  /* Simplified error message style */
+  .error-message {
+    color: #D9534F; /* Bootstrap danger color */
+    background-color: #F2DEDE; /* Light red background */
+    padding: 5px; /* Reduced padding */
+    border-radius: 4px;
+    text-align: center;
+    font-size: 0.875rem; /* Smaller font size */
+    margin-bottom: 0.5rem; /* Reduced margin */
+  }
+
+  /* Shake animation */
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+    20%, 40%, 60%, 80% { transform: translateX(10px); }
+  }
+
+  .shake-animation {
+    animation: shake 0.5s;
   }
 
   /* Form container style */

@@ -27,6 +27,7 @@
     let loading = false;
 
     const handleJoinGame = (gameId: string) => {
+        if (!$userStore.username) return;
         loading = true;
         joinGame(client, $userStore.username, gameId);
     }

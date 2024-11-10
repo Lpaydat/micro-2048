@@ -9,7 +9,7 @@
 
 <MainTemplate>
     <svelte:fragment slot="sidebar">
-        <UserSidebar username={$userStore.username} />
+        <UserSidebar />
     </svelte:fragment>
 
     <svelte:fragment slot="main">
