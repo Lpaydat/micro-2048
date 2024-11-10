@@ -113,7 +113,8 @@ impl QueryRoot {
 
     async fn check_player(&self, username: String, password_hash: String) -> Option<bool> {
         if let Ok(Some(player)) = self.state.players.try_load_entry(&username).await {
-            Some(*player.password_hash.get().to_string() == password_hash)
+            let stored_password_hash = player.password_hash.get().to_string();
+            Some(stored_password_hash == password_hash)
         } else {
             return None;
         }
