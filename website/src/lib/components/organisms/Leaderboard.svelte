@@ -9,7 +9,9 @@
   export let player: string;
   export let currentPlayerScore: number = 0; // round score
   export let gameLeaderboard: PlayerStats[] = [];
-  export let roundLeaderboard: RoundResults = {
+  export let roundLeaderboard: RoundResults | undefined;
+
+  $: rlb = roundLeaderboard ?? {
     round: 0,
     players: [],
     eliminatedPlayers: []
@@ -34,14 +36,17 @@
     .sort((a, b) => b.score - a.score) // Sort by score in descending order
     .map((player, index) => ({ ...player, rank: index + 1 })); // Add rank based on sorted position
 
-  $: combinedRoundLeaderboard = [...roundLeaderboard.players, ...roundLeaderboard.eliminatedPlayers]
+  $: combinedRoundLeaderboard = [...rlb.players, ...rlb.eliminatedPlayers]
     .map(p => ({
       ...p,
-      isEliminated: roundLeaderboard.eliminatedPlayers.includes(p),
+      isEliminated: rlb.eliminatedPlayers.includes(p),
       score: p.username === player ? currentPlayerScore : p.score
     }))
     .sort((a, b) => b.score - a.score)
     .map((player, index) => ({ ...player, rank: index + 1 }));
+
+  $: console.log('rlb', rlb);
+
 </script>
 
 <div class="text-center p-6 w-80 mt-6 max-h-full rounded-lg bg-[#FAF8EF] shadow-md max-w-md mx-auto">

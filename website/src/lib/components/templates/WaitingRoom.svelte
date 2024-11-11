@@ -17,9 +17,9 @@
 	import { goto } from '$app/navigation';
 	import { getGameDetails } from '$lib/graphql/queries/getGameDetails';
 	import { userStore } from '$lib/stores/userStore';
-	import { getMessageBlockheight } from '$lib/utils/getMessageBlockheight';
 
     const gameId = $page.params.gameId;
+    const minimumPlayers = 2;
 
     const client = getContextClient();
     $: username = $userStore.username;
@@ -46,7 +46,7 @@
         : undefined;
 
     $: if (data?.status === 'Active' && isJoined) {
-        const playerBoardId = `${gameId}-${data.currentRound}-${username}`;
+        const playerBoardId = `${gameId}-${data.currentRound}-${username}-${$userStore.chainId}`;
         goto(`/game/${playerBoardId}`);
     }
 
@@ -63,7 +63,7 @@
 
     // Reactive statements for block height and game query reexecution
     let blockHeight = 0;
-    $: bh = getMessageBlockheight($gameMessages.data);
+    $: bh = $gameMessages.data?.notifications?.reason?.NewIncomingBundle?.height;
     $: if (bh && bh !== blockHeight) {
         blockHeight = bh;
         game.reexecute({ requestPolicy: 'network-only' });
@@ -84,7 +84,7 @@
     }
 
     const handleStartGame = () => {
-        if (data?.playerCount < 2 || !username) return;
+        if (data?.playerCount < minimumPlayers || !username) return;
         startGame(client, gameId, username);
     }
 
@@ -109,8 +109,16 @@
             <svelte:fragment slot="actions">
                 {#if isLoaded && $userStore.username && data?.status === 'Waiting'}
                     {#if isHost}
-                        <ActionButton label="START GAME" on:click={handleStartGame} disabled={data.playerCount < 2} />
-                        <ActionButton label="END GAME" hoverColor="danger" on:click={handleEndGame} />
+                        <ActionButton
+                            label="START GAME"
+                            on:click={handleStartGame}
+                            disabled={data.playerCount < minimumPlayers}
+                        />
+                        <ActionButton
+                            label="END GAME"
+                            hoverColor="danger"
+                            on:click={handleEndGame}
+                        />
                     {:else if canJoinGame}
                         <ActionButton label="JOIN GAME" on:click={handleJoinGame} />
                     {:else if isJoined}

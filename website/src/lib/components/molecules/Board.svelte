@@ -31,12 +31,14 @@
 </style>
 
 <div class="grid wrapper">
-  {#each [...Array(board.length ** 2).keys()] as box}
-    <div class="box box-{box}"></div>
-  {/each}
-  <div class="tiles">
-    {#each board.reduce((acc, row) => acc.concat(row), []) as value, index}
-      <BoardTile {value} {index} />
+  {#if board}
+    {#each [...Array(board.length ** 2).keys()] as box}
+      <div class="box box-{box}"></div>
     {/each}
-  </div>
+    <div class="tiles">
+      {#each board.reduce((acc, row) => acc.concat(row), []) as value, index}
+        <BoardTile {value} {index} />
+      {/each}
+    </div>
+  {/if}
 </div>

@@ -177,7 +177,7 @@ impl QueryRoot {
         game_id: String,
         round: Option<u8>,
     ) -> Option<EliminationGameState> {
-        let round = round.unwrap_or(0);
+        // let round = round.unwrap_or(0);
         if let Ok(Some(game)) = self.state.elimination_games.try_load_entry(&game_id).await {
             let mut game_leaderboard: Vec<LeaderboardEntry> = Vec::new();
             game.game_leaderboard
@@ -188,6 +188,7 @@ impl QueryRoot {
                 .await
                 .unwrap();
 
+            let round = round.unwrap_or(*game.current_round.get());
             let mut round_leaderboard: Vec<EliminationGameRoundLeaderboard> = Vec::new();
             let mut round_players: Vec<LeaderboardEntry> = Vec::new();
             let mut round_eliminated_players: Vec<LeaderboardEntry> = Vec::new();

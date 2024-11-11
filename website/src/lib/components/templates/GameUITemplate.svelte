@@ -6,16 +6,37 @@
 	import Brand from '../molecules/Brand.svelte';
 	import GameSettingsDetails from '../organisms/GameSettingsDetails.svelte';
 	import UserSidebar from '../organisms/UserSidebar.svelte';
-	import { onMount } from "svelte";
+	import { onDestroy, onMount } from "svelte";
 	import { page } from "$app/stores";
 	import { getGameDetails } from "$lib/graphql/queries/getGameDetails";
 	import { userStore } from "$lib/stores/userStore";
-	import { getPlayerInfo } from "$lib/graphql/queries/getPlayerInfo";
 	import { getMessageBlockheight } from "$lib/utils/getMessageBlockheight";
 	import { gql } from "urql";
+	import { triggerGameEvent } from "$lib/graphql/mutations/triggerGame";
+	import { goto } from "$app/navigation";
+	import { nextRound } from "$lib/graphql/mutations/nextRound";
 
-    const boardId = $page.params.boardId;
-    const [gameId, round, username] = boardId.split('-');
+    // export let activeRound: number;
+    let boardId: string = $page.params.boardId;
+
+    let unsubscribe: any;
+
+    onDestroy(() => {
+        if (unsubscribe) unsubscribe()
+    })
+
+    $: {
+        const unsubscribe = page.subscribe(($page) => {
+            boardId = $page.params.boardId;
+        })
+
+        onDestroy(() => {
+            if (unsubscribe) unsubscribe()
+        })
+    }
+
+    let [gameId, round, username, playerChainId] = boardId.split('-');
+    $: r = parseInt($page.params.boardId.match(/\-(\d+)\-/)?.[1] || '0');
 
     const client = getContextClient();
 
@@ -28,7 +49,6 @@
         }
     `;
 
-
     // Subscription for notifications
     const gameMessages = subscriptionStore({
         client,
@@ -36,9 +56,11 @@
         variables: { chainId: gameId },
     });
 
+    const triggerGameEventMutation = () => triggerGameEvent(client, gameId, username);
+    const nextRoundMutation = () => nextRound(client, gameId, username);
+
     // Reactive declarations
-    $: player = getPlayerInfo(client, username);
-    $: game = getGameDetails(client, gameId, parseInt(round));
+    $: game = getGameDetails(client, gameId, r);
     $: data = $game.data?.eliminationGame && !$game.fetching 
         ? {
             ...$game.data.eliminationGame,
@@ -51,20 +73,31 @@
     $: totalRounds = $game.data?.eliminationGame?.totalRounds;
     $: gameLeaderboard = $game.data?.eliminationGame?.gameLeaderboard;
     $: roundLeaderboard = $game.data?.eliminationGame?.roundLeaderboard?.[0];
+    $: status = $game.data?.eliminationGame?.status;
 
     let currentPlayerScore = 0;
-    let blockHeight = 0;
-    $: bh = getMessageBlockheight($gameMessages.data);
+
+    let nextTarget: string | undefined = undefined;
+
+    $: {
+        const target = `/game/${gameId}-${currentRound}-${username}-${playerChainId}`;
+        if (currentRound && target !== nextTarget && status === 'Active') {
+            nextTarget = target;
+            goto(nextTarget);
+        }
+    }
 
     let intervalId: NodeJS.Timeout;
+    let blockHeight: number | undefined = undefined;
+    $: bh = getMessageBlockheight($gameMessages.data);
 
     onMount(() => {
         intervalId = setInterval(() => {
-            if (bh && bh !== blockHeight) {
-                blockHeight = bh ?? 0;
+            if ((bh !== blockHeight)) {
+                blockHeight = bh;
                 game.reexecute({ requestPolicy: 'network-only' });
             }
-        }, 250);
+        }, 1000);
 
         return () => {
             clearInterval(intervalId);
@@ -77,6 +110,8 @@
     <svelte:fragment slot="sidebar">
         {#if isMultiplayer && $userStore.username}
             <Brand />
+            <button class='text-white' on:click={triggerGameEventMutation}>Trigger Game Event</button>
+            <button class='text-white' on:click={nextRoundMutation}>Next Round</button>
             <Leaderboard
                 player={username}
                 {currentRound}
@@ -102,7 +137,7 @@
             <div class="w-full max-w-2xl pb-28">
                 <Game
                     player={username}
-                    playerChainId={$player.data?.player?.chainId}
+                    playerChainId={playerChainId}
                     boardId={boardId}
                     canStartNewGame={!isMultiplayer}
                     showBestScore={!isMultiplayer}

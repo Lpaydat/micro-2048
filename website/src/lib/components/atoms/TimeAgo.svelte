@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { onMount } from "svelte";
+
     export let time: string;
 
     const MINUTE = 60 * 1000;
@@ -24,6 +26,16 @@
 
     $: formattedTime = new Date(parseInt(time));
     $: timeAgo = getTimeAgo(formattedTime);
+
+    // Add an interval to update the timeAgo every minute
+    let interval: NodeJS.Timeout;
+    onMount(() => {
+        interval = setInterval(() => {
+            timeAgo = getTimeAgo(formattedTime);
+        }, 5000);
+
+        return () => clearInterval(interval);
+    });
 </script>
 
 <span>{timeAgo}</span>

@@ -86,6 +86,7 @@
   // Reactive statements for block height and rendering
   let blockHeight = 0;
   $: bh = getMessageBlockheight($playerMessages.data);
+  $: console.log('bh', bh);
   $: if (bh && bh !== blockHeight) {
     blockHeight = bh;
     canMakeMove = true;
@@ -101,7 +102,6 @@
   }
 
   // Logs for move history
-  // TODO: check this out, I don't think it's working
   let logs: { hash: string, timestamp: string }[] = [];
   let lastHash = '';
   $: isCurrentGame = $game.data?.game?.boardId === boardId;

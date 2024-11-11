@@ -4,6 +4,8 @@
     
     export let players: Array<string> = [];
 
+    // TODO: make sure to make the list not flicker when new players join
+
     // Convert simple string array to object array with default values
     $: playerObjects = players.map((name, index) => ({
         name,

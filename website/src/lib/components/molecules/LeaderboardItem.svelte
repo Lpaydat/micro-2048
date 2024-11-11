@@ -7,7 +7,9 @@
     export let isSelectedPlayer: boolean = false;
 
     $: color = isEliminated ? 'bg-[#F3F3F3]' : 'bg-[#EEE4DA]';
-    $: currentPlayerStyle = isCurrentPlayer ? '!border-l-blue-500 font-bold bg-[#FFD700]' : '';
+    $: currentPlayerStyle = isCurrentPlayer 
+        ? (isEliminated ? '!border-l-[#E57373] font-bold bg-[#FFCDD2]' : '!border-l-blue-500 font-bold bg-[#FFD700]')
+        : '';
     $: selectedPlayerStyle = isSelectedPlayer ? '!border-l-orange-500' : '';
 </script>
 
