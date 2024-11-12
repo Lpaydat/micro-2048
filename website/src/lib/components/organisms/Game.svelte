@@ -1,7 +1,7 @@
 <script lang="ts">
   import { queryStore, subscriptionStore, gql, getContextClient } from '@urql/svelte';
 
-  import Header from "../molecules/BoardHeader.svelte";
+  import BoardHeader from "../molecules/BoardHeader.svelte";
   import Board from '../molecules/Board.svelte';
 	import { makeMove } from '$lib/graphql/mutations/makeMove';
 	import { onDestroy } from 'svelte';
@@ -100,7 +100,7 @@
   }
 
   $: rendered = false;
-  $: if (!$game.fetching) {
+  $: if (!$game.fetching && $game.data?.board) {
     rendered = true;
   }
 
@@ -137,7 +137,7 @@
 
 
 <div class="game-container">
-  <Header {canStartNewGame} {showBestScore} {player} value={score} />
+  <BoardHeader bind:boardId={boardId} {canStartNewGame} {showBestScore} {player} value={score} />
   {#if rendered}
     <div class="game-board">
       <Board board={$game.data?.board?.board} />
@@ -148,7 +148,7 @@
       {/if}
     </div>
     {#if pingTime !== null}
-      <div class="mt-2 text-sm text-surface-200">
+      <div class="mt-2 text-sm font-semibold text-surface-300">
         Ping: {pingTime} ms
       </div>
     {/if}

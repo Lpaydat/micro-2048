@@ -9,7 +9,7 @@
     }
 </script>
 
-<div class="container w-full mx-auto p-6 rounded-md bg-[#FAF8EF] shadow-md border-[8px] border-[#BBADA0]">
+<div class="container w-full max-w-sm mx-auto p-6 rounded-md bg-[#FAF8EF] shadow-md border-[8px] border-[#BBADA0]">
     <div class="space-y-6">
         <!-- Title -->
         <div class="text-center">

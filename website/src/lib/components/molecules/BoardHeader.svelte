@@ -6,6 +6,7 @@
 	export let value: number;
 	export let canStartNewGame: boolean = true;
 	export let showBestScore: boolean = true;
+	export let boardId: string | undefined = undefined;
 
 	let bestScore: number = 0;
 	let client = getContextClient();
@@ -27,7 +28,8 @@
 
 	const newSingleGame = () => {
 		if (!canStartNewGame) return;
-		newGameMutation({ seed: Math.floor(Math.random() * 1000000) });
+		boardId = Math.floor(Math.random() * 1000000).toString();
+		newGameMutation({ seed: parseInt(boardId) });
 	}
 
 	onMount(() => {

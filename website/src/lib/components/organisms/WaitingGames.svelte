@@ -84,7 +84,7 @@
             <div class="w-20 h-20 rounded-xl flex items-center justify-center mx-auto mb-4 bg-[#edc53f]">
                 <i class="fas fa-gamepad text-3xl text-white"></i>
             </div>
-            <h3 class="text-2xl font-bold mb-3 text-[#edc53f]">NO GAMES AVAILABLE</h3>
+            <h3 class="text-2xl font-bold mb-3 text-[#d6b64c]">NO GAMES AVAILABLE</h3>
             <p class="text-sm bg-[#bbada0] text-white py-2 px-6 rounded-full inline-block">
                 Create a new game or wait for others to host!
             </p>

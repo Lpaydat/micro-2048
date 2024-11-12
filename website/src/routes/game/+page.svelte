@@ -1,5 +1,5 @@
 <script lang="ts">
-    import GameUITemplate from "$lib/components/templates/GameUITemplate.svelte";
+    import ClassicGameUI from "$lib/components/templates/ClassicGameUI.svelte";
 </script>
 
-<GameUITemplate />
+<ClassicGameUI />

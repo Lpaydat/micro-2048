@@ -38,6 +38,5 @@ export const GET_GAME_DETAILS = gql`
 `;
 
 export const getGameDetails = (client: Client, gameId: string, round: number = 0) => {
-	console.log('getGameDetails', round);
 	return queryStore({ client, query: GET_GAME_DETAILS, variables: { gameId, round } });
 };
