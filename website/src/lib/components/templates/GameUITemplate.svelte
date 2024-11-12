@@ -16,7 +16,6 @@
 	import { goto } from "$app/navigation";
 	import { nextRound } from "$lib/graphql/mutations/nextRound";
 
-    // export let activeRound: number;
     let boardId: string = $page.params.boardId;
 
     let unsubscribe: any;
@@ -36,6 +35,7 @@
     }
 
     let [gameId, round, username, playerChainId] = boardId.split('-');
+    let canMakeMove = username === $userStore.username;
     $: r = parseInt($page.params.boardId.match(/\-(\d+)\-/)?.[1] || '0');
 
     const client = getContextClient();
@@ -69,11 +69,65 @@
         : {};
 
     // Reactive variables for component data
+    $: lastUpdated = parseInt($game.data?.eliminationGame?.lastUpdatedTime || '0');
     $: currentRound = $game.data?.eliminationGame?.currentRound;
     $: totalRounds = $game.data?.eliminationGame?.totalRounds;
     $: gameLeaderboard = $game.data?.eliminationGame?.gameLeaderboard;
     $: roundLeaderboard = $game.data?.eliminationGame?.roundLeaderboard?.[0];
     $: status = $game.data?.eliminationGame?.status;
+    $: isRoundEnded = roundLeaderboard?.players.length === 0;
+    let countdown = 0;
+    let countdownInterval: NodeJS.Timeout;
+
+    let intervalId: NodeJS.Timeout;
+    let blockHeight: number | undefined = undefined;
+    $: bh = getMessageBlockheight($gameMessages.data);
+
+    function updateCountdown() {
+        const triggerInterval = $game.data?.eliminationGame?.triggerIntervalSeconds || 0;
+        
+        if (lastUpdated) {
+            // Clear existing interval if any
+            if (countdownInterval) clearInterval(countdownInterval);
+            
+            countdown = triggerInterval - Math.floor((Date.now() - lastUpdated) / 1000);
+            
+            countdownInterval = setInterval(() => {
+                countdown = Math.max(0, countdown - 1);
+
+                if (countdown <= 0) {
+                    triggerGameEventMutation();
+                    canMakeMove = false;
+                } else {
+                    canMakeMove = username === $userStore.username;
+                }
+            }, 1000);
+        }
+    }
+
+    onMount(() => {
+        updateCountdown();
+
+        intervalId = setInterval(() => {
+            if (bh !== blockHeight) {
+                blockHeight = bh;
+                game.reexecute({ requestPolicy: 'network-only' });
+            }
+        }, 1000);
+
+        return () => {
+            clearInterval(intervalId);
+            if (countdownInterval) clearInterval(countdownInterval);
+            gameMessages.pause();
+        }
+    });
+
+    $: {
+        // Re-run countdown update when lastUpdated changes
+        if (lastUpdated) {
+            updateCountdown();
+        }
+    }
 
     let currentPlayerScore = 0;
 
@@ -86,32 +140,12 @@
             goto(nextTarget);
         }
     }
-
-    let intervalId: NodeJS.Timeout;
-    let blockHeight: number | undefined = undefined;
-    $: bh = getMessageBlockheight($gameMessages.data);
-
-    onMount(() => {
-        intervalId = setInterval(() => {
-            if ((bh !== blockHeight)) {
-                blockHeight = bh;
-                game.reexecute({ requestPolicy: 'network-only' });
-            }
-        }, 1000);
-
-        return () => {
-            clearInterval(intervalId);
-            gameMessages.pause();
-        }
-    });
 </script>
 
 <MainTemplate>
     <svelte:fragment slot="sidebar">
         {#if isMultiplayer && $userStore.username}
             <Brand />
-            <button class='text-white' on:click={triggerGameEventMutation}>Trigger Game Event</button>
-            <button class='text-white' on:click={nextRoundMutation}>Next Round</button>
             <Leaderboard
                 player={username}
                 {currentRound}
@@ -132,8 +166,29 @@
                 numberB={totalRounds}
                 numberLabel="Round"
             />
+            <div class="h-32 flex items-center justify-center pt-10">
+                {#if !isRoundEnded}
+                    <div class="text-[#776E65] text-7xl font-bold game-font text-center">
+                        {countdown >= 0 ? countdown : '...'}
+                    </div>
+                {:else if status === 'Ended'}
+                    <button
+                        class="btn variant-soft-surface text-[#F67C5F] text-3xl font-bold game-font text-center"
+                        on:click={() => goto('/elimination')}
+                    >
+                        Lobby
+                    </button>
+                {:else}
+                    <button
+                        class="btn variant-soft-surface text-[#F67C5F] text-3xl font-bold game-font text-center"
+                        on:click={nextRoundMutation}
+                    >
+                        Next Round
+                    </button>
+                {/if}
+            </div>
         {/if}
-        <div class="flex justify-center items-center h-full">
+        <div class="flex justify-center items-center pt-8">
             <div class="w-full max-w-2xl pb-28">
                 <Game
                     player={username}
@@ -141,7 +196,7 @@
                     boardId={boardId}
                     canStartNewGame={!isMultiplayer}
                     showBestScore={!isMultiplayer}
-                    canMakeMove={username === $userStore.username}
+                    canMakeMove={canMakeMove}
                     bind:score={currentPlayerScore}
                 />
             </div>

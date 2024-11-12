@@ -45,8 +45,6 @@
     .sort((a, b) => b.score - a.score)
     .map((player, index) => ({ ...player, rank: index + 1 }));
 
-  $: console.log('rlb', rlb);
-
 </script>
 
 <div class="text-center p-6 w-80 mt-6 max-h-full rounded-lg bg-[#FAF8EF] shadow-md max-w-md mx-auto">

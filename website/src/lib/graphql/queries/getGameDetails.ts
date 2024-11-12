@@ -17,6 +17,7 @@ export const GET_GAME_DETAILS = gql`
 			eliminatedPerTrigger
 			createdTime
 			status
+			lastUpdatedTime
 			gameLeaderboard {
 				username
 				score

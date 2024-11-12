@@ -5,7 +5,6 @@
   import Board from '../molecules/Board.svelte';
 	import { makeMove } from '$lib/graphql/mutations/makeMove';
 	import { onDestroy } from 'svelte';
-	import { getMessageBlockheight } from '$lib/utils/getMessageBlockheight';
 
   export let player: string;
   export let score: number = 0;
@@ -24,6 +23,8 @@
   // use combination of playerChainId and gameChainId for subscription
   // playerChainId used for game board queries
   // gameChainId used for game state queries
+
+  // TODO: currently, game is slow because it need to wait for cross-chain messages to be processed
 
   // GraphQL queries, mutations, and subscriptions
   const GET_BOARD_STATE = gql`
@@ -56,6 +57,8 @@
   $: score = $game.data?.board?.score || 0;
 
   let moveTimeout: NodeJS.Timeout | null = null;
+  let keyPressTime: number | null = null;
+  let pingTime: number | null = null;
 
   // Mutation functions
   const makeMoveMutation = ({ boardId, direction }: { boardId: string, direction: string }) => {
@@ -66,12 +69,13 @@
     // Set a timeout to re-enable moves after 200ms
     moveTimeout = setTimeout(() => {
       canMakeMove = true;
-    }, 150);
+    }, 100);
 
     makeMove(client, boardId, direction);
   };
 
   // Subscription for notifications
+  // const chainId = 'e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65';
   const playerMessages = subscriptionStore({
     client,
     query: PLAYER_PING_SUBSCRIPTION,
@@ -85,8 +89,7 @@
 
   // Reactive statements for block height and rendering
   let blockHeight = 0;
-  $: bh = getMessageBlockheight($playerMessages.data);
-  $: console.log('bh', bh);
+  $: bh = $playerMessages.data?.notifications?.reason?.NewBlock?.height;
   $: if (bh && bh !== blockHeight) {
     blockHeight = bh;
     canMakeMove = true;
@@ -101,23 +104,29 @@
     rendered = true;
   }
 
-  // Logs for move history
-  let logs: { hash: string, timestamp: string }[] = [];
-  let lastHash = '';
-  $: isCurrentGame = $game.data?.game?.boardId === boardId;
-  $: if ($playerMessages.data?.notifications?.reason?.NewBlock?.hash
-    && lastHash !== $playerMessages.data.notifications.reason.NewBlock.hash
-    && isCurrentGame)
-  {
-    lastHash = $playerMessages.data.notifications.reason.NewBlock.hash;
-    logs = [{ hash: lastHash, timestamp: new Date().toISOString() }, ...logs];
+  $: if (keyPressTime && !$game.fetching) {
+    pingTime = Date.now() - keyPressTime; // Calculate the ping time
+    keyPressTime = null; // Reset keyPressTime
   }
+
+  // Logs for move history
+  // let logs: { hash: string, timestamp: string }[] = [];
+  // let lastHash = '';
+  // $: isCurrentGame = $game.data?.game?.boardId === boardId;
+  // $: if ($playerMessages.data?.notifications?.reason?.NewBlock?.hash
+  //   && lastHash !== $playerMessages.data.notifications.reason.NewBlock.hash
+  //   && isCurrentGame)
+  // {
+  //   lastHash = $playerMessages.data.notifications.reason.NewBlock.hash;
+  //   logs = [{ hash: lastHash, timestamp: new Date().toISOString() }, ...logs];
+  // }
 
   // Utility functions
   const hasWon = (board: number[][]) => board.some(row => row.includes(11));
 
   const handleKeydown = (event: KeyboardEvent) => {
     if ($game.data?.board?.isEnded || !boardId) return;
+    keyPressTime = Date.now(); // Capture the time when a key is pressed
     makeMoveMutation({ boardId, direction: event.key });
   };
 
@@ -138,6 +147,11 @@
         </div>
       {/if}
     </div>
+    {#if pingTime !== null}
+      <div class="mt-2 text-sm text-surface-200">
+        Ping: {pingTime} ms
+      </div>
+    {/if}
   {:else}
     <Board board={[[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]} />
   {/if}

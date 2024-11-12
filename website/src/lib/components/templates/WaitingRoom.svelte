@@ -19,7 +19,7 @@
 	import { userStore } from '$lib/stores/userStore';
 
     const gameId = $page.params.gameId;
-    const minimumPlayers = 2;
+    const minimumPlayers = 1;
 
     const client = getContextClient();
     $: username = $userStore.username;

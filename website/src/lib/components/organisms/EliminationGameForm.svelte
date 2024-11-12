@@ -84,6 +84,7 @@
                 required
                 type="number"
                 min="1"
+                max="99"
             />
         </div>
 
@@ -97,6 +98,7 @@
                 required
                 type="number"
                 min="1"
+                max="99"
             />
         </div>
 
@@ -110,6 +112,7 @@
                 required
                 type="number"
                 min="1"
+                max="99"
             />
         </div>
 
@@ -123,6 +126,7 @@
                 required
                 type="number"
                 min="2"
+                max="99"
             />
         </div>
 
