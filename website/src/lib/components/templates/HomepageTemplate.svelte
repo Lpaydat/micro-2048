@@ -14,8 +14,10 @@
 
     <svelte:fragment slot="main">
         {#if $userStore.username}
-            <div class="p-4 flex items-center justify-center">
-                <GameModeSelector />
+            <div class="flex flex-col h-full">
+                <div class="flex-grow flex items-center justify-center">
+                    <GameModeSelector />
+                </div>
             </div>
         {:else}
             <HeaderNav />
