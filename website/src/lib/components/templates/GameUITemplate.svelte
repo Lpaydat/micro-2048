@@ -146,6 +146,7 @@
             goto(nextTarget);
         }
     }
+    $: isEnded = roundLeaderboard?.eliminatedPlayers.some((player: any) => player.username === username);
 </script>
 
 <MainTemplate>
@@ -197,6 +198,8 @@
         <div class="flex justify-center items-center pt-8">
             <div class="w-full max-w-2xl pb-28">
                 <Game
+                    {isMultiplayer}
+                    {isEnded}
                     player={username}
                     playerChainId={chainId}
                     boardId={boardId}

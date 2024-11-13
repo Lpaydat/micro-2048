@@ -6,6 +6,8 @@
 	import { makeMove } from '$lib/graphql/mutations/makeMove';
 	import { onDestroy } from 'svelte';
 
+  export let isMultiplayer: boolean = false;
+  export let isEnded: boolean = false;
   export let player: string;
   export let score: number = 0;
   export let playerChainId: string;
@@ -127,7 +129,12 @@
     makeMoveMutation({ boardId, direction: event.key });
   };
 
-  const getOverlayMessage = (board: number[][]) => hasWon(board) ? "Congratulations! You Won!" : "Game Over! You Lost!";
+  const getOverlayMessage = (board: number[][]) => {
+    if (!isMultiplayer) {
+      return hasWon(board) ? "Congratulations! You Won!" : "Game Over! You Lost!";
+    }
+    return "Game Over!";
+  };
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -138,7 +145,7 @@
   {#if rendered}
     <div class="game-board">
       <Board board={$game.data?.board?.board} />
-      {#if $game.data?.board?.isEnded}
+      {#if $game.data?.board?.isEnded || isEnded}
         <div class="overlay">
           <p>{getOverlayMessage($game.data?.board?.board)}</p>
         </div>
