@@ -15,15 +15,6 @@
   export let canMakeMove: boolean = true;
   export let showBestScore: boolean = true;
 
-  // accept chainId for subscription
-  // boardId if it's multiplayer
-  // boardId for queries
-  // player name for queries
-
-  // use combination of playerChainId and gameChainId for subscription
-  // playerChainId used for game board queries
-  // gameChainId used for game state queries
-
   // TODO: currently, game is slow because it need to wait for cross-chain messages to be processed
 
   // GraphQL queries, mutations, and subscriptions
@@ -76,20 +67,26 @@
 
   // Subscription for notifications
   // const chainId = 'e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65';
-  const playerMessages = subscriptionStore({
-    client,
-    query: PLAYER_PING_SUBSCRIPTION,
-    variables: { chainId: playerChainId },
-  });
+  let playerMessages: any;
+  $: {
+    if (playerChainId) {
+      playerMessages = subscriptionStore({
+        client,
+        query: PLAYER_PING_SUBSCRIPTION,
+        variables: { chainId: playerChainId },
+      });
+    }
+  }
 
   onDestroy(() => {
-    playerMessages.pause();
+    if (playerMessages) {
+      playerMessages.pause();
+    }
   });
-
 
   // Reactive statements for block height and rendering
   let blockHeight = 0;
-  $: bh = $playerMessages.data?.notifications?.reason?.NewBlock?.height;
+  $: bh = $playerMessages?.data?.notifications?.reason?.NewBlock?.height;
   $: if (bh && bh !== blockHeight) {
     blockHeight = bh;
     canMakeMove = true;

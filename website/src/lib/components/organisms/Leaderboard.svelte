@@ -1,15 +1,47 @@
 <script lang="ts">
+  import { page } from '$app/stores';
   import { popup, TabGroup, Tab } from '@skeletonlabs/skeleton';
   import type { PopupSettings } from '@skeletonlabs/skeleton';
   import ListItem from '../molecules/LeaderboardItem.svelte'
   import { ChevronDown } from 'lucide-svelte';
 	import type { PlayerStats, RoundResults } from '$lib/types/leaderboard';
+	import { getContextClient, gql, queryStore } from '@urql/svelte';
 
   export let currentRound: number = 1;
   export let player: string;
   export let currentPlayerScore: number = 0; // round score
   export let gameLeaderboard: PlayerStats[] = [];
   export let roundLeaderboard: RoundResults | undefined;
+
+  const PLAYERS = gql`
+    query Players($usernames: [String!]!) {
+      players(usernames: $usernames) {
+        username
+        chainId
+      }
+    }
+  `;
+
+  const client = getContextClient();
+
+  $: players = queryStore({
+    client,
+    query: PLAYERS,
+    variables: { usernames: gameLeaderboard?.map(p => p.username) ?? [] }
+  });
+  $: currentUrl = $page.url.pathname;
+  $: otherPlayersBoards = $players.data?.players.reduce((acc: Record<string, string>, p: { username: string, chainId: string }) => {
+    // Extract game ID and round from current URL
+    const matches = currentUrl.match(/\/game\/(.+)-(\d+)-[^-]+-[^-]+$/);
+    if (!matches) return acc;
+    
+    const [_, gameId, round] = matches;
+    // Create new URL with player's username and chainId
+    const boardUrl = `/game/${gameId}-${round}-${p.username}-${p.chainId}`;
+    
+    acc[p.username] = boardUrl;
+    return acc;
+  }, {} as Record<string, string>) ?? {};
 
   $: rlb = roundLeaderboard ?? {
     round: 0,
@@ -72,13 +104,26 @@
     {#if activeTab === 0}
       <ul class="list-none p-0 border-sm">
         {#each sortedGameLeaderboard as {rank, username, score}}
-          <ListItem {rank} name={username} isCurrentPlayer={username === player} {score} />
+          <ListItem 
+            {rank}
+            name={username}
+            isCurrentPlayer={username === player}
+            {score}
+            boardUrl={otherPlayersBoards[username]}
+          />
         {/each}
       </ul>
     {:else if activeTab === 1}
       <ul class="list-none p-0 border-sm">
         {#each combinedRoundLeaderboard as {rank, username, score, isEliminated}}
-          <ListItem {rank} name={username} isCurrentPlayer={username === player} {score} {isEliminated} />
+          <ListItem
+            {rank}
+            name={username}
+            isCurrentPlayer={username === player}
+            {score}
+            {isEliminated}
+            boardUrl={otherPlayersBoards[username]}
+          />
         {/each}
       </ul>
     {:else if activeTab === 2}

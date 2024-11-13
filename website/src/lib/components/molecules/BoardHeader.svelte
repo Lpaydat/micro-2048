@@ -58,7 +58,7 @@
 			New Game
 		</button>
 	{:else}
-		<div class="flex items-center justify-center text-2xl text-[#f67c5f] font-bold" style="font-family: 'Clear Sans', 'Arial', sans-serif;">
+		<div class="flex items-center justify-center text-2xl text-[#f67c5f] font-bold truncate" style="font-family: 'Clear Sans', 'Arial', sans-serif;">
 			{player}
 		</div>
 	{/if}

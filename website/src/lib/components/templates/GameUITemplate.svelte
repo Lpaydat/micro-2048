@@ -34,9 +34,11 @@
         })
     }
 
-    let [gameId, round, username, playerChainId] = boardId.split('-');
-    let canMakeMove = username === $userStore.username;
+    let [gameId, round, _username, _playerChainId] = $page.params.boardId.split('-');
     $: r = parseInt($page.params.boardId.match(/\-(\d+)\-/)?.[1] || '0');
+    $: username = $page.params.boardId.split('-')[2] || '';
+    $: chainId = $page.params.boardId.match(/\-[^-]+-([^-]+)$/)?.[1] || '';
+    let canMakeMove = username === $userStore.username;
 
     const client = getContextClient();
 
@@ -76,12 +78,13 @@
     $: roundLeaderboard = $game.data?.eliminationGame?.roundLeaderboard?.[0];
     $: status = $game.data?.eliminationGame?.status;
     $: isRoundEnded = roundLeaderboard?.players.length === 0;
+    $: bh = getMessageBlockheight($gameMessages.data);
+
     let countdown = 0;
     let countdownInterval: NodeJS.Timeout;
-
     let intervalId: NodeJS.Timeout;
     let blockHeight: number | undefined = undefined;
-    $: bh = getMessageBlockheight($gameMessages.data);
+    let isTriggered: boolean = false;
 
     function updateCountdown() {
         const triggerInterval = $game.data?.eliminationGame?.triggerIntervalSeconds || 0;
@@ -95,8 +98,9 @@
             countdownInterval = setInterval(() => {
                 countdown = Math.max(0, countdown - 1);
 
-                if (countdown <= 0) {
+                if (countdown <= 0 && !isTriggered) {
                     triggerGameEventMutation();
+                    isTriggered = true;
                     canMakeMove = false;
                 } else {
                     canMakeMove = username === $userStore.username;
@@ -130,13 +134,15 @@
     }
 
     let currentPlayerScore = 0;
-
     let nextTarget: string | undefined = undefined;
 
     $: {
-        const target = `/game/${gameId}-${currentRound}-${username}-${playerChainId}`;
+        const player = $userStore.username || username;
+        const chainId = $userStore.chainId || _playerChainId;
+        const target = `/game/${gameId}-${currentRound}-${player}-${chainId}`;
         if (currentRound && target !== nextTarget && status === 'Active') {
             nextTarget = target;
+            isTriggered = false;
             goto(nextTarget);
         }
     }
@@ -192,7 +198,7 @@
             <div class="w-full max-w-2xl pb-28">
                 <Game
                     player={username}
-                    playerChainId={playerChainId}
+                    playerChainId={chainId}
                     boardId={boardId}
                     canStartNewGame={!isMultiplayer}
                     showBestScore={!isMultiplayer}

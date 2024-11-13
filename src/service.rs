@@ -111,6 +111,19 @@ impl QueryRoot {
         }
     }
 
+    async fn players(&self, usernames: Vec<String>) -> Vec<Player> {
+        let mut players: Vec<Player> = Vec::new();
+        for username in usernames {
+            if let Ok(Some(player)) = self.state.players.try_load_entry(&username).await {
+                players.push(Player {
+                    username,
+                    chain_id: player.chain_id.get().to_string(),
+                });
+            }
+        }
+        players
+    }
+
     async fn check_player(&self, username: String, password_hash: String) -> Option<bool> {
         if let Ok(Some(player)) = self.state.players.try_load_entry(&username).await {
             let stored_password_hash = player.password_hash.get().to_string();
