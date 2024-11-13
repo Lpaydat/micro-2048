@@ -7,10 +7,10 @@
 	import { createEliminationGame, type EliminationGameSettings } from "$lib/graphql/mutations/createEliminationGame";
 	import { userStore } from "$lib/stores/userStore";
 
-    let totalRound = '';
-    let eliminatedPerTrigger = '';
-    let triggerInterval = '';
-    let maxPlayer = '';
+    let totalRound = '5';
+    let eliminatedPerTrigger = '2';
+    let triggerInterval = '30';
+    let maxPlayer = '10';
     let name = '';
     let loading = false;
 
