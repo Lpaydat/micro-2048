@@ -1,12 +1,15 @@
 <script lang="ts">
   import { page } from '$app/stores';
-  import { popup, TabGroup, Tab } from '@skeletonlabs/skeleton';
-  import type { PopupSettings } from '@skeletonlabs/skeleton';
+  import { popup, TabGroup, Tab, getModalStore } from '@skeletonlabs/skeleton';
+  import type { PopupSettings, ModalSettings } from '@skeletonlabs/skeleton';
   import ListItem from '../molecules/LeaderboardItem.svelte'
+	import GameResults from '../organisms/GameResults.svelte';  
   import { ChevronDown } from 'lucide-svelte';
 	import type { PlayerStats, RoundResults } from '$lib/types/leaderboard';
 	import { getContextClient, gql, queryStore } from '@urql/svelte';
+	import { onDestroy } from 'svelte';
 
+  export let gameStatus: string = '';
   export let currentRound: number = 1;
   export let player: string;
   export let currentPlayerScore: number = 0; // round score
@@ -77,6 +80,30 @@
     .sort((a, b) => b.score - a.score)
     .map((player, index) => ({ ...player, rank: index + 1 }));
 
+    const modalStore = getModalStore();
+    const modal: ModalSettings = {
+        type: 'component',
+        component: {
+            ref: GameResults,
+            props: { gameLeaderboard, player }
+        }
+    }
+
+    let timeoutId: NodeJS.Timeout;
+    $: {
+        if (gameStatus === 'Ended') {
+            timeoutId = setTimeout(() => {
+                console.log('triggering modal');
+                console.log('gameLeaderboard', gameLeaderboard)
+                console.log('player', player)
+                modalStore.trigger(modal);
+            }, 2000);
+        }
+    }
+
+    onDestroy(() => {
+        clearTimeout(timeoutId);
+    });
 </script>
 
 <div class="text-center p-6 w-80 mt-6 max-h-full rounded-lg bg-[#FAF8EF] shadow-md max-w-md mx-auto">

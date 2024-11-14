@@ -152,7 +152,7 @@
       {/if}
     </div>
     <div class="mt-2 text-sm font-semibold text-surface-300">
-      Ping: {pingTime} ms
+      Ping: {pingTime || 0} ms
     </div>
   {:else}
     <Board board={[[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]} />

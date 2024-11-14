@@ -151,6 +151,7 @@
             <Brand />
             <Leaderboard
                 player={username}
+                gameStatus={status}
                 {currentRound}
                 {gameLeaderboard}
                 {roundLeaderboard}
