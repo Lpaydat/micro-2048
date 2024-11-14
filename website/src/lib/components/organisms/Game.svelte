@@ -122,7 +122,6 @@
     && lastHash !== $playerMessages?.data?.notifications?.reason?.NewBlock?.hash
   ) {
     lastHash = $playerMessages?.data?.notifications?.reason?.NewBlock?.hash;
-    console.log('lastHash', lastHash);
     if (lastHash) {
       hashesStore.update(logs => [{ hash: lastHash, timestamp: new Date().toISOString() }, ...logs]);
     }

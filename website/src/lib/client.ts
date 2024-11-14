@@ -9,7 +9,7 @@ const getBaseUrl = (ipAddress: string, port: string) => ({
 });
 
 export const getClient = (chainId: string, applicationId: string, port: string) => {
-	const ipAddress = 'localhost'; // or import.meta.env.VITE_IP_ADDRESS
+	const ipAddress = '64.225.79.45'; // or import.meta.env.VITE_IP_ADDRESS
 	const urls = getBaseUrl(ipAddress, port);
 
 	// Create basic HTTP client for server-side rendering

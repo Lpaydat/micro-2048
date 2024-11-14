@@ -93,9 +93,6 @@
     $: {
         if (gameStatus === 'Ended') {
             timeoutId = setTimeout(() => {
-                console.log('triggering modal');
-                console.log('gameLeaderboard', gameLeaderboard)
-                console.log('player', player)
                 modalStore.trigger(modal);
             }, 2000);
         }
