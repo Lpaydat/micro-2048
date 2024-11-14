@@ -20,19 +20,15 @@
 
     let unsubscribe: any;
 
-    onDestroy(() => {
-        if (unsubscribe) unsubscribe()
-    })
-
     $: {
-        const unsubscribe = page.subscribe(($page) => {
+        unsubscribe = page.subscribe(($page) => {
             boardId = $page.params.boardId;
-        })
-
-        onDestroy(() => {
-            if (unsubscribe) unsubscribe()
-        })
+        });
     }
+
+    onDestroy(() => {
+        if (unsubscribe) unsubscribe();
+    });
 
     let [gameId, round, _username, _playerChainId] = $page.params.boardId.split('-');
     $: r = parseInt($page.params.boardId.match(/\-(\d+)\-/)?.[1] || '0');

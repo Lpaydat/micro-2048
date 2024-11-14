@@ -151,11 +151,9 @@
         </div>
       {/if}
     </div>
-    {#if pingTime !== null}
-      <div class="mt-2 text-sm font-semibold text-surface-300">
-        Ping: {pingTime} ms
-      </div>
-    {/if}
+    <div class="mt-2 text-sm font-semibold text-surface-300">
+      Ping: {pingTime} ms
+    </div>
   {:else}
     <Board board={[[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]} />
   {/if}

@@ -9,7 +9,6 @@
 	import WaitingGames from "../organisms/WaitingGames.svelte";
     import EliminationGameForm from '../organisms/EliminationGameForm.svelte';
 	import type { ModalSettings, ModalStore } from '@skeletonlabs/skeleton';
-	import { userStore } from '$lib/stores/userStore';
 
     const modal: ModalSettings = {
         type: 'component',
