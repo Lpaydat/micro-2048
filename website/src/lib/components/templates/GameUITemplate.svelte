@@ -32,7 +32,7 @@
         if (unsubscribe) unsubscribe();
     });
 
-    let [gameId, round, _username, _playerChainId] = $page.params.boardId.split('-');
+    let [gameId, round, _username, playerChainId] = $page.params.boardId.split('-');
     $: r = parseInt($page.params.boardId.match(/\-(\d+)\-/)?.[1] || '0');
     $: username = $page.params.boardId.split('-')[2] || '';
     $: chainId = $page.params.boardId.match(/\-[^-]+-([^-]+)$/)?.[1] || '';
@@ -136,7 +136,7 @@
 
     $: {
         const player = $userStore.username || username;
-        const chainId = $userStore.chainId || _playerChainId;
+        const chainId = $userStore.chainId || playerChainId;
         const target = `/game/${gameId}-${currentRound}-${player}-${chainId}`;
         if (currentRound && target !== nextTarget && status === 'Active') {
             nextTarget = target;

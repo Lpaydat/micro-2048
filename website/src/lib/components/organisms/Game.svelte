@@ -6,6 +6,7 @@
 	import { makeMove } from '$lib/graphql/mutations/makeMove';
 	import { onDestroy } from 'svelte';
   import { hashesStore, isHashesListVisible } from '$lib/stores/hashesStore';
+	import { goto } from '$app/navigation';
 
   export let isMultiplayer: boolean = false;
   export let isEnded: boolean = false;
@@ -49,6 +50,10 @@
     requestPolicy: 'network-only',
   });
   $: score = $game.data?.board?.score || 0;
+
+  $: if (isMultiplayer && $game.data?.board === null) {
+    goto('/error');
+  }
 
   let moveTimeout: NodeJS.Timeout | null = null;
   let keyPressTime: number | null = null;
