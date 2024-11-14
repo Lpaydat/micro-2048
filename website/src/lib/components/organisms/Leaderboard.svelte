@@ -113,14 +113,7 @@
       <Tab class="hover:bg-transparent" bind:group={activeTab} name="tab1" value={0}>Game</Tab>
       <Tab class="hover:bg-transparent" bind:group={activeTab} name="tab2" value={1}>
         Round {currentRound}
-        <button 
-          class="ml-2"
-          use:popup={popupRoundSelect}
-        >
-          <ChevronDown size={18} />
-        </button>
       </Tab>
-      <Tab class="hover:bg-transparent" bind:group={activeTab} name="tab3" value={2}>Blocks</Tab>
     </TabGroup>
     {#if selectedRound !== currentRound}
       <p class="text-sm text-gray-600 mt-2">Viewing Round {selectedRound}</p>
