@@ -1,9 +1,9 @@
 import { writable } from 'svelte/store';
 
 export const userStore = writable<{
-	username: string | undefined;
-	passwordHash: string | undefined;
-	chainId: string | undefined;
+	username: string | undefined | null;
+	passwordHash: string | undefined | null;
+	chainId: string | undefined | null;
 }>({
 	username: undefined,
 	passwordHash: undefined,

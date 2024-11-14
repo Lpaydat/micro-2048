@@ -2,10 +2,19 @@
 	import { userStore } from "$lib/stores/userStore";
     import Button from "../atoms/Button.svelte";
 
+    $: {
+        localStorage.setItem('username', $userStore.username ?? '');
+        localStorage.setItem('passwordHash', $userStore.passwordHash ?? '');
+        localStorage.setItem('chainId', $userStore.chainId ?? '');
+    }
+
     const handleLogout = () => {
         $userStore.chainId = undefined;
         $userStore.username = undefined;
         $userStore.passwordHash = undefined;
+        localStorage.removeItem('username');
+        localStorage.removeItem('passwordHash');
+        localStorage.removeItem('chainId');
     }
 </script>
 

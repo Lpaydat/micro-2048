@@ -115,6 +115,10 @@
   }
 
   $: if (!$player.fetching && $player.data?.player && canLogin) {
+    localStorage.setItem('username', username);
+    localStorage.setItem('passwordHash', passwordHash);
+    localStorage.setItem('chainId', $player.data.player.chainId);
+
     userStore.update(store => ({
       ...store,
       username: $player.data.player.username,

@@ -5,15 +5,15 @@ authors = ["LPAYDAT <lpaydat@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-async-graphql = { version = "=7.0.2", default-features = false }
-linera-sdk = "0.12.1"
+async-graphql = { version = "7.0.2", default-features = false }
+linera-sdk = "0.13.1"
 serde = { version = "1.0", features = ["derive"] }
 lazy_static = "1.4"
 log = "0.4.22"
 env_logger = "0.11.5"
 
 [dev-dependencies]
-linera-sdk = { version = "0.12.1", features = ["test"] }
+linera-sdk = { version = "0.13.1", features = ["test"] }
 
 [[bin]]
 name = "game2048_contract"
