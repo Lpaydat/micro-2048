@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { subscriptionStore, getContextClient } from "@urql/svelte";
+	import BlockHashes from "../molecules/BlockHashes.svelte";
 	import Game from "../organisms/Game.svelte";
 	import MainTemplate from "../organisms/MainTemplate.svelte";
 	import Leaderboard from '../organisms/Leaderboard.svelte';
@@ -15,6 +16,7 @@
 	import { triggerGameEvent } from "$lib/graphql/mutations/triggerGame";
 	import { goto } from "$app/navigation";
 	import { nextRound } from "$lib/graphql/mutations/nextRound";
+	import { isHashesListVisible } from "$lib/stores/hashesStore";
 
     let boardId: string = $page.params.boardId;
 
@@ -207,5 +209,8 @@
                 />
             </div>
         </div>
+        {#if $isHashesListVisible}
+            <BlockHashes />
+        {/if}
     </svelte:fragment>
 </MainTemplate>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { hashesStore } from "$lib/stores/hashesStore";
 	import { getContextClient, mutationStore, gql } from "@urql/svelte";
 	import { onMount } from "svelte";
 
@@ -19,6 +20,7 @@
 
 	// Mutation functions
 	const newGameMutation = ({ seed }: { seed: number }) => {
+		hashesStore.set([]);
 		mutationStore({
 			client,
 			query: NEW_BOARD,

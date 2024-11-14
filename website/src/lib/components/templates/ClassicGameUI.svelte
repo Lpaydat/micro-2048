@@ -1,8 +1,10 @@
 <script lang="ts">
+	import BlockHashes from "../molecules/BlockHashes.svelte";
 	import Game from "../organisms/Game.svelte";
 	import MainTemplate from "../organisms/MainTemplate.svelte";
 	import UserSidebar from '../organisms/UserSidebar.svelte';
 	import { userStore } from "$lib/stores/userStore";
+	import { isHashesListVisible } from "$lib/stores/hashesStore";
 
     let canMakeMove = !!$userStore.username;
     $: chainId = $userStore.chainId;
@@ -25,5 +27,8 @@
                 />
             </div>
         </div>
+        {#if $isHashesListVisible}
+            <BlockHashes />
+        {/if}
     </svelte:fragment>
 </MainTemplate>

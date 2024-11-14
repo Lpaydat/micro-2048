@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Main from "../molecules/Main.svelte";
+    import Main from "../molecules/Main.svelte";
     import Sidebar from "../molecules/Sidebar.svelte";
 </script>
 

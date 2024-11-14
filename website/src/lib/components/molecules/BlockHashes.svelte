@@ -1,5 +1,5 @@
 <script lang="ts">
-  export let hashes: { hash: string, timestamp: string }[] = [];
+  import { hashesStore } from '$lib/stores/hashesStore';
 
   // Function to format the timestamp
   function formatTimestamp(isoString: string): string {
@@ -11,40 +11,19 @@
   function formatHash(hash: string): string {
     return `${hash.slice(0, 6)}...${hash.slice(-6)}`;
   }
+
+  // Subscribe to the logs store
+  let hashes: { hash: string; timestamp: string }[] = [];
+  hashesStore.subscribe(value => {
+    hashes = value;
+  });
 </script>
 
-<style>
-  .sidebar {
-    width: 280px;
-    background-color: #2d2d2d;
-    padding: 20px;
-    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-    position: fixed;
-    top: 0;
-    right: 0;
-    height: 100%;
-    overflow-y: auto;
-  }
-
-  .log-item {
-    margin-bottom: 15px;
-    padding: 10px;
-    background-color: #343434;
-    border-radius: 5px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  }
-
-  .log-title {
-    font-weight: bold;
-    margin-bottom: 5px;
-  }
-</style>
-
-<div class="sidebar">
-  <div class="log-title">Block Hashes</div>
+<div class="fixed top-0 right-0 h-full w-[280px] overflow-y-auto text-surface-300 bg-[#2d2d2d] p-5 shadow-md">
+  <div class="font-bold mb-1">Block Hashes</div>
   {#each hashes as { hash, timestamp }}
-    <div class="log-item">
-      <div><strong>Hash:</strong> {formatHash(hash)}</div>
+    <div class="mb-4 rounded bg-[#343434] p-2.5 shadow">
+      <div><strong>Hash:</strong> <span class="text-emerald-400">{formatHash(hash)}</span></div>
       <div>{formatTimestamp(timestamp)}</div>
     </div>
   {/each}

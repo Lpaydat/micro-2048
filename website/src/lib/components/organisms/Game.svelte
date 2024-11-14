@@ -5,6 +5,7 @@
   import Board from '../molecules/Board.svelte';
 	import { makeMove } from '$lib/graphql/mutations/makeMove';
 	import { onDestroy } from 'svelte';
+  import { hashesStore, isHashesListVisible } from '$lib/stores/hashesStore';
 
   export let isMultiplayer: boolean = false;
   export let isEnded: boolean = false;
@@ -83,6 +84,7 @@
   onDestroy(() => {
     if (playerMessages) {
       playerMessages.pause();
+      hashesStore.set([]);
     }
   });
 
@@ -109,16 +111,17 @@
   }
 
   // Logs for move history
-  // let logs: { hash: string, timestamp: string }[] = [];
-  // let lastHash = '';
-  // $: isCurrentGame = $game.data?.game?.boardId === boardId;
-  // $: if ($playerMessages.data?.notifications?.reason?.NewBlock?.hash
-  //   && lastHash !== $playerMessages.data.notifications.reason.NewBlock.hash
-  //   && isCurrentGame)
-  // {
-  //   lastHash = $playerMessages.data.notifications.reason.NewBlock.hash;
-  //   logs = [{ hash: lastHash, timestamp: new Date().toISOString() }, ...logs];
-  // }
+  let lastHash = '';
+  $: if (
+    $playerMessages?.data?.notifications?.reason?.NewBlock?.hash
+    && lastHash !== $playerMessages?.data?.notifications?.reason?.NewBlock?.hash
+  ) {
+    lastHash = $playerMessages?.data?.notifications?.reason?.NewBlock?.hash;
+    console.log('lastHash', lastHash);
+    if (lastHash) {
+      hashesStore.update(logs => [{ hash: lastHash, timestamp: new Date().toISOString() }, ...logs]);
+    }
+  }
 
   // Utility functions
   const hasWon = (board: number[][]) => board.some(row => row.includes(11));
@@ -151,8 +154,24 @@
         </div>
       {/if}
     </div>
-    <div class="mt-2 text-sm font-semibold text-surface-300">
-      Ping: {pingTime || 0} ms
+    <div class="mt-2 flex items-center justify-center gap-4 text-sm">
+      <button 
+        class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-700/50 hover:bg-surface-600/50 transition-colors"
+        on:click={() => isHashesListVisible.update(current => !current)}
+      >
+        <span 
+          class="font-mono text-emerald-400 cursor-pointer" 
+          title={lastHash || "No hash available"}
+        >
+          {#if lastHash}
+            {lastHash.slice(0, 6)}...{lastHash.slice(-4)}
+          {:else}
+            ---
+          {/if}
+        </span>
+        <span class="text-surface-400">|</span>
+        <span class="text-orange-400">{pingTime || 0}<span class="text-surface-400 text-xs ml-1">ms</span></span>
+      </button>
     </div>
   {:else}
     <Board board={[[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]} />

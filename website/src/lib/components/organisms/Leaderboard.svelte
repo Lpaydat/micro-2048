@@ -153,15 +153,6 @@
           />
         {/each}
       </ul>
-    {:else if activeTab === 2}
-      <ul class="list-none p-0 border-sm">
-        {#each blockHashes as {block, hash}}
-          <li class="flex justify-between snap-start">
-            <span>Block {block}</span>
-            <span>{hash}</span>
-          </li>
-        {/each}
-      </ul>
     {/if}
   </div>
 </div>
@@ -183,9 +174,5 @@
     max-height: calc(100vh - 10rem); /* Adjust the height as needed */
     overflow-y: auto;
     scroll-snap-type: y mandatory; /* Enable vertical snapping */
-  }
-
-  .snap-start {
-    scroll-snap-align: start; /* Align items to the start of the container */
   }
 </style> 
