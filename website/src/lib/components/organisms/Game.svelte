@@ -59,11 +59,15 @@
   let keyPressTime: number | null = null;
   let pingTime: number | null = null;
 
+  // Add a new store for tracking moves
+  let moveStartTimes: Record<string, number> = {};
+
   // Mutation functions
   const makeMoveMutation = ({ boardId, direction }: { boardId: string, direction: string }) => {
     if (!canMakeMove) return;
 
     canMakeMove = false;
+    moveStartTimes[direction] = Date.now(); // Store the start time for this move
 
     // Set a timeout to re-enable moves after 200ms
     moveTimeout = setTimeout(() => {
@@ -100,7 +104,14 @@
     blockHeight = bh;
     canMakeMove = true;
     if (moveTimeout) {
-      clearTimeout(moveTimeout); // Clear the timeout if a new block height is received
+      clearTimeout(moveTimeout);
+    }
+    // Calculate ping time when new block arrives
+    const lastMove = Object.entries(moveStartTimes)[0];
+    if (lastMove) {
+      const [direction, startTime] = lastMove;
+      pingTime = Date.now() - startTime;
+      delete moveStartTimes[direction]; // Clean up the stored time
     }
     game.reexecute({ requestPolicy: 'network-only' });
   }
@@ -108,11 +119,6 @@
   $: rendered = false;
   $: if (!$game.fetching && $game.data?.board) {
     rendered = true;
-  }
-
-  $: if (keyPressTime && !$game.fetching) {
-    pingTime = Date.now() - keyPressTime; // Calculate the ping time
-    keyPressTime = null; // Reset keyPressTime
   }
 
   // Logs for move history
