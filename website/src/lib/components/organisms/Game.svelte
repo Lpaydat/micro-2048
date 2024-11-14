@@ -156,7 +156,7 @@
     </div>
     <div class="mt-2 flex items-center justify-center gap-4 text-sm">
       <button 
-        class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-700/50 hover:bg-surface-600/50 transition-colors"
+        class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-800/50 hover:bg-black/50 transition-colors"
         on:click={() => isHashesListVisible.update(current => !current)}
       >
         <span 

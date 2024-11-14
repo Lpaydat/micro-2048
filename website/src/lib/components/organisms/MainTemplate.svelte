@@ -3,7 +3,7 @@
     import Sidebar from "../molecules/Sidebar.svelte";
 </script>
 
-<div class="flex h-screen overflow-hidden bg-[#3b3b41] bg-[url('/micro-carbon.png')] bg-repeat">
+<div class="flex h-screen overflow-hidden bg-[#23232b] bg-[url('/micro-carbon.png')] bg-repeat">
     <Sidebar>
         <slot name="sidebar" />
     </Sidebar>
