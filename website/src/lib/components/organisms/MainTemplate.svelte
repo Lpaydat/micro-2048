@@ -3,6 +3,7 @@
     import Main from "../molecules/Main.svelte";
     import MobileHeader from "../molecules/MobileHeader.svelte";
     import Sidebar from "../molecules/Sidebar.svelte";
+	import MobileUserDetails from '../molecules/MobileUserDetails.svelte';
 
     export let windowWidth = 0;
 
@@ -28,7 +29,11 @@
             {#if isMobile}
                 <div class="flex-none">
                     <MobileHeader>
-                        <slot name="header" />
+                        {#if $$slots.header}
+                            <slot name="header" />
+                        {:else}
+                            <MobileUserDetails />
+                        {/if}
                     </MobileHeader>
                 </div>
             {/if}
