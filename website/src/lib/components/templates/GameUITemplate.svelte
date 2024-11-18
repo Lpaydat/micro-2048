@@ -34,7 +34,7 @@
         if (unsubscribe) unsubscribe();
     });
 
-    let [gameId, round, _username, playerChainId] = $page.params.boardId.split('-');
+    let [gameId, _, _username, playerChainId] = $page.params.boardId.split('-');
     $: r = parseInt($page.params.boardId.match(/\-(\d+)\-/)?.[1] || '0');
     $: username = $page.params.boardId.split('-')[2] || '';
     $: chainId = $page.params.boardId.match(/\-[^-]+-([^-]+)$/)?.[1] || '';

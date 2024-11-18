@@ -1,4 +1,6 @@
 <script>
+    import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 	import { userStore } from '$lib/stores/userStore';
     import LogOut from 'lucide-svelte/icons/log-out';
 	import MobileUserLogin from './MobileUserLogin.svelte';
@@ -7,9 +9,15 @@
         $userStore.chainId = undefined;
         $userStore.username = undefined;
         $userStore.passwordHash = undefined;
+        $userStore.highestScore = undefined;
         localStorage.removeItem('username');
         localStorage.removeItem('passwordHash');
         localStorage.removeItem('chainId');
+        localStorage.removeItem('highestScore');
+
+        if ($page.url.pathname === '/game') {
+            goto('/');
+        }
     }
 </script>
 

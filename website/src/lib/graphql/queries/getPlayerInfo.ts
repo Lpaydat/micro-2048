@@ -5,6 +5,7 @@ const GET_PLAYER = gql`
 		player(username: $username) {
 			username
 			chainId
+			highestScore
 		}
 	}
 `;

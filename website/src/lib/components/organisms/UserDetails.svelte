@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 	import { userStore } from "$lib/stores/userStore";
     import Button from "../atoms/Button.svelte";
 
@@ -6,15 +8,22 @@
         localStorage.setItem('username', $userStore.username ?? '');
         localStorage.setItem('passwordHash', $userStore.passwordHash ?? '');
         localStorage.setItem('chainId', $userStore.chainId ?? '');
+        localStorage.setItem('highestScore', $userStore.highestScore?.toString() ?? '');
     }
 
     const handleLogout = () => {
         $userStore.chainId = undefined;
         $userStore.username = undefined;
         $userStore.passwordHash = undefined;
+        $userStore.highestScore = undefined;
         localStorage.removeItem('username');
         localStorage.removeItem('passwordHash');
         localStorage.removeItem('chainId');
+        localStorage.removeItem('highestScore');
+
+        if ($page.url.pathname === '/game') {
+            goto('/');
+        }
     }
 </script>
 

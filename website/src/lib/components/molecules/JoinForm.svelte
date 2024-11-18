@@ -118,11 +118,13 @@
     localStorage.setItem('username', username);
     localStorage.setItem('passwordHash', passwordHash);
     localStorage.setItem('chainId', $player.data.player.chainId);
+    localStorage.setItem('highestScore', $player.data.player.highestScore.toString());
 
     userStore.update(store => ({
       ...store,
       username: $player.data.player.username,
       chainId: $player.data.player.chainId,
+      highestScore: $player.data.player.highestScore,
       ...(passwordHash && { passwordHash })
     }));
     canLogin = false;

@@ -16,7 +16,7 @@
 	// const applicationId = '6c6bd0bf320bf7cc0d2f972f1649b9e52a151f2dbfc50bbdf736242405dcb268341717e586aaace9516bd152eb494c5ac0a38db37681d643e01e90a92950513de476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65010000000000000000000000';
 	// const port = '8080';
 	const chainId = 'e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65';
-	const applicationId = 'd69b7acfc16a4cd038aa900db9d086783e4b304907d4c649668e6c5a3ca5ceef341717e586aaace9516bd152eb494c5ac0a38db37681d643e01e90a92950513de476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a659b0000000000000000000000';
+	const applicationId = '2a0108778b34248f0e08971eb360b191a1406dec35f0470fdbc6738693c6cfdfa0e070c19f6e87b844ba3c78787846e03adc6c2ea0121c427be5f367b3bf5057e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65830200000000000000000000';
 	const port = '8080';
 
 	const client = getClient(chainId, applicationId, port);
@@ -26,13 +26,15 @@
 		const username = localStorage.getItem('username');
 		const passwordHash = localStorage.getItem('passwordHash');
 		const chainId = localStorage.getItem('chainId');
+		const highestScore = Number(localStorage.getItem('highestScore'));
 
 		if (username && passwordHash && chainId) {
 		  userStore.update(store => ({
 		    ...store,
-		    username: localStorage.getItem('username'),
-		    passwordHash: localStorage.getItem('passwordHash'),
-		    chainId: localStorage.getItem('chainId')
+		    username,
+		    passwordHash,
+		    chainId,
+			highestScore
 		  }))
 		}
 	})

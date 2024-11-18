@@ -43,7 +43,7 @@
 	}
 
 	onMount(() => {
-		bestScore = Number(localStorage.getItem("best"));
+		bestScore = Number(localStorage.getItem("highestScore"));
 
 		setTimeout(() => {
 			newSingleGame();
@@ -51,7 +51,7 @@
 	});
 
 	$: if (bestScore < value) {
-		localStorage.setItem("best", String(value));
+		localStorage.setItem("highestScore", String(value));
 	}
 
 	$: bestScoreValue = bestScore < value ? value : bestScore;

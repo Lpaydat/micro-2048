@@ -141,6 +141,11 @@ impl Contract for Game2048Contract {
                         if is_ended {
                             board.is_ended.set(true);
                         }
+
+                        let player = self.state.players.load_entry_mut(&player).await.unwrap();
+                        if *player.highest_score.get() < score {
+                            player.highest_score.set(score);
+                        }
                     } else {
                         let (game_id, round, player, _player_chain_id) =
                             self.parse_elimination_game_id(&board_id).await.unwrap();
