@@ -3,14 +3,14 @@ import { createClient as createWSClient } from 'graphql-ws';
 
 import { cacheExchange, Client, fetchExchange, subscriptionExchange } from '@urql/svelte';
 
-const getBaseUrl = (ipAddress: string, port: string) => ({
-	ws: `ws://${ipAddress}:${port}/ws`,
-	http: `http://${ipAddress}:${port}`
+const getBaseUrl = (website: string, port: string) => ({
+	ws: `wss://${website}:${port}/ws`,
+	http: `https://${website}:${port}`
 });
 
 export const getClient = (chainId: string, applicationId: string, port: string) => {
-	const ipAddress = '64.225.79.45'; // or import.meta.env.VITE_IP_ADDRESS
-	const urls = getBaseUrl(ipAddress, port);
+	const website = 'u2048.hopto.org'; // or import.meta.env.VITE_IP_ADDRESS
+	const urls = getBaseUrl(website, port);
 
 	// Create basic HTTP client for server-side rendering
 	if (!browser) {
