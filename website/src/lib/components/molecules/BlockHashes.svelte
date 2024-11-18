@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { hashesStore } from '$lib/stores/hashesStore';
+  import { hashesStore, isHashesListVisible } from '$lib/stores/hashesStore';
 
   // Function to format the timestamp
   function formatTimestamp(isoString: string): string {
@@ -17,9 +17,17 @@
   hashesStore.subscribe(value => {
     hashes = value;
   });
+
+  const closeHashesSidebar = () => {
+    isHashesListVisible.set(false);
+  }
 </script>
 
-<div class="fixed top-0 right-0 h-full w-[280px] overflow-y-auto text-surface-300 bg-[#2d2d2d] p-5 shadow-md">
+<button 
+  on:click={closeHashesSidebar} 
+  type="button"
+  class="fixed top-0 right-0 h-full w-[280px] overflow-y-auto text-surface-300 bg-[#2d2d2d] p-5 shadow-md"
+>
   <div class="font-bold mb-1">Block Hashes</div>
   {#each hashes as { hash, timestamp }}
     <div class="mb-4 rounded bg-[#343434] p-2.5 shadow">
@@ -27,4 +35,4 @@
       <div>{formatTimestamp(timestamp)}</div>
     </div>
   {/each}
-</div>
+</button>

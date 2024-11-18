@@ -15,7 +15,7 @@
     }
 </script>
 
-<div class="game-details bg-[#faf8ef] p-4 mt-8 rounded-lg shadow-md max-w-2xl mx-auto">
+<div class="game-details bg-[#faf8ef] p-4 m-2 sm:mt-8 sm:mx-auto rounded-lg shadow-md max-w-2xl">
     <div class="flex flex-wrap items-center gap-4">
         <div class="flex items-center gap-2">
             <span class="font-bold text-[#776e65]">{val.gameName}</span>
