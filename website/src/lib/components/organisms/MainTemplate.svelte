@@ -14,7 +14,6 @@
     });
 
     $: isMobile = windowWidth <= 768;
-    $: console.log('isMobile', isMobile);
 </script>
 
 <div class="flex h-screen overflow-hidden bg-[#23232b] bg-[url('/micro-carbon.png')] bg-repeat">

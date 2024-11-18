@@ -10,6 +10,7 @@
   export let currentPlayerScore: number = 0; // round score
   export let gameLeaderboard: PlayerStats[] = [];
   export let roundLeaderboard: RoundResults | undefined;
+  export let isFullScreen: boolean = false;
 
   const PLAYERS = gql`
     query Players($usernames: [String!]!) {
@@ -62,9 +63,11 @@
     }))
     .sort((a, b) => b.score - a.score)
     .map((player, index) => ({ ...player, rank: index + 1 }));
+
+  const customClass = isFullScreen ? 'w-full h-full mt-4' : 'p-6 w-80 mt-6 max-h-full max-w-md mx-auto';
 </script>
 
-<div class="text-center p-6 w-80 mt-6 max-h-full rounded-lg bg-[#FAF8EF] shadow-md max-w-md mx-auto">
+<div class="text-center {customClass} rounded-lg bg-[#FAF8EF] shadow-md">
   <header class="flex flex-col items-center mb-4">
     <h1 class="text-3xl font-bold text-[#776E65] mb-2">Leaderboard</h1>
     <TabGroup>

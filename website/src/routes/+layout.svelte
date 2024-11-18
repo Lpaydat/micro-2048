@@ -1,10 +1,11 @@
 <script lang="ts">
+	import '../app.css';
 	import { getClient } from '$lib/client';
 	import { onMount } from 'svelte';
-	import '../app.css';
-	import { initializeStores, Modal } from '@skeletonlabs/skeleton';
+	import { initializeStores, Modal, Drawer, getDrawerStore } from '@skeletonlabs/skeleton';
 	import { setContextClient } from '@urql/svelte';
 	import { userStore } from '$lib/stores/userStore';
+	import Leaderboard from '$lib/components/organisms/Leaderboard.svelte';
 
 	initializeStores();
 
@@ -32,8 +33,23 @@
 		  }))
 		}
 	})
+
+    const drawerStore = getDrawerStore();
+	$: console.log('meta', $drawerStore.meta);
 </script>
 
 <Modal />
+<Drawer>
+	{#if $drawerStore.id === 'mobile-user-stats'}
+		<Leaderboard
+			isFullScreen
+			player={$drawerStore.meta?.player}
+			currentRound={$drawerStore.meta?.currentRound}
+			gameLeaderboard={$drawerStore.meta?.gameLeaderboard}
+			roundLeaderboard={$drawerStore.meta?.roundLeaderboard}
+			currentPlayerScore={$drawerStore.meta?.currentPlayerScore}
+		/>
+	{/if}
+</Drawer>
 
 <slot />

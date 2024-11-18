@@ -18,6 +18,7 @@
 	import { nextRound } from "$lib/graphql/mutations/nextRound";
 	import { isHashesListVisible } from "$lib/stores/hashesStore";
 	import RoundButton from "../molecules/RoundButton.svelte";
+	import MobileUserStats from "../organisms/MobileUserStats.svelte";
 
     let boardId: string = $page.params.boardId;
 
@@ -168,6 +169,16 @@
 </script>
 
 <MainTemplate bind:windowWidth>
+    <svelte:fragment slot="header">
+        <MobileUserStats
+            player={username}
+            {currentRound}
+            {roundLeaderboard}
+            {gameLeaderboard}
+            {currentPlayerScore}
+        />
+    </svelte:fragment>
+
     <svelte:fragment slot="sidebar">
         {#if isMultiplayer && $userStore.username}
             <Brand />
@@ -209,7 +220,7 @@
                     on:click={nextRoundMutation}
                 />
             {/if}
-            <div class="flex justify-center items-center pt-2 xl:pt-8">
+            <div class="flex justify-center items-center pt-2 lg:pt-6 xl:pt-8">
                 <div class="w-full max-w-2xl xl:pb-28">
                     <Game
                         {boardSize}
