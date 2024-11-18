@@ -148,6 +148,7 @@
     $: isEnded = roundLeaderboard?.eliminatedPlayers.some((player: any) => player.username === username);
 
     let boardSize: 'sm' | 'md' | 'lg' = 'lg';
+    let windowWidth = 0;
 
     function updateBoardSize() {
         if (window.innerWidth < 480) {
@@ -166,18 +167,18 @@
     });
 </script>
 
-<MainTemplate>
+<MainTemplate bind:windowWidth>
     <svelte:fragment slot="sidebar">
         {#if isMultiplayer && $userStore.username}
             <Brand />
-            {#if boardSize !== 'lg'}
+            <!-- {#if boardSize === 'md'}
                 <RoundButton
                     {isRoundEnded}
                     {countdown}
                     {status}
                     on:click={nextRoundMutation}
                 />
-            {/if}
+            {/if} -->
             <Leaderboard
                 player={username}
                 {currentRound}
@@ -191,14 +192,16 @@
     </svelte:fragment>
 
     <svelte:fragment slot="main">
-        {#if isMultiplayer}
-            <GameSettingsDetails
-                {data}
-                numberA={currentRound}
-                numberB={totalRounds}
-                numberLabel="Round"
-            />
-            {#if boardSize === 'lg'}
+        <div class="flex-1 flex flex-col justify-center lg:justify-start items-stretch">
+            {#if isMultiplayer}
+                {#if windowWidth > 768}
+                    <GameSettingsDetails
+                        {data}
+                        numberA={currentRound}
+                        numberB={totalRounds}
+                        numberLabel="Round"
+                    />
+                {/if}
                 <RoundButton
                     {isRoundEnded}
                     {countdown}
@@ -206,25 +209,36 @@
                     on:click={nextRoundMutation}
                 />
             {/if}
-        {/if}
-        <div class="flex justify-center items-center pt-8">
-            <div class="w-full max-w-2xl pb-28">
-                <Game
-                    {boardSize}
-                    {isMultiplayer}
-                    {isEnded}
-                    player={username}
-                    playerChainId={chainId}
-                    boardId={boardId}
-                    canStartNewGame={!isMultiplayer}
-                    showBestScore={!isMultiplayer}
-                    canMakeMove={canMakeMove}
-                    bind:score={currentPlayerScore}
-                />
+            <div class="flex justify-center items-center pt-2 xl:pt-8">
+                <div class="w-full max-w-2xl xl:pb-28">
+                    <Game
+                        {boardSize}
+                        {isMultiplayer}
+                        {isEnded}
+                        player={username}
+                        playerChainId={chainId}
+                        boardId={boardId}
+                        canStartNewGame={!isMultiplayer}
+                        showBestScore={!isMultiplayer}
+                        canMakeMove={canMakeMove}
+                        bind:score={currentPlayerScore}
+                    />
+                </div>
             </div>
         </div>
         {#if $isHashesListVisible}
             <BlockHashes />
+        {/if}
+    </svelte:fragment>
+
+    <svelte:fragment slot="footer">
+        {#if isMultiplayer && windowWidth <= 768}
+            <GameSettingsDetails
+                {data}
+                numberA={currentRound}
+                numberB={totalRounds}
+                numberLabel="Round"
+            />
         {/if}
     </svelte:fragment>
 </MainTemplate>

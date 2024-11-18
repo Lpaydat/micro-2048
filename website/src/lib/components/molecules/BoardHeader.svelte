@@ -21,7 +21,7 @@
 
 	// Size configurations
 	const sizeConfig = {
-		sm: { width: 370, buttonHeight: 8, fontSize: 'text-lg', scoreSize: 'text-xl' },
+		sm: { width: 370, buttonHeight: 6, fontSize: 'text-base', scoreSize: 'text-lg' },
 		md: { width: 460, buttonHeight: 9, fontSize: 'text-xl', scoreSize: 'text-2xl' },
 		lg: { width: 555, buttonHeight: 10, fontSize: 'text-2xl', scoreSize: 'text-2xl' }
 	};

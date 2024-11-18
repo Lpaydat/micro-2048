@@ -24,7 +24,7 @@
             </div>
         </div>
 
-        <div class="flex flex-wrap items-center gap-4 text-sm">
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
             <div class="flex items-center gap-2">
                 <span class="text-[#bbada0]">Host</span>
                 <span class="font-bold text-[#776e65]">{val.host}</span>

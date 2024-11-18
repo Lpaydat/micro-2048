@@ -17,7 +17,7 @@
 
     <svelte:fragment slot="main">
         <div class="flex justify-center items-center h-full">
-            <div class="w-full max-w-2xl pb-28 my-auto">
+            <div class="w-full max-w-2xl lg:pb-28 my-auto">
                 <Game
                     player={$userStore.username ?? ''}
                     playerChainId={chainId as string}

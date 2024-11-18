@@ -1,3 +1,3 @@
-<div class="flex-1 min-h-full">
+<main class="flex-1 flex flex-col overflow-auto">
     <slot />
-</div>
+</main>
