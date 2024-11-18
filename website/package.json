@@ -55,6 +55,7 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"@floating-ui/dom": "^1.6.12",
 		"@urql/exchange-throw-on-error": "^0.1.0"
 	}
 }

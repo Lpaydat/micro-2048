@@ -20,11 +20,11 @@
                 </div>
             </div>
         {:else}
-            <div class="relative">
+            <div class="relative w-full h-full">
                 <div class="relative z-10">
                     <HeaderNav />
                 </div>
-                <div class="scale-[240%] rotate-12 ml-[0vw] mt-[55vh]">
+                <div class="scale-[120%] lg:scale-[240%] rotate-12 ml-[-20vw] mt-[20vh] lg:ml-[0vw] lg:mt-[55vh]">
                     <HeroImage />
                 </div>
             </div>
