@@ -1,13 +1,14 @@
 <script lang="ts">
   import type { HTMLInputAttributes } from 'svelte/elements';
 
-  interface $$Props extends Omit<HTMLInputAttributes, 'type' | 'placeholder'> {
+  interface $$Props extends Omit<HTMLInputAttributes, 'type' | 'placeholder' | 'size'> {
     label?: string | undefined;
     error?: string | undefined;
     showToggle?: boolean | undefined;
     type?: HTMLInputElement['type'];
     placeholder?: string;
     required?: boolean | undefined;
+    size?: 'sm' | 'md' | 'lg';
   }
 
   export let value: string = '';
@@ -17,6 +18,7 @@
   export let placeholder: string = '';
   export let required: boolean = false;
   export let showToggle: boolean = false;
+  export let size: 'sm' | 'md' | 'lg' = 'md';
 
   let showPassword = false;
 
@@ -24,13 +26,25 @@
     showPassword = !showPassword;
     type = showPassword ? 'text' : 'password';
   }
+
+  // Helper function to get size-specific classes
+  const getSizeClasses = (size: 'sm' | 'md' | 'lg') => {
+    switch (size) {
+      case 'sm':
+        return 'px-3 py-2 text-sm';
+      case 'lg':
+        return 'px-5 py-4 text-xl';
+      default:
+        return 'px-4 py-3 text-lg';
+    }
+  };
 </script>
 
 <div class="form-field space-y-2">
   {#if label}
     <label 
       for={$$props.id} 
-      class="block text-base font-bold text-gray-700 game-font"
+      class="block font-bold text-gray-700 game-font {size === 'sm' ? 'text-sm' : 'text-base'}"
     >
       {label}
       {#if required}
@@ -48,8 +62,6 @@
       class="
         input
         w-full
-        px-4
-        py-3
         border-2
         rounded-md
         bg-[#FAF8EF]
@@ -60,9 +72,9 @@
         focus:ring-2
         focus:ring-[#EDC22E]/30
         game-font
-        text-lg
         transition-all
         duration-200
+        {getSizeClasses(size)}
         {$$props.class || ''}
       "
     />
