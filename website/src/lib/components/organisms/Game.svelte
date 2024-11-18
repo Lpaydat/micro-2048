@@ -136,10 +136,62 @@
   // Utility functions
   const hasWon = (board: number[][]) => board.some(row => row.includes(11));
 
+  // Add touch handling variables
+  let touchStartX: number | null = null;
+  let touchStartY: number | null = null;
+  const SWIPE_THRESHOLD = 50; // minimum distance for a swipe
+
+  // Add touch event handlers
+  const handleTouchStart = (event: TouchEvent) => {
+    touchStartX = event.touches[0].clientX;
+    touchStartY = event.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (event: TouchEvent) => {
+    if (!touchStartX || !touchStartY || $game.data?.board?.isEnded || !boardId) return;
+
+    const touchEndX = event.changedTouches[0].clientX;
+    const touchEndY = event.changedTouches[0].clientY;
+
+    const deltaX = touchEndX - touchStartX;
+    const deltaY = touchEndY - touchStartY;
+
+    // Determine if the swipe was primarily horizontal or vertical
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+      // Horizontal swipe
+      if (Math.abs(deltaX) >= SWIPE_THRESHOLD) {
+        if (deltaX > 0) {
+          makeMoveMutation({ boardId, direction: 'ArrowRight' });
+        } else {
+          makeMoveMutation({ boardId, direction: 'ArrowLeft' });
+        }
+      }
+    } else {
+      // Vertical swipe
+      if (Math.abs(deltaY) >= SWIPE_THRESHOLD) {
+        if (deltaY > 0) {
+          makeMoveMutation({ boardId, direction: 'ArrowDown' });
+        } else {
+          makeMoveMutation({ boardId, direction: 'ArrowUp' });
+        }
+      }
+    }
+
+    // Reset touch coordinates
+    touchStartX = null;
+    touchStartY = null;
+  };
+
+  // Update the existing handleKeydown function to handle arrow keys
   const handleKeydown = (event: KeyboardEvent) => {
     if ($game.data?.board?.isEnded || !boardId) return;
-    keyPressTime = Date.now(); // Capture the time when a key is pressed
-    makeMoveMutation({ boardId, direction: event.key });
+    keyPressTime = Date.now();
+    
+    // Map arrow keys to directions
+    const validKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+    if (validKeys.includes(event.key)) {
+      makeMoveMutation({ boardId, direction: event.key });
+    }
   };
 
   const getOverlayMessage = (board: number[][]) => {
@@ -153,10 +205,17 @@
   export let boardSize: 'sm' | 'md' | 'lg' = 'lg';
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
+<svelte:window 
+  on:keydown={handleKeydown}
+  on:touchstart={handleTouchStart}
+  on:touchend={handleTouchEnd}
+/>
 
-
-<div class="game-container {boardSize}">
+<div 
+  class="game-container {boardSize}"
+  on:touchstart={handleTouchStart}
+  on:touchend={handleTouchEnd}
+>
   <BoardHeader bind:boardId={boardId} {canStartNewGame} {showBestScore} {player} value={score} size={boardSize} />
   {#if rendered}
     <div class="game-board">
