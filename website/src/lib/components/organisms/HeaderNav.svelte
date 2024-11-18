@@ -2,7 +2,7 @@
 	import NavLink from "../atoms/NavLink.svelte";
 </script>
 
-<div class="nav-container mt-5 me-5">
+<div class="nav-container mt-5 me-5 z-10">
     <ul class="nav-list flex justify-end gap-8">
         <!-- Main Linera Sites -->
         <li>

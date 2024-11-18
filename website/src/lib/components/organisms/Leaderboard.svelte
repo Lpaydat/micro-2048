@@ -1,15 +1,10 @@
 <script lang="ts">
   import { page } from '$app/stores';
-  import { popup, TabGroup, Tab, getModalStore } from '@skeletonlabs/skeleton';
-  import type { PopupSettings, ModalSettings } from '@skeletonlabs/skeleton';
+  import { TabGroup, Tab } from '@skeletonlabs/skeleton';
   import ListItem from '../molecules/LeaderboardItem.svelte'
-	import GameResults from '../organisms/GameResults.svelte';  
-  import { ChevronDown } from 'lucide-svelte';
 	import type { PlayerStats, RoundResults } from '$lib/types/leaderboard';
 	import { getContextClient, gql, queryStore } from '@urql/svelte';
-	import { onDestroy } from 'svelte';
 
-  export let gameStatus: string = '';
   export let currentRound: number = 1;
   export let player: string;
   export let currentPlayerScore: number = 0; // round score
@@ -52,19 +47,7 @@
     eliminatedPlayers: []
   };
 
-  let selectedRound = currentRound;
   let activeTab = 1;
-
-  const blockHashes = [
-    { block: 1, hash: '0x1234567890abcdef...' },
-    { block: 2, hash: '0xabcdef1234567890...' },
-  ];
-
-  const popupRoundSelect: PopupSettings = {
-    event: 'click',
-    target: 'popupRoundSelect',
-    placement: 'bottom'
-  };
 
   $: sortedGameLeaderboard = gameLeaderboard
     ?.slice() // Create a shallow copy to avoid mutating the original array
@@ -79,28 +62,6 @@
     }))
     .sort((a, b) => b.score - a.score)
     .map((player, index) => ({ ...player, rank: index + 1 }));
-
-    const modalStore = getModalStore();
-    const modal: ModalSettings = {
-        type: 'component',
-        component: {
-            ref: GameResults,
-            props: { gameLeaderboard, player }
-        }
-    }
-
-    let timeoutId: NodeJS.Timeout;
-    $: {
-        if (gameStatus === 'Ended') {
-            timeoutId = setTimeout(() => {
-                modalStore.trigger(modal);
-            }, 2000);
-        }
-    }
-
-    onDestroy(() => {
-        clearTimeout(timeoutId);
-    });
 </script>
 
 <div class="text-center p-6 w-80 mt-6 max-h-full rounded-lg bg-[#FAF8EF] shadow-md max-w-md mx-auto">
@@ -112,9 +73,9 @@
         Round {currentRound}
       </Tab>
     </TabGroup>
-    {#if selectedRound !== currentRound}
+    <!-- {#if selectedRound !== currentRound}
       <p class="text-sm text-gray-600 mt-2">Viewing Round {selectedRound}</p>
-    {/if}
+    {/if} -->
   </header>
 
   <div class="list-container overflow-y-auto overflow-x-hidden h-[calc(100%-3rem)]">

@@ -180,7 +180,6 @@
             {/if}
             <Leaderboard
                 player={username}
-                gameStatus={status}
                 {currentRound}
                 {gameLeaderboard}
                 {roundLeaderboard}

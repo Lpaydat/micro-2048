@@ -386,11 +386,42 @@ impl Contract for Game2048Contract {
                                 .unwrap();
                             let total_round = elimination_game.total_rounds.get();
 
+                            // Update round scores to game leaderboard
+                            let mut player_round_scores = std::collections::HashMap::new();
+                            leaderboard
+                                .eliminated_players
+                                .for_each_index_value(|username, score| {
+                                    player_round_scores.insert(username, score);
+                                    Ok(())
+                                })
+                                .await
+                                .unwrap();
+
+                            // Add round scores to total scores
+                            for player in player_round_scores {
+                                let prev_score = elimination_game
+                                    .game_leaderboard
+                                    .get(&player.0)
+                                    .await
+                                    .unwrap();
+                                elimination_game
+                                    .game_leaderboard
+                                    .insert(&player.0, player.1 + prev_score.unwrap_or(0))
+                                    .unwrap();
+                            }
+
                             if *current_round < *total_round {
                                 *current_round += 1;
                                 elimination_game.last_updated_time.set(timestamp);
 
-                                // create boards
+                                // Initialize new round leaderboard
+                                let new_round_leaderboard = elimination_game
+                                    .round_leaderboard
+                                    .load_entry_mut(current_round)
+                                    .await
+                                    .unwrap();
+
+                                // Create boards for next round
                                 for player in players {
                                     let player_chain_id = self
                                         .state
@@ -411,35 +442,7 @@ impl Contract for Game2048Contract {
                                     game.board_id.set(board_id);
                                     game.board.set(new_board);
                                     game.player.set(player.clone());
-                                }
-
-                                let mut player_round_scores = std::collections::HashMap::new();
-                                leaderboard
-                                    .eliminated_players
-                                    .for_each_index_value(|username, score| {
-                                        player_round_scores.insert(username, score);
-                                        Ok(())
-                                    })
-                                    .await
-                                    .unwrap();
-
-                                let new_round_leaderboard = elimination_game
-                                    .round_leaderboard
-                                    .load_entry_mut(current_round)
-                                    .await
-                                    .unwrap();
-
-                                for player in player_round_scores {
-                                    let prev_score = elimination_game
-                                        .game_leaderboard
-                                        .get(&player.0)
-                                        .await
-                                        .unwrap();
-                                    elimination_game
-                                        .game_leaderboard
-                                        .insert(&player.0, player.1 + prev_score.unwrap_or(0))
-                                        .unwrap();
-                                    new_round_leaderboard.players.insert(&player.0, 0).unwrap();
+                                    new_round_leaderboard.players.insert(&player, 0).unwrap();
                                 }
                             } else {
                                 elimination_game.status.set(EliminationGameStatus::Ended);

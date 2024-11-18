@@ -20,9 +20,13 @@
                 </div>
             </div>
         {:else}
-            <HeaderNav />
-            <div class="scale-[240%] rotate-12 ml-[0vw] mt-[55vh]">
-                <HeroImage />
+            <div class="relative">
+                <div class="relative z-10">
+                    <HeaderNav />
+                </div>
+                <div class="scale-[240%] rotate-12 ml-[0vw] mt-[55vh]">
+                    <HeroImage />
+                </div>
             </div>
         {/if}
     </svelte:fragment>
