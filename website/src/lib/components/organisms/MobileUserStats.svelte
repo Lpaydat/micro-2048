@@ -29,7 +29,8 @@
     $: userScore = currentPlayer?.score ?? 0;
 
     const drawerStore = getDrawerStore();
-    const drawerSettings: DrawerSettings = {
+    let drawerSettings: DrawerSettings;
+    $: drawerSettings = {
         id: 'mobile-user-stats',
         position: 'bottom',
         bgDrawer: 'bg-[#FAF8EF]',

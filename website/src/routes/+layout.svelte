@@ -35,7 +35,6 @@
 	})
 
     const drawerStore = getDrawerStore();
-	$: console.log('meta', $drawerStore.meta);
 </script>
 
 <Modal />
