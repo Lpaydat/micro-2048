@@ -1,6 +1,13 @@
 <script lang="ts">
   export let value: number;
   export let index: number;
+  export let size: 'sm' | 'md' | 'lg' = 'lg';
+
+  const sizeConfig = {
+    sm: { tile: 80, gap: 10, fontSize: { default: 55, medium: 35, small: 25 } },
+    md: { tile: 100, gap: 12, fontSize: { default: 65, medium: 40, small: 30 } },
+    lg: { tile: 120, gap: 15, fontSize: { default: 80, medium: 45, small: 35 } }
+  };
 
   const indexes: Record<number, { top: number; left: number }> = {
     0: { top: 0, left: 0 },
@@ -21,16 +28,15 @@
     15: { top: 3, left: 3 }
   };
 
-  // Based on composite rule of three
+  $: currentSize = sizeConfig[size];
   $: ({ top, left } = indexes[index]);
-  $: topValue = top / 3 * 405 + 15;
-  $: leftValue = left / 3 * 405 + 15;
+  $: topValue = top * (currentSize.tile + currentSize.gap) + currentSize.gap;
+  $: leftValue = left * (currentSize.tile + currentSize.gap) + currentSize.gap;
 </script>
 
-
 <div
-  class="tile tile-{value}"
-  style="top: {topValue}px; left: {leftValue}px;">
+  class="tile tile-{value} size-{size}"
+  style="top: {topValue}px; left: {leftValue}px; width: {currentSize.tile}px; height: {currentSize.tile}px;">
   {value !== 0 ? 2 ** value : ''}
 </div>
 
@@ -38,11 +44,33 @@
   .tile {
     font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
     text-align: center;
-    line-height: 120px;
     position: absolute;
-    width: 120px;
-    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
+
+  /* Size-specific line heights */
+  .size-sm { line-height: 80px; }
+  .size-md { line-height: 100px; }
+  .size-lg { line-height: 120px; }
+
+  /* Adjust font sizes for different tile sizes */
+  .size-sm .tile-1, .size-sm .tile-2, .size-sm .tile-3,
+  .size-sm .tile-4, .size-sm .tile-5, .size-sm .tile-6 {
+    font-size: 55px;
+  }
+  
+  .size-sm .tile-7, .size-sm .tile-8, .size-sm .tile-9 {
+    font-size: 35px;
+  }
+
+  .size-sm .tile-10, .size-sm .tile-11, .size-sm .tile-12,
+  .size-sm .tile-13, .size-sm .tile-14, .size-sm .tile-15,
+  .size-sm .tile-16 {
+    font-size: 25px;
+  }
+
   .tile-1 {
     background: #eee4da;
     box-shadow: 0 0 30px 10px rgba(243, 215, 116, 0),

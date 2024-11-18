@@ -17,6 +17,7 @@
 	import { goto } from "$app/navigation";
 	import { nextRound } from "$lib/graphql/mutations/nextRound";
 	import { isHashesListVisible } from "$lib/stores/hashesStore";
+	import RoundButton from "../molecules/RoundButton.svelte";
 
     let boardId: string = $page.params.boardId;
 
@@ -145,12 +146,38 @@
         }
     }
     $: isEnded = roundLeaderboard?.eliminatedPlayers.some((player: any) => player.username === username);
+
+    let boardSize: 'sm' | 'md' | 'lg' = 'lg';
+
+    function updateBoardSize() {
+        if (window.innerWidth < 480) {
+            boardSize = 'sm';
+        } else if (window.innerWidth < 1248) {
+            boardSize = 'md';
+        } else {
+            boardSize = 'lg';
+        }
+    }
+
+    onMount(() => {
+        updateBoardSize();
+        window.addEventListener('resize', updateBoardSize);
+        return () => window.removeEventListener('resize', updateBoardSize);
+    });
 </script>
 
 <MainTemplate>
     <svelte:fragment slot="sidebar">
         {#if isMultiplayer && $userStore.username}
             <Brand />
+            {#if boardSize !== 'lg'}
+                <RoundButton
+                    {isRoundEnded}
+                    {countdown}
+                    {status}
+                    on:click={nextRoundMutation}
+                />
+            {/if}
             <Leaderboard
                 player={username}
                 gameStatus={status}
@@ -172,31 +199,19 @@
                 numberB={totalRounds}
                 numberLabel="Round"
             />
-            <div class="h-32 flex items-center justify-center pt-10">
-                {#if !isRoundEnded}
-                    <div class="text-[#776E65] text-7xl font-bold game-font text-center">
-                        {countdown >= 0 ? countdown : '...'}
-                    </div>
-                {:else if status === 'Ended'}
-                    <button
-                        class="btn variant-soft-surface text-[#F67C5F] text-3xl font-bold game-font text-center"
-                        on:click={() => goto('/elimination')}
-                    >
-                        Lobby
-                    </button>
-                {:else}
-                    <button
-                        class="btn variant-soft-surface text-[#F67C5F] text-3xl font-bold game-font text-center"
-                        on:click={nextRoundMutation}
-                    >
-                        Next Round
-                    </button>
-                {/if}
-            </div>
+            {#if boardSize === 'lg'}
+                <RoundButton
+                    {isRoundEnded}
+                    {countdown}
+                    {status}
+                    on:click={nextRoundMutation}
+                />
+            {/if}
         {/if}
         <div class="flex justify-center items-center pt-8">
             <div class="w-full max-w-2xl pb-28">
                 <Game
+                    {boardSize}
                     {isMultiplayer}
                     {isEnded}
                     player={username}

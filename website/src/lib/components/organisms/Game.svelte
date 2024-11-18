@@ -148,16 +148,19 @@
     }
     return "Game Over!";
   };
+
+  // Add new prop for board size
+  export let boardSize: 'sm' | 'md' | 'lg' = 'lg';
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
 
 
-<div class="game-container">
-  <BoardHeader bind:boardId={boardId} {canStartNewGame} {showBestScore} {player} value={score} />
+<div class="game-container {boardSize}">
+  <BoardHeader bind:boardId={boardId} {canStartNewGame} {showBestScore} {player} value={score} size={boardSize} />
   {#if rendered}
     <div class="game-board">
-      <Board board={$game.data?.board?.board} />
+      <Board board={$game.data?.board?.board} size={boardSize} />
       {#if $game.data?.board?.isEnded || isEnded}
         <div class="overlay">
           <p>{getOverlayMessage($game.data?.board?.board)}</p>
@@ -184,23 +187,32 @@
       </button>
     </div>
   {:else}
-    <Board board={[[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]} />
+    <Board board={[[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]} size={boardSize} />
   {/if}
 </div>
 
 <style>
   .game-container {
-    max-width: 555px;
-    background-color: transparent;;
     margin: 0 auto;
     text-align: center;
     overflow: visible;
   }
 
+  .game-container.lg {
+    max-width: 555px;
+  }
+
+  .game-container.md {
+    max-width: 460px;
+  }
+
+  .game-container.sm {
+    max-width: 370px;
+  }
+
   .game-board {
     position: relative;
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    width: 100%;
   }
 
   .overlay {
@@ -216,6 +228,18 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    font-size: 1.5em;
+  }
+
+  .game-container.sm .overlay {
+    font-size: 1.2em;
+  }
+
+  .game-container.md .overlay {
+    font-size: 1.35em;
+  }
+
+  .game-container.lg .overlay {
     font-size: 1.5em;
   }
 </style>
