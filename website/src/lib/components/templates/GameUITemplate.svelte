@@ -165,14 +165,6 @@
     <svelte:fragment slot="sidebar">
         {#if isMultiplayer && $userStore.username}
             <Brand />
-            <!-- {#if boardSize === 'md'}
-                <RoundButton
-                    {isRoundEnded}
-                    {countdown}
-                    {status}
-                    on:click={nextRoundMutation}
-                />
-            {/if} -->
             <Leaderboard
                 player={username}
                 {currentRound}
