@@ -148,24 +148,7 @@
     }
     $: isEnded = roundLeaderboard?.eliminatedPlayers.some((player: any) => player.username === username);
 
-    let boardSize: 'sm' | 'md' | 'lg' = 'lg';
     let windowWidth = 0;
-
-    function updateBoardSize() {
-        if (window.innerWidth < 480) {
-            boardSize = 'sm';
-        } else if (window.innerWidth < 1248) {
-            boardSize = 'md';
-        } else {
-            boardSize = 'lg';
-        }
-    }
-
-    onMount(() => {
-        updateBoardSize();
-        window.addEventListener('resize', updateBoardSize);
-        return () => window.removeEventListener('resize', updateBoardSize);
-    });
 </script>
 
 <MainTemplate bind:windowWidth>
@@ -223,7 +206,6 @@
             <div class="flex justify-center items-center pt-2 lg:pt-6 xl:pt-8">
                 <div class="w-full max-w-2xl xl:pb-28">
                     <Game
-                        {boardSize}
                         {isMultiplayer}
                         {isEnded}
                         player={username}

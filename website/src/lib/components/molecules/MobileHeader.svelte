@@ -3,9 +3,11 @@
 </script>
 
 <div class="flex justify-between m-2 rounded-lg items-center px-4 py-3 bg-[#faf8ef] shadow-sm">
-    <div class="flex-none">
-        <BrandLogo />
-    </div>
+    <a href="/">
+        <div class="flex-none">
+            <BrandLogo />
+        </div>
+    </a>
 
     <div class="flex-1 flex justify-end">
         <slot />

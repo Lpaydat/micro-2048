@@ -4,7 +4,7 @@
   import BoardHeader from "../molecules/BoardHeader.svelte";
   import Board from '../molecules/Board.svelte';
 	import { makeMove } from '$lib/graphql/mutations/makeMove';
-	import { onDestroy } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
   import { hashesStore, isHashesListVisible } from '$lib/stores/hashesStore';
 	import { goto } from '$app/navigation';
 
@@ -202,7 +202,23 @@
   };
 
   // Add new prop for board size
-  export let boardSize: 'sm' | 'md' | 'lg' = 'lg';
+  let boardSize: 'sm' | 'md' | 'lg' = 'lg';
+
+  function updateBoardSize() {
+      if (window.innerWidth < 480) {
+          boardSize = 'sm';
+      } else if (window.innerWidth < 1248) {
+          boardSize = 'md';
+      } else {
+          boardSize = 'lg';
+      }
+  }
+
+  onMount(() => {
+      updateBoardSize();
+      window.addEventListener('resize', updateBoardSize);
+      return () => window.removeEventListener('resize', updateBoardSize);
+  });
 </script>
 
 <svelte:window 
