@@ -15,7 +15,7 @@
     }));
 </script>
 
-<div class="flex flex-col gap-4 mt-8 max-w-4xl mx-auto">
+<div class="flex flex-col gap-4 mt-8 w-full lg:max-w-4xl mx-auto">
     <ul class="flex flex-col gap-4">
         {#if playerObjects.length > 0}
             {#each playerObjects as player}

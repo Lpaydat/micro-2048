@@ -151,7 +151,7 @@
     let windowWidth = 0;
 </script>
 
-<MainTemplate bind:windowWidth>
+<MainTemplate bind:windowWidth mainCenter>
     <svelte:fragment slot="header">
         <MobileUserStats
             player={username}
@@ -178,7 +178,7 @@
     </svelte:fragment>
 
     <svelte:fragment slot="main">
-        <div class="flex-1 flex flex-col justify-center lg:justify-start items-stretch">
+        <div class="flex-1 flex flex-col items-stretch">
             {#if isMultiplayer}
                 {#if windowWidth > 768}
                     <GameSettingsDetails

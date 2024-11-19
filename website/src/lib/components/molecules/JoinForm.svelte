@@ -118,7 +118,7 @@
     localStorage.setItem('username', username);
     localStorage.setItem('passwordHash', passwordHash);
     localStorage.setItem('chainId', $player.data.player.chainId);
-    localStorage.setItem('highestScore', $player.data.player.highestScore.toString());
+    localStorage.setItem('highestScore', $player.data.player.highestScore?.toString() ?? '0');
 
     userStore.update(store => ({
       ...store,

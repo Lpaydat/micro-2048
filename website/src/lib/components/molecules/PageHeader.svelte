@@ -6,11 +6,11 @@
 </script>
 
 <div class="flex w-full flex-col">
-    <div class="text-md lg:text-2xl font-bold w-full flex items-center gap-4 bg-gradient-to-r from-warning-500 to-warning-600 text-white {headerRound} p-4 shadow-md transition-all relative">
+    <div class="text-md lg:text-2xl font-bold w-full flex items-center gap-2 lg:gap-4 bg-gradient-to-r from-warning-500 to-warning-600 text-white {headerRound} p-4 shadow-md transition-all relative">
         {#if $$slots.icon}
             <slot name="icon" />
         {/if}
-        <span class="tracking-wider">{title}</span>
+        <span class="tracking-wider me-2">{title}</span>
         {#if $$slots.actions}
             <slot name="actions" />
         {/if}

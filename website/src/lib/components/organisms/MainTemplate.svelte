@@ -6,6 +6,7 @@
 	import MobileUserDetails from '../molecules/MobileUserDetails.svelte';
 
     export let windowWidth = 0;
+    export let mainCenter = false;
 
     onMount(() => {
         const updateWidth = () => (windowWidth = window.innerWidth);
@@ -15,6 +16,7 @@
     });
 
     $: isMobile = windowWidth <= 768;
+    const mainClass = mainCenter ? 'justify-center' : 'justify-start';
 </script>
 
 <div class="flex h-screen overflow-hidden bg-[#23232b] bg-[url('/micro-carbon.png')] bg-repeat">
@@ -25,7 +27,7 @@
     {/if}
 
     <Main>
-        <div class="flex flex-col flex-1">
+        <div class="flex flex-col flex-1 overflow-hidden">
             {#if isMobile}
                 <div class="flex-none">
                     <MobileHeader>
@@ -38,7 +40,7 @@
                 </div>
             {/if}
 
-            <div class="flex-1 flex items-center lg:justify-start justify-center flex-col">
+            <div class="flex-1 flex items-center {mainClass} flex-col">
                 <slot name="main" />
             </div>
 

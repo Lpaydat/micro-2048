@@ -28,7 +28,7 @@
 </script>
 
 <button 
-    class="flex items-center justify-center rounded-lg px-4 py-2 text-xs lg:text-sm font-bold transition-all {colorClass} {hoverClass} {loading ? 'cursor-not-allowed' : ''}"
+    class="flex items-center justify-center rounded-lg px-2 lg:px-4 py-2 text-xs lg:text-sm font-bold transition-all {colorClass} {hoverClass} {loading ? 'cursor-not-allowed' : ''}"
     on:click
     disabled={disabled || loading}
 >

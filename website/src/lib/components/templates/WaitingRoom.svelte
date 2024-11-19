@@ -110,19 +110,19 @@
                 {#if isLoaded && $userStore.username && data?.status === 'Waiting'}
                     {#if isHost}
                         <ActionButton
-                            label="START GAME"
+                            label="START"
                             on:click={handleStartGame}
                             disabled={data.playerCount < minimumPlayers}
                         />
                         <ActionButton
-                            label="END GAME"
+                            label="CANCEL"
                             hoverColor="danger"
                             on:click={handleEndGame}
                         />
                     {:else if canJoinGame}
-                        <ActionButton label="JOIN GAME" on:click={handleJoinGame} />
+                        <ActionButton label="JOIN" on:click={handleJoinGame} />
                     {:else if isJoined}
-                        <ActionButton label="LEAVE GAME" on:click={handleLeaveGame} />
+                        <ActionButton label="LEAVE" on:click={handleLeaveGame} />
                     {/if}
                 {/if}
             </svelte:fragment>

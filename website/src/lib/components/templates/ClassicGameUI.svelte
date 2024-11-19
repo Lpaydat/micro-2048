@@ -10,7 +10,7 @@
     $: chainId = $userStore.chainId;
 </script>
 
-<MainTemplate>
+<MainTemplate mainCenter>
     <svelte:fragment slot="sidebar">
         <UserSidebar />
     </svelte:fragment>
