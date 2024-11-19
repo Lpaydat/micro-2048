@@ -3,7 +3,9 @@
 	import { onDestroy } from 'svelte';
     import Clock from 'lucide-svelte/icons/clock-4';
     import { page } from '$app/stores';
+    import HelpCircle from 'lucide-svelte/icons/circle-help';
 
+	import HelpButton from '../atoms/HelpButton.svelte';
 	import ActionButton from '../atoms/ActionButton.svelte';
 	import PageHeader from "../molecules/PageHeader.svelte";
     import GameSettingsDetails from '../organisms/GameSettingsDetails.svelte'
@@ -17,10 +19,12 @@
 	import { goto } from '$app/navigation';
 	import { getGameDetails } from '$lib/graphql/queries/getGameDetails';
 	import { userStore } from '$lib/stores/userStore';
+	import { getModalStore, type ModalSettings, type ModalStore } from '@skeletonlabs/skeleton';
 
     const gameId = $page.params.gameId;
     const minimumPlayers = 1;
 
+    const modalStore: ModalStore = getModalStore();
     const client = getContextClient();
     $: username = $userStore.username;
 
@@ -93,6 +97,15 @@
         endGame(client, gameId, username);
     }
 
+    const howToPlayModal: ModalSettings = {
+        type: 'component',
+        component: 'how-to-play-elimination'
+    }
+
+    const howToPlay = () => {
+        modalStore.trigger(howToPlayModal);
+    }
+
     $: prevPage = data?.status === 'Ended' ? '/elimination' : undefined;
 </script>
 
@@ -108,6 +121,9 @@
             </svelte:fragment>
             <svelte:fragment slot="actions">
                 {#if isLoaded && $userStore.username && data?.status === 'Waiting'}
+                    <HelpButton ariaLabel="How to Play" on:click={howToPlay}>
+                        <HelpCircle size={20} />
+                    </HelpButton>
                     {#if isHost}
                         <ActionButton
                             label="START"

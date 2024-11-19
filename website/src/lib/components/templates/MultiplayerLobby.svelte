@@ -1,6 +1,7 @@
 <script lang="ts">
     import { getModalStore } from '@skeletonlabs/skeleton';
     import Swords from 'lucide-svelte/icons/swords';
+    import HelpCircle from 'lucide-svelte/icons/circle-help';
 
 	import ActionButton from '../atoms/ActionButton.svelte';
 	import PageHeader from "../molecules/PageHeader.svelte";
@@ -9,16 +10,26 @@
 	import WaitingGames from "../organisms/WaitingGames.svelte";
     import EliminationGameForm from '../organisms/EliminationGameForm.svelte';
 	import type { ModalSettings, ModalStore } from '@skeletonlabs/skeleton';
+	import HelpButton from '../atoms/HelpButton.svelte';
 
-    const modal: ModalSettings = {
+    const modalStore: ModalStore = getModalStore();
+
+    const hostGameModal: ModalSettings = {
         type: 'component',
         component: { ref: EliminationGameForm }
     }
 
-    const modalStore: ModalStore = getModalStore();
+    const howToPlayModal: ModalSettings = {
+        type: 'component',
+        component: 'how-to-play-elimination'
+    }
 
     const hostGame = () => {
-        modalStore.trigger(modal);
+        modalStore.trigger(hostGameModal);
+    }
+
+    const howToPlay = () => {
+        modalStore.trigger(howToPlayModal);
     }
 </script>
 
@@ -33,6 +44,9 @@
                 <Swords size={28} />
             </svelte:fragment>
             <svelte:fragment slot="actions">
+                <HelpButton ariaLabel="How to Play" on:click={howToPlay}>
+                    <HelpCircle size={20} />
+                </HelpButton>
                 <ActionButton icon="plus" label="HOST GAME" on:click={hostGame} />
             </svelte:fragment>
         </PageHeader>

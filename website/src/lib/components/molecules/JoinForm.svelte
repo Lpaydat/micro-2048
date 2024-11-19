@@ -5,6 +5,7 @@
 	import { hashPassword } from "$lib/utils/hashPassword";
 	import { userStore } from "$lib/stores/userStore";
 	import { getPlayerInfo } from "$lib/graphql/queries/getPlayerInfo";
+	import { getModalStore, type ModalSettings } from "@skeletonlabs/skeleton";
 
   let username = '';
   let submittedUsername = '';
@@ -25,7 +26,19 @@
     }
   `;
 
+  const modalStore = getModalStore();
   const client = getContextClient();
+
+  const howToPlayModal: ModalSettings = {
+    type: 'component',
+    component: 'how-to-play-2048'
+  }
+
+  const guestModeModal: ModalSettings = {
+    type: 'alert',
+    title: 'Oops! No Sneaking In! 🕵️‍♂️',
+    body: 'Sorry, but our "Play as Guest" feature is still on vacation! Why not join us properly? Create an account - it\'s quick, free, and way more fun than trying to sneak in through the back door! 😉'
+  }
 
   $: player = getPlayerInfo(client, submittedUsername)
   $: playerOnChain = queryStore({
@@ -188,6 +201,7 @@
       <Button
         variant="outline"
         size="sm"
+        on:click={() => modalStore.trigger(howToPlayModal)}
       >
         How to Play
       </Button>
@@ -195,6 +209,7 @@
       <Button
         variant="default"
         size="sm"
+        on:click={() => modalStore.trigger(guestModeModal)}
       >
         Play as Guest
       </Button>

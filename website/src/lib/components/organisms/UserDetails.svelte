@@ -3,6 +3,10 @@
 	import { goto } from '$app/navigation';
 	import { userStore } from "$lib/stores/userStore";
     import Button from "../atoms/Button.svelte";
+    import { getModalStore } from '@skeletonlabs/skeleton';
+    import type { ModalSettings, ModalStore } from '@skeletonlabs/skeleton';
+
+    const modalStore: ModalStore = getModalStore();
 
     $: {
         localStorage.setItem('username', $userStore.username ?? '');
@@ -24,6 +28,17 @@
         if ($page.url.pathname === '/game') {
             goto('/');
         }
+    }
+
+    const isElimination = $page.url.pathname.includes('elimination');
+
+    const howToPlayModal: ModalSettings = {
+        type: 'component',
+        component: isElimination ? 'how-to-play-elimination' : 'how-to-play-2048'
+    }
+
+    const howToPlay = () => {
+        modalStore.trigger(howToPlayModal);
     }
 </script>
 
@@ -49,6 +64,7 @@
             <Button
                 variant="outline"
                 size="sm"
+                on:click={howToPlay}
             >
                 How to Play
             </Button>

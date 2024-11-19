@@ -10,10 +10,13 @@
         {#if $$slots.icon}
             <slot name="icon" />
         {/if}
-        <span class="tracking-wider me-2">{title}</span>
-        {#if $$slots.actions}
-            <slot name="actions" />
-        {/if}
+        <span class="tracking-wider">{title}</span>
+        
+        <div class="ms-auto flex items-center gap-2">
+            {#if $$slots.actions}
+                <slot name="actions" />
+            {/if}
+        </div>
     </div>
 
     {#if prevPage}

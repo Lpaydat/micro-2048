@@ -5,10 +5,13 @@
 	import { initializeStores, Modal, Drawer, getDrawerStore } from '@skeletonlabs/skeleton';
 	import { computePosition, autoUpdate, offset, shift, flip, arrow } from '@floating-ui/dom';
 	import { storePopup } from '@skeletonlabs/skeleton';
+	import type { ModalComponent } from '@skeletonlabs/skeleton';
 			
 	import { setContextClient } from '@urql/svelte';
 	import { userStore } from '$lib/stores/userStore';
 	import Leaderboard from '$lib/components/organisms/Leaderboard.svelte';
+	import HowToPlayElimination from '$lib/components/organisms/HowToPlayElimination.svelte';
+	import HowToPlay2048 from '$lib/components/organisms/HowToPlay2048.svelte';
 
 	initializeStores();
 
@@ -17,10 +20,10 @@
 	// const port = '8080';
 
 	const chainId = 'e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65';
-	// const applicationId = '19bbd03bf228c3e8544a5efe3e1625364884f67608cfde36a795730c6e9e8fc5aab0184faf8bc428ad82f318d060d1dd1cff23499d79fb3e7a050a701814439fe476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65010000000000000000000000';
-	// const port = '443';
-	const applicationId = '2a0108778b34248f0e08971eb360b191a1406dec35f0470fdbc6738693c6cfdfa0e070c19f6e87b844ba3c78787846e03adc6c2ea0121c427be5f367b3bf5057e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65830200000000000000000000';
-	const port = '8080';
+	const applicationId = '19bbd03bf228c3e8544a5efe3e1625364884f67608cfde36a795730c6e9e8fc5aab0184faf8bc428ad82f318d060d1dd1cff23499d79fb3e7a050a701814439fe476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65010000000000000000000000';
+	const port = '443';
+	// const applicationId = '2a0108778b34248f0e08971eb360b191a1406dec35f0470fdbc6738693c6cfdfa0e070c19f6e87b844ba3c78787846e03adc6c2ea0121c427be5f367b3bf5057e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65830200000000000000000000';
+	// const port = '8080';
 
 	const client = getClient(chainId, applicationId, port);
 	setContextClient(client);
@@ -44,9 +47,14 @@
 
     const drawerStore = getDrawerStore();
 	storePopup.set({ computePosition, autoUpdate, offset, shift, flip, arrow });
+
+	const modalRegistry: Record<string, ModalComponent> = {
+		'how-to-play-elimination': { ref: HowToPlayElimination },
+		'how-to-play-2048': { ref: HowToPlay2048 }
+	};
 </script>
 
-<Modal />
+<Modal components={modalRegistry} />
 <Drawer>
 	{#if $drawerStore.id === 'mobile-user-stats'}
 		<Leaderboard
