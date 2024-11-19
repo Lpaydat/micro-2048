@@ -39,6 +39,7 @@
 	const newSingleGame = () => {
 		if (!canStartNewGame) return;
 		boardId = Math.floor(Math.random() * 1000000).toString();
+		localStorage.setItem('boardId', boardId);
 		newGameMutation({ seed: parseInt(boardId) });
 	}
 
@@ -46,7 +47,9 @@
 		bestScore = Number(localStorage.getItem("highestScore"));
 
 		setTimeout(() => {
-			newSingleGame();
+			if (!localStorage.getItem('boardId')) {
+				newSingleGame();
+			}
 		}, 50);
 	});
 

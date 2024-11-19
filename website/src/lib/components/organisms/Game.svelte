@@ -21,6 +21,22 @@
 
   // TODO: currently, game is slow because it need to wait for cross-chain messages to be processed
 
+  let localBoardId: string | null = null;
+  let gameBoardId: string | undefined = boardId;
+
+  onMount(() => {
+    localBoardId = localStorage.getItem('boardId');
+    if (!isMultiplayer && localBoardId && boardId === undefined) {
+      gameBoardId = localBoardId;
+      canMakeMove = true;
+    }
+  });
+
+  // Update gameBoardId when boardId prop changes
+  $: if (boardId !== undefined) {
+    gameBoardId = boardId;
+  }
+
   // GraphQL queries, mutations, and subscriptions
   const GET_BOARD_STATE = gql`
     query BoardState($boardId: Int!) {
@@ -46,7 +62,7 @@
   $: game = queryStore({
     client,
     query: GET_BOARD_STATE,
-    variables: { boardId },
+    variables: { boardId: gameBoardId },
     requestPolicy: 'network-only',
   });
   $: score = $game.data?.board?.score || 0;
@@ -78,7 +94,6 @@
   };
 
   // Subscription for notifications
-  // const chainId = 'e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65';
   let playerMessages: any;
   $: {
     if (playerChainId) {
@@ -143,12 +158,20 @@
 
   // Add touch event handlers
   const handleTouchStart = (event: TouchEvent) => {
+    // Only prevent default if touch started on game board
+    if (event.target instanceof Element && event.target.closest('.game-board')) {
+      event.preventDefault();
+    }
     touchStartX = event.touches[0].clientX;
     touchStartY = event.touches[0].clientY;
   };
 
   const handleTouchEnd = (event: TouchEvent) => {
-    if (!touchStartX || !touchStartY || $game.data?.board?.isEnded || !boardId) return;
+    // Only prevent default if touch ended on game board
+    if (event.target instanceof Element && event.target.closest('.game-board')) {
+      event.preventDefault();
+    }
+    if (!touchStartX || !touchStartY || $game.data?.board?.isEnded || !gameBoardId) return;
 
     const touchEndX = event.changedTouches[0].clientX;
     const touchEndY = event.changedTouches[0].clientY;
@@ -161,18 +184,18 @@
       // Horizontal swipe
       if (Math.abs(deltaX) >= SWIPE_THRESHOLD) {
         if (deltaX > 0) {
-          makeMoveMutation({ boardId, direction: 'ArrowRight' });
+          makeMoveMutation({ boardId: gameBoardId, direction: 'ArrowRight' });
         } else {
-          makeMoveMutation({ boardId, direction: 'ArrowLeft' });
+          makeMoveMutation({ boardId: gameBoardId, direction: 'ArrowLeft' });
         }
       }
     } else {
       // Vertical swipe
       if (Math.abs(deltaY) >= SWIPE_THRESHOLD) {
         if (deltaY > 0) {
-          makeMoveMutation({ boardId, direction: 'ArrowDown' });
+          makeMoveMutation({ boardId: gameBoardId, direction: 'ArrowDown' });
         } else {
-          makeMoveMutation({ boardId, direction: 'ArrowUp' });
+          makeMoveMutation({ boardId: gameBoardId, direction: 'ArrowUp' });
         }
       }
     }
@@ -182,15 +205,23 @@
     touchStartY = null;
   };
 
+  // Add new handler for touch move to prevent scrolling during swipe
+  const handleTouchMove = (event: TouchEvent) => {
+    // Only prevent default if touch move is on game board
+    if (event.target instanceof Element && event.target.closest('.game-board')) {
+      event.preventDefault();
+    }
+  };
+
   // Update the existing handleKeydown function to handle arrow keys
   const handleKeydown = (event: KeyboardEvent) => {
-    if ($game.data?.board?.isEnded || !boardId) return;
+    if ($game.data?.board?.isEnded || !gameBoardId) return;
     keyPressTime = Date.now();
     
     // Map arrow keys to directions
     const validKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
     if (validKeys.includes(event.key)) {
-      makeMoveMutation({ boardId, direction: event.key });
+      makeMoveMutation({ boardId: gameBoardId, direction: event.key });
     }
   };
 
@@ -223,18 +254,19 @@
 
 <svelte:window 
   on:keydown={handleKeydown}
-  on:touchstart={handleTouchStart}
-  on:touchend={handleTouchEnd}
 />
 
 <div 
   class="game-container {boardSize}"
-  on:touchstart={handleTouchStart}
-  on:touchend={handleTouchEnd}
 >
-  <BoardHeader bind:boardId={boardId} {canStartNewGame} {showBestScore} {player} value={score} size={boardSize} />
+  <BoardHeader bind:boardId={gameBoardId} {canStartNewGame} {showBestScore} {player} value={score} size={boardSize} />
   {#if rendered}
-    <div class="game-board">
+    <div 
+      class="game-board"
+      on:touchstart={handleTouchStart}
+      on:touchmove={handleTouchMove}
+      on:touchend={handleTouchEnd}
+    >
       <Board board={$game.data?.board?.board} size={boardSize} />
       {#if $game.data?.board?.isEnded || isEnded}
         <div class="overlay">
