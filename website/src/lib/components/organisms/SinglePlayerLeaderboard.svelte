@@ -18,6 +18,9 @@
         client,
         query: RANKERS,
     });
+
+    // Sort the rankers by score in descending order
+    $: sortedRankers = $rankers.data?.leaderboard.slice().sort((a: any, b: any) => b.score - a.score);
 </script>
 
 <div class="w-full mx-auto mt-8 max-w-4xl">
@@ -33,7 +36,7 @@
                     <span class="w-4/12 text-right">Score</span>
                 </div>
                 <!-- Player Rows -->
-                {#each $rankers.data?.leaderboard as player, index}
+                {#each sortedRankers as player, index}
                     <RankerCard {player} rank={index + 1} />
                 {/each}
             </div>
