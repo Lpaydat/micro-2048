@@ -41,6 +41,16 @@
                 </svelte:fragment>
             </GameModeCard>
         </a>
+        <a href="/leaderboard">
+            <GameModeCard>
+                <svelte:fragment slot="title">
+                    <h2>Leaderboard</h2>
+                </svelte:fragment>
+                <svelte:fragment slot="description">
+                    <p>Check out the highest single player scores and see where you rank!</p>
+                </svelte:fragment>
+            </GameModeCard>
+        </a>
     </div>
     <!-- <div class="flex justify-center items-center flex-grow">
         <GameModeDescription {imageUrl} {description} />

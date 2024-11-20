@@ -7,6 +7,7 @@
 	import { onDestroy, onMount } from 'svelte';
   import { hashesStore, isHashesListVisible } from '$lib/stores/hashesStore';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 
   export let isMultiplayer: boolean = false;
   export let isEnded: boolean = false;
@@ -21,14 +22,19 @@
 
   // TODO: currently, game is slow because it need to wait for cross-chain messages to be processed
 
+  let specBoardId = $page.url.searchParams.get('boardId');
   let localBoardId: string | null = null;
   let gameBoardId: string | undefined = boardId;
 
   onMount(() => {
     localBoardId = localStorage.getItem('boardId');
     if (!isMultiplayer && localBoardId && boardId === undefined) {
-      gameBoardId = localBoardId;
-      canMakeMove = true;
+      gameBoardId = specBoardId || localBoardId;
+      if (specBoardId) {
+        canMakeMove = false;
+      } else {
+        canMakeMove = true;
+      }
     }
   });
 

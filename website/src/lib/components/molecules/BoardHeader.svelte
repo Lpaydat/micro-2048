@@ -2,6 +2,8 @@
 	import { hashesStore } from "$lib/stores/hashesStore";
 	import { getContextClient, mutationStore, gql } from "@urql/svelte";
 	import { onMount } from "svelte";
+	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 
 	export let player: string;
 	export let value: number;
@@ -41,6 +43,10 @@
 		boardId = Math.floor(Math.random() * 1000000).toString();
 		localStorage.setItem('boardId', boardId);
 		newGameMutation({ seed: parseInt(boardId) });
+
+		const url = new URL($page.url);
+		url.searchParams.delete('boardId');
+		goto(url.toString(), { replaceState: true });
 	}
 
 	onMount(() => {
@@ -58,6 +64,7 @@
 	}
 
 	$: bestScoreValue = bestScore < value ? value : bestScore;
+	$: isSpecBoard = !!$page.url.searchParams.get('boardId');
 	$: scoreLabelAlign = value.toString().length > 3 ? 'left' : 'center';
 	$: bestScoreLabelAlign = bestScoreValue.toString().length > 3 ? 'left' : 'center';
 	$: currentSize = sizeConfig[size];
@@ -86,7 +93,7 @@
 			<div class="text-xs text-[#eee4da] text-{scoreLabelAlign}">Score</div>
 			<div class="{currentSize.scoreSize} text-center">{value}</div>
 		</div>
-		{#if showBestScore}
+		{#if showBestScore && !isSpecBoard}
 			<div class="flex flex-col bg-[#bbada0] p-2 font-bold rounded-md text-white ml-2 mb-2 min-w-16">
 				<div class="text-xs text-[#eee4da] text-{bestScoreLabelAlign}">Best</div>
 				<div class="{currentSize.scoreSize} text-center">{bestScoreValue}</div>
