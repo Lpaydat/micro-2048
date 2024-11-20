@@ -35,7 +35,7 @@ pub struct Player {
     pub username: RegisterView<String>,
     pub password_hash: RegisterView<String>,
     pub chain_id: RegisterView<String>,
-    pub highest_score: RegisterView<u64>,
+    pub highest_score: RegisterView<u64>, // single player only
 }
 
 #[derive(View, SimpleObject)]
@@ -50,10 +50,19 @@ pub struct BoardState {
 
 #[derive(View, SimpleObject)]
 #[view(context = "ViewStorageContext")]
-pub struct Leaderboard {
-    pub players: MapView<String, u64>, // username, score
+pub struct MultiplayerLeaderboard {
+    pub players: MapView<String, u64>,            // username, score
     pub eliminated_players: MapView<String, u64>, // username
-                                       // pub eliminated_players: QueueView<String>, // username
+}
+
+#[derive(View, SimpleObject)]
+#[view(context = "ViewStorageContext")]
+pub struct SingleplayerLeaderboard {
+    pub rankers: MapView<String, u64>,               // username, score
+    pub board_ids: MapView<String, String>,          // username, board_id
+    pub lowest_score_username: RegisterView<String>, // username
+    pub lowest_score: RegisterView<u64>,             // score
+    pub count: RegisterView<u8>,
 }
 
 #[derive(View, SimpleObject)]
@@ -70,7 +79,7 @@ pub struct EliminationGame {
     pub max_players: RegisterView<u8>,
     pub eliminated_per_trigger: RegisterView<u8>,
     pub trigger_interval_seconds: RegisterView<u16>,
-    pub round_leaderboard: CollectionView<u8, Leaderboard>,
+    pub round_leaderboard: CollectionView<u8, MultiplayerLeaderboard>,
     pub game_leaderboard: MapView<String, u64>,
     pub created_time: RegisterView<u64>,
     pub last_updated_time: RegisterView<u64>,
@@ -83,4 +92,5 @@ pub struct Game2048 {
     pub elimination_games: CollectionView<String, EliminationGame>, // game_id
     pub waiting_rooms: MapView<String, bool>,
     pub players: CollectionView<String, Player>,
+    pub singleplayer_leaderboard: CollectionView<u8, SingleplayerLeaderboard>,
 }

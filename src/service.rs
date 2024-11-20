@@ -2,6 +2,7 @@
 
 mod state;
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use self::state::Game2048;
@@ -99,6 +100,13 @@ struct Player {
     highest_score: u64,
 }
 
+#[derive(SimpleObject)]
+struct Ranker {
+    username: String,
+    score: u64,
+    board_id: String,
+}
+
 #[Object]
 impl QueryRoot {
     async fn player(&self, username: String) -> Option<Player> {
@@ -125,6 +133,41 @@ impl QueryRoot {
             }
         }
         players
+    }
+
+    async fn leaderboard(&self) -> Vec<Ranker> {
+        let mut players: HashMap<String, Ranker> = HashMap::new();
+
+        if let Ok(Some(leaderboard)) = self.state.singleplayer_leaderboard.try_load_entry(&0).await
+        {
+            leaderboard
+                .rankers
+                .for_each_index_value(|username, score| {
+                    players.insert(
+                        username.clone(),
+                        Ranker {
+                            username,
+                            score,
+                            board_id: "".to_string(),
+                        },
+                    );
+                    Ok(())
+                })
+                .await
+                .unwrap();
+            leaderboard
+                .board_ids
+                .for_each_index_value(|username, board_id| {
+                    if let Some(ranker) = players.get_mut(&username) {
+                        ranker.board_id = board_id.to_string();
+                    }
+                    Ok(())
+                })
+                .await
+                .unwrap();
+        }
+
+        players.into_values().collect()
     }
 
     async fn check_player(&self, username: String, password_hash: String) -> Option<bool> {

@@ -1,0 +1,14 @@
+{
+  "validators": [
+    {
+      "name": "6fcd778e828881b81b0a39cbde5fa6efdb7eeaeae4cf35fba695c2f6541dda13",
+      "network": {
+        "protocol": {
+          "Grpc": "ClearText"
+        },
+        "host": "localhost",
+        "port": 9000
+      }
+    }
+  ]
+}

@@ -145,6 +145,41 @@ impl Contract for Game2048Contract {
                         let player = self.state.players.load_entry_mut(&player).await.unwrap();
                         if *player.highest_score.get() < score {
                             player.highest_score.set(score);
+
+                            // check and update singleplayer leaderboard
+                            let singleplayer_leaderboard = self
+                                .state
+                                .singleplayer_leaderboard
+                                .load_entry_mut(&0)
+                                .await
+                                .unwrap();
+                            let score = score as u64;
+                            let username = board.player.get();
+                            let lowest_score = singleplayer_leaderboard.lowest_score.get();
+
+                            if &score > lowest_score {
+                                let lowest_score_username =
+                                    singleplayer_leaderboard.lowest_score_username.get();
+
+                                if *singleplayer_leaderboard.count.get() >= 100 {
+                                    let _ = singleplayer_leaderboard
+                                        .rankers
+                                        .remove(lowest_score_username);
+                                }
+
+                                singleplayer_leaderboard.lowest_score.set(score);
+                                singleplayer_leaderboard
+                                    .lowest_score_username
+                                    .set(username.clone());
+                                singleplayer_leaderboard
+                                    .rankers
+                                    .insert(&username.clone(), score)
+                                    .unwrap();
+                                singleplayer_leaderboard
+                                    .board_ids
+                                    .insert(&username.clone(), board_id)
+                                    .unwrap();
+                            }
                         }
                     } else {
                         let (game_id, round, player, _player_chain_id) =

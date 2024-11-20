@@ -1,0 +1,84 @@
+{
+  "chains": {
+    "673ce04da4b8ed773ee7cd5828a2083775bea4130498b847c5b34b2ed913b07f": {
+      "chain_id": "673ce04da4b8ed773ee7cd5828a2083775bea4130498b847c5b34b2ed913b07f",
+      "key_pair": "103fb5eeea9ca0fbca0c32dd62fe0daa9169a1042e994f72fc509fd052f040d5",
+      "block_hash": null,
+      "timestamp": 1732090455816254,
+      "next_block_height": 0,
+      "pending_block": null,
+      "pending_blobs": {}
+    },
+    "69705f85ac4c9fef6c02b4d83426aaaf05154c645ec1c61665f8e450f0468bc0": {
+      "chain_id": "69705f85ac4c9fef6c02b4d83426aaaf05154c645ec1c61665f8e450f0468bc0",
+      "key_pair": "dd66a375e12db19b37592d16128edf8714cdfbcc9022b739067a8709a3e62e69",
+      "block_hash": null,
+      "timestamp": 1732090455816254,
+      "next_block_height": 0,
+      "pending_block": null,
+      "pending_blobs": {}
+    },
+    "e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65": {
+      "chain_id": "e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65",
+      "key_pair": "08d935f4a804c06bdd682db11a3fce1c2794148ce1ad0d9c6b1d302f83f4a796",
+      "block_hash": null,
+      "timestamp": 1732090455816254,
+      "next_block_height": 0,
+      "pending_block": null,
+      "pending_blobs": {}
+    }
+  },
+  "unassigned_key_pairs": {},
+  "default": "e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65",
+  "genesis_config": {
+    "committee": {
+      "validators": [
+        {
+          "name": "6fcd778e828881b81b0a39cbde5fa6efdb7eeaeae4cf35fba695c2f6541dda13",
+          "network": {
+            "protocol": {
+              "Grpc": "ClearText"
+            },
+            "host": "localhost",
+            "port": 9000
+          }
+        }
+      ]
+    },
+    "admin_id": "e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65",
+    "timestamp": 1732090455816254,
+    "chains": [
+      [
+        "c7be9d76a25b99a129bf7f48c6a089545d93865bbf895b5ff9fb8fe5f625a74e",
+        "1000000."
+      ],
+      [
+        "72719b370477500e69d627eaf7de3bdf1e58806a05b2204f77a9be07c856418f",
+        "1000000."
+      ],
+      [
+        "fc2d34235181718ccf04aa654201a621f4118c00b95a6af79852a7e0889e128a",
+        "1000000."
+      ]
+    ],
+    "policy": {
+      "block": "0.",
+      "fuel_unit": "0.",
+      "read_operation": "0.",
+      "write_operation": "0.",
+      "byte_read": "0.",
+      "byte_written": "0.",
+      "byte_stored": "0.",
+      "operation": "0.",
+      "operation_byte": "0.",
+      "message": "0.",
+      "message_byte": "0.",
+      "maximum_fuel_per_block": 18446744073709551615,
+      "maximum_executed_block_size": 18446744073709551615,
+      "maximum_bytes_read_per_block": 18446744073709551615,
+      "maximum_bytes_written_per_block": 18446744073709551615
+    },
+    "network_name": "linera-2024-11-20T08:14:15"
+  },
+  "testing_prng_seed": null
+}

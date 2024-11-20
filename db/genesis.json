@@ -1,0 +1,50 @@
+{
+  "committee": {
+    "validators": [
+      {
+        "name": "6fcd778e828881b81b0a39cbde5fa6efdb7eeaeae4cf35fba695c2f6541dda13",
+        "network": {
+          "protocol": {
+            "Grpc": "ClearText"
+          },
+          "host": "localhost",
+          "port": 9000
+        }
+      }
+    ]
+  },
+  "admin_id": "e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65",
+  "timestamp": 1732090455816254,
+  "chains": [
+    [
+      "c7be9d76a25b99a129bf7f48c6a089545d93865bbf895b5ff9fb8fe5f625a74e",
+      "1000000."
+    ],
+    [
+      "72719b370477500e69d627eaf7de3bdf1e58806a05b2204f77a9be07c856418f",
+      "1000000."
+    ],
+    [
+      "fc2d34235181718ccf04aa654201a621f4118c00b95a6af79852a7e0889e128a",
+      "1000000."
+    ]
+  ],
+  "policy": {
+    "block": "0.",
+    "fuel_unit": "0.",
+    "read_operation": "0.",
+    "write_operation": "0.",
+    "byte_read": "0.",
+    "byte_written": "0.",
+    "byte_stored": "0.",
+    "operation": "0.",
+    "operation_byte": "0.",
+    "message": "0.",
+    "message_byte": "0.",
+    "maximum_fuel_per_block": 18446744073709551615,
+    "maximum_executed_block_size": 18446744073709551615,
+    "maximum_bytes_read_per_block": 18446744073709551615,
+    "maximum_bytes_written_per_block": 18446744073709551615
+  },
+  "network_name": "linera-2024-11-20T08:14:15"
+}
