@@ -30,6 +30,7 @@ impl ServiceAbi for Game2048Abi {
 
 #[derive(Debug, Deserialize, Serialize, GraphQLMutationRoot)]
 pub enum Operation {
+    ClearMessages,
     RegisterPlayer {
         username: String,
         password_hash: String,

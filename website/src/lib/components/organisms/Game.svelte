@@ -8,6 +8,8 @@
   import { hashesStore, isHashesListVisible } from '$lib/stores/hashesStore';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
+	import { clearMessages } from '$lib/graphql/mutations/clearMessages';
+	import { applicationId, port } from '$lib/constants';
 
   export let isMultiplayer: boolean = false;
   export let isEnded: boolean = false;
@@ -97,6 +99,7 @@
     }, 100);
 
     makeMove(client, boardId, direction);
+    // clearMessages(playerChainId, applicationId, port);
   };
 
   // Subscription for notifications

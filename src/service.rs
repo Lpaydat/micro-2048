@@ -305,6 +305,11 @@ struct MutationRoot;
 
 #[Object]
 impl MutationRoot {
+    async fn clear_messages(&self) -> Vec<u8> {
+        let operation = Operation::ClearMessages;
+        bcs::to_bytes(&operation).unwrap()
+    }
+
     async fn register_player(&self, username: String, password_hash: String) -> Vec<u8> {
         let operation = Operation::RegisterPlayer {
             username,

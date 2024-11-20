@@ -59,6 +59,7 @@ impl Contract for Game2048Contract {
 
     async fn execute_operation(&mut self, operation: Self::Operation) -> Self::Response {
         match operation {
+            Operation::ClearMessages => {}
             Operation::RegisterPlayer {
                 username,
                 password_hash,
