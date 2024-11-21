@@ -141,7 +141,7 @@ impl QueryRoot {
         if let Ok(Some(leaderboard)) = self.state.singleplayer_leaderboard.try_load_entry(&0).await
         {
             leaderboard
-                .rankers
+                .score
                 .for_each_index_value(|username, score| {
                     players.insert(
                         username.clone(),

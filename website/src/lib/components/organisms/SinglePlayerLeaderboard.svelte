@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getContextClient, gql, queryStore } from '@urql/svelte';
     import RankerCard from '../molecules/RankerCard.svelte';
+	import { onMount } from 'svelte';
 
     const RANKERS = gql`
         query Rankers {
@@ -21,6 +22,16 @@
 
     // Sort the rankers by score in descending order
     $: sortedRankers = $rankers.data?.leaderboard.slice().sort((a: any, b: any) => b.score - a.score);
+
+	onMount(() => {
+        rankers.reexecute({ requestPolicy: 'network-only' });
+
+		const interval = setInterval(() => {
+			rankers.reexecute({ requestPolicy: 'network-only' });
+		}, 5000);
+
+		return () => clearInterval(interval);
+	});
 </script>
 
 <div class="w-full mx-auto mt-8 max-w-4xl">

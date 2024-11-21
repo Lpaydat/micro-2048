@@ -58,11 +58,8 @@ pub struct MultiplayerLeaderboard {
 #[derive(View, SimpleObject)]
 #[view(context = "ViewStorageContext")]
 pub struct SingleplayerLeaderboard {
-    pub rankers: MapView<String, u64>,               // username, score
-    pub board_ids: MapView<String, String>,          // username, board_id
-    pub lowest_score_username: RegisterView<String>, // username
-    pub lowest_score: RegisterView<u64>,             // score
-    pub count: RegisterView<u8>,
+    pub score: MapView<String, u64>,        // username, score
+    pub board_ids: MapView<String, String>, // username, board_id
 }
 
 #[derive(View, SimpleObject)]

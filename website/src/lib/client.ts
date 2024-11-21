@@ -5,10 +5,15 @@ import { cacheExchange, Client, fetchExchange, subscriptionExchange } from '@urq
 
 import { website } from './constants';
 
-const getBaseUrl = (website: string, port: string) => ({
-	ws: `wss://${website}:${port}/ws`,
-	http: `https://${website}:${port}`
-});
+const getBaseUrl = (website: string, port: string) => {
+	const protocol = website === 'localhost' ? 'ws' : 'wss';
+	const httpProtocol = website === 'localhost' ? 'http' : 'https';
+
+	return {
+		ws: `${protocol}://${website}:${port}/ws`,
+		http: `${httpProtocol}://${website}:${port}`
+	};
+};
 
 export const getClient = (chainId: string, applicationId: string, port: string) => {
 	const urls = getBaseUrl(website, port);

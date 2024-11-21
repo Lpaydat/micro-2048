@@ -14,6 +14,7 @@
         localStorage.removeItem('passwordHash');
         localStorage.removeItem('chainId');
         localStorage.removeItem('highestScore');
+        localStorage.removeItem('boardId');
 
         if ($page.url.pathname === '/game') {
             goto('/');

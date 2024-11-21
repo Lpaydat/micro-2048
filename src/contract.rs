@@ -156,30 +156,35 @@ impl Contract for Game2048Contract {
                                 .unwrap();
                             let score = score as u64;
                             let username = board.player.get();
-                            let lowest_score = singleplayer_leaderboard.lowest_score.get();
 
-                            if &score > lowest_score {
-                                let lowest_score_username =
-                                    singleplayer_leaderboard.lowest_score_username.get();
+                            let current_player_score = singleplayer_leaderboard
+                                .score
+                                .get(&username.clone())
+                                .await
+                                .unwrap();
 
-                                if *singleplayer_leaderboard.count.get() >= 100 {
-                                    let _ = singleplayer_leaderboard
-                                        .rankers
-                                        .remove(lowest_score_username);
+                            match current_player_score {
+                                Some(existing_score) if score > existing_score => {
+                                    singleplayer_leaderboard
+                                        .score
+                                        .insert(&username.clone(), score)
+                                        .unwrap();
+                                    singleplayer_leaderboard
+                                        .board_ids
+                                        .insert(&username.clone(), board_id)
+                                        .unwrap();
                                 }
-
-                                singleplayer_leaderboard.lowest_score.set(score);
-                                singleplayer_leaderboard
-                                    .lowest_score_username
-                                    .set(username.clone());
-                                singleplayer_leaderboard
-                                    .rankers
-                                    .insert(&username.clone(), score)
-                                    .unwrap();
-                                singleplayer_leaderboard
-                                    .board_ids
-                                    .insert(&username.clone(), board_id)
-                                    .unwrap();
+                                None => {
+                                    singleplayer_leaderboard
+                                        .score
+                                        .insert(&username.clone(), score)
+                                        .unwrap();
+                                    singleplayer_leaderboard
+                                        .board_ids
+                                        .insert(&username.clone(), board_id)
+                                        .unwrap();
+                                }
+                                _ => {}
                             }
                         }
                     } else {
