@@ -100,7 +100,7 @@ struct Player {
     highest_score: u64,
 }
 
-#[derive(SimpleObject)]
+#[derive(SimpleObject, serde::Serialize)]
 struct Ranker {
     username: String,
     score: u64,
@@ -121,8 +121,14 @@ impl QueryRoot {
         }
     }
 
-    async fn players(&self, usernames: Vec<String>) -> Vec<Player> {
+    async fn players(&self, usernames: Option<Vec<String>>) -> Vec<Player> {
+        let mut usernames = usernames.unwrap_or_default();
         let mut players: Vec<Player> = Vec::new();
+
+        if usernames.is_empty() {
+            usernames = self.state.players.indices().await.unwrap();
+        }
+
         for username in usernames {
             if let Ok(Some(player)) = self.state.players.try_load_entry(&username).await {
                 players.push(Player {
@@ -132,6 +138,7 @@ impl QueryRoot {
                 });
             }
         }
+
         players
     }
 
@@ -191,6 +198,28 @@ impl QueryRoot {
         } else {
             None
         }
+    }
+
+    async fn boards(&self, board_ids: Option<Vec<String>>) -> Vec<BoardState> {
+        let mut board_ids = board_ids.unwrap_or_default();
+        let mut boards: Vec<BoardState> = Vec::new();
+
+        if board_ids.is_empty() {
+            board_ids = self.state.boards.indices().await.unwrap();
+        }
+
+        for board_id in board_ids {
+            if let Ok(Some(board)) = self.state.boards.try_load_entry(&board_id).await {
+                boards.push(BoardState {
+                    board_id,
+                    board: Game::convert_to_matrix(*board.board.get()),
+                    is_ended: *board.is_ended.get(),
+                    score: *board.score.get(),
+                });
+            }
+        }
+
+        boards
     }
 
     async fn waiting_rooms(&self) -> Vec<EliminationGameState> {
