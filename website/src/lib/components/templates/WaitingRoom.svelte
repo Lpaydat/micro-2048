@@ -12,10 +12,7 @@
 	import MainTemplate from "../organisms/MainTemplate.svelte";
 	import WaitingPlayers from "../organisms/WaitingPlayers.svelte";
 	import UserSidebar from "../organisms/UserSidebar.svelte";
-	import { joinGame } from '$lib/graphql/mutations/joinGame';
-	import { leaveGame } from '$lib/graphql/mutations/leaveGame';
-	import { startGame } from '$lib/graphql/mutations/startGame';
-	import { endGame } from '$lib/graphql/mutations/endGame';
+	import { joinGame, leaveGame, startGame, endGame } from '$lib/graphql/mutations';
 	import { goto } from '$app/navigation';
 	import { getGameDetails } from '$lib/graphql/queries/getGameDetails';
 	import { userStore } from '$lib/stores/userStore';
@@ -79,22 +76,22 @@
 
     const handleJoinGame = () => {
         if (!username) return;
-        joinGame(client, username, gameId);
+        joinGame(client, gameId);
     }
 
     const handleLeaveGame = () => {
         if (!username) return;
-        leaveGame(client, username, gameId);
+        leaveGame(client, gameId);
     }
 
     const handleStartGame = () => {
         if (data?.playerCount < minimumPlayers || !username) return;
-        startGame(client, gameId, username);
+        startGame(client, gameId);
     }
 
     const handleEndGame = () => {
         if (!username) return;
-        endGame(client, gameId, username);
+        endGame(client, gameId);
     }
 
     const howToPlayModal: ModalSettings = {

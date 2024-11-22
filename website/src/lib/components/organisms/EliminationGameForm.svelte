@@ -43,7 +43,7 @@
                 createdTime: Date.now().toString()
             };
 
-            createEliminationGame(client, $userStore.username, settings);
+            createEliminationGame(client, settings);
             await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
             modalStore.close();
         } finally {

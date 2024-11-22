@@ -55,6 +55,7 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"@aws-crypto/sha256-browser": "^5.2.0",
 		"@floating-ui/dom": "^1.6.12",
 		"@urql/exchange-throw-on-error": "^0.1.0",
 		"siphash": "^1.1.0",

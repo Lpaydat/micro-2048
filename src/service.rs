@@ -356,7 +356,7 @@ impl MutationRoot {
         seed: Option<String>,
         player: String,
         password_hash: String,
-        timestamp: u64,
+        timestamp: String,
     ) -> Vec<u8> {
         if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
             if *player.password_hash.get() != password_hash {
@@ -368,7 +368,7 @@ impl MutationRoot {
         bcs::to_bytes(&Operation::NewBoard {
             seed,
             player,
-            timestamp,
+            timestamp: timestamp.parse::<u64>().unwrap(),
         })
         .unwrap()
     }
@@ -378,7 +378,7 @@ impl MutationRoot {
         board_id: String,
         direction: Direction,
         player: String,
-        timestamp: u64,
+        timestamp: String,
         password_hash: String,
     ) -> Vec<u8> {
         if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
@@ -391,7 +391,7 @@ impl MutationRoot {
             board_id,
             direction,
             player,
-            timestamp,
+            timestamp: timestamp.parse::<u64>().unwrap(),
         };
         bcs::to_bytes(&operation).unwrap()
     }
@@ -412,51 +412,10 @@ impl MutationRoot {
         bcs::to_bytes(&operation).unwrap()
     }
 
-    async fn join_elimination_game(
+    async fn elimination_game_action(
         &self,
         game_id: String,
-        player: String,
-        password_hash: String,
-    ) -> Vec<u8> {
-        if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
-            if *player.password_hash.get() != password_hash {
-                panic!("Invalid password");
-            }
-        }
-
-        let operation = Operation::EliminationGameAction {
-            game_id,
-            action: MultiplayerGameAction::Join,
-            player,
-            timestamp: 0,
-        };
-        bcs::to_bytes(&operation).unwrap()
-    }
-
-    async fn leave_elimination_game(
-        &self,
-        game_id: String,
-        player: String,
-        password_hash: String,
-    ) -> Vec<u8> {
-        if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
-            if *player.password_hash.get() != password_hash {
-                panic!("Invalid password");
-            }
-        }
-
-        let operation = Operation::EliminationGameAction {
-            game_id,
-            action: MultiplayerGameAction::Leave,
-            player,
-            timestamp: 0,
-        };
-        bcs::to_bytes(&operation).unwrap()
-    }
-
-    async fn start_elimination_game(
-        &self,
-        game_id: String,
+        action: MultiplayerGameAction,
         player: String,
         password_hash: String,
         timestamp: String,
@@ -469,77 +428,141 @@ impl MutationRoot {
 
         let operation = Operation::EliminationGameAction {
             game_id,
-            action: MultiplayerGameAction::Start,
+            action,
             player,
             timestamp: timestamp.parse::<u64>().unwrap(),
         };
         bcs::to_bytes(&operation).unwrap()
     }
 
-    // for early end
-    async fn end_elimination_game(
-        &self,
-        game_id: String,
-        player: String,
-        password_hash: String,
-        timestamp: String,
-    ) -> Vec<u8> {
-        if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
-            if *player.password_hash.get() != password_hash {
-                panic!("Invalid password");
-            }
-        }
+    // async fn join_elimination_game(
+    //     &self,
+    //     game_id: String,
+    //     player: String,
+    //     password_hash: String,
+    // ) -> Vec<u8> {
+    //     if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
+    //         if *player.password_hash.get() != password_hash {
+    //             panic!("Invalid password");
+    //         }
+    //     }
 
-        let operation = Operation::EliminationGameAction {
-            game_id,
-            action: MultiplayerGameAction::End,
-            player,
-            timestamp: timestamp.parse::<u64>().unwrap(),
-        };
-        bcs::to_bytes(&operation).unwrap()
-    }
+    //     let operation = Operation::EliminationGameAction {
+    //         game_id,
+    //         action: MultiplayerGameAction::Join,
+    //         player,
+    //         timestamp: 0,
+    //     };
+    //     bcs::to_bytes(&operation).unwrap()
+    // }
 
-    async fn trigger_elimination_game(
-        &self,
-        game_id: String,
-        player: String,
-        password_hash: String,
-        timestamp: String,
-    ) -> Vec<u8> {
-        if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
-            if *player.password_hash.get() != password_hash {
-                panic!("Invalid password");
-            }
-        }
+    // async fn leave_elimination_game(
+    //     &self,
+    //     game_id: String,
+    //     player: String,
+    //     password_hash: String,
+    // ) -> Vec<u8> {
+    //     if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
+    //         if *player.password_hash.get() != password_hash {
+    //             panic!("Invalid password");
+    //         }
+    //     }
 
-        let operation = Operation::EliminationGameAction {
-            game_id,
-            action: MultiplayerGameAction::Trigger,
-            player,
-            timestamp: timestamp.parse::<u64>().unwrap(),
-        };
-        bcs::to_bytes(&operation).unwrap()
-    }
+    //     let operation = Operation::EliminationGameAction {
+    //         game_id,
+    //         action: MultiplayerGameAction::Leave,
+    //         player,
+    //         timestamp: 0,
+    //     };
+    //     bcs::to_bytes(&operation).unwrap()
+    // }
 
-    async fn next_round_elimination_game(
-        &self,
-        game_id: String,
-        player: String,
-        password_hash: String,
-        timestamp: String,
-    ) -> Vec<u8> {
-        if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
-            if *player.password_hash.get() != password_hash {
-                panic!("Invalid password");
-            }
-        }
+    // async fn start_elimination_game(
+    //     &self,
+    //     game_id: String,
+    //     player: String,
+    //     password_hash: String,
+    //     timestamp: String,
+    // ) -> Vec<u8> {
+    //     if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
+    //         if *player.password_hash.get() != password_hash {
+    //             panic!("Invalid password");
+    //         }
+    //     }
 
-        let operation = Operation::EliminationGameAction {
-            game_id,
-            action: MultiplayerGameAction::NextRound,
-            player,
-            timestamp: timestamp.parse::<u64>().unwrap(),
-        };
-        bcs::to_bytes(&operation).unwrap()
-    }
+    //     let operation = Operation::EliminationGameAction {
+    //         game_id,
+    //         action: MultiplayerGameAction::Start,
+    //         player,
+    //         timestamp: timestamp.parse::<u64>().unwrap(),
+    //     };
+    //     bcs::to_bytes(&operation).unwrap()
+    // }
+
+    // // for early end
+    // async fn end_elimination_game(
+    //     &self,
+    //     game_id: String,
+    //     player: String,
+    //     password_hash: String,
+    //     timestamp: String,
+    // ) -> Vec<u8> {
+    //     if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
+    //         if *player.password_hash.get() != password_hash {
+    //             panic!("Invalid password");
+    //         }
+    //     }
+
+    //     let operation = Operation::EliminationGameAction {
+    //         game_id,
+    //         action: MultiplayerGameAction::End,
+    //         player,
+    //         timestamp: timestamp.parse::<u64>().unwrap(),
+    //     };
+    //     bcs::to_bytes(&operation).unwrap()
+    // }
+
+    // async fn trigger_elimination_game(
+    //     &self,
+    //     game_id: String,
+    //     player: String,
+    //     password_hash: String,
+    //     timestamp: String,
+    // ) -> Vec<u8> {
+    //     if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
+    //         if *player.password_hash.get() != password_hash {
+    //             panic!("Invalid password");
+    //         }
+    //     }
+
+    //     let operation = Operation::EliminationGameAction {
+    //         game_id,
+    //         action: MultiplayerGameAction::Trigger,
+    //         player,
+    //         timestamp: timestamp.parse::<u64>().unwrap(),
+    //     };
+    //     bcs::to_bytes(&operation).unwrap()
+    // }
+
+    // async fn next_round_elimination_game(
+    //     &self,
+    //     game_id: String,
+    //     player: String,
+    //     password_hash: String,
+    //     timestamp: String,
+    // ) -> Vec<u8> {
+    //     if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
+    //         if *player.password_hash.get() != password_hash {
+    //             panic!("Invalid password");
+    //         }
+    //     }
+
+    //     let operation = Operation::EliminationGameAction {
+    //         game_id,
+    //         action: MultiplayerGameAction::NextRound,
+    //         player,
+    //         timestamp: timestamp.parse::<u64>().unwrap(),
+    //     };
+    //     bcs::to_bytes(&operation).unwrap()
+    // }
 }

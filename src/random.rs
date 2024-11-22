@@ -1,6 +1,6 @@
 use sha2::{Digest, Sha256};
 
-fn hash_seed(board_id: &str, username: &str, timestamp: u64) -> u32 {
+pub fn hash_seed(board_id: &str, username: &str, timestamp: u64) -> u32 {
     let mut hasher = Sha256::new();
     hasher.update(board_id);
     hasher.update(username);

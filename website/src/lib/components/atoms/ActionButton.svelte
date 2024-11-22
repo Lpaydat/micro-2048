@@ -7,7 +7,7 @@
     export let loading: boolean = false;
 
     const baseColorClasses = {
-        default: 'bg-orange-500/50',
+        default: 'bg-orange-600 text-white',
         important: 'text-orange-600 variant-outline-primary hover:text-white',
         warning: 'bg-warning-500',
         danger: 'bg-error-500',
@@ -15,7 +15,7 @@
     };
 
     const hoverColorClasses = {
-        default: 'hover:bg-orange-500 hover:text-black',
+        default: 'hover:bg-orange-700 hover:text-white',
         important: 'hover:bg-orange-600',
         warning: 'hover:bg-warning-600',
         danger: 'hover:bg-error-800',
@@ -53,5 +53,10 @@
     @keyframes spin {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
+    }
+
+    button {
+        border: 2px solid #fff;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
 </style>

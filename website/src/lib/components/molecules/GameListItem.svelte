@@ -4,7 +4,7 @@
     import BaseListItem from './BaseListItem.svelte';
     import ActionButton from '../atoms/ActionButton.svelte';
 	import TimeAgo from '../atoms/TimeAgo.svelte';
-	import { joinGame } from '$lib/graphql/mutations/joinGame';
+	import { joinGame } from '$lib/graphql/mutations';
 	import type { EliminationGameDetails } from '$lib/types/eliminationGame';
 	import { userStore } from '$lib/stores/userStore';
 
@@ -29,7 +29,7 @@
     const handleJoinGame = (gameId: string) => {
         if (!$userStore.username) return;
         loading = true;
-        joinGame(client, $userStore.username, gameId);
+        joinGame(client, gameId);
     }
 
     const enterGame = (gameId: string) => {

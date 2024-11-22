@@ -13,9 +13,8 @@
 	import { userStore } from "$lib/stores/userStore";
 	import { getMessageBlockheight } from "$lib/utils/getMessageBlockheight";
 	import { gql } from "urql";
-	import { triggerGameEvent } from "$lib/graphql/mutations/triggerGame";
 	import { goto } from "$app/navigation";
-	import { nextRound } from "$lib/graphql/mutations/nextRound";
+	import { nextRound, triggerGame } from "$lib/graphql/mutations";
 	import { isHashesListVisible } from "$lib/stores/hashesStore";
 	import RoundButton from "../molecules/RoundButton.svelte";
 	import MobileUserStats from "../organisms/MobileUserStats.svelte";
@@ -58,8 +57,8 @@
         variables: { chainId: gameId },
     });
 
-    const triggerGameEventMutation = () => triggerGameEvent(client, gameId, username);
-    const nextRoundMutation = () => nextRound(client, gameId, username);
+    const triggerGameEventMutation = () => triggerGame(client, gameId);
+    const nextRoundMutation = () => nextRound(client, gameId);
 
     // Reactive declarations
     $: game = getGameDetails(client, gameId, r);

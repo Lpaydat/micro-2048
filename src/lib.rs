@@ -8,7 +8,7 @@ pub use crate::direction::Direction;
 pub use crate::elimination_game::{EliminationGameSettings, MultiplayerGameAction};
 pub use crate::game::Game;
 pub use crate::moves::{Moves, COL_MASK, ROW_MASK};
-pub use crate::random::rnd_range;
+pub use crate::random::{hash_seed, rnd_range};
 use async_graphql::{Request, Response};
 use linera_sdk::{
     base::{ContractAbi, ServiceAbi},

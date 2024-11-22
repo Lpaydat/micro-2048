@@ -1,9 +1,10 @@
 <script lang="ts">
-	import { hashesStore } from "$lib/stores/hashesStore";
-	import { getContextClient, mutationStore, gql } from "@urql/svelte";
+	import { getContextClient } from "@urql/svelte";
 	import { onMount } from "svelte";
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
+	import { newGame } from "$lib/graphql/mutations/newBoard";
+	import { hashSeed } from "$lib/utils/random";
 
 	export let player: string;
 	export let value: number;
@@ -15,12 +16,6 @@
 	let bestScore: number = 0;
 	let client = getContextClient();
 
-	const NEW_BOARD = gql`
-		mutation NewBoard($seed: Int!, $player: String!) {
-		newBoard(seed: $seed, player: $player)
-		}
-	`;
-
 	// Size configurations
 	const sizeConfig = {
 		sm: { width: 370, buttonHeight: 6, fontSize: 'text-base', scoreSize: 'text-lg' },
@@ -29,20 +24,17 @@
 	};
 
 	// Mutation functions
-	const newGameMutation = ({ seed }: { seed: number }) => {
-		hashesStore.set([]);
-		mutationStore({
-			client,
-			query: NEW_BOARD,
-			variables: { seed, player },
-		});
-	};
+	const newGameMutation = (seed: string, timestamp: string) => newGame(client, seed, timestamp);
 
-	const newSingleGame = () => {
+	const newSingleGame = async () => {
 		if (!canStartNewGame) return;
-		boardId = Math.floor(Math.random() * 1000000).toString();
+		const seed = Math.floor(Math.random() * 10_000_000).toString();
+		const timestamp = Date.now().toString();
+
+		boardId = (await hashSeed(seed, player, timestamp)).toString();
 		localStorage.setItem('boardId', boardId);
-		newGameMutation({ seed: parseInt(boardId) });
+
+		newGameMutation(seed, timestamp);
 
 		const url = new URL($page.url);
 		url.searchParams.delete('boardId');

@@ -12,7 +12,7 @@ use linera_sdk::{
 use state::EliminationGameStatus;
 
 use self::state::Game2048;
-use game2048::{rnd_range, Game, Message, MultiplayerGameAction, Operation, RegistrationCheck};
+use game2048::{hash_seed, Game, Message, MultiplayerGameAction, Operation, RegistrationCheck};
 
 pub struct Game2048Contract {
     state: Game2048,
@@ -91,7 +91,7 @@ impl Contract for Game2048Contract {
                 self.check_player_registered(&player, RegistrationCheck::EnsureRegistered)
                     .await;
 
-                let board_id = rnd_range(&seed, &player, timestamp, 0, 100000000).to_string();
+                let board_id = hash_seed(&seed, &player, timestamp).to_string();
                 let new_board = Game::new(&board_id, &player, timestamp).board;
                 let game = self.state.boards.load_entry_mut(&board_id).await.unwrap();
 
