@@ -7,6 +7,7 @@
 
     export let windowWidth = 0;
     export let mainCenter = false;
+    export let overflowHidden = false;
 
     onMount(() => {
         const updateWidth = () => (windowWidth = window.innerWidth);
@@ -17,9 +18,10 @@
 
     $: isMobile = windowWidth <= 768;
     const mainClass = mainCenter ? 'justify-center' : 'justify-start';
+    const overflowClass = overflowHidden ? 'overflow-hidden' : '';
 </script>
 
-<div class="flex h-screen overflow-hidden bg-[#23232b] bg-[url('/micro-carbon.png')] bg-repeat">
+<div class="flex h-screen {overflowClass} bg-[#23232b] bg-[url('/micro-carbon.png')] bg-repeat">
     {#if !isMobile}
         <Sidebar>
             <slot name="sidebar" />
@@ -27,7 +29,7 @@
     {/if}
 
     <Main>
-        <div class="flex flex-col flex-1 overflow-hidden">
+        <div class="flex flex-col flex-1 {overflowClass}">
             {#if isMobile}
                 <div class="flex-none">
                     <MobileHeader>

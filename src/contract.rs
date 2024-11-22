@@ -12,7 +12,7 @@ use linera_sdk::{
 use state::EliminationGameStatus;
 
 use self::state::Game2048;
-use game2048::{gen_range, Game, Message, MultiplayerGameAction, Operation, RegistrationCheck};
+use game2048::{rnd_range, Game, Message, MultiplayerGameAction, Operation, RegistrationCheck};
 
 pub struct Game2048Contract {
     state: Game2048,
@@ -83,18 +83,17 @@ impl Contract for Game2048Contract {
                 player.password_hash.set(password_hash);
                 player.chain_id.set(chain_id.to_string());
             }
-            Operation::NewBoard { seed, player } => {
+            Operation::NewBoard {
+                seed,
+                player,
+                timestamp,
+            } => {
                 self.check_player_registered(&player, RegistrationCheck::EnsureRegistered)
                     .await;
 
-                let seed = self.get_seed(seed);
-                let new_board = Game::new(&seed).board;
-                let game = self
-                    .state
-                    .boards
-                    .load_entry_mut(&seed.to_string())
-                    .await
-                    .unwrap();
+                let board_id = rnd_range(&seed, &player, timestamp, 0, 100000000).to_string();
+                let new_board = Game::new(&board_id, &player, timestamp).board;
+                let game = self.state.boards.load_entry_mut(&board_id).await.unwrap();
 
                 game.board_id.set(seed.to_string());
                 game.board.set(new_board);
@@ -115,15 +114,18 @@ impl Contract for Game2048Contract {
             Operation::MakeMove {
                 board_id,
                 direction,
+                player,
+                timestamp,
             } => {
-                let seed = self.get_seed(0);
                 let board = self.state.boards.load_entry_mut(&board_id).await.unwrap();
 
                 let is_ended = board.is_ended.get();
                 if !is_ended {
                     let mut game = Game {
                         board: *board.board.get(),
-                        seed,
+                        board_id: board_id.clone(),
+                        username: player.clone(),
+                        timestamp,
                     };
 
                     let new_board = Game::execute(&mut game, direction);
@@ -314,7 +316,7 @@ impl Contract for Game2048Contract {
                             let board_id =
                                 format!("{}-{}-{}-{}", game_id, 1, player, player_chain_id);
                             let game = self.state.boards.load_entry_mut(&board_id).await.unwrap();
-                            let new_board = Game::new(&board_id).board;
+                            let new_board = Game::new(&board_id, player, timestamp).board;
 
                             game.board_id.set(board_id);
                             game.board.set(new_board);
@@ -483,7 +485,7 @@ impl Contract for Game2048Contract {
                                     );
                                     let game =
                                         self.state.boards.load_entry_mut(&board_id).await.unwrap();
-                                    let new_board = Game::new(&board_id).board;
+                                    let new_board = Game::new(&board_id, &player, timestamp).board;
 
                                     game.board_id.set(board_id);
                                     game.board.set(new_board);
@@ -618,15 +620,6 @@ impl Contract for Game2048Contract {
 }
 
 impl Game2048Contract {
-    fn get_seed(&mut self, init_seed: u32) -> u32 {
-        if init_seed != 0 {
-            init_seed
-        } else {
-            let block_height = self.runtime.block_height().to_string();
-            gen_range(&block_height, 0, u32::MAX)
-        }
-    }
-
     async fn ping_player(&mut self, player: &str) {
         let chain_id = self
             .state

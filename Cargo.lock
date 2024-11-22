@@ -1461,6 +1461,7 @@ dependencies = [
  "linera-sdk",
  "log",
  "serde",
+ "sha2",
 ]
 
 [[package]]

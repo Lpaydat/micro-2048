@@ -56,6 +56,8 @@
 	"type": "module",
 	"dependencies": {
 		"@floating-ui/dom": "^1.6.12",
-		"@urql/exchange-throw-on-error": "^0.1.0"
+		"@urql/exchange-throw-on-error": "^0.1.0",
+		"siphash": "^1.1.0",
+		"siphash24": "^1.3.1"
 	}
 }

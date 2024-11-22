@@ -7,7 +7,7 @@
 	import UserSidebar from "../organisms/UserSidebar.svelte";
 </script>
 
-<MainTemplate>
+<MainTemplate overflowHidden>
     <svelte:fragment slot="sidebar">
         <UserSidebar />
     </svelte:fragment>

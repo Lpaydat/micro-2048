@@ -37,7 +37,7 @@
 <div class="w-full mx-auto mt-8 max-w-4xl">
     <h1 class="text-4xl font-extrabold mb-6 text-center text-gray-100">Leaderboard</h1>
     <div class="bg-gray-800 px-2 py-6 lg:p-6 lg:rounded-lg shadow-xl">
-        {#if !$rankers.fetching || sortedRankers.length > 0}
+        {#if !$rankers.fetching || (sortedRankers?.length ?? 0) > 0}
             <div class="space-y-4">
                 <!-- Header Row -->
                 <div class="flex justify-between items-center text-xs lg:text-base px-4 text-gray-400 font-semibold border-b border-gray-700 pb-2">

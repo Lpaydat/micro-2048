@@ -8,7 +8,7 @@ pub use crate::direction::Direction;
 pub use crate::elimination_game::{EliminationGameSettings, MultiplayerGameAction};
 pub use crate::game::Game;
 pub use crate::moves::{Moves, COL_MASK, ROW_MASK};
-pub use crate::random::gen_range;
+pub use crate::random::rnd_range;
 use async_graphql::{Request, Response};
 use linera_sdk::{
     base::{ContractAbi, ServiceAbi},
@@ -36,8 +36,9 @@ pub enum Operation {
         password_hash: String,
     },
     NewBoard {
-        seed: u32,
+        seed: String,
         player: String,
+        timestamp: u64,
     },
     EndBoard {
         board_id: String,
@@ -45,6 +46,8 @@ pub enum Operation {
     MakeMove {
         board_id: String,
         direction: Direction,
+        player: String,
+        timestamp: u64,
     },
     // Elimination Game
     CreateEliminationGame {

@@ -1,7 +1,5 @@
-use crate::{gen_range, Direction, ROW_MASK};
+use crate::{rnd_range, Direction, ROW_MASK};
 use lazy_static::lazy_static;
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
 use std::ops::Add;
 include!("../moves_data.rs");
 
@@ -50,27 +48,29 @@ lazy_static! {
 /// back into the board at the right position is the output board.
 pub struct Game {
     pub board: u64,
-    pub seed: u32,
+    pub board_id: String,
+    pub username: String,
+    pub timestamp: u64,
 }
-impl Game {
-    /// Convert any type that implements Hash trait into a u32 seed
-    pub fn to_seed<T: Hash>(value: T) -> u32 {
-        let mut hasher = DefaultHasher::new();
-        value.hash(&mut hasher);
-        hasher.finish() as u32
-    }
 
+impl Game {
     /// Constructs a new `tfe::Game`.
     /// Accepts either a u32 or any string as seed
-    pub fn new<T: Hash>(seed_value: &T) -> Self {
-        let seed = Self::to_seed(seed_value);
+    pub fn new(board_id: &str, username: &str, timestamp: u64) -> Self {
         let mut game = Game {
             board: 0x0000_0000_0000_0000_u64,
-            seed,
+            board_id: board_id.to_string(),
+            username: username.to_string(),
+            timestamp,
         };
 
-        game.board |= Self::spawn_tile(game.board, game.seed);
-        game.board |= Self::spawn_tile(game.board, game.seed + 1);
+        game.board |= Self::spawn_tile(&game.board_id, &game.username, game.timestamp, game.board);
+        game.board |= Self::spawn_tile(
+            &game.board_id,
+            &game.username,
+            game.timestamp - 1,
+            game.board,
+        );
 
         game
     }
@@ -110,7 +110,13 @@ impl Game {
         };
 
         if current_board != self.board {
-            current_board = current_board | Self::spawn_tile(current_board, self.seed)
+            current_board = current_board
+                | Self::spawn_tile(
+                    &self.board_id,
+                    &self.username,
+                    self.timestamp,
+                    current_board,
+                )
         }
 
         current_board
@@ -384,8 +390,8 @@ impl Game {
     }
 
     /// Returns a `2` with 90% chance and `4` with 10% chance.
-    pub fn tile(seed: u32) -> u64 {
-        if gen_range(&seed.to_string(), 0, 10) == 9 {
+    pub fn tile(board_id: &str, username: &str, timestamp: u64) -> u64 {
+        if rnd_range(board_id, username, timestamp, 0, 10) == 9 {
             2
         } else {
             1
@@ -393,10 +399,10 @@ impl Game {
     }
 
     /// Returns a `1` shifted to the position of any `0` bit in `board` randomly.
-    pub fn spawn_tile(board: u64, seed: u32) -> u64 {
+    pub fn spawn_tile(board_id: &str, username: &str, timestamp: u64, board: u64) -> u64 {
         let mut tmp = board;
-        let mut idx = gen_range(&seed.to_string(), 0, Self::count_empty(board));
-        let mut t = Self::tile(seed);
+        let mut idx = rnd_range(board_id, username, timestamp, 0, Self::count_empty(board));
+        let mut t = Self::tile(board_id, username, timestamp);
 
         loop {
             while (tmp & 0xF) != 0 {

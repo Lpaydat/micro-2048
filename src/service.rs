@@ -40,7 +40,9 @@ impl Service for Game2048Service {
                 state: self.state.clone(),
                 // runtime: self.runtime.clone(),
             },
-            MutationRoot,
+            MutationRoot {
+                state: self.state.clone(),
+            },
             EmptySubscription,
         )
         .finish();
@@ -330,7 +332,9 @@ impl QueryRoot {
     }
 }
 
-struct MutationRoot;
+struct MutationRoot {
+    state: Arc<Game2048>,
+}
 
 #[Object]
 impl MutationRoot {
@@ -347,15 +351,47 @@ impl MutationRoot {
         bcs::to_bytes(&operation).unwrap()
     }
 
-    async fn new_board(&self, seed: Option<u32>, player: String) -> Vec<u8> {
-        let seed = seed.unwrap_or(0);
-        bcs::to_bytes(&Operation::NewBoard { seed, player }).unwrap()
+    async fn new_board(
+        &self,
+        seed: Option<String>,
+        player: String,
+        password_hash: String,
+        timestamp: u64,
+    ) -> Vec<u8> {
+        if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
+            if *player.password_hash.get() != password_hash {
+                panic!("Invalid password");
+            }
+        }
+
+        let seed = seed.unwrap_or("".to_string());
+        bcs::to_bytes(&Operation::NewBoard {
+            seed,
+            player,
+            timestamp,
+        })
+        .unwrap()
     }
 
-    async fn make_move(&self, board_id: String, direction: Direction) -> Vec<u8> {
+    async fn make_move(
+        &self,
+        board_id: String,
+        direction: Direction,
+        player: String,
+        timestamp: u64,
+        password_hash: String,
+    ) -> Vec<u8> {
+        if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
+            if *player.password_hash.get() != password_hash {
+                panic!("Invalid password");
+            }
+        }
+
         let operation = Operation::MakeMove {
             board_id,
             direction,
+            player,
+            timestamp,
         };
         bcs::to_bytes(&operation).unwrap()
     }
@@ -363,13 +399,31 @@ impl MutationRoot {
     async fn create_elimination_game(
         &self,
         player: String,
+        password_hash: String,
         settings: EliminationGameSettings,
     ) -> Vec<u8> {
+        if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
+            if *player.password_hash.get() != password_hash {
+                panic!("Invalid password");
+            }
+        }
+
         let operation = Operation::CreateEliminationGame { player, settings };
         bcs::to_bytes(&operation).unwrap()
     }
 
-    async fn join_elimination_game(&self, game_id: String, player: String) -> Vec<u8> {
+    async fn join_elimination_game(
+        &self,
+        game_id: String,
+        player: String,
+        password_hash: String,
+    ) -> Vec<u8> {
+        if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
+            if *player.password_hash.get() != password_hash {
+                panic!("Invalid password");
+            }
+        }
+
         let operation = Operation::EliminationGameAction {
             game_id,
             action: MultiplayerGameAction::Join,
@@ -379,7 +433,18 @@ impl MutationRoot {
         bcs::to_bytes(&operation).unwrap()
     }
 
-    async fn leave_elimination_game(&self, game_id: String, player: String) -> Vec<u8> {
+    async fn leave_elimination_game(
+        &self,
+        game_id: String,
+        player: String,
+        password_hash: String,
+    ) -> Vec<u8> {
+        if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
+            if *player.password_hash.get() != password_hash {
+                panic!("Invalid password");
+            }
+        }
+
         let operation = Operation::EliminationGameAction {
             game_id,
             action: MultiplayerGameAction::Leave,
@@ -393,8 +458,15 @@ impl MutationRoot {
         &self,
         game_id: String,
         player: String,
+        password_hash: String,
         timestamp: String,
     ) -> Vec<u8> {
+        if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
+            if *player.password_hash.get() != password_hash {
+                panic!("Invalid password");
+            }
+        }
+
         let operation = Operation::EliminationGameAction {
             game_id,
             action: MultiplayerGameAction::Start,
@@ -409,8 +481,15 @@ impl MutationRoot {
         &self,
         game_id: String,
         player: String,
+        password_hash: String,
         timestamp: String,
     ) -> Vec<u8> {
+        if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
+            if *player.password_hash.get() != password_hash {
+                panic!("Invalid password");
+            }
+        }
+
         let operation = Operation::EliminationGameAction {
             game_id,
             action: MultiplayerGameAction::End,
@@ -424,8 +503,15 @@ impl MutationRoot {
         &self,
         game_id: String,
         player: String,
+        password_hash: String,
         timestamp: String,
     ) -> Vec<u8> {
+        if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
+            if *player.password_hash.get() != password_hash {
+                panic!("Invalid password");
+            }
+        }
+
         let operation = Operation::EliminationGameAction {
             game_id,
             action: MultiplayerGameAction::Trigger,
@@ -439,8 +525,15 @@ impl MutationRoot {
         &self,
         game_id: String,
         player: String,
+        password_hash: String,
         timestamp: String,
     ) -> Vec<u8> {
+        if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
+            if *player.password_hash.get() != password_hash {
+                panic!("Invalid password");
+            }
+        }
+
         let operation = Operation::EliminationGameAction {
             game_id,
             action: MultiplayerGameAction::NextRound,
