@@ -56,7 +56,8 @@ export const generateTabletFromMatrix = (matrix: number[][]): Tablet => {
 				merged: false,
 				swipe: false,
 				new: false,
-				position: indexes[index]
+				position: indexes[index],
+				prevPosition: indexes[index]
 			};
 		})
 	);
