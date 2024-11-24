@@ -61,6 +61,7 @@ struct BoardState {
     board: [[u16; 4]; 4],
     is_ended: bool,
     score: u64,
+    player: String,
 }
 
 #[derive(SimpleObject)]
@@ -195,6 +196,7 @@ impl QueryRoot {
                 board: Game::convert_to_matrix(*game.board.get()),
                 is_ended: *game.is_ended.get(),
                 score: *game.score.get(),
+                player: game.player.get().to_string(),
             };
             Some(game_state)
         } else {
@@ -217,6 +219,7 @@ impl QueryRoot {
                     board: Game::convert_to_matrix(*board.board.get()),
                     is_ended: *board.is_ended.get(),
                     score: *board.score.get(),
+                    player: board.player.get().to_string(),
                 });
             }
         }

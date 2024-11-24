@@ -40,21 +40,48 @@ impl Contract for Game2048Contract {
     async fn instantiate(&mut self, _seed: Self::InstantiationArgument) {
         self.runtime.application_parameters();
 
-        // Initialize a default game entry if it doesn't exist
-        // let board_id = seed.to_string(); // Example game ID
-        // if self
-        //     .state
-        //     .boards
-        //     .load_entry_or_insert(&board_id)
-        //     .await
-        //     .is_err()
-        // {
-        //     let boards = self.state.boards.load_entry_mut(&board_id).await.unwrap();
-        //     boards.board_id.set(board_id);
-        //     boards.board.set(0); // Set a default board value, e.g., an empty board
-        // }
+        let boards = include_str!("../db/boards.txt");
+        for line in boards.lines() {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 2 {
+                let board_id = parts[0];
+                let board = parts[1];
+                let score = parts[2];
+                let is_ended = parts[3];
 
-        // let elimination_games = self.state.elimination_games.load_entry_or_insert(&board_id).await.unwrap();
+                let game = self.state.boards.load_entry_mut(board_id).await.unwrap();
+                game.board_id.set(board_id.to_string());
+                game.board.set(board.parse::<u64>().unwrap());
+                game.player.set("".to_string());
+                game.score.set(score.parse::<u64>().unwrap());
+                game.is_ended.set(is_ended.parse::<bool>().unwrap());
+            }
+        }
+
+        let rankers = include_str!("../db/rankers.txt");
+        let leaderboard = self
+            .state
+            .singleplayer_leaderboard
+            .load_entry_mut(&0)
+            .await
+            .unwrap();
+        for line in rankers.lines() {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 3 {
+                let username = parts[0];
+                let score = parts[1];
+                let board_id = parts[2];
+
+                leaderboard
+                    .score
+                    .insert(username, score.parse::<u64>().unwrap())
+                    .unwrap();
+                leaderboard
+                    .board_ids
+                    .insert(username, board_id.to_string())
+                    .unwrap();
+            }
+        }
     }
 
     async fn execute_operation(&mut self, operation: Self::Operation) -> Self::Response {
