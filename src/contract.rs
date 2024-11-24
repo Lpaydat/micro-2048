@@ -45,13 +45,14 @@ impl Contract for Game2048Contract {
             let parts: Vec<&str> = line.split_whitespace().collect();
             if parts.len() >= 2 {
                 let board_id = parts[0];
-                let board = parts[1];
+                let board_hex = parts[1];
                 let score = parts[2];
                 let is_ended = parts[3];
 
                 let game = self.state.boards.load_entry_mut(board_id).await.unwrap();
                 game.board_id.set(board_id.to_string());
-                game.board.set(board.parse::<u64>().unwrap());
+                game.board
+                    .set(u64::from_str_radix(board_hex.trim_start_matches("0x"), 16).unwrap());
                 game.player.set("".to_string());
                 game.score.set(score.parse::<u64>().unwrap());
                 game.is_ended.set(is_ended.parse::<bool>().unwrap());
