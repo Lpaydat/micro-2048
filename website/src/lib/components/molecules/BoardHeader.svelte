@@ -5,6 +5,7 @@
 	import { goto } from '$app/navigation';
 	import { newGame } from "$lib/graphql/mutations/newBoard";
 	import { hashSeed } from "$lib/utils/random";
+	import { setGameCreationStatus } from "$lib/stores/gameStore";
 
 	export let player: string;
 	export let value: number;
@@ -33,6 +34,7 @@
 
 		boardId = (await hashSeed(seed, player, timestamp)).toString();
 		localStorage.setItem('boardId', boardId);
+		setGameCreationStatus(true);
 
 		newGameMutation(seed, timestamp);
 

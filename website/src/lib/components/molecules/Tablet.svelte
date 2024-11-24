@@ -1,7 +1,8 @@
 <script lang="ts">
-  import BoardTile from "../atoms/BoardTile.svelte";
+  import type { Tablet } from "$lib/game/models";
+  import Tile from "../atoms/Tile.svelte";
 
-  export let board: number[][];
+  export let tablet: Tablet;
   export let size: 'sm' | 'md' | 'lg' = 'lg';
 
   const sizeConfig = {
@@ -12,6 +13,26 @@
 
   $: currentSize = sizeConfig[size];
 </script>
+
+<div 
+  class="grid wrapper"
+  style="
+    --tile-size: {currentSize.tile}px; 
+    --gap-size: {currentSize.gap}px;
+    --wrapper-padding: {currentSize.wrapper}px;
+  "
+>
+  {#each [...Array(tablet.length ** 2).keys()] as box}
+    <div class="box box-{box}"></div>
+  {/each}
+  <div class="tiles">
+    {#each tablet.flatMap((row) => row) as tile}
+      {#if tile.position}
+        <Tile {tile} {size} />
+      {/if}
+    {/each}
+  </div>
+</div>
 
 <style>
   .grid {
@@ -40,23 +61,3 @@
     background-color: #cdc1b4;
   }
 </style>
-
-<div 
-  class="grid wrapper"
-  style="
-    --tile-size: {currentSize.tile}px; 
-    --gap-size: {currentSize.gap}px;
-    --wrapper-padding: {currentSize.wrapper}px;
-  "
->
-  {#if board}
-    {#each [...Array(board.length ** 2).keys()] as box}
-      <div class="box box-{box}"></div>
-    {/each}
-    <div class="tiles">
-      {#each board.reduce((acc, row) => acc.concat(row), []) as value, index}
-        <BoardTile {value} {index} {size} />
-      {/each}
-    </div>
-  {/if}
-</div>

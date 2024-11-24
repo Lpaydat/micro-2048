@@ -1,40 +1,84 @@
 <script lang="ts">
-  export let value: number;
-  export let index: number;
+  import type { TileContent } from "$lib/game/models";
+  import { tweened, spring } from "svelte/motion";
+  import { cubicOut } from "svelte/easing";
+  import { onMount } from "svelte";
+
+  export let tile: TileContent;
   export let size: 'sm' | 'md' | 'lg' = 'lg';
 
   const sizeConfig = {
-    sm: { tile: 80, gap: 10, fontSize: { default: 55, medium: 35, small: 25 } },
-    md: { tile: 100, gap: 12, fontSize: { default: 65, medium: 40, small: 30 } },
-    lg: { tile: 120, gap: 15, fontSize: { default: 80, medium: 45, small: 35 } }
+    sm: { tile: 270, gap: 10, fontSize: { default: 55, medium: 35, small: 25 } },
+    md: { tile: 324, gap: 12, fontSize: { default: 65, medium: 40, small: 30 } },
+    lg: { tile: 405, gap: 15, fontSize: { default: 80, medium: 45, small: 35 } }
   };
 
-  const indexes: Record<number, { top: number; left: number }> = {
-    0: { top: 0, left: 0 },
-    1: { top: 0, left: 1 },
-    2: { top: 0, left: 2 },
-    3: { top: 0, left: 3 },
-    4: { top: 1, left: 0 },
-    5: { top: 1, left: 1 },
-    6: { top: 1, left: 2 },
-    7: { top: 1, left: 3 },
-    8: { top: 2, left: 0 },
-    9: { top: 2, left: 1 },
-    10: { top: 2, left: 2 },
-    11: { top: 2, left: 3 },
-    12: { top: 3, left: 0 },
-    13: { top: 3, left: 1 },
-    14: { top: 3, left: 2 },
-    15: { top: 3, left: 3 }
-  };
+  const posTop = tile.position?.top ?? 0;
+  const prevPosTop = tile.prevPosition?.top ?? 0;
+  const posLeft = tile.position?.left ?? 0;
+  const prevPosLeft = tile.prevPosition?.left ?? 0;
 
+  const topTweened = tweened(
+    (tile.new ? posTop : prevPosTop) / 3,
+    {
+      duration: 75,
+      easing: cubicOut,
+    }
+  );
+
+  const leftTweened = tweened(
+    (tile.new ? posLeft : prevPosLeft) / 3,
+    {
+      duration: 75,
+      easing: cubicOut,
+    }
+  );
+
+  const mergeSpring = spring(
+    { scale: 0 },
+    {
+      stiffness: 1,
+      damping: 1.5,
+    }
+  );
+
+  let mergedValue: number = 0;
+
+  // Based on composite rule of three
   $: currentSize = sizeConfig[size];
-  $: ({ top, left } = indexes[index]);
-  $: topValue = top * (currentSize.tile + currentSize.gap) + currentSize.gap;
-  $: leftValue = left * (currentSize.tile + currentSize.gap) + currentSize.gap;
+  $: top = $topTweened * currentSize.tile + currentSize.gap;
+  $: left = $leftTweened * currentSize.tile + currentSize.gap;
+  $: wasMerged = tile.merged && mergedValue !== tile.value;
+
+  $: if (wasMerged) {
+    mergeSpring.set({ scale: 1 });
+  }
+
+  $: if ($mergeSpring.scale === 1) {
+    mergedValue = tile.value;
+    mergeSpring.set({ scale: 0 });
+  }
+
+  onMount(() => {
+    topTweened.set(posTop / 3);
+    leftTweened.set(posLeft / 3);
+  });
+
+  const scale = (node: any, { duration }: any) => {
+    return {
+      duration,
+      css: (t: any) => {
+        const eased = tile.new ? cubicOut(t) : 1;
+
+        return `
+          transform: scale(${eased});
+          `;
+      },
+    };
+  };
 
   // Add this function to determine font size
-  function getFontSize(value: number, size: 'sm' | 'md' | 'lg'): number {
+  const getFontSize = (value: number, size: 'sm' | 'md' | 'lg'): number => {
     const config = sizeConfig[size].fontSize;
     if (value <= 6) return config.default;
     if (value <= 9) return config.medium;
@@ -43,26 +87,32 @@
 </script>
 
 <div
-  class="tile tile-{value} size-{size}"
-  style="top: {topValue}px; left: {leftValue}px; width: {currentSize.tile}px; height: {currentSize.tile}px; font-size: {getFontSize(value, size)}px;">
-  {value !== 0 ? 2 ** value : ''}
+  class="tile tile-{tile.value} size-{size}"
+  style="top: {top}px; left: {left}px; font-size: {getFontSize(tile.value, size)}px; transform: scale({wasMerged ? $mergeSpring.scale : 1})"
+  in:scale={{ duration: 100 }}>
+  {tile.value !== 0 ? 2 ** tile.value : ''}
 </div>
 
 <style>
+  .size-sm {
+    line-height: 80px;
+    width: 80px;
+    height: 80px;
+  }
+  .size-md {
+    line-height: 100px;
+    width: 100px;
+    height: 100px;
+  }
+  .size-lg {
+    line-height: 120px;
+    width: 120px;
+    height: 120px;
+  }
   .tile {
-    font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
     text-align: center;
     position: absolute;
-    display: flex;
-    align-items: center;
-    justify-content: center;
   }
-
-  /* Size-specific line heights */
-  .size-sm { line-height: 80px; }
-  .size-md { line-height: 100px; }
-  .size-lg { line-height: 120px; }
-
   .tile-1 {
     background: #eee4da;
     box-shadow: 0 0 30px 10px rgba(243, 215, 116, 0),

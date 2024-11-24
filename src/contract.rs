@@ -95,7 +95,7 @@ impl Contract for Game2048Contract {
                 let new_board = Game::new(&board_id, &player, timestamp).board;
                 let game = self.state.boards.load_entry_mut(&board_id).await.unwrap();
 
-                game.board_id.set(seed.to_string());
+                game.board_id.set(board_id);
                 game.board.set(new_board);
                 game.player.set(player.clone());
 
