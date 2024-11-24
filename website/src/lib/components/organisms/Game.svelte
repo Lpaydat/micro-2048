@@ -132,7 +132,7 @@
   }
 
   // Utility Functions
-  const hasWon = (board: number[][]) => board.some(row => row.includes(11));
+  const hasWon = (board: number[][]) => board.some(row => row.some(cell => cell >= 11));
 
   const getOverlayMessage = (board: number[][]) => {
     if (!isMultiplayer) {

@@ -185,11 +185,11 @@ impl Game {
     /// assert!(!Game::is_ended(board)); // Game should not be ended
     /// ```
     pub fn is_ended(board: u64) -> bool {
-        // Check if any tile has reached 2048
+        // Check if any tile has reached the maximum value
         for i in 0..16 {
             let tile_value = (board >> (i * 4)) & 0xF;
-            if tile_value == 11 {
-                // 2^11 = 2048
+            if tile_value == 0xF {
+                // 2^15 = 32768
                 return true;
             }
         }

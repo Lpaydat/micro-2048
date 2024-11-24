@@ -8,9 +8,9 @@
   export let size: 'sm' | 'md' | 'lg' = 'lg';
 
   const sizeConfig = {
-    sm: { tile: 270, gap: 10, fontSize: { default: 55, medium: 35, small: 25 } },
-    md: { tile: 324, gap: 12, fontSize: { default: 65, medium: 40, small: 30 } },
-    lg: { tile: 405, gap: 15, fontSize: { default: 80, medium: 45, small: 35 } }
+    sm: { tile: 270, gap: 10, fontSize: { default: 45, medium: 30, small: 20 } },
+    md: { tile: 324, gap: 12, fontSize: { default: 55, medium: 35, small: 25 } },
+    lg: { tile: 405, gap: 15, fontSize: { default: 65, medium: 40, small: 30 } }
   };
 
   const posTop = tile.position?.top ?? 0;
@@ -112,13 +112,20 @@
   .tile {
     text-align: center;
     position: absolute;
+    border-radius: 6px;
+    font-weight: bold;
+    font-family: "Clear Sans", "Helvetica Neue", Arial, sans-serif;
+    transition: 50ms ease-in-out;
+    user-select: none;
   }
   .tile-1 {
+    color: #776e65;
     background: #eee4da;
     box-shadow: 0 0 30px 10px rgba(243, 215, 116, 0),
       inset 0 0 0 1px rgba(255, 255, 255, 0);
   }
   .tile-2 {
+    color: #776e65;
     background: #ede0c8;
     box-shadow: 0 0 30px 10px rgba(243, 215, 116, 0),
       inset 0 0 0 1px rgba(255, 255, 255, 0);
