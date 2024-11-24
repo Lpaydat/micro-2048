@@ -1,8 +1,9 @@
 <script lang="ts">
   import type { Tablet } from "$lib/game/models";
+	import { generateTabletFromMatrix } from "$lib/game/utils";
   import Tile from "../atoms/Tile.svelte";
 
-  export let tablet: Tablet;
+  export let tablet: Tablet = generateTabletFromMatrix([[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]);
   export let size: 'sm' | 'md' | 'lg' = 'lg';
 
   const sizeConfig = {

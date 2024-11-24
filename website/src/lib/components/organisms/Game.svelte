@@ -57,6 +57,7 @@
   let blockHeight = 0;
   let lastHash = '';
   let moveStartTimes: Record<string, number> = {};
+  let isSynced: boolean = false;
 
   // Timers and Flags
   let moveTimeout: NodeJS.Timeout | null = null;
@@ -120,16 +121,15 @@
     handleNewHash($playerMessages?.data?.notifications?.reason?.NewBlock?.hash);
   }
 
-  $: {
-    if (
-      $game.data?.board &&
-      gameBoardId &&
-      player &&
-      (!isInitialized || $isNewGameCreated || $game.data?.board?.isEnded || shouldSyncGame)
-    ) {
-      handleGameStateUpdate();
-    }
+  $: if (
+    $game.data?.board &&
+    gameBoardId &&
+    player &&
+    (!isInitialized || $isNewGameCreated || $game.data?.board?.isEnded || shouldSyncGame)
+  ) {
+    handleGameStateUpdate();
   }
+  
 
   // Utility Functions
   const hasWon = (board: number[][]) => board.some(row => row.some(cell => cell >= 11));
@@ -168,6 +168,7 @@
     state = createState($game.data?.board?.board, 4, gameBoardId, player);
     isInitialized = true;
     shouldSyncGame = false;
+    isSynced = true;
     setGameCreationStatus(false);
   }
 
@@ -184,6 +185,7 @@
 
     canMakeMove = false;
     shouldSyncGame = false;
+    isSynced = false;
     moveStartTimes[direction] = Date.now();
 
     moveTimeout = setTimeout(() => { canMakeMove = true; }, 100);
@@ -324,10 +326,14 @@
         </span>
         <span class="text-surface-400">|</span>
         <span class="text-orange-400">{pingTime || 0}<span class="text-surface-400 text-xs ml-1">ms</span></span>
+        <span class="text-surface-400">|</span>
+        <span class={isSynced ? "text-emerald-400" : "text-yellow-400"}>
+          {isSynced ? "synced" : "syncing"}
+        </span>
       </button>
     </div>
   {:else}
-    <!-- <Tablet tablet={[[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]} size={boardSize} /> -->
+    <Tablet size={boardSize} />
   {/if}
 </div>
 

@@ -37,8 +37,8 @@
   const mergeSpring = spring(
     { scale: 0 },
     {
-      stiffness: 1,
-      damping: 1.5,
+      stiffness: 0.5,
+      damping: 0.8,
     }
   );
 
