@@ -15,40 +15,23 @@
 	import { isNewGameCreated, setGameCreationStatus } from '$lib/stores/gameStore';
 	import { boardToString } from '$lib/game/utils';
 
+  // Props
   export let isMultiplayer: boolean = false;
   export let isEnded: boolean = false;
   export let player: string;
   export let score: number = 0;
   export let playerChainId: string;
   export let boardId: string | undefined = undefined;
-
   export let canStartNewGame: boolean = true;
   export let canMakeMove: boolean = true;
   export let showBestScore: boolean = true;
 
+  // Board ID Management
   let specBoardId = $page.url.searchParams.get('boardId');
   let localBoardId: string | null = null;
   let gameBoardId: string | undefined = boardId;
 
-  onMount(() => {
-    localBoardId = localStorage.getItem('boardId');
-    if (!isMultiplayer && localBoardId && boardId === undefined) {
-      gameBoardId = specBoardId || localBoardId;
-      if (specBoardId) {
-        canMakeMove = false;
-      } else {
-        canMakeMove = true;
-      }
-    }
-  });
-
-  // Update gameBoardId when boardId prop changes
-  $: if (boardId !== undefined) {
-    gameBoardId = boardId;
-    setGameCreationStatus(true);
-  }
-
-  // GraphQL queries, mutations, and subscriptions
+  // GraphQL Definitions
   const GET_BOARD_STATE = gql`
     query BoardState($boardId: Int!) {
       board(boardId: $boardId) {
@@ -66,40 +49,38 @@
     }
   `;
 
-  // Initialize client and game state
+  // State Management
   const client = getContextClient();
+  let state: GameState | undefined;
+  let isInitialized = false;
+  let rendered = false;
+  let blockHeight = 0;
+  let lastHash = '';
+  let moveStartTimes: Record<string, number> = {};
 
-  // Reactive statement for game state
+  // Timers and Flags
+  let moveTimeout: NodeJS.Timeout | null = null;
+  let syncTimeout: NodeJS.Timeout | null = null;
+  let keyPressTime: number | null = null;
+  let pingTime: number | null = null;
   $: shouldSyncGame = false;
+
+  // Responsive Design
+  let boardSize: 'sm' | 'md' | 'lg' = 'lg';
+  
+  // Touch Handling
+  let touchStartX: number | null = null;
+  let touchStartY: number | null = null;
+  const SWIPE_THRESHOLD = 50;
+
+  // GraphQL Queries and Subscriptions
   $: game = queryStore({
     client,
     query: GET_BOARD_STATE,
     variables: { boardId: gameBoardId },
     requestPolicy: 'network-only',
   });
-  $: score = $game.data?.board?.score || 0;
 
-  $: if (isMultiplayer && $game.data?.board === null) {
-    goto('/error');
-  }
-
-  let moveTimeout: NodeJS.Timeout | null = null;
-  let syncTimeout: NodeJS.Timeout | null = null;
-  let keyPressTime: number | null = null;
-  let pingTime: number | null = null;
-
-  // Add a new store for tracking moves
-  let moveStartTimes: Record<string, number> = {};
-
-  // Mutation functions
-  const makeMoveMutation = (
-    { boardId, direction, timestamp }: { boardId: string, direction: string, timestamp: string }
-  ) => {
-    makeMove(client, boardId, direction, timestamp);
-    clearMessages(playerChainId, applicationId, port);
-  };
-
-  // Subscription for notifications
   let playerMessages: any;
   $: {
     if (playerChainId) {
@@ -111,106 +92,112 @@
     }
   }
 
-  onDestroy(() => {
-    if (playerMessages) {
-      playerMessages.pause();
-      hashesStore.set([]);
-    }
-  });
-
-  // Reactive statements for block height and rendering
-  let blockHeight = 0;
-  $: bh = $playerMessages?.data?.notifications?.reason?.NewBlock?.height;
-  $: if (bh && bh !== blockHeight) {
-    blockHeight = bh;
-    canMakeMove = true;
-    if (moveTimeout) {
-      clearTimeout(moveTimeout);
-    }
-    // Calculate ping time when new block arrives
-    const lastMove = Object.entries(moveStartTimes)[0];
-    if (lastMove) {
-      const [direction, startTime] = lastMove;
-      pingTime = Date.now() - startTime;
-      delete moveStartTimes[direction]; // Clean up the stored time
-    }
-    game.reexecute({ requestPolicy: 'network-only' });
+  // Reactive Statements
+  $: score = $game.data?.board?.score || 0;
+  
+  $: if (isMultiplayer && $game.data?.board === null) {
+    goto('/error');
   }
 
-  $: rendered = false;
   $: if (!$game.fetching && $game.data?.board) {
     rendered = true;
   }
 
-  // Logs for move history
-  let lastHash = '';
+  $: if (boardId !== undefined) {
+    gameBoardId = boardId;
+    setGameCreationStatus(true);
+  }
+
+  $: bh = $playerMessages?.data?.notifications?.reason?.NewBlock?.height;
+  $: if (bh && bh !== blockHeight) {
+    handleNewBlock(bh);
+  }
+
   $: if (
     $playerMessages?.data?.notifications?.reason?.NewBlock?.hash
     && lastHash !== $playerMessages?.data?.notifications?.reason?.NewBlock?.hash
   ) {
-    lastHash = $playerMessages?.data?.notifications?.reason?.NewBlock?.hash;
-    if (lastHash) {
-      hashesStore.update(logs => [{ hash: lastHash, timestamp: new Date().toISOString() }, ...logs]);
-    }
+    handleNewHash($playerMessages?.data?.notifications?.reason?.NewBlock?.hash);
   }
 
-  let state: GameState | undefined;
-  let isInitialized = false;
   $: {
     if (
       $game.data?.board &&
       gameBoardId &&
       player &&
-      (
-        !isInitialized ||
-        $isNewGameCreated ||
-        $game.data?.board?.isEnded ||
-        shouldSyncGame
-      )
+      (!isInitialized || $isNewGameCreated || $game.data?.board?.isEnded || shouldSyncGame)
     ) {
-      state = createState($game.data?.board?.board, 4, gameBoardId, player);
-      isInitialized = true;
-      shouldSyncGame = false;
-      setGameCreationStatus(false);
+      handleGameStateUpdate();
     }
   }
 
-  // Utility functions
+  // Utility Functions
   const hasWon = (board: number[][]) => board.some(row => row.includes(11));
 
-  // Add touch handling variables
-  let touchStartX: number | null = null;
-  let touchStartY: number | null = null;
-  const SWIPE_THRESHOLD = 50; // minimum distance for a swipe
+  const getOverlayMessage = (board: number[][]) => {
+    if (!isMultiplayer) {
+      return hasWon(board) ? "Congratulations! You Won!" : "Game Over! You Lost!";
+    }
+    return "Game Over!";
+  };
+
+  // Game State Handlers
+  function handleNewBlock(newBlockHeight: number) {
+    blockHeight = newBlockHeight;
+    canMakeMove = true;
+    if (moveTimeout) clearTimeout(moveTimeout);
+    
+    const lastMove = Object.entries(moveStartTimes)[0];
+    if (lastMove) {
+      const [direction, startTime] = lastMove;
+      pingTime = Date.now() - startTime;
+      delete moveStartTimes[direction];
+    }
+    game.reexecute({ requestPolicy: 'network-only' });
+  }
+
+  function handleNewHash(hash: string) {
+    lastHash = hash;
+    if (lastHash) {
+      hashesStore.update(logs => [{ hash: lastHash, timestamp: new Date().toISOString() }, ...logs]);
+    }
+  }
+
+  function handleGameStateUpdate() {
+    if (!gameBoardId) return;
+    state = createState($game.data?.board?.board, 4, gameBoardId, player);
+    isInitialized = true;
+    shouldSyncGame = false;
+    setGameCreationStatus(false);
+  }
+
+  // Movement Functions
+  const makeMoveMutation = (
+    { boardId, direction, timestamp }: { boardId: string, direction: string, timestamp: string }
+  ) => {
+    makeMove(client, boardId, direction, timestamp);
+    clearMessages(playerChainId, applicationId, port);
+  };
 
   const move = async (boardId: string, direction: GameKeys) => {
     if (!canMakeMove || $game.data?.board?.isEnded) return;
 
     canMakeMove = false;
     shouldSyncGame = false;
-    moveStartTimes[direction] = Date.now(); // Store the start time for this move
+    moveStartTimes[direction] = Date.now();
 
-    // Set a timeout to re-enable moves after 75ms
-    moveTimeout = setTimeout(() => {
-      canMakeMove = true;
-    }, 100);
-
-    if (syncTimeout) {
-      clearTimeout(syncTimeout);
-    }
-    syncTimeout = setTimeout(() => {
-      shouldSyncGame = true;
-    }, 2000);
+    moveTimeout = setTimeout(() => { canMakeMove = true; }, 100);
+    if (syncTimeout) clearTimeout(syncTimeout);
+    syncTimeout = setTimeout(() => { shouldSyncGame = true; }, 2000);
 
     const timestamp = Date.now().toString();
     makeMoveMutation({ boardId, direction, timestamp });
     const prevTablet = boardToString(state?.tablet);
     state = await state?.actions[direction](state, timestamp, prevTablet);
-  }
+  };
 
-  // Add touch event handlers
+  // Event Handlers
   const handleTouchStart = (event: TouchEvent) => {
-    // Only prevent default if touch started on game board
     if (event.target instanceof Element && event.target.closest('.game-board')) {
       event.preventDefault();
     }
@@ -218,8 +205,13 @@
     touchStartY = event.touches[0].clientY;
   };
 
+  const handleTouchMove = (event: TouchEvent) => {
+    if (event.target instanceof Element && event.target.closest('.game-board')) {
+      event.preventDefault();
+    }
+  };
+
   const handleTouchEnd = async (event: TouchEvent) => {
-    // Only prevent default if touch ended on game board
     if (event.target instanceof Element && event.target.closest('.game-board')) {
       event.preventDefault();
     }
@@ -231,9 +223,7 @@
     const deltaX = touchEndX - touchStartX;
     const deltaY = touchEndY - touchStartY;
 
-    // Determine if the swipe was primarily horizontal or vertical
     if (Math.abs(deltaX) > Math.abs(deltaY)) {
-      // Horizontal swipe
       if (Math.abs(deltaX) >= SWIPE_THRESHOLD) {
         if (deltaX > 0) {
           move(gameBoardId, 'ArrowRight');
@@ -242,7 +232,6 @@
         }
       }
     } else {
-      // Vertical swipe
       if (Math.abs(deltaY) >= SWIPE_THRESHOLD) {
         if (deltaY > 0) {
           move(gameBoardId, 'ArrowDown');
@@ -252,55 +241,45 @@
       }
     }
 
-    // Reset touch coordinates
     touchStartX = null;
     touchStartY = null;
   };
 
-  // Add new handler for touch move to prevent scrolling during swipe
-  const handleTouchMove = (event: TouchEvent) => {
-    // Only prevent default if touch move is on game board
-    if (event.target instanceof Element && event.target.closest('.game-board')) {
-      event.preventDefault();
-    }
-  };
-
-  // Update the existing handleKeydown function to handle arrow keys
   const handleKeydown = async (event: KeyboardEvent) => {
     if ($game.data?.board?.isEnded || !gameBoardId) return;
     keyPressTime = Date.now();
     
-    // Map arrow keys to directions
     const validKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
     if (validKeys.includes(event.key)) {
       move(gameBoardId, event.key as GameKeys);
     }
   };
 
-  const getOverlayMessage = (board: number[][]) => {
-    if (!isMultiplayer) {
-      return hasWon(board) ? "Congratulations! You Won!" : "Game Over! You Lost!";
-    }
-    return "Game Over!";
-  };
-
-  // Add new prop for board size
-  let boardSize: 'sm' | 'md' | 'lg' = 'lg';
-
+  // Responsive Design Functions
   const updateBoardSize = () => {
-    if (window.innerWidth < 480) {
-      boardSize = 'sm';
-    } else if (window.innerWidth < 1248) {
-      boardSize = 'md';
-    } else {
-      boardSize = 'lg';
-    }
+    if (window.innerWidth < 480) boardSize = 'sm';
+    else if (window.innerWidth < 1024) boardSize = 'md';
+    else boardSize = 'lg';
   };
 
+  // Lifecycle Hooks
   onMount(() => {
+    localBoardId = localStorage.getItem('boardId');
+    if (!isMultiplayer && localBoardId && boardId === undefined) {
+      gameBoardId = specBoardId || localBoardId;
+      canMakeMove = !specBoardId;
+    }
+
     updateBoardSize();
     window.addEventListener('resize', updateBoardSize);
     return () => window.removeEventListener('resize', updateBoardSize);
+  });
+
+  onDestroy(() => {
+    if (playerMessages) {
+      playerMessages.pause();
+      hashesStore.set([]);
+    }
   });
 </script>
 
@@ -319,7 +298,6 @@
       on:touchmove={handleTouchMove}
       on:touchend={handleTouchEnd}
     >
-      <!-- <Board board={$game.data?.board?.board} size={boardSize} /> -->
       {#if state}
         <Tablet tablet={state.tablet} size={boardSize} />
       {/if}
