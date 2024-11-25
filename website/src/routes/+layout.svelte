@@ -12,7 +12,7 @@
 	import Leaderboard from '$lib/components/organisms/Leaderboard.svelte';
 	import HowToPlayElimination from '$lib/components/organisms/HowToPlayElimination.svelte';
 	import HowToPlay2048 from '$lib/components/organisms/HowToPlay2048.svelte';
-	import { applicationId, chainId, port } from '$lib/constants';
+	import { applicationId, appVersion, chainId, port } from '$lib/constants';
 
 	initializeStores();
 
@@ -20,6 +20,25 @@
 	setContextClient(client);
 
 	onMount(() => {
+		const version = localStorage.getItem('version');
+		console.log('version', version);
+		console.log('appVersion', appVersion);
+		if (version !== appVersion) {
+			// update version
+			localStorage.setItem('version', appVersion);
+
+			// force logout on new version
+			$userStore.chainId = undefined;
+			$userStore.username = undefined;
+			$userStore.passwordHash = undefined;
+			$userStore.highestScore = undefined;
+			localStorage.removeItem('username');
+			localStorage.removeItem('passwordHash');
+			localStorage.removeItem('chainId');
+			localStorage.removeItem('highestScore');
+			localStorage.removeItem('boardId');
+		}
+
 		const username = localStorage.getItem('username');
 		const passwordHash = localStorage.getItem('passwordHash');
 		const chainId = localStorage.getItem('chainId');

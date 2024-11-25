@@ -31,7 +31,7 @@
   <div class="font-bold mb-1">Block Hashes</div>
   {#each hashes as { hash, timestamp }}
     <div class="mb-4 rounded bg-[#343434] p-2.5 shadow">
-      <div><strong>Hash:</strong> <span class="text-emerald-400">{formatHash(hash)}</span></div>
+      <div><strong>Hash:</strong> <span class="font-mono text-emerald-400">{formatHash(hash)}</span></div>
       <div>{formatTimestamp(timestamp)}</div>
     </div>
   {/each}

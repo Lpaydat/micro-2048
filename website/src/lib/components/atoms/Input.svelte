@@ -131,4 +131,10 @@
     -webkit-box-shadow: 0 0 0px 1000px #FAF8EF inset;
     transition: background-color 5000s ease-in-out 0s;
   }
+
+  /* Custom font for password input to reduce dot spacing */
+  input[type="password"] {
+    font-family: "Courier New", Courier, monospace;
+    letter-spacing: normal;
+  }
 </style>
