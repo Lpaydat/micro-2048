@@ -112,10 +112,7 @@
     </svelte:fragment>
 
     <svelte:fragment slot="main">
-        <PageHeader title={gameName} {prevPage}>
-            <svelte:fragment slot="icon">
-                <Clock size={28} />
-            </svelte:fragment>
+        <PageHeader color="green" title={gameName} {prevPage}>
             <svelte:fragment slot="actions">
                 {#if isLoaded && $userStore.username && data?.status === 'Waiting'}
                     <HelpButton ariaLabel="How to Play" on:click={howToPlay}>

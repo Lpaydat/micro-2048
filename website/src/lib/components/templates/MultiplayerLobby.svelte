@@ -39,7 +39,7 @@
     </svelte:fragment>
 
     <svelte:fragment slot="main">
-        <PageHeader title="ELIMINATION GAME" prevPage="/">
+        <PageHeader color="cyan" title="ELIMINATION GAME" prevPage="/">
             <svelte:fragment slot="icon">
                 <Swords size={28} />
             </svelte:fragment>
