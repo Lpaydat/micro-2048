@@ -21,8 +21,6 @@
 
 	onMount(() => {
 		const version = localStorage.getItem('version');
-		console.log('version', version);
-		console.log('appVersion', appVersion);
 		if (version !== appVersion) {
 			// update version
 			localStorage.setItem('version', appVersion);
