@@ -1,9 +1,11 @@
 <script lang="ts">
-	let {
-		ariaLabel,
-		onclick,
-		children
-	}: { ariaLabel?: string; onclick?: () => void; children?: () => any } = $props();
+	interface Props {
+		ariaLabel?: string;
+		onclick?: () => void;
+		children?: () => any;
+	}
+
+	let { ariaLabel, onclick, children }: Props = $props();
 </script>
 
 <button

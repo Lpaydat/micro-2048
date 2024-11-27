@@ -4,17 +4,10 @@
 	import { userStore } from '$lib/stores/userStore';
 	import LogOut from 'lucide-svelte/icons/log-out';
 	import MobileUserLogin from './MobileUserLogin.svelte';
+	import { logout } from '$lib/utils/logout';
 
 	const handleLogout = () => {
-		$userStore.chainId = undefined;
-		$userStore.username = undefined;
-		$userStore.passwordHash = undefined;
-		$userStore.highestScore = undefined;
-		localStorage.removeItem('username');
-		localStorage.removeItem('passwordHash');
-		localStorage.removeItem('chainId');
-		localStorage.removeItem('highestScore');
-		localStorage.removeItem('boardId');
+		logout();
 
 		if ($page.url.pathname === '/game') {
 			goto('/');
@@ -27,7 +20,7 @@
 		<span class="text-md font-bold text-[#776e65]">{$userStore.username}</span>
 		<button
 			type="button"
-			on:click={handleLogout}
+			onclick={handleLogout}
 			class="rounded-[3px] bg-[#8f7a66] p-2 text-sm font-bold text-white transition-colors hover:bg-[#7f6a56]"
 		>
 			<LogOut size={16} />

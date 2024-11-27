@@ -1,7 +1,12 @@
 <script lang="ts">
-	export let href: string;
-	export let target: string = '_self';
-	export let rel: string = '';
+	interface Props {
+		href: string;
+		target: string;
+		rel: string;
+		children: () => any;
+	}
+
+	let { href, target = '_self', rel = '', children }: Props = $props();
 </script>
 
 <a
@@ -12,5 +17,5 @@
 	{target}
 	{rel}
 >
-	<slot />
+	{@render children()}
 </a>

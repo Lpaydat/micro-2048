@@ -4,8 +4,12 @@
 	import { cubicOut } from 'svelte/easing';
 	import { onMount } from 'svelte';
 
-	export let tile: TileContent;
-	export let size: 'sm' | 'md' | 'lg' = 'lg';
+	interface Props {
+		tile: TileContent;
+		size: 'sm' | 'md' | 'lg';
+	}
+
+	let { tile, size = 'lg' }: Props = $props();
 
 	const sizeConfig = {
 		sm: { tile: 270, gap: 10, fontSize: { default: 45, medium: 30, small: 20 } },
@@ -36,22 +40,24 @@
 		}
 	);
 
-	let mergedValue: number = 0;
+	let mergedValue = $state(0);
 
 	// Based on composite rule of three
-	$: currentSize = sizeConfig[size];
-	$: top = $topTweened * currentSize.tile + currentSize.gap;
-	$: left = $leftTweened * currentSize.tile + currentSize.gap;
-	$: wasMerged = tile.merged && mergedValue !== tile.value;
+	const currentSize = $derived(sizeConfig[size]);
+	const top = $derived($topTweened * currentSize.tile + currentSize.gap);
+	const left = $derived($leftTweened * currentSize.tile + currentSize.gap);
+	const wasMerged = $derived(tile.merged && mergedValue !== tile.value);
 
-	$: if (wasMerged) {
-		mergeSpring.set({ scale: 1 });
-	}
+	$effect(() => {
+		if (wasMerged) {
+			mergeSpring.set({ scale: 1 });
+		}
 
-	$: if ($mergeSpring.scale === 1) {
-		mergedValue = tile.value;
-		mergeSpring.set({ scale: 0 });
-	}
+		if ($mergeSpring.scale === 1) {
+			mergedValue = tile.value;
+			mergeSpring.set({ scale: 0 });
+		}
+	});
 
 	onMount(() => {
 		topTweened.set(posTop / 3);

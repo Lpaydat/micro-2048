@@ -7,15 +7,27 @@
 	import { hashSeed } from '$lib/utils/random';
 	import { setGameCreationStatus } from '$lib/stores/gameStore';
 
-	export let player: string;
-	export let value: number;
-	export let canStartNewGame: boolean = true;
-	export let showBestScore: boolean = true;
-	export let boardId: string | undefined = undefined;
-	export let size: 'sm' | 'md' | 'lg' = 'lg';
+	interface Props {
+		player: string;
+		value: number;
+		canStartNewGame?: boolean;
+		showBestScore?: boolean;
+		boardId?: string | undefined;
+		size?: 'sm' | 'md' | 'lg';
+	}
 
-	let bestScore: number = 0;
-	let client = getContextClient();
+	let {
+		player,
+		value,
+		canStartNewGame = true,
+		showBestScore = true,
+		boardId = $bindable(),
+		size = 'lg'
+	}: Props = $props();
+
+	let bestScore = $state(0);
+
+	const client = getContextClient();
 
 	// Size configurations
 	const sizeConfig = {
@@ -53,21 +65,23 @@
 		}, 50);
 	});
 
-	$: if (bestScore < value) {
-		localStorage.setItem('highestScore', String(value));
-	}
+	$effect(() => {
+		if (bestScore < value) {
+			localStorage.setItem('highestScore', String(value));
+		}
+	});
 
-	$: bestScoreValue = bestScore < value ? value : bestScore;
-	$: isSpecBoard = !!$page.url.searchParams.get('boardId');
-	$: scoreLabelAlign = value.toString().length > 3 ? 'left' : 'center';
-	$: bestScoreLabelAlign = bestScoreValue.toString().length > 3 ? 'left' : 'center';
-	$: currentSize = sizeConfig[size];
+	const bestScoreValue = $derived(bestScore < value ? value : bestScore);
+	const isSpecBoard = $derived(!!$page.url.searchParams.get('boardId'));
+	const scoreLabelAlign = $derived(value.toString().length > 3 ? 'left' : 'center');
+	const bestScoreLabelAlign = $derived(bestScoreValue.toString().length > 3 ? 'left' : 'center');
+	const currentSize = $derived(sizeConfig[size]);
 </script>
 
 <div class="flex items-center justify-between" style="width: {currentSize.width}px">
 	{#if canStartNewGame}
 		<button
-			on:click={newSingleGame}
+			onclick={newSingleGame}
 			class="rounded-md border-none bg-[#8f7a66] px-5 text-center font-bold text-[#f9f6f2]
 			{canStartNewGame ? 'visible' : 'invisible'}"
 			style="height: {currentSize.buttonHeight * 4}px"

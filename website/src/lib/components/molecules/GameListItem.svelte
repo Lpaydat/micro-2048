@@ -42,7 +42,7 @@
 </script>
 
 <BaseListItem>
-	<div slot="left-content">
+	{#snippet leftContent()}
 		<div class="mb-1 flex items-center gap-2">
 			<h3 class="text-lg font-semibold">{gameName}</h3>
 			<span class="bg-surface-300-600-token rounded-full px-2 py-0.5 text-sm">
@@ -63,10 +63,10 @@
 				<span>{triggerIntervalSeconds}s interval</span>
 			</div>
 		</div>
-	</div>
-	<div slot="right-content">
+	{/snippet}
+	{#snippet rightContent()}
 		{#if $userStore.username === host}
-			<ActionButton label="Enter Game" color="important" on:click={() => enterGame(gameId)} />
+			<ActionButton label="Enter Game" color="important" onclick={() => enterGame(gameId)} />
 		{:else if playerCount >= maxPlayers}
 			<ActionButton label="Full" disabled={true} color="disabled" />
 		{:else}
@@ -74,8 +74,8 @@
 				label="Join Game"
 				color="warning"
 				{loading}
-				on:click={() => handleJoinGame(gameId)}
+				onclick={() => handleJoinGame(gameId)}
 			/>
 		{/if}
-	</div>
+	{/snippet}
 </BaseListItem>

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { HTMLInputAttributes } from 'svelte/elements';
 
-	interface $$Props extends Omit<HTMLInputAttributes, 'type' | 'placeholder' | 'size'> {
+	interface Props extends Omit<HTMLInputAttributes, 'type' | 'placeholder' | 'size'> {
 		label?: string | undefined;
 		error?: string | undefined;
 		showToggle?: boolean | undefined;
@@ -11,21 +11,24 @@
 		size?: 'sm' | 'md' | 'lg';
 	}
 
-	export let value: string = '';
-	export let label: string = '';
-	export let error: string = '';
-	export let type: HTMLInputElement['type'] = 'text';
-	export let placeholder: string = '';
-	export let required: boolean = false;
-	export let showToggle: boolean = false;
-	export let size: 'sm' | 'md' | 'lg' = 'md';
+	let {
+		value = $bindable(),
+		label,
+		error,
+		type = 'text',
+		placeholder,
+		required,
+		showToggle,
+		size = 'md',
+		...restProps
+	}: Props = $props();
 
-	let showPassword = false;
+	let showPassword = $state(false);
 
-	function togglePassword() {
+	const togglePassword = () => {
 		showPassword = !showPassword;
 		type = showPassword ? 'text' : 'password';
-	}
+	};
 
 	// Helper function to get size-specific classes
 	const getSizeClasses = (size: 'sm' | 'md' | 'lg') => {
@@ -43,7 +46,7 @@
 <div class="form-field space-y-2">
 	{#if label}
 		<label
-			for={$$props.id}
+			for={restProps.id}
 			class="game-font block font-bold text-gray-700 {size === 'sm' ? 'text-sm' : 'text-base'}"
 		>
 			{label}
@@ -55,7 +58,7 @@
 
 	<div class="relative">
 		<input
-			{...$$props}
+			{...restProps}
 			{type}
 			{placeholder}
 			bind:value
@@ -75,7 +78,7 @@
         focus:ring-2
         focus:ring-[#EDC22E]/30
         {getSizeClasses(size)}
-        {$$props.class || ''}
+        {restProps.class || ''}
       "
 		/>
 
@@ -83,7 +86,7 @@
 			<button
 				type="button"
 				class="absolute right-3 top-1/2 -translate-y-1/2 text-[#BBADA0] transition-colors hover:text-[#776E65] focus:outline-none"
-				on:click={togglePassword}
+				onclick={togglePassword}
 				aria-label={showPassword ? 'Hide password' : 'Show password'}
 			>
 				{#if showPassword}

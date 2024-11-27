@@ -1,10 +1,23 @@
 <script lang="ts">
-	export let icon: string = '';
-	export let label: string = '';
-	export let disabled: boolean = false;
-	export let color: 'default' | 'important' | 'warning' | 'danger' | 'disabled' = 'default';
-	export let hoverColor: 'default' | 'important' | 'warning' | 'danger' | 'disabled' = 'default';
-	export let loading: boolean = false;
+	interface Props {
+		icon?: string;
+		label?: string;
+		disabled?: boolean;
+		color?: 'default' | 'important' | 'warning' | 'danger' | 'disabled';
+		hoverColor?: 'default' | 'important' | 'warning' | 'danger' | 'disabled';
+		loading?: boolean;
+		onclick?: () => void;
+	}
+
+	let {
+		icon,
+		label,
+		disabled,
+		color = 'default',
+		hoverColor = 'default',
+		loading,
+		onclick
+	}: Props = $props();
 
 	const baseColorClasses = {
 		default: 'bg-orange-600 text-white',
@@ -22,16 +35,16 @@
 		disabled: ''
 	};
 
-	$: colorClass = baseColorClasses[disabled ? 'disabled' : color];
-	$: hoverClass = !disabled && !loading ? hoverColorClasses[hoverColor || color] : '';
-	$: loadingClass = loading ? 'cursor-not-allowed text-surface-400' : '';
+	const colorClass = $derived(baseColorClasses[disabled ? 'disabled' : color]);
+	const hoverClass = $derived(!disabled && !loading ? hoverColorClasses[hoverColor || color] : '');
+	const loadingClass = $derived(loading ? 'cursor-not-allowed text-surface-400' : '');
 </script>
 
 <button
 	class="flex items-center justify-center rounded-lg px-2 py-2 text-xs font-bold transition-all lg:px-4 lg:text-sm {colorClass} {hoverClass} {loading
 		? 'cursor-not-allowed'
 		: ''}"
-	on:click
+	{onclick}
 	disabled={disabled || loading}
 >
 	{#if loading}

@@ -5,6 +5,7 @@
 	import Button from '../atoms/Button.svelte';
 	import { getModalStore } from '@skeletonlabs/skeleton';
 	import type { ModalSettings, ModalStore } from '@skeletonlabs/skeleton';
+	import { logout } from '$lib/utils/logout';
 
 	const modalStore: ModalStore = getModalStore();
 
@@ -16,15 +17,7 @@
 	}
 
 	const handleLogout = () => {
-		$userStore.chainId = undefined;
-		$userStore.username = undefined;
-		$userStore.passwordHash = undefined;
-		$userStore.highestScore = undefined;
-		localStorage.removeItem('username');
-		localStorage.removeItem('passwordHash');
-		localStorage.removeItem('chainId');
-		localStorage.removeItem('highestScore');
-		localStorage.removeItem('boardId');
+		logout();
 
 		if ($page.url.pathname === '/game') {
 			goto('/');
@@ -62,9 +55,9 @@
 
 		<!-- Actions -->
 		<div class="flex items-center justify-between border-t border-[#CDC1B4] pt-4">
-			<Button variant="outline" size="sm" on:click={howToPlay}>How to Play</Button>
+			<Button variant="outline" size="sm" onclick={howToPlay}>How to Play</Button>
 
-			<Button variant="default" size="sm" on:click={handleLogout}>Logout</Button>
+			<Button variant="default" size="sm" onclick={handleLogout}>Logout</Button>
 		</div>
 	</div>
 </div>

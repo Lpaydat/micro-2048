@@ -47,7 +47,7 @@
 				<HelpButton ariaLabel="How to Play" onclick={howToPlay}>
 					<HelpCircle size={20} />
 				</HelpButton>
-				<ActionButton icon="plus" label="HOST GAME" on:click={hostGame} />
+				<ActionButton icon="plus" label="HOST GAME" onclick={hostGame} />
 			</svelte:fragment>
 		</PageHeader>
 		<WaitingGames />

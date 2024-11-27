@@ -1,17 +1,27 @@
 <script lang="ts">
 	import type { HTMLButtonAttributes } from 'svelte/elements';
 
-	interface $$Props extends HTMLButtonAttributes {
+	interface Props extends HTMLButtonAttributes {
 		variant?: 'default' | 'primary' | 'destructive' | 'outline';
 		size?: 'sm' | 'md' | 'lg';
 		loading?: boolean;
 		disabled?: boolean;
 	}
 
-	export let variant: $$Props['variant'] = 'default';
-	export let size: $$Props['size'] = 'md';
-	export let loading = false;
-	export let disabled = false;
+	let {
+		variant = 'default',
+		size = 'md',
+		loading = false,
+		disabled = false,
+		onclick,
+		onmouseover,
+		onmouseenter,
+		onmouseleave,
+		onfocus,
+		onblur,
+		children,
+		...restProps
+	}: Props = $props();
 
 	const variantStyles = {
 		default: 'bg-[#8F7A66] hover:bg-[#806A56] text-[#F9F6F2]',
@@ -26,40 +36,40 @@
 		lg: 'px-6 py-4 text-lg'
 	};
 
-	$: classes = `
-    relative
-    game-font
-    font-bold
-    rounded-[3px]
-    transition-all
-    duration-200
-    ${variantStyles[variant as keyof typeof variantStyles]}
-    ${sizeStyles[size as keyof typeof sizeStyles]}
-    ${disabled ? 'opacity-50 cursor-not-allowed' : 'transform hover:-translate-y-[1px]'}
-    focus:outline-none
-    focus:ring-2
-    focus:ring-[#EDC22E]/50
-    active:translate-y-[1px]
-    ${$$props.class || ''}
-  `;
+	const classes = $derived(`
+		relative
+		game-font
+		font-bold
+		rounded-[3px]
+		transition-all
+		duration-200
+		${variantStyles[variant as keyof typeof variantStyles]}
+		${sizeStyles[size as keyof typeof sizeStyles]}
+		${disabled ? 'opacity-50 cursor-not-allowed' : 'transform hover:-translate-y-[1px]'}
+		focus:outline-none
+		focus:ring-2
+		focus:ring-[#EDC22E]/50
+		active:translate-y-[1px]
+		${restProps.class || ''}
+	`);
 </script>
 
 <button
-	{...$$props}
+	{...restProps}
 	{disabled}
 	class={classes}
-	on:click
-	on:mouseover
-	on:mouseenter
-	on:mouseleave
-	on:focus
-	on:blur
+	{onclick}
+	{onmouseover}
+	{onmouseenter}
+	{onmouseleave}
+	{onfocus}
+	{onblur}
 >
 	<div class="relative flex items-center justify-center gap-2">
 		{#if loading}
 			<div class="loading-dots"></div>
 		{/if}
-		<slot />
+		{@render children?.()}
 	</div>
 </button>
 

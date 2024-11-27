@@ -6,13 +6,14 @@
 	import { userStore } from '$lib/stores/userStore';
 	import { getPlayerInfo } from '$lib/graphql/queries/getPlayerInfo';
 	import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
+	import { preventDefault } from '$lib/utils/preventDefault';
 
-	let username = '';
-	let submittedUsername = '';
-	let passwordHash = '';
-	let password = '';
-	let loading = false;
-	let canLogin = false;
+	let username = $state('');
+	let submittedUsername = $state('');
+	let passwordHash = $state('');
+	let password = $state('');
+	let loading = $state(false);
+	let canLogin = $state(false);
 
 	const REGISTER_PLAYER = gql`
 		mutation RegisterPlayer($username: String!, $passwordHash: String!) {
@@ -40,13 +41,15 @@
 		body: 'Sorry, but our "Play as Guest" feature is still on vacation! Why not join us properly? Create an account - it\'s quick, free, and way more fun than trying to sneak in through the back door! 😉'
 	};
 
-	$: player = getPlayerInfo(client, submittedUsername);
-	$: playerOnChain = queryStore({
-		client,
-		query: CHECK_PLAYER,
-		variables: { username, passwordHash },
-		requestPolicy: 'network-only'
-	});
+	const player = $derived(getPlayerInfo(client, submittedUsername));
+	const playerOnChain = $derived(
+		queryStore({
+			client,
+			query: CHECK_PLAYER,
+			variables: { username, passwordHash },
+			requestPolicy: 'network-only'
+		})
+	);
 
 	const registerPlayer = async () => {
 		mutationStore({
@@ -69,7 +72,7 @@
 		player.reexecute({ requestPolicy: 'network-only' });
 	};
 
-	let errorMessage = '';
+	let errorMessage = $state('');
 
 	const validateInput = (username: string, password: string) => {
 		let errors = [];
@@ -108,7 +111,7 @@
 		await checkPlayer();
 	};
 
-	$: {
+	$effect(() => {
 		if (loading && username && !$playerOnChain.fetching) {
 			try {
 				const value = $playerOnChain.data?.checkPlayer;
@@ -125,27 +128,29 @@
 				loading = false;
 			}
 		}
-	}
+	});
 
-	$: if (!$player.fetching && $player.data?.player && canLogin) {
-		localStorage.setItem('username', username);
-		localStorage.setItem('passwordHash', passwordHash);
-		localStorage.setItem('chainId', $player.data.player.chainId);
-		localStorage.setItem('highestScore', $player.data.player.highestScore?.toString() ?? '0');
+	$effect(() => {
+		if (!$player.fetching && $player.data?.player && canLogin) {
+			localStorage.setItem('username', username);
+			localStorage.setItem('passwordHash', passwordHash);
+			localStorage.setItem('chainId', $player.data.player.chainId);
+			localStorage.setItem('highestScore', $player.data.player.highestScore?.toString() ?? '0');
 
-		userStore.update((store) => ({
-			...store,
-			username: $player.data.player.username,
-			chainId: $player.data.player.chainId,
-			highestScore: $player.data.player.highestScore,
-			...(passwordHash && { passwordHash })
-		}));
-		canLogin = false;
-	}
+			userStore.update((store) => ({
+				...store,
+				username: $player.data.player.username,
+				chainId: $player.data.player.chainId,
+				highestScore: $player.data.player.highestScore,
+				...(passwordHash && { passwordHash })
+			}));
+			canLogin = false;
+		}
+	});
 </script>
 
 <form
-	on:submit|preventDefault={handleSubmit}
+	onsubmit={preventDefault(handleSubmit)}
 	class="mx-auto w-full max-w-md rounded-md bg-[#FAF8EF] p-6 shadow-md"
 >
 	<div class="space-y-6">
@@ -193,11 +198,11 @@
 
 		<!-- Additional Actions -->
 		<div class="flex items-center justify-between border-t border-[#CDC1B4] pt-4">
-			<Button variant="outline" size="sm" on:click={() => modalStore.trigger(howToPlayModal)}>
+			<Button variant="outline" size="sm" onclick={() => modalStore.trigger(howToPlayModal)}>
 				How to Play
 			</Button>
 
-			<Button variant="default" size="sm" on:click={() => modalStore.trigger(guestModeModal)}>
+			<Button variant="default" size="sm" onclick={() => modalStore.trigger(guestModeModal)}>
 				Play as Guest
 			</Button>
 		</div>

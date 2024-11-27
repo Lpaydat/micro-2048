@@ -1,7 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 
-	export let time: string;
+	interface Props {
+		time: string;
+	}
+
+	let { time }: Props = $props();
 
 	const MINUTE = 60 * 1000;
 	const HOUR = 60 * MINUTE;
@@ -24,8 +28,12 @@
 		}
 	}
 
-	$: formattedTime = new Date(parseInt(time));
-	$: timeAgo = getTimeAgo(formattedTime);
+	let timeAgo = $state('');
+	const formattedTime = $derived(new Date(parseInt(time)));
+
+	$effect(() => {
+		timeAgo = getTimeAgo(formattedTime);
+	});
 
 	// Add an interval to update the timeAgo every minute
 	let interval: NodeJS.Timeout;

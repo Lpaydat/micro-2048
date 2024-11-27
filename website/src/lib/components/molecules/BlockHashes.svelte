@@ -2,15 +2,15 @@
 	import { hashesStore, isHashesListVisible } from '$lib/stores/hashesStore';
 
 	// Function to format the timestamp
-	function formatTimestamp(isoString: string): string {
+	const formatTimestamp = (isoString: string): string => {
 		const date = new Date(isoString);
 		return date.toLocaleString(); // Adjust this to your preferred format
-	}
+	};
 
 	// Function to format the hash
-	function formatHash(hash: string): string {
+	const formatHash = (hash: string): string => {
 		return `${hash.slice(0, 6)}...${hash.slice(-6)}`;
-	}
+	};
 
 	// Subscribe to the logs store
 	let hashes: { hash: string; timestamp: string }[] = [];

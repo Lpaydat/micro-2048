@@ -71,7 +71,7 @@
 </script>
 
 <BaseListItem>
-	<div slot="left-content">
+	{#snippet leftContent()}
 		<div class="mb-1 flex items-center justify-between gap-2">
 			<div class="flex items-center gap-2">
 				<h3 class="text-lg font-semibold">{playerName}</h3>
@@ -89,5 +89,5 @@
 				<span>{statusPhrase}</span>
 			</div>
 		</div>
-	</div>
+	{/snippet}
 </BaseListItem>
