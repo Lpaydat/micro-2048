@@ -1,71 +1,71 @@
 schema {
-  query: QueryRoot
-  mutation: MutationRoot
+	query: QueryRoot
+	mutation: MutationRoot
 }
 
 type BoardState {
-  board: [[Int!]!]!
-  boardId: String!
-  isEnded: Boolean!
-  score: Int!
+	board: [[Int!]!]!
+	boardId: String!
+	isEnded: Boolean!
+	score: Int!
 }
 
 scalar Direction
 
 type EliminationGameRoundLeaderboard {
-  eliminatedPlayers: [LeaderboardEntry!]!
-  players: [LeaderboardEntry!]!
-  round: Int!
+	eliminatedPlayers: [LeaderboardEntry!]!
+	players: [LeaderboardEntry!]!
+	round: Int!
 }
 
 input EliminationGameSettings {
-  chainId: String!
-  createdTime: String!
-  eliminatedPerTrigger: Int!
-  gameName: String!
-  host: String!
-  maxPlayers: Int!
-  totalRound: Int!
-  triggerIntervalSeconds: Int!
+	chainId: String!
+	createdTime: String!
+	eliminatedPerTrigger: Int!
+	gameName: String!
+	host: String!
+	maxPlayers: Int!
+	totalRound: Int!
+	triggerIntervalSeconds: Int!
 }
 
 type EliminationGameState {
-  chainId: String!
-  createdTime: String!
-  currentRound: Int!
-  eliminatedPerTrigger: Int!
-  gameId: String!
-  gameLeaderboard: [LeaderboardEntry!]!
-  gameName: String!
-  host: String!
-  lastUpdatedTime: String!
-  players: [String!]!
-  roundLeaderboard: [EliminationGameRoundLeaderboard!]!
-  status: String!
-  totalPlayers: Int!
-  totalRound: Int!
-  triggerIntervalSeconds: Int!
+	chainId: String!
+	createdTime: String!
+	currentRound: Int!
+	eliminatedPerTrigger: Int!
+	gameId: String!
+	gameLeaderboard: [LeaderboardEntry!]!
+	gameName: String!
+	host: String!
+	lastUpdatedTime: String!
+	players: [String!]!
+	roundLeaderboard: [EliminationGameRoundLeaderboard!]!
+	status: String!
+	totalPlayers: Int!
+	totalRound: Int!
+	triggerIntervalSeconds: Int!
 }
 
 type LeaderboardEntry {
-  score: Int!
-  username: String!
+	score: Int!
+	username: String!
 }
 
 type MutationRoot {
-  createEliminationGame(gameId: String!, settings: EliminationGameSettings!): [Int!]!
-  endEliminationGame(gameId: String!, player: String!, timestamp: String!): [Int!]!
-  joinEliminationGame(gameId: String!, player: String!): [Int!]!
-  leaveEliminationGame(gameId: String!, player: String!): [Int!]!
-  makeMove(boardId: String!, direction: Direction!, timestamp: Int!): [Int!]!
-  newBoard(seed: Int): [Int!]!
-  nextRoundEliminationGame(gameId: String!, player: String!, timestamp: String!): [Int!]!
-  startEliminationGame(gameId: String!, player: String!, timestamp: String!): [Int!]!
-  triggerEliminationGame(gameId: String!, player: String!, timestamp: String!): [Int!]!
+	createEliminationGame(gameId: String!, settings: EliminationGameSettings!): [Int!]!
+	endEliminationGame(gameId: String!, player: String!, timestamp: String!): [Int!]!
+	joinEliminationGame(gameId: String!, player: String!): [Int!]!
+	leaveEliminationGame(gameId: String!, player: String!): [Int!]!
+	makeMove(boardId: String!, direction: Direction!, timestamp: Int!): [Int!]!
+	newBoard(seed: Int): [Int!]!
+	nextRoundEliminationGame(gameId: String!, player: String!, timestamp: String!): [Int!]!
+	startEliminationGame(gameId: String!, player: String!, timestamp: String!): [Int!]!
+	triggerEliminationGame(gameId: String!, player: String!, timestamp: String!): [Int!]!
 }
 
 type QueryRoot {
-  board(boardId: String!): BoardState
-  eliminationGame(gameId: String!, round: Int!): EliminationGameState
-  waitingRooms: [EliminationGameState!]!
+	board(boardId: String!): BoardState
+	eliminationGame(gameId: String!, round: Int!): EliminationGameState
+	waitingRooms: [EliminationGameState!]!
 }

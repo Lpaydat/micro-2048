@@ -1,13 +1,13 @@
 <script lang="ts">
 	export let href: string;
-	export let target: string = "_self";
-	export let rel: string = "";
+	export let target: string = '_self';
+	export let rel: string = '';
 </script>
 
 <a
-	class="nav-link font-bold text-base lg:text-lg no-underline transition-colors duration-200
-	text-red-500 hover:text-white active:text-[#b3a9a1] text-shadow-md
-	py-2 px-1"
+	class="nav-link text-shadow-md px-1 py-2 text-base font-bold text-red-500
+	no-underline transition-colors duration-200 hover:text-white
+	active:text-[#b3a9a1] lg:text-lg"
 	{href}
 	{target}
 	{rel}

@@ -1,38 +1,38 @@
 <script>
-    import { page } from '$app/stores';
+	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { userStore } from '$lib/stores/userStore';
-    import LogOut from 'lucide-svelte/icons/log-out';
+	import LogOut from 'lucide-svelte/icons/log-out';
 	import MobileUserLogin from './MobileUserLogin.svelte';
 
-    const handleLogout = () => {
-        $userStore.chainId = undefined;
-        $userStore.username = undefined;
-        $userStore.passwordHash = undefined;
-        $userStore.highestScore = undefined;
-        localStorage.removeItem('username');
-        localStorage.removeItem('passwordHash');
-        localStorage.removeItem('chainId');
-        localStorage.removeItem('highestScore');
-        localStorage.removeItem('boardId');
+	const handleLogout = () => {
+		$userStore.chainId = undefined;
+		$userStore.username = undefined;
+		$userStore.passwordHash = undefined;
+		$userStore.highestScore = undefined;
+		localStorage.removeItem('username');
+		localStorage.removeItem('passwordHash');
+		localStorage.removeItem('chainId');
+		localStorage.removeItem('highestScore');
+		localStorage.removeItem('boardId');
 
-        if ($page.url.pathname === '/game') {
-            goto('/');
-        }
-    }
+		if ($page.url.pathname === '/game') {
+			goto('/');
+		}
+	};
 </script>
 
 <div class="flex items-center gap-3">
-    {#if $userStore.username}
-        <span class="text-[#776e65] font-bold text-md">{$userStore.username}</span>
-        <button
-            type="button"
-            on:click={handleLogout}
-            class="bg-[#8f7a66] text-white text-sm font-bold p-2 rounded-[3px] hover:bg-[#7f6a56] transition-colors"
-        >
-            <LogOut size={16} />
-        </button>
-    {:else}
-        <MobileUserLogin />
-    {/if}
+	{#if $userStore.username}
+		<span class="text-md font-bold text-[#776e65]">{$userStore.username}</span>
+		<button
+			type="button"
+			on:click={handleLogout}
+			class="rounded-[3px] bg-[#8f7a66] p-2 text-sm font-bold text-white transition-colors hover:bg-[#7f6a56]"
+		>
+			<LogOut size={16} />
+		</button>
+	{:else}
+		<MobileUserLogin />
+	{/if}
 </div>

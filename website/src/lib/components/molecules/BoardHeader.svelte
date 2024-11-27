@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { getContextClient } from "@urql/svelte";
-	import { onMount } from "svelte";
+	import { getContextClient } from '@urql/svelte';
+	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { newGame } from "$lib/graphql/mutations/newBoard";
-	import { hashSeed } from "$lib/utils/random";
-	import { setGameCreationStatus } from "$lib/stores/gameStore";
+	import { newGame } from '$lib/graphql/mutations/newBoard';
+	import { hashSeed } from '$lib/utils/random';
+	import { setGameCreationStatus } from '$lib/stores/gameStore';
 
 	export let player: string;
 	export let value: number;
@@ -41,10 +41,10 @@
 		const url = new URL($page.url);
 		url.searchParams.delete('boardId');
 		goto(url.toString(), { replaceState: true });
-	}
+	};
 
 	onMount(() => {
-		bestScore = Number(localStorage.getItem("highestScore"));
+		bestScore = Number(localStorage.getItem('highestScore'));
 
 		setTimeout(() => {
 			if (!localStorage.getItem('boardId')) {
@@ -54,7 +54,7 @@
 	});
 
 	$: if (bestScore < value) {
-		localStorage.setItem("highestScore", String(value));
+		localStorage.setItem('highestScore', String(value));
 	}
 
 	$: bestScoreValue = bestScore < value ? value : bestScore;
@@ -64,31 +64,33 @@
 	$: currentSize = sizeConfig[size];
 </script>
 
-<div class="flex justify-between items-center" style="width: {currentSize.width}px">
+<div class="flex items-center justify-between" style="width: {currentSize.width}px">
 	{#if canStartNewGame}
-		<button 
+		<button
 			on:click={newSingleGame}
-			class="bg-[#8f7a66] rounded-md px-5 text-[#f9f6f2] text-center border-none font-bold 
+			class="rounded-md border-none bg-[#8f7a66] px-5 text-center font-bold text-[#f9f6f2]
 			{canStartNewGame ? 'visible' : 'invisible'}"
 			style="height: {currentSize.buttonHeight * 4}px"
 		>
-			<span class="{currentSize.fontSize}">New Game</span>
+			<span class={currentSize.fontSize}>New Game</span>
 		</button>
 	{:else}
-		<div 
-			class="flex items-center justify-center text-[#f67c5f] font-bold truncate {currentSize.fontSize}" 
+		<div
+			class="flex items-center justify-center truncate font-bold text-[#f67c5f] {currentSize.fontSize}"
 			style="font-family: 'Clear Sans', 'Arial', sans-serif;"
 		>
 			{player}
 		</div>
 	{/if}
 	<div class="flex flex-row items-center transition-all">
-		<div class="flex flex-col bg-[#bbada0] p-2 font-bold rounded-md text-white ml-2 mb-2 min-w-16">
+		<div class="mb-2 ml-2 flex min-w-16 flex-col rounded-md bg-[#bbada0] p-2 font-bold text-white">
 			<div class="text-xs text-[#eee4da] text-{scoreLabelAlign}">Score</div>
 			<div class="{currentSize.scoreSize} text-center">{value}</div>
 		</div>
 		{#if showBestScore && !isSpecBoard}
-			<div class="flex flex-col bg-[#bbada0] p-2 font-bold rounded-md text-white ml-2 mb-2 min-w-16">
+			<div
+				class="mb-2 ml-2 flex min-w-16 flex-col rounded-md bg-[#bbada0] p-2 font-bold text-white"
+			>
 				<div class="text-xs text-[#eee4da] text-{bestScoreLabelAlign}">Best</div>
 				<div class="{currentSize.scoreSize} text-center">{bestScoreValue}</div>
 			</div>

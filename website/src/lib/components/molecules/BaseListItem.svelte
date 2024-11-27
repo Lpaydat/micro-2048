@@ -1,6 +1,8 @@
-<div class="flex items-center justify-between p-4 bg-surface-50-900-token rounded-lg hover:bg-surface-100-800-token border-4 hover:border-warning-900 transition-all">
-    <div class="flex-1">
-        <slot name="left-content" />
-    </div>
-    <slot name="right-content" />
-</div> 
+<div
+	class="bg-surface-50-900-token flex items-center justify-between rounded-lg border-4 p-4 transition-all hover:bg-surface-100-800-token hover:border-warning-900"
+>
+	<div class="flex-1">
+		<slot name="left-content" />
+	</div>
+	<slot name="right-content" />
+</div>

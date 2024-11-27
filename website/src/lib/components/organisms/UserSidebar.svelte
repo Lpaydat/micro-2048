@@ -1,9 +1,9 @@
 <script lang="ts">
-    import Brand from "../molecules/Brand.svelte";
-    import UserLogin from "./UserLogin.svelte";
+	import Brand from '../molecules/Brand.svelte';
+	import UserLogin from './UserLogin.svelte';
 </script>
 
 <Brand />
-<div class="flex items-center justify-center sm:mt-8 mt-24 w-full">
-    <UserLogin />
+<div class="mt-24 flex w-full items-center justify-center sm:mt-8">
+	<UserLogin />
 </div>

@@ -1,16 +1,18 @@
-<script>
-  export let description = "Default game mode description";
+<script lang="ts">
+	let { description = 'Default game mode description' }: { description?: string } = $props();
 </script>
 
-<style>
-  .custom-shadow {
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Subtle shadow for depth */
-  }
-  .custom-transition {
-    transition: transform 0.2s;
-  }
-</style>
+<div
+	class="description-box custom-shadow custom-transition w-full scale-110 transform rounded-lg border-4 border-surface-800 bg-surface-600 p-5 text-center font-sans text-lg text-white"
+>
+	{description}
+</div>
 
-<div class="description-box w-full bg-surface-600 text-white p-5 rounded-lg font-sans text-lg text-center custom-shadow custom-transition transform scale-110 border-4 border-surface-800">
-  {description}
-</div> 
+<style>
+	.custom-shadow {
+		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Subtle shadow for depth */
+	}
+	.custom-transition {
+		transition: transform 0.2s;
+	}
+</style>

@@ -6,7 +6,7 @@
 	import { computePosition, autoUpdate, offset, shift, flip, arrow } from '@floating-ui/dom';
 	import { storePopup } from '@skeletonlabs/skeleton';
 	import type { ModalComponent } from '@skeletonlabs/skeleton';
-			
+
 	import { setContextClient } from '@urql/svelte';
 	import { userStore } from '$lib/stores/userStore';
 	import Leaderboard from '$lib/components/organisms/Leaderboard.svelte';
@@ -43,17 +43,17 @@
 		const highestScore = Number(localStorage.getItem('highestScore'));
 
 		if (username && passwordHash && chainId) {
-		  userStore.update(store => ({
-		    ...store,
-		    username,
-		    passwordHash,
-		    chainId,
-			highestScore
-		  }))
+			userStore.update((store) => ({
+				...store,
+				username,
+				passwordHash,
+				chainId,
+				highestScore
+			}));
 		}
-	})
+	});
 
-    const drawerStore = getDrawerStore();
+	const drawerStore = getDrawerStore();
 	storePopup.set({ computePosition, autoUpdate, offset, shift, flip, arrow });
 
 	const modalRegistry: Record<string, ModalComponent> = {
