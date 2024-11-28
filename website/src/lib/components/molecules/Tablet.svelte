@@ -3,21 +3,27 @@
 	import { generateTabletFromMatrix } from '$lib/game/utils';
 	import Tile from '../atoms/Tile.svelte';
 
-	export let tablet: Tablet = generateTabletFromMatrix([
+	interface Props {
+		tablet?: Tablet;
+		size?: 'sm' | 'md' | 'lg';
+	}
+
+	const defaultTablet = generateTabletFromMatrix([
 		[0, 0, 0, 0],
 		[0, 0, 0, 0],
 		[0, 0, 0, 0],
 		[0, 0, 0, 0]
 	]);
-	export let size: 'sm' | 'md' | 'lg' = 'lg';
+
+	let { tablet = defaultTablet, size = 'lg' }: Props = $props();
 
 	const sizeConfig = {
 		sm: { tile: 80, gap: 10, wrapper: 10 },
-		md: { tile: 100, gap: 12, wrapper: 12 },
+		md: { tile: 100, gap: 12.5, wrapper: 12.5 },
 		lg: { tile: 120, gap: 15, wrapper: 15 }
 	};
 
-	$: currentSize = sizeConfig[size];
+	const currentSize = $derived(sizeConfig[size]);
 </script>
 
 <div

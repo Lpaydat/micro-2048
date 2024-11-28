@@ -1,8 +1,12 @@
 <script lang="ts">
 	import { getModalStore } from '@skeletonlabs/skeleton';
 
-	export let title = 'How to Play';
-	export let items: { text: string }[] = [];
+	interface Props {
+		title: string;
+		items: { text: string }[];
+	}
+
+	let { title = 'How to Play', items = [] }: Props = $props();
 
 	const modalStore = getModalStore();
 </script>
@@ -35,7 +39,7 @@
 	<div class="p-3 pt-0 sm:p-4 md:p-6">
 		<button
 			class="w-full rounded-md bg-warning-500 py-2 text-sm font-medium text-white transition-colors hover:bg-warning-600 sm:py-2.5 sm:text-base md:py-3 md:text-lg"
-			on:click={() => modalStore.close()}
+			onclick={() => modalStore.close()}
 		>
 			Got it!
 		</button>

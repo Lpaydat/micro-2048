@@ -3,34 +3,45 @@
 	import { getDrawerStore } from '@skeletonlabs/skeleton';
 	import type { DrawerSettings } from '@skeletonlabs/skeleton';
 
-	export let currentRound: number = 1;
-	export let player: string;
-	export let gameLeaderboard: PlayerStats[] = [];
-	export let roundLeaderboard: RoundResults | undefined;
-	export let currentPlayerScore: number = 0;
+	interface Props {
+		currentRound?: number;
+		player: string;
+		gameLeaderboard?: PlayerStats[];
+		roundLeaderboard?: RoundResults;
+		currentPlayerScore?: number;
+	}
 
-	$: rlb = roundLeaderboard ?? {
+	let {
+		currentRound = 1,
+		player,
+		gameLeaderboard = [],
+		roundLeaderboard,
+		currentPlayerScore = 0
+	}: Props = $props();
+
+	const rlb = $derived(roundLeaderboard ?? {
 		round: 0,
 		players: [],
 		eliminatedPlayers: []
-	};
+	});
 
-	$: combinedRoundLeaderboard = [...rlb.players, ...rlb.eliminatedPlayers]
-		.map((p) => ({
-			...p,
+	const combinedRoundLeaderboard = $derived(
+		[...rlb.players, ...rlb.eliminatedPlayers]
+			.map((p) => ({
+				...p,
 			isEliminated: rlb.eliminatedPlayers.includes(p),
 			score: p.username === player ? currentPlayerScore : p.score
 		}))
 		.sort((a, b) => b.score - a.score)
-		.map((player, index) => ({ ...player, rank: index + 1 }));
+		.map((player, index) => ({ ...player, rank: index + 1 }))
+	);
 
-	$: currentPlayer = combinedRoundLeaderboard?.find((p) => p.username === player);
-	$: userRank = currentPlayer?.rank ?? 0;
-	$: userScore = currentPlayer?.score ?? 0;
+	const currentPlayer = $derived(combinedRoundLeaderboard?.find((p) => p.username === player));
+	const userRank = $derived(currentPlayer?.rank ?? 0);
+	const userScore = $derived(currentPlayer?.score ?? 0);
 
 	const drawerStore = getDrawerStore();
-	let drawerSettings: DrawerSettings;
-	$: drawerSettings = {
+	const drawerSettings = $derived<DrawerSettings>({
 		id: 'mobile-user-stats',
 		position: 'bottom',
 		bgDrawer: 'bg-[#FAF8EF]',
@@ -43,12 +54,12 @@
 			currentPlayerScore,
 			roundLeaderboard
 		}
-	};
+	});
 </script>
 
 <button
 	type="button"
-	on:click={() => drawerStore.open(drawerSettings)}
+	onclick={() => drawerStore.open(drawerSettings)}
 	class="flex items-center justify-end rounded-lg bg-[#FAF8EF] p-2 shadow-md"
 >
 	<div class="flex items-center space-x-4 rounded-md bg-[#ed8d33] px-4 py-2">

@@ -19,30 +19,38 @@
 	import RoundButton from '../molecules/RoundButton.svelte';
 	import MobileUserStats from '../organisms/MobileUserStats.svelte';
 
-	let boardId: string = $page.params.boardId;
+	let boardId = $state<string>($page.params.boardId);
 
 	let unsubscribe: any;
 
-	$: {
+	$effect(() => {
 		unsubscribe = page.subscribe(($page) => {
 			boardId = $page.params.boardId;
 		});
-	}
+	});
 
 	onDestroy(() => {
 		if (unsubscribe) unsubscribe();
 	});
 
-	let [gameId, _, _username, playerChainId] = $page.params.boardId.split('-');
-	$: r = parseInt($page.params.boardId.match(/\-(\d+)\-/)?.[1] || '0');
-	$: username = $page.params.boardId.split('-')[2] || '';
-	$: chainId = $page.params.boardId.match(/\-[^-]+-([^-]+)$/)?.[1] || '';
-	let canMakeMove = username === $userStore.username;
+	const [gameId, _, _username, playerChainId] = $derived($page.params.boardId.split('-'));
+	const r = $derived(parseInt($page.params.boardId.match(/\-(\d+)\-/)?.[1] || '0'));
+	const username = $derived($page.params.boardId.split('-')[2] || '');
+	const chainId = $derived($page.params.boardId.match(/\-[^-]+-([^-]+)$/)?.[1] || '');
+	let canMakeMove = $state(false);
+	let initCanMakeMove = false;
+
+	$effect(() => {
+		if (!initCanMakeMove) {
+			initCanMakeMove = true;
+			canMakeMove = username === $userStore.username;
+		}
+	});
 
 	const client = getContextClient();
 
 	// Determine if the game is multiplayer based on the URL pattern
-	const isMultiplayer = boardId.includes('-');
+	const isMultiplayer = $derived(boardId.includes('-'));
 
 	const GAME_PING_SUBSCRIPTION = gql`
 		subscription Notifications($chainId: ID!) {
@@ -51,42 +59,45 @@
 	`;
 
 	// Subscription for notifications
-	const gameMessages = subscriptionStore({
-		client,
-		query: GAME_PING_SUBSCRIPTION,
-		variables: { chainId: gameId }
-	});
+	const gameMessages = $derived(
+		subscriptionStore({
+			client,
+			query: GAME_PING_SUBSCRIPTION,
+			variables: { chainId: gameId }
+		})
+	);
 
 	const triggerGameEventMutation = () => triggerGame(client, gameId);
 	const nextRoundMutation = () => nextRound(client, gameId);
 
 	// Reactive declarations
-	$: game = getGameDetails(client, gameId, r);
-	$: data =
+	const game = $derived(getGameDetails(client, gameId, r));
+	const data = $derived(
 		$game.data?.eliminationGame && !$game.fetching
 			? {
 					...$game.data.eliminationGame,
 					playerCount: $game.data.eliminationGame.players.length
 				}
-			: {};
+			: {}
+	);
 
 	// Reactive variables for component data
-	$: lastUpdated = parseInt($game.data?.eliminationGame?.lastUpdatedTime || '0');
-	$: currentRound = $game.data?.eliminationGame?.currentRound;
-	$: totalRounds = $game.data?.eliminationGame?.totalRounds;
-	$: gameLeaderboard = $game.data?.eliminationGame?.gameLeaderboard;
-	$: roundLeaderboard = $game.data?.eliminationGame?.roundLeaderboard?.[0];
-	$: status = $game.data?.eliminationGame?.status;
-	$: isRoundEnded = roundLeaderboard?.players.length === 0;
-	$: bh = getMessageBlockheight($gameMessages.data);
+	const lastUpdated = $derived(parseInt($game.data?.eliminationGame?.lastUpdatedTime || '0'));
+	const currentRound = $derived($game.data?.eliminationGame?.currentRound);
+	const totalRounds = $derived($game.data?.eliminationGame?.totalRounds);
+	const gameLeaderboard = $derived($game.data?.eliminationGame?.gameLeaderboard);
+	const roundLeaderboard = $derived($game.data?.eliminationGame?.roundLeaderboard?.[0]);
+	const status = $derived($game.data?.eliminationGame?.status);
+	const isRoundEnded = $derived(roundLeaderboard?.players.length === 0);
+	const bh = $derived(getMessageBlockheight($gameMessages.data));
 
-	let countdown = 0;
-	let countdownInterval: NodeJS.Timeout;
-	let intervalId: NodeJS.Timeout;
-	let blockHeight: number | undefined = undefined;
-	let isTriggered: boolean = false;
+	let countdown = $state(0);
+	let countdownInterval = $state<NodeJS.Timeout | undefined>(undefined);
+	let intervalId = $state<NodeJS.Timeout | undefined>(undefined);
+	let blockHeight = $state<number | undefined>(undefined);
+	let isTriggered = $state(false);
 
-	function updateCountdown() {
+	const updateCountdown = () => {
 		const triggerInterval = $game.data?.eliminationGame?.triggerIntervalSeconds || 0;
 
 		if (lastUpdated) {
@@ -107,7 +118,7 @@
 				}
 			}, 1000);
 		}
-	}
+	};
 
 	onMount(() => {
 		updateCountdown();
@@ -126,17 +137,17 @@
 		};
 	});
 
-	$: {
+	$effect(() => {
 		// Re-run countdown update when lastUpdated changes
 		if (lastUpdated) {
 			updateCountdown();
 		}
-	}
+	});
 
-	let currentPlayerScore = 0;
-	let nextTarget: string | undefined = undefined;
+	let currentPlayerScore = $state(0);
+	let nextTarget = $state<string | undefined>(undefined);
 
-	$: {
+	$effect(() => {
 		const player = $userStore.username || username;
 		const chainId = $userStore.chainId || playerChainId;
 		const target = `/game/${gameId}-${currentRound}-${player}-${chainId}`;
@@ -145,16 +156,17 @@
 			isTriggered = false;
 			goto(nextTarget);
 		}
-	}
-	$: isEnded = roundLeaderboard?.eliminatedPlayers.some(
-		(player: any) => player.username === username
+	});
+
+	const isEnded = $derived(
+		roundLeaderboard?.eliminatedPlayers.some((player: any) => player.username === username)
 	);
 
-	let windowWidth = 0;
+	let windowWidth = $state(0);
 </script>
 
 <MainTemplate bind:windowWidth mainCenter>
-	<svelte:fragment slot="header">
+	{#snippet header()}
 		<MobileUserStats
 			player={username}
 			{currentRound}
@@ -162,9 +174,9 @@
 			{gameLeaderboard}
 			{currentPlayerScore}
 		/>
-	</svelte:fragment>
+	{/snippet}
 
-	<svelte:fragment slot="sidebar">
+	{#snippet sidebar()}
 		{#if isMultiplayer && $userStore.username}
 			<Brand />
 			<Leaderboard
@@ -177,9 +189,9 @@
 		{:else}
 			<UserSidebar />
 		{/if}
-	</svelte:fragment>
+	{/snippet}
 
-	<svelte:fragment slot="main">
+	{#snippet main()}
 		<div class="flex flex-1 flex-col items-stretch">
 			{#if isMultiplayer}
 				{#if windowWidth > 768}
@@ -190,7 +202,7 @@
 						numberLabel="Round"
 					/>
 				{/if}
-				<RoundButton {isRoundEnded} {countdown} {status} on:click={nextRoundMutation} />
+				<RoundButton {isRoundEnded} {countdown} {status} onclick={nextRoundMutation} />
 			{/if}
 			<div class="flex items-center justify-center pt-2 lg:pt-6 xl:pt-8">
 				<div class="w-full max-w-2xl xl:pb-28">
@@ -211,9 +223,9 @@
 		{#if $isHashesListVisible}
 			<BlockHashes />
 		{/if}
-	</svelte:fragment>
+	{/snippet}
 
-	<svelte:fragment slot="footer">
+	{#snippet footer()}
 		{#if isMultiplayer && windowWidth <= 768}
 			<GameSettingsDetails
 				{data}
@@ -222,5 +234,5 @@
 				numberLabel="Round"
 			/>
 		{/if}
-	</svelte:fragment>
+	{/snippet}
 </MainTemplate>

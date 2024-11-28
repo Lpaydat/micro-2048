@@ -1,19 +1,27 @@
 <script lang="ts">
-	export let title: string;
-	export let prevPage: string | undefined = undefined;
-	export let color:
-		| 'green'
-		| 'orange'
-		| 'red'
-		| 'blue'
-		| 'purple'
-		| 'yellow'
-		| 'pink'
-		| 'gray'
-		| 'teal'
-		| 'cyan' = 'green';
+	import type { Snippet } from 'svelte';
 
-	$: headerRound = !prevPage ? 'md:rounded-bl-lg mb-4 md:mb-0' : '';
+	interface Props {
+		icon?: Snippet;
+		actions?: Snippet;
+		title: string;
+		prevPage?: string;
+		color?:
+			| 'green'
+			| 'orange'
+			| 'red'
+			| 'blue'
+			| 'purple'
+			| 'yellow'
+			| 'pink'
+			| 'gray'
+			| 'teal'
+			| 'cyan';
+	}
+
+	let { icon, actions, title, prevPage, color = 'green' }: Props = $props();
+
+	const headerRound = $derived(!prevPage ? 'md:rounded-bl-lg mb-4 md:mb-0' : '');
 
 	const colorClass = {
 		green: 'bg-green-600',
@@ -38,16 +46,12 @@
 				color
 			]}"
 		>
-			{#if $$slots.icon}
-				<slot name="icon" />
-			{/if}
+			{@render icon?.()}
 			<span class="text-md tracking-wider lg:text-2xl">{title}</span>
 		</div>
 
 		<div class="ms-auto flex items-center gap-2">
-			{#if $$slots.actions}
-				<slot name="actions" />
-			{/if}
+			{@render actions?.()}
 		</div>
 	</div>
 

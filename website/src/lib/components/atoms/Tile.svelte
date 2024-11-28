@@ -13,7 +13,7 @@
 
 	const sizeConfig = {
 		sm: { tile: 270, gap: 10, fontSize: { default: 45, medium: 30, small: 20 } },
-		md: { tile: 337.5, gap: 11, fontSize: { default: 55, medium: 37.5, small: 27.5 } },
+		md: { tile: 337.5, gap: 12, fontSize: { default: 55, medium: 37.5, small: 27.5 } },
 		lg: { tile: 405, gap: 15, fontSize: { default: 65, medium: 40, small: 30 } }
 	};
 

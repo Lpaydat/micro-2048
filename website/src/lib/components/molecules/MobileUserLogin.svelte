@@ -5,15 +5,16 @@
 	import { hashPassword } from '$lib/utils/hashPassword';
 	import { userStore } from '$lib/stores/userStore';
 	import { getPlayerInfo } from '$lib/graphql/queries/getPlayerInfo';
+	import { preventDefault } from '$lib/utils/preventDefault';
 
-	let username = '';
-	let submittedUsername = '';
-	let password = '';
-	let passwordHash = '';
-	let loading = false;
-	let canLogin = false;
-	let errorMessage = '';
-	let showForm = false;
+	let username = $state('');
+	let submittedUsername = $state('');
+	let password = $state('');
+	let passwordHash = $state('');
+	let loading = $state(false);
+	let canLogin = $state(false);
+	let errorMessage = $state('');
+	let showForm = $state(false);
 
 	const REGISTER_PLAYER = gql`
 		mutation RegisterPlayer($username: String!, $passwordHash: String!) {
@@ -29,13 +30,15 @@
 
 	const client = getContextClient();
 
-	$: player = getPlayerInfo(client, submittedUsername);
-	$: playerOnChain = queryStore({
-		client,
-		query: CHECK_PLAYER,
-		variables: { username, passwordHash },
-		requestPolicy: 'network-only'
-	});
+	const player = $derived(getPlayerInfo(client, username));
+	const playerOnChain = $derived(
+		queryStore({
+			client,
+			query: CHECK_PLAYER,
+			variables: { username, passwordHash },
+			requestPolicy: 'network-only'
+		})
+	);
 
 	const registerPlayer = async () => {
 		mutationStore({
@@ -82,7 +85,7 @@
 		await checkPlayer();
 	};
 
-	$: {
+	$effect(() => {
 		if (loading && username && !$playerOnChain.fetching) {
 			try {
 				const value = $playerOnChain.data?.checkPlayer;
@@ -99,34 +102,36 @@
 				loading = false;
 			}
 		}
-	}
+	});
 
-	$: if (!$player.fetching && $player.data?.player && canLogin) {
-		localStorage.setItem('username', username);
-		localStorage.setItem('passwordHash', passwordHash);
-		localStorage.setItem('chainId', $player.data.player.chainId);
-		localStorage.setItem('highestScore', $player.data.player.highestScore.toString());
+	$effect(() => {
+		if (!$player.fetching && $player.data?.player && canLogin) {
+			localStorage.setItem('username', username);
+			localStorage.setItem('passwordHash', passwordHash);
+			localStorage.setItem('chainId', $player.data.player.chainId);
+			localStorage.setItem('highestScore', $player.data.player.highestScore.toString());
 
-		userStore.update((store) => ({
-			...store,
-			username: $player.data.player.username,
-			chainId: $player.data.player.chainId,
-			highestScore: $player.data.player.highestScore,
-			...(passwordHash && { passwordHash })
-		}));
-		canLogin = false;
-		showForm = false;
-	}
+			userStore.update((store) => ({
+				...store,
+				username: $player.data.player.username,
+				chainId: $player.data.player.chainId,
+				highestScore: $player.data.player.highestScore,
+				...(passwordHash && { passwordHash })
+			}));
+			canLogin = false;
+			showForm = false;
+		}
+	});
 </script>
 
 <div class="relative z-20">
-	<Button variant="outline" size="sm" on:click={() => (showForm = !showForm)}>Login</Button>
+	<Button variant="outline" size="sm" onclick={() => (showForm = !showForm)}>Login</Button>
 
 	{#if showForm}
 		<div
 			class="absolute right-0 top-12 w-72 rounded-md border-4 border-[#BBADA0] bg-[#FAF8EF] p-4 shadow-lg"
 		>
-			<form on:submit|preventDefault={handleSubmit} class="space-y-3">
+			<form onsubmit={preventDefault(handleSubmit)} class="space-y-3">
 				{#if errorMessage}
 					<div class="error-message text-sm">{errorMessage}</div>
 				{/if}
@@ -152,7 +157,7 @@
 				/>
 
 				<div class="flex justify-end gap-2">
-					<Button variant="outline" size="sm" type="button" on:click={() => (showForm = false)}>
+					<Button variant="outline" size="sm" type="button" onclick={() => (showForm = false)}>
 						Cancel
 					</Button>
 					<Button type="submit" variant="primary" size="sm" {loading}>

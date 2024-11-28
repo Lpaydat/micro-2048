@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { getContextClient, gql, subscriptionStore } from '@urql/svelte';
 	import { onDestroy } from 'svelte';
-	import Clock from 'lucide-svelte/icons/clock-4';
 	import { page } from '$app/stores';
 	import HelpCircle from 'lucide-svelte/icons/circle-help';
 
@@ -108,35 +107,35 @@
 </script>
 
 <MainTemplate>
-	<svelte:fragment slot="sidebar">
+	{#snippet sidebar()}
 		<UserSidebar />
-	</svelte:fragment>
+	{/snippet}
 
-	<svelte:fragment slot="main">
+	{#snippet main()}
 		<PageHeader color="green" title={gameName} {prevPage}>
-			<svelte:fragment slot="actions">
+			{#snippet actions()}
 				{#if isLoaded && $userStore.username && data?.status === 'Waiting'}
-					<HelpButton ariaLabel="How to Play" on:click={howToPlay}>
+					<HelpButton ariaLabel="How to Play" onclick={howToPlay}>
 						<HelpCircle size={20} />
 					</HelpButton>
 					{#if isHost}
 						<ActionButton
 							label="START"
-							on:click={handleStartGame}
+							onclick={handleStartGame}
 							disabled={data.playerCount < minimumPlayers}
 						/>
-						<ActionButton label="CANCEL" hoverColor="danger" on:click={handleEndGame} />
+						<ActionButton label="CANCEL" hoverColor="danger" onclick={handleEndGame} />
 					{:else if canJoinGame}
-						<ActionButton label="JOIN" on:click={handleJoinGame} />
+						<ActionButton label="JOIN" onclick={handleJoinGame} />
 					{:else if isJoined}
-						<ActionButton label="LEAVE" on:click={handleLeaveGame} />
+						<ActionButton label="LEAVE" onclick={handleLeaveGame} />
 					{/if}
 				{/if}
-			</svelte:fragment>
+			{/snippet}
 		</PageHeader>
 		{#if !$game.fetching}
 			<GameSettingsDetails {data} numberA={data.playerCount} numberB={data.maxPlayers} />
 			<WaitingPlayers players={data?.players ?? []} />
 		{/if}
-	</svelte:fragment>
+	{/snippet}
 </MainTemplate>

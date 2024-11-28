@@ -1,6 +1,10 @@
 <script lang="ts">
-	export let rank: number;
-	export let player: { username: string; score: number; boardId: string };
+	interface Props {
+		rank: number;
+		player: { username: string; score: number; boardId: string };
+	}
+
+	let { rank, player }: Props = $props();
 </script>
 
 <a

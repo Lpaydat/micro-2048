@@ -2,13 +2,19 @@
 	import ListItem from '../molecules/LeaderboardItem.svelte';
 	import type { PlayerStats } from '$lib/types/leaderboard';
 
-	export let gameLeaderboard: PlayerStats[] = [];
-	export let player: string;
+	interface Props {
+		gameLeaderboard: PlayerStats[];
+		player: string;
+	}
 
-	$: sortedGameLeaderboard = gameLeaderboard
-		?.slice() // Create a shallow copy to avoid mutating the original array
-		.sort((a, b) => b.score - a.score) // Sort by score in descending order
-		.map((player, index) => ({ ...player, rank: index + 1 })); // Add rank based on sorted position
+	let { gameLeaderboard = [], player }: Props = $props();
+
+	const sortedGameLeaderboard = $derived(
+		gameLeaderboard
+			?.slice() // Create a shallow copy to avoid mutating the original array
+			.sort((a, b) => b.score - a.score) // Sort by score in descending order
+			.map((player, index) => ({ ...player, rank: index + 1 })) // Add rank based on sorted position
+	);
 </script>
 
 <div class="w-full max-w-md rounded-lg bg-[#FAF8EF] p-6 shadow-lg">

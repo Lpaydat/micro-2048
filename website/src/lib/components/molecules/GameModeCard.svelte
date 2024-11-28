@@ -1,25 +1,23 @@
 <script lang="ts">
-	export let disabled = false;
+	import type { Snippet } from 'svelte';
+
+	interface Props {
+		title: Snippet;
+		description: Snippet;
+	}
+
+	let { title, description }: Props = $props();
 </script>
 
 <div
 	role="button"
-	class="card variant-filled-surface p-4 transition-all duration-200 {!disabled &&
-		'cursor-pointer hover:scale-105 hover:shadow-xl'} flex h-full w-full flex-col rounded-lg"
-	class:opacity-50={disabled}
-	tabindex={disabled ? -1 : 0}
-	on:click
-	on:keydown
+	class="card variant-filled-surface flex h-full w-full cursor-pointer flex-col rounded-lg p-4 transition-all duration-200 hover:scale-105 hover:shadow-xl"
 >
 	<header class="card-header pb-4 text-center text-2xl font-bold">
-		<slot name="title" />
+		{@render title()}
 	</header>
 
 	<section class="flex-grow p-4">
-		<slot name="description" />
-	</section>
-
-	<section class="pt-4">
-		<slot name="actions" />
+		{@render description()}
 	</section>
 </div>

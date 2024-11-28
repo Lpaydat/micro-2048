@@ -8,8 +8,6 @@
 	import type { EliminationGameDetails } from '$lib/types/eliminationGame';
 	import { userStore } from '$lib/stores/userStore';
 
-	export let data: EliminationGameDetails;
-
 	let {
 		gameId,
 		gameName,
@@ -21,10 +19,10 @@
 		eliminatedPerTrigger,
 		triggerIntervalSeconds,
 		status
-	} = data;
+	}: EliminationGameDetails = $props();
 
 	const client = getContextClient();
-	let loading = false;
+	let loading = $state(false);
 
 	const handleJoinGame = (gameId: string) => {
 		if (!$userStore.username) return;

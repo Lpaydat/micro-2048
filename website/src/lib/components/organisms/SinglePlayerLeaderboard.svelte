@@ -15,13 +15,17 @@
 
 	const client = getContextClient();
 
-	$: rankers = queryStore({
-		client,
-		query: RANKERS
-	});
+	const rankers = $derived(
+		queryStore({
+			client,
+			query: RANKERS
+		})
+	);
 
 	// Sort the rankers by score in descending order
-	$: sortedRankers = $rankers.data?.leaderboard.slice().sort((a: any, b: any) => b.score - a.score);
+	const sortedRankers = $derived(
+		$rankers.data?.leaderboard.slice().sort((a: any, b: any) => b.score - a.score)
+	);
 
 	onMount(() => {
 		rankers.reexecute({ requestPolicy: 'network-only' });

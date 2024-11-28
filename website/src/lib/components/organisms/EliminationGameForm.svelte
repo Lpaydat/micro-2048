@@ -9,13 +9,14 @@
 		type EliminationGameSettings
 	} from '$lib/graphql/mutations/createEliminationGame';
 	import { userStore } from '$lib/stores/userStore';
+	import { preventDefault } from '$lib/utils/preventDefault';
 
-	let totalRound = '5';
-	let eliminatedPerTrigger = '2';
-	let triggerInterval = '30';
-	let maxPlayer = '10';
-	let name = '';
-	let loading = false;
+	let totalRound = $state('5');
+	let eliminatedPerTrigger = $state('2');
+	let triggerInterval = $state('30');
+	let maxPlayer = $state('10');
+	let name = $state('');
+	let loading = $state(false);
 
 	const client = getContextClient();
 	const modalStore = getModalStore();
@@ -61,7 +62,7 @@
 </script>
 
 <form
-	on:submit|preventDefault={handleSubmit}
+	onsubmit={preventDefault(handleSubmit)}
 	class="mx-auto w-full max-w-md rounded-md bg-[#FAF8EF] p-6 shadow-md"
 >
 	<div class="space-y-6">

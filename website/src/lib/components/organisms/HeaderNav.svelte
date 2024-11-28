@@ -4,7 +4,7 @@
 	import type { PopupSettings } from '@skeletonlabs/skeleton';
 	import { onMount } from 'svelte';
 
-	let isMobile = false;
+	let isMobile = $state(false);
 
 	const popupSettings: PopupSettings = {
 		event: 'click',
@@ -21,9 +21,9 @@
 		return () => window.removeEventListener('resize', checkMobile);
 	});
 
-	function checkMobile() {
+	const checkMobile = () => {
 		isMobile = window.innerWidth < 768;
-	}
+	};
 </script>
 
 <div class="nav-container z-10 mx-4 mt-3 lg:me-5 lg:mt-5">

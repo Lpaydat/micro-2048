@@ -8,11 +8,11 @@
 </script>
 
 <MainTemplate overflowHidden>
-	<svelte:fragment slot="sidebar">
+	{#snippet sidebar()}
 		<UserSidebar />
-	</svelte:fragment>
+	{/snippet}
 
-	<svelte:fragment slot="main">
+	{#snippet main()}
 		{#if $userStore.username}
 			<div class="flex h-full flex-col">
 				<div class="flex flex-grow items-center justify-center">
@@ -31,5 +31,5 @@
 				</div>
 			</div>
 		{/if}
-	</svelte:fragment>
+	{/snippet}
 </MainTemplate>

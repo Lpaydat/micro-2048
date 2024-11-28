@@ -1,8 +1,12 @@
-<script>
+<script lang="ts">
 	import DescriptionBox from '../atoms/DescriptionBox.svelte';
 
-	export let imageUrl = '';
-	export let description = 'Default game mode description';
+	interface Props {
+		imageUrl: string;
+		description: string;
+	}
+
+	let { imageUrl = '', description = 'Default game mode description' }: Props = $props();
 </script>
 
 <div class="mx-auto max-w-sm">

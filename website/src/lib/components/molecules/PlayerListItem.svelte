@@ -2,23 +2,20 @@
 	import Smile from 'lucide-svelte/icons/smile';
 	import BaseListItem from './BaseListItem.svelte';
 
-	export let playerName: string;
-	export let isHost: boolean = false;
-	export let isYou: boolean = false;
-	export let joinedAt: Date;
+	interface Props {
+		playerName: string;
+		isHost: boolean;
+		isYou: boolean;
+	}
 
-	// Format the joined time to show how long ago the player joined
-	$: timeAgo = `${Math.floor((Date.now() - joinedAt.getTime()) / (1000 * 60))} minutes ago`;
+	let { playerName, isHost, isYou }: Props = $props();
 
 	const competitivePhrases = [
-		// Previous phrases
 		'Ready to dominate!',
 		'Born to win!',
 		'Challenge accepted!',
 		'Bringing the heat 🔥',
 		'Watch and learn!',
-
-		// New aggressive-fun phrases
 		'I will crush you all! 💪',
 		'Prepare to be destroyed!',
 		'Victory is my middle name',
@@ -67,7 +64,9 @@
 		'The legend has arrived'
 	];
 
-	$: statusPhrase = competitivePhrases[Math.floor(Math.random() * competitivePhrases.length)];
+	const statusPhrase = $derived(
+		competitivePhrases[Math.floor(Math.random() * competitivePhrases.length)]
+	);
 </script>
 
 <BaseListItem>

@@ -1,9 +1,14 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 
-	export let isRoundEnded: boolean;
-	export let countdown: number;
-	export let status: string;
+	interface Props {
+		isRoundEnded: boolean;
+		countdown: number;
+		status: string;
+		onclick: () => void;
+	}
+
+	let { isRoundEnded, countdown, status, onclick }: Props = $props();
 </script>
 
 <div class="lg:h-18 flex h-12 items-center justify-center pt-4 lg:pt-8 xl:h-32 xl:pt-10">
@@ -14,14 +19,14 @@
 	{:else if status === 'Ended'}
 		<button
 			class="game-font variant-soft-surface btn text-center text-xl font-bold text-[#F67C5F] lg:text-2xl xl:text-3xl"
-			on:click={() => goto('/elimination')}
+			onclick={() => goto('/elimination')}
 		>
 			Lobby
 		</button>
 	{:else}
 		<button
 			class="game-font variant-soft-surface btn text-center text-xl font-bold text-[#F67C5F] lg:text-2xl xl:text-3xl"
-			on:click
+			{onclick}
 		>
 			Next Round
 		</button>

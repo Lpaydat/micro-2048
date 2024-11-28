@@ -23,32 +23,32 @@
 	<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 		<a href="/game">
 			<GameModeCard>
-				<svelte:fragment slot="title">
+				{#snippet title()}
 					<h2>Classic</h2>
-				</svelte:fragment>
-				<svelte:fragment slot="description">
+				{/snippet}
+				{#snippet description()}
 					<p>The original 2048 experience. Combine matching numbers to reach 2048!</p>
-				</svelte:fragment>
+				{/snippet}
 			</GameModeCard>
 		</a>
 		<a href="/elimination">
 			<GameModeCard>
-				<svelte:fragment slot="title">
+				{#snippet title()}
 					<h2>Multiplayer</h2>
-				</svelte:fragment>
-				<svelte:fragment slot="description">
+				{/snippet}
+				{#snippet description()}
 					<p>Compete against other players in elimination mode. Last player standing wins!</p>
-				</svelte:fragment>
+				{/snippet}
 			</GameModeCard>
 		</a>
 		<a href="/leaderboard">
 			<GameModeCard>
-				<svelte:fragment slot="title">
+				{#snippet title()}
 					<h2>Leaderboard</h2>
-				</svelte:fragment>
-				<svelte:fragment slot="description">
+				{/snippet}
+				{#snippet description()}
 					<p>Check out the highest single player scores and see where you rank!</p>
-				</svelte:fragment>
+				{/snippet}
 			</GameModeCard>
 		</a>
 	</div>

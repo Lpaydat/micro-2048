@@ -6,16 +6,16 @@
 	import { userStore } from '$lib/stores/userStore';
 	import { isHashesListVisible } from '$lib/stores/hashesStore';
 
-	let canMakeMove = !!$userStore.username;
-	$: chainId = $userStore.chainId;
+	const canMakeMove = $derived(!!$userStore.username);
+	const chainId = $derived($userStore.chainId);
 </script>
 
 <MainTemplate mainCenter>
-	<svelte:fragment slot="sidebar">
+	{#snippet sidebar()}
 		<UserSidebar />
-	</svelte:fragment>
+	{/snippet}
 
-	<svelte:fragment slot="main">
+	{#snippet main()}
 		<div class="flex h-full items-center justify-center">
 			<div class="my-auto w-full max-w-2xl lg:pb-28">
 				<Game
@@ -30,5 +30,5 @@
 		{#if $isHashesListVisible}
 			<BlockHashes />
 		{/if}
-	</svelte:fragment>
+	{/snippet}
 </MainTemplate>

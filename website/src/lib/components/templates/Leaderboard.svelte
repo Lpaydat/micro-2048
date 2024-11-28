@@ -5,11 +5,11 @@
 </script>
 
 <MainTemplate>
-	<svelte:fragment slot="sidebar">
+	{#snippet sidebar()}
 		<UserSidebar />
-	</svelte:fragment>
+	{/snippet}
 
-	<svelte:fragment slot="main">
+	{#snippet main()}
 		<SinglePlayerLeaderboard />
-	</svelte:fragment>
+	{/snippet}
 </MainTemplate>

@@ -34,22 +34,22 @@
 </script>
 
 <MainTemplate>
-	<svelte:fragment slot="sidebar">
+	{#snippet sidebar()}
 		<UserSidebar />
-	</svelte:fragment>
+	{/snippet}
 
-	<svelte:fragment slot="main">
+	{#snippet main()}
 		<PageHeader color="cyan" title="ELIMINATION GAME" prevPage="/">
-			<svelte:fragment slot="icon">
+			{#snippet icon()}
 				<Swords size={28} />
-			</svelte:fragment>
-			<svelte:fragment slot="actions">
+			{/snippet}
+			{#snippet actions()}
 				<HelpButton ariaLabel="How to Play" onclick={howToPlay}>
 					<HelpCircle size={20} />
 				</HelpButton>
 				<ActionButton icon="plus" label="HOST GAME" onclick={hostGame} />
-			</svelte:fragment>
+			{/snippet}
 		</PageHeader>
 		<WaitingGames />
-	</svelte:fragment>
+	{/snippet}
 </MainTemplate>

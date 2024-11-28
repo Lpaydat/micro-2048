@@ -2,17 +2,19 @@
 	import PlayerListItem from '../molecules/PlayerListItem.svelte';
 	import { userStore } from '$lib/stores/userStore';
 
-	export let players: Array<string> = [];
+	let { players = [] }: { players?: Array<string> } = $props();
 
 	// TODO: make sure to make the list not flicker when new players join
 
 	// Convert simple string array to object array with default values
-	$: playerObjects = players.map((name, index) => ({
-		name,
-		isHost: index === 0, // Assuming first player is host
-		isYou: name === $userStore.username,
-		joinedAt: new Date() // You might want to pass this as actual data
-	}));
+	const playerObjects = $derived(
+		players.map((playerName, index) => ({
+			playerName,
+			isHost: index === 0, // Assuming first player is host
+			isYou: playerName === $userStore.username,
+			joinedAt: new Date() // You might want to pass this as actual data
+		}))
+	);
 </script>
 
 <div class="mx-auto mt-8 flex w-full flex-col gap-4 lg:max-w-4xl">
@@ -20,12 +22,7 @@
 		{#if playerObjects.length > 0}
 			{#each playerObjects as player}
 				<li>
-					<PlayerListItem
-						playerName={player.name}
-						isHost={player.isHost}
-						isYou={player.isYou}
-						joinedAt={player.joinedAt}
-					/>
+					<PlayerListItem {...player} />
 				</li>
 			{/each}
 		{:else}

@@ -1,20 +1,29 @@
 <script lang="ts">
-	export let rank: number;
-	export let name: string;
-	export let score: number;
-	export let isEliminated: boolean = false;
-	export let isCurrentPlayer: boolean = false;
-	export let isSelectedPlayer: boolean = false;
-	export let boardUrl: string;
+	interface Props {
+		rank: number;
+		name: string;
+		score: number;
+		isEliminated?: boolean;
+		isCurrentPlayer?: boolean;
+		isSelectedPlayer?: boolean;
+		boardUrl: string;
+	}
 
-	$: color = isEliminated ? 'bg-[#F3F3F3]' : 'bg-[#EEE4DA]';
-	$: currentPlayerStyle = isCurrentPlayer
-		? isEliminated
-			? '!border-l-[#E57373] font-bold bg-[#FFCDD2]'
-			: '!border-l-blue-500 font-bold bg-[#FFD700]'
-		: '';
-	$: selectedPlayerStyle = isSelectedPlayer ? '!border-l-orange-500' : '';
-	$: commonClasses = `flex justify-between snap-start items-center p-3 pl-2 w-full ${color} rounded-sm shadow-md relative border-l-4 border-transparent ${currentPlayerStyle} ${selectedPlayerStyle}`;
+	let { rank, name, score, isEliminated, isCurrentPlayer, isSelectedPlayer, boardUrl }: Props =
+		$props();
+
+	const color = $derived(isEliminated ? 'bg-[#F3F3F3]' : 'bg-[#EEE4DA]');
+	const currentPlayerStyle = $derived(
+		isCurrentPlayer
+			? isEliminated
+				? '!border-l-[#E57373] font-bold bg-[#FFCDD2]'
+				: '!border-l-blue-500 font-bold bg-[#FFD700]'
+			: ''
+	);
+	const selectedPlayerStyle = $derived(isSelectedPlayer ? '!border-l-orange-500' : '');
+	const commonClasses = $derived(
+		`flex justify-between snap-start items-center p-3 pl-2 w-full ${color} rounded-sm shadow-md relative border-l-4 border-transparent ${currentPlayerStyle} ${selectedPlayerStyle}`
+	);
 </script>
 
 {#if boardUrl}

@@ -6,7 +6,7 @@
 	import GameListItem from '../molecules/GameListItem.svelte';
 	import { userStore } from '$lib/stores/userStore';
 
-	let games: Array<EliminationGameDetails> = [];
+	let games: Array<EliminationGameDetails> = $state([]);
 
 	const GET_WAITING_GAMES = gql`
 		query GetWaitingGames {
@@ -28,12 +28,14 @@
 
 	const client = getContextClient();
 
-	$: waitingGames = queryStore({
-		client,
-		query: GET_WAITING_GAMES
-	});
+	const waitingGames = $derived(
+		queryStore({
+			client,
+			query: GET_WAITING_GAMES
+		})
+	);
 
-	let intervalId: NodeJS.Timeout;
+	let intervalId = $state<NodeJS.Timeout | undefined>(undefined);
 
 	onMount(() => {
 		waitingGames.reexecute({ requestPolicy: 'network-only' });
@@ -47,12 +49,14 @@
 		};
 	});
 
-	let initialFetch = true;
-	$: if (initialFetch && !$waitingGames.fetching) {
-		initialFetch = false;
-	}
+	let initialFetch = $state(true);
+	$effect(() => {
+		if (initialFetch && !$waitingGames.fetching) {
+			initialFetch = false;
+		}
+	});
 
-	$: {
+	$effect(() => {
 		setTimeout(() => {
 			games = ($waitingGames.data?.waitingRooms ?? []).map((game: any) => {
 				if (game.players.includes($userStore.username) && game.status === 'Waiting') {
@@ -65,7 +69,7 @@
 				};
 			});
 		}, 1000);
-	}
+	});
 </script>
 
 <ul class="mx-auto mt-8 flex h-full max-w-4xl flex-col gap-4">
@@ -77,7 +81,7 @@
 	{:else if games.length > 0}
 		{#each games as game}
 			<li>
-				<GameListItem data={game} />
+				<GameListItem {...game} />
 			</li>
 		{/each}
 	{:else}

@@ -2,17 +2,23 @@
 	import type { EliminationGameDetails } from '$lib/types/eliminationGame';
 	import TimeAgo from '../atoms/TimeAgo.svelte';
 
-	export let data: EliminationGameDetails;
-	export let numberLabel: string = 'Players';
-	export let numberA: number | undefined = 1;
-	export let numberB: number;
+	interface Props {
+		data: EliminationGameDetails;
+		numberLabel?: string;
+		numberA?: number;
+		numberB: number;
+	}
+
+	let { data, numberLabel = 'Players', numberA = 1, numberB }: Props = $props();
 
 	// Store the initial data in a local variable
-	let val: EliminationGameDetails = { ...data };
+	let val = $state<EliminationGameDetails>({ ...data });
 
-	$: if (!val.gameName) {
-		val = { ...data };
-	}
+	$effect(() => {
+		if (!val.gameName) {
+			val = { ...data };
+		}
+	});
 </script>
 
 <div class="game-details m-2 max-w-2xl rounded-lg bg-[#faf8ef] p-4 shadow-md sm:mx-auto sm:mt-8">

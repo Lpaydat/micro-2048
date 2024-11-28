@@ -5,12 +5,23 @@
 	import type { PlayerStats, RoundResults } from '$lib/types/leaderboard';
 	import { getContextClient, gql, queryStore } from '@urql/svelte';
 
-	export let currentRound: number = 1;
-	export let player: string;
-	export let currentPlayerScore: number = 0; // round score
-	export let gameLeaderboard: PlayerStats[] = [];
-	export let roundLeaderboard: RoundResults | undefined;
-	export let isFullScreen: boolean = false;
+	interface Props {
+		currentRound?: number;
+		player: string;
+		currentPlayerScore?: number; // round score
+		gameLeaderboard?: PlayerStats[];
+		roundLeaderboard?: RoundResults;
+		isFullScreen?: boolean;
+	}
+
+	let {
+		currentRound = 1,
+		player,
+		currentPlayerScore = 0,
+		gameLeaderboard = [],
+		roundLeaderboard,
+		isFullScreen = false
+	}: Props = $props();
 
 	const PLAYERS = gql`
 		query Players($usernames: [String!]!) {
@@ -23,13 +34,15 @@
 
 	const client = getContextClient();
 
-	$: players = queryStore({
-		client,
-		query: PLAYERS,
-		variables: { usernames: gameLeaderboard?.map((p) => p.username) ?? [] }
-	});
-	$: currentUrl = $page.url.pathname;
-	$: otherPlayersBoards =
+	const players = $derived(
+		queryStore({
+			client,
+			query: PLAYERS,
+			variables: { usernames: gameLeaderboard?.map((p) => p.username) ?? [] }
+		})
+	);
+	const currentUrl = $derived($page.url.pathname);
+	const otherPlayersBoards = $derived(
 		$players.data?.players.reduce(
 			(acc: Record<string, string>, p: { username: string; chainId: string }) => {
 				// Extract game ID and round from current URL
@@ -44,33 +57,40 @@
 				return acc;
 			},
 			{} as Record<string, string>
-		) ?? {};
+		) ?? {}
+	);
 
-	$: rlb = roundLeaderboard ?? {
-		round: 0,
-		players: [],
-		eliminatedPlayers: []
-	};
+	const rlb = $derived(
+		roundLeaderboard ?? {
+			round: 0,
+			players: [],
+			eliminatedPlayers: []
+		}
+	);
 
-	let activeTab = 1;
+	let activeTab = $state(1);
 
-	$: sortedGameLeaderboard = gameLeaderboard
-		?.slice() // Create a shallow copy to avoid mutating the original array
-		.sort((a, b) => b.score - a.score) // Sort by score in descending order
-		.map((player, index) => ({ ...player, rank: index + 1 })); // Add rank based on sorted position
+	const sortedGameLeaderboard = $derived(
+		gameLeaderboard
+			?.slice() // Create a shallow copy to avoid mutating the original array
+			.sort((a, b) => b.score - a.score) // Sort by score in descending order
+			.map((player, index) => ({ ...player, rank: index + 1 })) // Add rank based on sorted position
+	);
 
-	$: combinedRoundLeaderboard = [...rlb.players, ...rlb.eliminatedPlayers]
-		.map((p) => ({
-			...p,
-			isEliminated: rlb.eliminatedPlayers.includes(p),
-			score: p.username === player ? currentPlayerScore : p.score
-		}))
-		.sort((a, b) => b.score - a.score)
-		.map((player, index) => ({ ...player, rank: index + 1 }));
+	const combinedRoundLeaderboard = $derived(
+		[...rlb.players, ...rlb.eliminatedPlayers]
+			.map((p) => ({
+				...p,
+				isEliminated: rlb.eliminatedPlayers.includes(p),
+				score: p.username === player ? currentPlayerScore : p.score
+			}))
+			.sort((a, b) => b.score - a.score)
+			.map((player, index) => ({ ...player, rank: index + 1 }))
+	);
 
-	const customClass = isFullScreen
-		? 'w-full h-full mt-4'
-		: 'p-6 w-80 mt-6 max-h-full max-w-md mx-auto';
+	const customClass = $derived(
+		isFullScreen ? 'w-full h-full mt-4' : 'p-6 w-80 mt-6 max-h-full max-w-md mx-auto'
+	);
 </script>
 
 <div class="text-center {customClass} rounded-lg bg-[#FAF8EF] shadow-md">

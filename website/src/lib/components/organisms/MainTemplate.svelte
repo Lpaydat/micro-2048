@@ -1,13 +1,29 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, type Snippet } from 'svelte';
 	import Main from '../molecules/Main.svelte';
 	import MobileHeader from '../molecules/MobileHeader.svelte';
 	import Sidebar from '../molecules/Sidebar.svelte';
 	import MobileUserDetails from '../molecules/MobileUserDetails.svelte';
 
-	export let windowWidth = 0;
-	export let mainCenter = false;
-	export let overflowHidden = false;
+	interface Props {
+		windowWidth?: number;
+		mainCenter?: boolean;
+		overflowHidden?: boolean;
+		sidebar?: Snippet;
+		header?: Snippet;
+		main?: Snippet;
+		footer?: Snippet;
+	}
+
+	let {
+		windowWidth = $bindable(0),
+		mainCenter,
+		overflowHidden,
+		sidebar,
+		header,
+		main,
+		footer
+	}: Props = $props();
 
 	onMount(() => {
 		const updateWidth = () => (windowWidth = window.innerWidth);
@@ -16,15 +32,15 @@
 		return () => window.removeEventListener('resize', updateWidth);
 	});
 
-	$: isMobile = windowWidth <= 768;
-	const mainClass = mainCenter ? 'justify-center' : 'justify-start';
-	const overflowClass = overflowHidden ? 'overflow-hidden' : '';
+	const isMobile = $derived(windowWidth <= 768);
+	const mainClass = $derived(mainCenter ? 'justify-center' : 'justify-start');
+	const overflowClass = $derived(overflowHidden ? 'overflow-hidden' : '');
 </script>
 
 <div class="flex h-screen {overflowClass} bg-[#23232b] bg-[url('/micro-carbon.png')] bg-repeat">
 	{#if !isMobile}
 		<Sidebar>
-			<slot name="sidebar" />
+			{@render sidebar?.()}
 		</Sidebar>
 	{/if}
 
@@ -33,8 +49,8 @@
 			{#if isMobile}
 				<div class="flex-none">
 					<MobileHeader>
-						{#if $$slots.header}
-							<slot name="header" />
+						{#if header}
+							{@render header?.()}
 						{:else}
 							<MobileUserDetails />
 						{/if}
@@ -43,11 +59,11 @@
 			{/if}
 
 			<div class="flex flex-1 items-center {mainClass} flex-col">
-				<slot name="main" />
+				{@render main?.()}
 			</div>
 
 			<div class="flex-none">
-				<slot name="footer" />
+				{@render footer?.()}
 			</div>
 		</div>
 	</Main>
