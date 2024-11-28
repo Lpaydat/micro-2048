@@ -14,7 +14,7 @@
 		localStorage.setItem('passwordHash', $userStore.passwordHash ?? '');
 		localStorage.setItem('chainId', $userStore.chainId ?? '');
 		localStorage.setItem('highestScore', $userStore.highestScore?.toString() ?? '');
-	})
+	});
 
 	const handleLogout = () => {
 		logout();

@@ -19,21 +19,23 @@
 		currentPlayerScore = 0
 	}: Props = $props();
 
-	const rlb = $derived(roundLeaderboard ?? {
-		round: 0,
-		players: [],
-		eliminatedPlayers: []
-	});
+	const rlb = $derived(
+		roundLeaderboard ?? {
+			round: 0,
+			players: [],
+			eliminatedPlayers: []
+		}
+	);
 
 	const combinedRoundLeaderboard = $derived(
 		[...rlb.players, ...rlb.eliminatedPlayers]
 			.map((p) => ({
 				...p,
-			isEliminated: rlb.eliminatedPlayers.includes(p),
-			score: p.username === player ? currentPlayerScore : p.score
-		}))
-		.sort((a, b) => b.score - a.score)
-		.map((player, index) => ({ ...player, rank: index + 1 }))
+				isEliminated: rlb.eliminatedPlayers.includes(p),
+				score: p.username === player ? currentPlayerScore : p.score
+			}))
+			.sort((a, b) => b.score - a.score)
+			.map((player, index) => ({ ...player, rank: index + 1 }))
 	);
 
 	const currentPlayer = $derived(combinedRoundLeaderboard?.find((p) => p.username === player));

@@ -83,7 +83,7 @@
 	{#if canStartNewGame}
 		<button
 			onclick={newSingleGame}
-			class="rounded-md border-none bg-[#8f7a66] text-md md:text-xl px-2 py-2 md:px-4 text-center font-bold text-[#f9f6f2]
+			class="text-md rounded-md border-none bg-[#8f7a66] px-2 py-2 text-center font-bold text-[#f9f6f2] md:px-4 md:text-xl
 			{canStartNewGame ? 'visible' : 'invisible'}"
 		>
 			<span>New Game</span>

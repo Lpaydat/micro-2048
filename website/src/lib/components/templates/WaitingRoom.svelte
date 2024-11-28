@@ -29,11 +29,13 @@
 	`;
 
 	// Subscription for notifications
-	const gameMessages = $derived(subscriptionStore({
-		client,
-		query: GAME_PING_SUBSCRIPTION,
-		variables: { chainId: gameId }
-	}));
+	const gameMessages = $derived(
+		subscriptionStore({
+			client,
+			query: GAME_PING_SUBSCRIPTION,
+			variables: { chainId: gameId }
+		})
+	);
 
 	const game = $derived(getGameDetails(client, gameId));
 	const data = $derived(
@@ -56,7 +58,8 @@
 	$effect(() => {
 		if (!isLoaded && !$game.fetching) {
 			isLoaded = true;
-		}gameName = data?.gameName ?? gameName;
+		}
+		gameName = data?.gameName ?? gameName;
 	});
 
 	// Reactive statements for block height and game query reexecution
@@ -69,7 +72,7 @@
 			initialFetch = false;
 			game.reexecute({ requestPolicy: 'network-only' });
 		}
-	})
+	});
 
 	$effect(() => {
 		if (data?.status === 'Active' && isJoined) {

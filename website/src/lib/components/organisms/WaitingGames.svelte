@@ -59,7 +59,7 @@
 
 	$effect(() => {
 		setTimeout(() => {
-			games = (rooms).map((game: any) => {
+			games = rooms.map((game: any) => {
 				if (game.players.includes($userStore.username) && game.status === 'Waiting') {
 					goto(`/elimination/${game.gameId}`);
 				}

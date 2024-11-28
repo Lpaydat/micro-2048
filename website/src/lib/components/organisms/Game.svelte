@@ -7,13 +7,11 @@
 	import { hashesStore, isHashesListVisible } from '$lib/stores/hashesStore';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { clearMessages } from '$lib/graphql/mutations/clearMessages';
-	import { applicationId, port } from '$lib/constants';
 	import { genInitialState as createState } from '$lib/game/game';
-	import Tablet from '../molecules/Tablet.svelte';
 	import type { GameKeys, GameState } from '$lib/game/models';
 	import { isNewGameCreated, setGameCreationStatus } from '$lib/stores/gameStore';
 	import { boardToString } from '$lib/game/utils';
+	import Board from './Board.svelte';
 
 	// Props
 	export let isMultiplayer: boolean = false;
@@ -62,17 +60,8 @@
 	// Timers and Flags
 	let moveTimeout: NodeJS.Timeout | null = null;
 	let syncTimeout: NodeJS.Timeout | null = null;
-	let keyPressTime: number | null = null;
 	let pingTime: number | null = null;
 	$: shouldSyncGame = false;
-
-	// Responsive Design
-	let boardSize: 'sm' | 'md' | 'lg' = 'lg';
-
-	// Touch Handling
-	let touchStartX: number | null = null;
-	let touchStartY: number | null = null;
-	const SWIPE_THRESHOLD = 50;
 
 	// GraphQL Queries and Subscriptions
 	$: game = queryStore({
@@ -104,6 +93,8 @@
 		rendered = true;
 	}
 
+	$: boardEnded = isEnded || $game.data?.board?.isEnded;
+
 	$: if (boardId !== undefined) {
 		gameBoardId = boardId;
 		setGameCreationStatus(true);
@@ -131,9 +122,9 @@
 	}
 
 	// Utility Functions
-	const hasWon = (board: number[][]) => board.some((row) => row.some((cell) => cell >= 11));
+	const hasWon = (board?: number[][]) => board?.some((row) => row?.some((cell) => cell >= 11));
 
-	const getOverlayMessage = (board: number[][]) => {
+	const getOverlayMessage = (board?: number[][]) => {
 		if (!isMultiplayer) {
 			return hasWon(board) ? 'Congratulations! You Won!' : 'Game Over! You Lost!';
 		}
@@ -175,19 +166,6 @@
 	};
 
 	// Movement Functions
-	const makeMoveMutation = ({
-		boardId,
-		direction,
-		timestamp
-	}: {
-		boardId: string;
-		direction: string;
-		timestamp: string;
-	}) => {
-		makeMove(client, boardId, direction, timestamp);
-		clearMessages(playerChainId, applicationId, port);
-	};
-
 	const move = async (boardId: string, direction: GameKeys) => {
 		if (!canMakeMove || $game.data?.board?.isEnded) return;
 
@@ -206,75 +184,14 @@
 		}, 1200);
 
 		const timestamp = Date.now().toString();
-		makeMoveMutation({ boardId, direction, timestamp });
+		makeMove(client, boardId, direction, timestamp);
 		const prevTablet = boardToString(state?.tablet);
 		state = await state?.actions[direction](state, timestamp, prevTablet);
 	};
 
-	// Event Handlers
-	const handleTouchStart = (event: TouchEvent) => {
-		if (event.target instanceof Element && event.target.closest('.game-board')) {
-			event.preventDefault();
-		}
-		touchStartX = event.touches[0].clientX;
-		touchStartY = event.touches[0].clientY;
-	};
-
-	const handleTouchMove = (event: TouchEvent) => {
-		if (event.target instanceof Element && event.target.closest('.game-board')) {
-			event.preventDefault();
-		}
-	};
-
-	const handleTouchEnd = async (event: TouchEvent) => {
-		if (event.target instanceof Element && event.target.closest('.game-board')) {
-			event.preventDefault();
-		}
-		if (!touchStartX || !touchStartY || $game.data?.board?.isEnded || !gameBoardId) return;
-
-		const touchEndX = event.changedTouches[0].clientX;
-		const touchEndY = event.changedTouches[0].clientY;
-
-		const deltaX = touchEndX - touchStartX;
-		const deltaY = touchEndY - touchStartY;
-
-		if (Math.abs(deltaX) > Math.abs(deltaY)) {
-			if (Math.abs(deltaX) >= SWIPE_THRESHOLD) {
-				if (deltaX > 0) {
-					move(gameBoardId, 'ArrowRight');
-				} else {
-					move(gameBoardId, 'ArrowLeft');
-				}
-			}
-		} else {
-			if (Math.abs(deltaY) >= SWIPE_THRESHOLD) {
-				if (deltaY > 0) {
-					move(gameBoardId, 'ArrowDown');
-				} else {
-					move(gameBoardId, 'ArrowUp');
-				}
-			}
-		}
-
-		touchStartX = null;
-		touchStartY = null;
-	};
-
-	const handleKeydown = async (event: KeyboardEvent) => {
-		if ($game.data?.board?.isEnded || !gameBoardId) return;
-		keyPressTime = Date.now();
-
-		const validKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
-		if (validKeys.includes(event.key)) {
-			move(gameBoardId, event.key as GameKeys);
-		}
-	};
-
-	// Responsive Design Functions
-	const updateBoardSize = () => {
-		if (window.innerWidth < 480) boardSize = 'sm';
-		else if (window.innerWidth < 1280) boardSize = 'md';
-		else boardSize = 'lg';
+	const handleMove = (direction: GameKeys, timestamp: string) => {
+		if (!gameBoardId) return;
+		move(gameBoardId, direction);
 	};
 
 	// Lifecycle Hooks
@@ -284,10 +201,6 @@
 			gameBoardId = specBoardId || localBoardId;
 			canMakeMove = !specBoardId;
 		}
-
-		updateBoardSize();
-		window.addEventListener('resize', updateBoardSize);
-		return () => window.removeEventListener('resize', updateBoardSize);
 	});
 
 	onDestroy(() => {
@@ -296,33 +209,33 @@
 			hashesStore.set([]);
 		}
 	});
+
+	let size: 'sm' | 'md' | 'lg' = 'lg';
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
-
-<div class="game-container {boardSize}">
-	<BoardHeader
-		bind:boardId={gameBoardId}
-		{canStartNewGame}
-		{showBestScore}
-		{player}
-		value={score}
-		size={boardSize}
-	/>
+<div class="game-container {size}">
 	{#if rendered}
-		<div
-			class="game-board"
-			on:touchstart={handleTouchStart}
-			on:touchmove={handleTouchMove}
-			on:touchend={handleTouchEnd}
-		>
+		<div class="game-board">
 			{#if state}
-				<Tablet tablet={state.tablet} size={boardSize} />
-			{/if}
-			{#if $game.data?.board?.isEnded || isEnded}
-				<div class="overlay">
-					<p>{getOverlayMessage($game.data?.board?.board)}</p>
-				</div>
+				<Board
+					bind:size
+					tablet={state.tablet}
+					{canMakeMove}
+					isEnded={boardEnded}
+					overlayMessage={getOverlayMessage($game.data?.board?.board)}
+					moveCallback={handleMove}
+				>
+					{#snippet header(size)}
+						<BoardHeader
+							bind:boardId={gameBoardId}
+							{canStartNewGame}
+							{showBestScore}
+							{player}
+							{size}
+							value={score}
+						/>
+					{/snippet}
+				</Board>
 			{/if}
 		</div>
 		<div class="mt-2 flex items-center justify-center gap-4 text-sm">
@@ -351,7 +264,7 @@
 			</button>
 		</div>
 	{:else}
-		<Tablet size={boardSize} />
+		<Board />
 	{/if}
 </div>
 
@@ -392,18 +305,6 @@
 		display: flex;
 		justify-content: center;
 		align-items: center;
-		font-size: 1.5em;
-	}
-
-	.game-container.sm .overlay {
-		font-size: 1.2em;
-	}
-
-	.game-container.md .overlay {
-		font-size: 1.35em;
-	}
-
-	.game-container.lg .overlay {
 		font-size: 1.5em;
 	}
 </style>

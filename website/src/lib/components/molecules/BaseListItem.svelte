@@ -10,7 +10,7 @@
 </script>
 
 <div
-	class="container bg-surface-50-900-token justify-between rounded-none md:rounded-lg border-4 p-4 transition-all hover:bg-surface-100-800-token hover:border-warning-900"
+	class="bg-surface-50-900-token container justify-between rounded-none border-4 p-4 transition-all hover:bg-surface-100-800-token hover:border-warning-900 md:rounded-lg"
 >
 	<div class="flex-1">
 		{@render leftContent?.()}
