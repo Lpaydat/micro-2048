@@ -28,6 +28,10 @@
 		if (!$userStore.username) return;
 		loading = true;
 		joinGame(client, gameId);
+
+		setTimeout(() => {
+			goto(`/elimination/${gameId}`);
+		}, 2000);
 	};
 
 	const enterGame = (gameId: string) => {
@@ -47,7 +51,7 @@
 				{playerCount}/{maxPlayers} players
 			</span>
 		</div>
-		<div class="flex items-center gap-4 text-sm text-surface-700">
+		<div class="flex items-center gap-x-4 text-sm text-surface-700 flex-wrap">
 			<div class="flex items-center gap-2">
 				<div class="h-4 w-4 rounded bg-warning-500"></div>
 				<span>{host}</span>

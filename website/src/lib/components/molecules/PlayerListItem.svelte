@@ -71,7 +71,7 @@
 
 <BaseListItem>
 	{#snippet leftContent()}
-		<div class="mb-1 flex items-center justify-between gap-2">
+		<div class="mb-1 flex justify-between items-center gap-2">
 			<div class="flex items-center gap-2">
 				<h3 class="text-lg font-semibold">{playerName}</h3>
 				{#if isHost}

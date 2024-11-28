@@ -11,15 +11,15 @@
 	import { userStore } from '$lib/stores/userStore';
 	import { preventDefault } from '$lib/utils/preventDefault';
 
+	const client = getContextClient();
+	const modalStore = getModalStore();
+
 	let totalRound = $state('5');
 	let eliminatedPerTrigger = $state('2');
 	let triggerInterval = $state('30');
 	let maxPlayer = $state('10');
 	let name = $state('');
 	let loading = $state(false);
-
-	const client = getContextClient();
-	const modalStore = getModalStore();
 
 	const handleSubmit = async () => {
 		loading = true;
@@ -53,8 +53,10 @@
 			};
 
 			createEliminationGame(client, settings);
-			await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API call
-			modalStore.close();
+
+			setTimeout(() => {
+				modalStore.close();
+			}, 1000);
 		} finally {
 			loading = false;
 		}

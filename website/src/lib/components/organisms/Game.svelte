@@ -141,7 +141,7 @@
 	};
 
 	// Game State Handlers
-	function handleNewBlock(newBlockHeight: number) {
+	const handleNewBlock = (newBlockHeight: number) => {
 		blockHeight = newBlockHeight;
 		canMakeMove = true;
 		if (moveTimeout) clearTimeout(moveTimeout);
@@ -153,9 +153,9 @@
 			delete moveStartTimes[direction];
 		}
 		game.reexecute({ requestPolicy: 'network-only' });
-	}
+	};
 
-	function handleNewHash(hash: string) {
+	const handleNewHash = (hash: string) => {
 		lastHash = hash;
 		if (lastHash) {
 			hashesStore.update((logs) => [
@@ -163,16 +163,16 @@
 				...logs
 			]);
 		}
-	}
+	};
 
-	function handleGameStateUpdate() {
+	const handleGameStateUpdate = () => {
 		if (!gameBoardId) return;
 		state = createState($game.data?.board?.board, 4, gameBoardId, player);
 		isInitialized = true;
 		shouldSyncGame = false;
 		isSynced = true;
 		setGameCreationStatus(false);
-	}
+	};
 
 	// Movement Functions
 	const makeMoveMutation = ({
@@ -199,10 +199,11 @@
 		moveTimeout = setTimeout(() => {
 			canMakeMove = true;
 		}, 100);
+
 		if (syncTimeout) clearTimeout(syncTimeout);
 		syncTimeout = setTimeout(() => {
 			shouldSyncGame = true;
-		}, 2000);
+		}, 1200);
 
 		const timestamp = Date.now().toString();
 		makeMoveMutation({ boardId, direction, timestamp });

@@ -17,12 +17,10 @@
 	import { userStore } from '$lib/stores/userStore';
 	import { getModalStore, type ModalSettings, type ModalStore } from '@skeletonlabs/skeleton';
 
-	const gameId = $page.params.gameId;
-	const minimumPlayers = 1;
-
 	const modalStore: ModalStore = getModalStore();
 	const client = getContextClient();
-	$: username = $userStore.username;
+	const gameId = $derived($page.params.gameId);
+	const minimumPlayers = 1;
 
 	const GAME_PING_SUBSCRIPTION = gql`
 		subscription Notifications($chainId: ID!) {
@@ -31,44 +29,54 @@
 	`;
 
 	// Subscription for notifications
-	const gameMessages = subscriptionStore({
+	const gameMessages = $derived(subscriptionStore({
 		client,
 		query: GAME_PING_SUBSCRIPTION,
 		variables: { chainId: gameId }
-	});
+	}));
 
-	$: game = getGameDetails(client, gameId);
-	$: data =
+	const game = $derived(getGameDetails(client, gameId));
+	const data = $derived(
 		$game.data?.eliminationGame && !$game.fetching
 			? {
 					...$game.data.eliminationGame,
 					playerCount: $game.data.eliminationGame.players.length
 				}
-			: undefined;
+			: undefined
+	);
 
-	$: if (data?.status === 'Active' && isJoined) {
-		const playerBoardId = `${gameId}-${data.currentRound}-${username}-${$userStore.chainId}`;
-		goto(`/game/${playerBoardId}`);
-	}
+	const username = $derived($userStore.username);
+	const isHost = $derived(data?.host === username);
+	const isJoined = $derived(data?.players.includes(username));
+	const canJoinGame = $derived(data?.playerCount < data?.maxPlayers && !isJoined);
+	const prevPage = $derived(data?.status === 'Ended' || !isJoined ? '/elimination' : undefined);
 
-	$: isHost = data?.host === username;
-	$: isJoined = data?.players.includes(username);
-	$: canJoinGame = data?.playerCount < data?.maxPlayers && !isJoined;
-
-	let gameName = 'Loading...';
-	let isLoaded = false;
-	$: if (!isLoaded && !$game.fetching) {
-		isLoaded = true;
-	}
-	$: gameName = data?.gameName ?? gameName;
+	let gameName = $state('Loading...');
+	let isLoaded = $state(false);
+	$effect(() => {
+		if (!isLoaded && !$game.fetching) {
+			isLoaded = true;
+		}gameName = data?.gameName ?? gameName;
+	});
 
 	// Reactive statements for block height and game query reexecution
-	let blockHeight = 0;
-	$: bh = $gameMessages.data?.notifications?.reason?.NewIncomingBundle?.height;
-	$: if (bh && bh !== blockHeight) {
-		blockHeight = bh;
-		game.reexecute({ requestPolicy: 'network-only' });
-	}
+	let blockHeight = $state(0);
+	let initialFetch = $state(true);
+	$effect(() => {
+		const bh = $gameMessages.data?.notifications?.reason?.NewIncomingBundle?.height;
+		if ((bh && bh !== blockHeight) || initialFetch) {
+			blockHeight = bh;
+			initialFetch = false;
+			game.reexecute({ requestPolicy: 'network-only' });
+		}
+	})
+
+	$effect(() => {
+		if (data?.status === 'Active' && isJoined) {
+			const playerBoardId = `${gameId}-${data.currentRound}-${username}-${$userStore.chainId}`;
+			goto(`/game/${playerBoardId}`);
+		}
+	});
 
 	onDestroy(() => {
 		gameMessages.pause();
@@ -102,8 +110,6 @@
 	const howToPlay = () => {
 		modalStore.trigger(howToPlayModal);
 	};
-
-	$: prevPage = data?.status === 'Ended' ? '/elimination' : undefined;
 </script>
 
 <MainTemplate>

@@ -6,6 +6,7 @@
 	import { newGame } from '$lib/graphql/mutations/newBoard';
 	import { hashSeed } from '$lib/utils/random';
 	import { setGameCreationStatus } from '$lib/stores/gameStore';
+	import { userStore } from '$lib/stores/userStore';
 
 	interface Props {
 		player: string;
@@ -66,7 +67,7 @@
 	});
 
 	$effect(() => {
-		if (bestScore < value) {
+		if (bestScore < value && player === $userStore.username) {
 			localStorage.setItem('highestScore', String(value));
 		}
 	});
@@ -82,11 +83,10 @@
 	{#if canStartNewGame}
 		<button
 			onclick={newSingleGame}
-			class="rounded-md border-none bg-[#8f7a66] px-5 text-center font-bold text-[#f9f6f2]
+			class="rounded-md border-none bg-[#8f7a66] text-md md:text-xl px-2 py-2 md:px-4 text-center font-bold text-[#f9f6f2]
 			{canStartNewGame ? 'visible' : 'invisible'}"
-			style="height: {currentSize.buttonHeight * 4}px"
 		>
-			<span class={currentSize.fontSize}>New Game</span>
+			<span>New Game</span>
 		</button>
 	{:else}
 		<div

@@ -6,6 +6,8 @@
 	import GameListItem from '../molecules/GameListItem.svelte';
 	import { userStore } from '$lib/stores/userStore';
 
+	const client = getContextClient();
+
 	let games: Array<EliminationGameDetails> = $state([]);
 
 	const GET_WAITING_GAMES = gql`
@@ -26,16 +28,15 @@
 		}
 	`;
 
-	const client = getContextClient();
-
 	const waitingGames = $derived(
 		queryStore({
 			client,
 			query: GET_WAITING_GAMES
 		})
 	);
+	const rooms = $derived($waitingGames.data?.waitingRooms ?? []);
 
-	let intervalId = $state<NodeJS.Timeout | undefined>(undefined);
+	let intervalId: NodeJS.Timeout;
 
 	onMount(() => {
 		waitingGames.reexecute({ requestPolicy: 'network-only' });
@@ -58,7 +59,7 @@
 
 	$effect(() => {
 		setTimeout(() => {
-			games = ($waitingGames.data?.waitingRooms ?? []).map((game: any) => {
+			games = (rooms).map((game: any) => {
 				if (game.players.includes($userStore.username) && game.status === 'Waiting') {
 					goto(`/elimination/${game.gameId}`);
 				}
@@ -72,7 +73,7 @@
 	});
 </script>
 
-<ul class="mx-auto mt-8 flex h-full max-w-4xl flex-col gap-4">
+<ul class="mx-auto mt-8 flex h-full w-full max-w-4xl flex-col gap-4">
 	{#if initialFetch}
 		<li class="p-8 text-center">
 			<div class="text-2xl font-bold text-[#776e65]">Loading...</div>
@@ -81,7 +82,9 @@
 	{:else if games.length > 0}
 		{#each games as game}
 			<li>
-				<GameListItem {...game} />
+				<a href={`/elimination/${game.gameId}`}>
+					<GameListItem {...game} />
+				</a>
 			</li>
 		{/each}
 	{:else}
