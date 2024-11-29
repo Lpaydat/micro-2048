@@ -143,7 +143,11 @@
 			{/snippet}
 		</PageHeader>
 		{#if !$game.fetching}
-			<GameSettingsDetails {data} numberA={data.playerCount} numberB={data.maxPlayers} />
+			<GameSettingsDetails
+				{...data}
+				numberA={data.playerCount}
+				numberB={data.maxPlayers}
+			/>
 			<WaitingPlayers players={data?.players ?? []} />
 		{/if}
 	{/snippet}

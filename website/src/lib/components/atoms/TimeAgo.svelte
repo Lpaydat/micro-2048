@@ -11,7 +11,7 @@
 	const HOUR = 60 * MINUTE;
 	const DAY = 24 * HOUR;
 
-	function getTimeAgo(timestamp: Date): string {
+	const getTimeAgo = (timestamp: Date): string => {
 		const diff = Date.now() - timestamp.getTime();
 
 		if (diff < MINUTE) {
@@ -26,7 +26,7 @@
 			const days = Math.floor(diff / DAY);
 			return `${days} ${days === 1 ? 'day' : 'days'} ago`;
 		}
-	}
+	};
 
 	let timeAgo = $state('');
 	const formattedTime = $derived(new Date(parseInt(time)));

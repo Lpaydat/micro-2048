@@ -3,7 +3,7 @@
 
 	import BoardHeader from '../molecules/BoardHeader.svelte';
 	import { makeMove } from '$lib/graphql/mutations/makeMove';
-	import { onDestroy, onMount } from 'svelte';
+	import { onDestroy, onMount, createEventDispatcher } from 'svelte';
 	import { hashesStore, isHashesListVisible } from '$lib/stores/hashesStore';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -23,6 +23,8 @@
 	export let canStartNewGame: boolean = true;
 	export let canMakeMove: boolean = true;
 	export let showBestScore: boolean = true;
+
+	const dispatch = createEventDispatcher();
 
 	// Board ID Management
 	let specBoardId = $page.url.searchParams.get('boardId');
@@ -56,6 +58,7 @@
 	let lastHash = '';
 	let moveStartTimes: Record<string, number> = {};
 	let isSynced: boolean = false;
+	let size: 'sm' | 'md' | 'lg' = 'lg';
 
 	// Timers and Flags
 	let moveTimeout: NodeJS.Timeout | null = null;
@@ -192,7 +195,8 @@
 	const handleMove = (direction: GameKeys, timestamp: string) => {
 		if (!gameBoardId) return;
 		move(gameBoardId, direction);
-	};
+		dispatch('move', { direction, timestamp });
+	}
 
 	// Lifecycle Hooks
 	onMount(() => {
@@ -209,8 +213,6 @@
 			hashesStore.set([]);
 		}
 	});
-
-	let size: 'sm' | 'md' | 'lg' = 'lg';
 </script>
 
 <div class="game-container {size}">

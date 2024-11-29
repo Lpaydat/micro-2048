@@ -36,20 +36,6 @@
 	);
 	const rooms = $derived($waitingGames.data?.waitingRooms ?? []);
 
-	let intervalId: NodeJS.Timeout;
-
-	onMount(() => {
-		waitingGames.reexecute({ requestPolicy: 'network-only' });
-
-		intervalId = setInterval(() => {
-			waitingGames.reexecute({ requestPolicy: 'network-only' });
-		}, 1000);
-
-		return () => {
-			clearInterval(intervalId);
-		};
-	});
-
 	let initialFetch = $state(true);
 	$effect(() => {
 		if (initialFetch && !$waitingGames.fetching) {
@@ -57,8 +43,12 @@
 		}
 	});
 
-	$effect(() => {
-		setTimeout(() => {
+	let intervalId: NodeJS.Timeout;
+	onMount(() => {
+		waitingGames.reexecute({ requestPolicy: 'network-only' });
+
+		intervalId = setInterval(() => {
+			waitingGames.reexecute({ requestPolicy: 'network-only' });
 			games = rooms.map((game: any) => {
 				if (game.players.includes($userStore.username) && game.status === 'Waiting') {
 					goto(`/elimination/${game.gameId}`);
@@ -70,6 +60,10 @@
 				};
 			});
 		}, 1000);
+
+		return () => {
+			clearInterval(intervalId);
+		};
 	});
 </script>
 

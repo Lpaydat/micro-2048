@@ -38,7 +38,7 @@
 	const username = $derived($page.params.boardId.split('-')[2] || '');
 	const chainId = $derived($page.params.boardId.match(/\-[^-]+-([^-]+)$/)?.[1] || '');
 	let canMakeMove = $state(false);
-	let initCanMakeMove = false;
+	let initCanMakeMove = $state(false);
 
 	$effect(() => {
 		if (!initCanMakeMove) {
@@ -96,6 +96,24 @@
 	let intervalId = $state<NodeJS.Timeout | undefined>(undefined);
 	let blockHeight = $state<number | undefined>(undefined);
 	let isTriggered = $state(false);
+	let currentPlayerScore = $state(0);
+	let nextTarget = $state<string | undefined>(undefined);
+
+	let lastUpdatedRecord = 0;
+
+	const handleEliminationTrigger = () => {
+		if (countdown <= 0 && !isTriggered) {
+			triggerGameEventMutation();
+			isTriggered = true;
+			canMakeMove = false;
+		} else {
+			canMakeMove = username === $userStore.username;
+		}
+	}
+
+	const handleMoveCallback = () => {
+		handleEliminationTrigger();
+	}
 
 	const updateCountdown = () => {
 		const triggerInterval = $game.data?.eliminationGame?.triggerIntervalSeconds || 0;
@@ -108,14 +126,7 @@
 
 			countdownInterval = setInterval(() => {
 				countdown = Math.max(0, countdown - 1);
-
-				if (countdown <= 0 && !isTriggered) {
-					triggerGameEventMutation();
-					isTriggered = true;
-					canMakeMove = false;
-				} else {
-					canMakeMove = username === $userStore.username;
-				}
+				handleEliminationTrigger();
 			}, 1000);
 		}
 	};
@@ -138,14 +149,11 @@
 	});
 
 	$effect(() => {
-		// Re-run countdown update when lastUpdated changes
-		if (lastUpdated) {
+		if (lastUpdated !== lastUpdatedRecord) {
+			lastUpdatedRecord = lastUpdated;
 			updateCountdown();
 		}
 	});
-
-	let currentPlayerScore = $state(0);
-	let nextTarget = $state<string | undefined>(undefined);
 
 	$effect(() => {
 		const player = $userStore.username || username;
@@ -196,7 +204,7 @@
 			{#if isMultiplayer}
 				{#if windowWidth > 768}
 					<GameSettingsDetails
-						{data}
+						{...data}
 						numberA={currentRound}
 						numberB={totalRounds}
 						numberLabel="Round"
@@ -214,8 +222,9 @@
 						{boardId}
 						canStartNewGame={!isMultiplayer}
 						showBestScore={!isMultiplayer}
-						{canMakeMove}
+						canMakeMove={canMakeMove && !isEnded}
 						bind:score={currentPlayerScore}
+						on:move={handleMoveCallback}
 					/>
 				</div>
 			</div>
@@ -228,7 +237,7 @@
 	{#snippet footer()}
 		{#if isMultiplayer && windowWidth <= 768}
 			<GameSettingsDetails
-				{data}
+				{...data}
 				numberA={currentRound}
 				numberB={totalRounds}
 				numberLabel="Round"
