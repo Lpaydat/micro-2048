@@ -6,9 +6,11 @@
 	const RANKERS = gql`
 		query Rankers {
 			leaderboard {
-				username
-				score
-				boardId
+				rankers {
+					username
+					score
+					boardId
+				}
 			}
 		}
 	`;
@@ -24,7 +26,7 @@
 
 	// Sort the rankers by score in descending order
 	const sortedRankers = $derived(
-		$rankers.data?.leaderboard.slice().sort((a: any, b: any) => b.score - a.score)
+		$rankers.data?.leaderboard.rankers.slice().sort((a: any, b: any) => b.score - a.score)
 	);
 
 	onMount(() => {

@@ -172,6 +172,10 @@
 	);
 
 	let windowWidth = $state(0);
+	let shouldRenderGameDetails = $state(false);
+	$effect(() => {
+		if (data?.gameName) shouldRenderGameDetails = true;
+	})
 </script>
 
 <MainTemplate bind:windowWidth mainCenter>
@@ -203,7 +207,7 @@
 	{#snippet main()}
 		<div class="flex flex-1 flex-col items-stretch">
 			{#if isMultiplayer}
-				{#if windowWidth > 768 && data?.gameName}
+				{#if windowWidth > 768 && shouldRenderGameDetails}
 					<GameSettingsDetails
 						{...data}
 						numberA={currentRound}
@@ -236,7 +240,7 @@
 	{/snippet}
 
 	{#snippet footer()}
-		{#if isMultiplayer && windowWidth <= 768 && data?.gameName}
+		{#if isMultiplayer && windowWidth <= 768 && shouldRenderGameDetails}
 			<GameSettingsDetails
 				{...data}
 				numberA={currentRound}

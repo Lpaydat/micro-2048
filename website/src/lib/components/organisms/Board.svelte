@@ -56,7 +56,7 @@
 		if (event.target instanceof Element && event.target.closest('.game-board')) {
 			event.preventDefault();
 		}
-		if (!touchStartX || !touchStartY || !canMakeMove) return;
+		if (!touchStartX || !touchStartY || !canMakeMove || isEnded) return;
 
 		const touchEndX = event.changedTouches[0].clientX;
 		const touchEndY = event.changedTouches[0].clientY;
@@ -89,7 +89,7 @@
 	};
 
 	const handleKeydown = async (event: KeyboardEvent) => {
-		if (!canMakeMove) return;
+		if (!canMakeMove || isEnded) return;
 		keyPressTime = Date.now();
 
 		const validKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];

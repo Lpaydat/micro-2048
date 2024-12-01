@@ -200,7 +200,7 @@
 		if (!gameBoardId) return;
 		move(gameBoardId, direction);
 		dispatch('move', { direction, timestamp });
-	}
+	};
 
 	// Lifecycle Hooks
 	onMount(() => {
