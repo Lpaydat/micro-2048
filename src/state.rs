@@ -46,6 +46,7 @@ pub struct BoardState {
     pub score: RegisterView<u64>,
     pub is_ended: RegisterView<bool>,
     pub player: RegisterView<String>,
+    pub leaderboard_id: RegisterView<String>,
 }
 
 #[derive(View, SimpleObject)]
@@ -57,9 +58,31 @@ pub struct MultiplayerLeaderboard {
 
 #[derive(View, SimpleObject)]
 #[view(context = "ViewStorageContext")]
-pub struct SingleplayerLeaderboard {
+pub struct ClassicLeaderboard {
+    pub leaderboard_id: RegisterView<String>,
+    pub chain_id: RegisterView<String>,
+    pub name: RegisterView<String>,
+    pub host: RegisterView<String>,
+    pub start_time: RegisterView<u64>,
+    pub end_time: RegisterView<u64>,
+    pub total_boards: RegisterView<u32>,
+    pub total_players: RegisterView<u32>,
+
     pub score: MapView<String, u64>,        // username, score
     pub board_ids: MapView<String, String>, // username, board_id
+}
+
+#[derive(View, SimpleObject)]
+#[view(context = "ViewStorageContext")]
+pub struct EventLeaderboard {
+    pub leaderboard_id: RegisterView<String>,
+    pub chain_id: RegisterView<String>,
+    pub name: RegisterView<String>,
+    pub host: RegisterView<String>,
+    pub start_time: RegisterView<u64>,
+    pub end_time: RegisterView<u64>,
+    pub total_boards: RegisterView<u32>,
+    pub total_players: RegisterView<u32>,
 }
 
 #[derive(View, SimpleObject)]
@@ -89,5 +112,5 @@ pub struct Game2048 {
     pub elimination_games: CollectionView<String, EliminationGame>, // game_id
     pub waiting_rooms: MapView<String, bool>,
     pub players: CollectionView<String, Player>,
-    pub singleplayer_leaderboard: CollectionView<u8, SingleplayerLeaderboard>,
+    pub leaderboards: CollectionView<String, ClassicLeaderboard>, // leaderboard_id
 }

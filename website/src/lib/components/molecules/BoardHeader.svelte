@@ -38,8 +38,6 @@
 	};
 
 	// Mutation functions
-	const newGameMutation = (seed: string, timestamp: string) => newGame(client, seed, timestamp);
-
 	const newSingleGame = async () => {
 		if (!canStartNewGame) return;
 		const seed = Math.floor(Math.random() * 10_000_000).toString();
@@ -48,8 +46,7 @@
 		boardId = (await hashSeed(seed, player, timestamp)).toString();
 		localStorage.setItem('boardId', boardId);
 		setGameCreationStatus(true);
-
-		newGameMutation(seed, timestamp);
+		newGame(client, seed, timestamp);
 
 		const url = new URL($page.url);
 		url.searchParams.delete('boardId');
@@ -81,13 +78,22 @@
 
 <div class="flex items-center justify-between" style="width: {currentSize.width}px">
 	{#if canStartNewGame}
-		<button
-			onclick={newSingleGame}
-			class="text-md rounded-md border-none bg-[#8f7a66] px-2 py-2 text-center font-bold text-[#f9f6f2] md:px-4 md:text-xl
-			{canStartNewGame ? 'visible' : 'invisible'}"
-		>
-			<span>New Game</span>
-		</button>
+		<div class="flex items-center gap-2">
+			<button
+				onclick={newSingleGame}
+				class="text-md rounded-md border-none bg-[#8f7a66] px-2 py-2 text-center font-bold text-[#f9f6f2] md:px-4 md:text-xl
+				{canStartNewGame ? 'visible' : 'invisible'}"
+			>
+				<span>New Game</span>
+			</button>
+			<button
+				onclick={newSingleGame}
+				class="text-md rounded-md border-none bg-[#8f7a66] px-2 py-2 text-center font-bold text-[#f9f6f2] md:px-4 md:text-xl
+				{canStartNewGame ? 'visible' : 'invisible'}"
+			>
+				<span>Leaderboard</span>
+			</button>
+		</div>
 	{:else}
 		<div
 			class="flex items-center justify-center truncate font-bold text-[#f67c5f] {currentSize.fontSize}"

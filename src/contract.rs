@@ -12,7 +12,10 @@ use linera_sdk::{
 use state::EliminationGameStatus;
 
 use self::state::Game2048;
-use game2048::{hash_seed, Game, Message, MultiplayerGameAction, Operation, RegistrationCheck};
+use game2048::{
+    hash_seed, EventLeaderboardAction, Game, Message, MultiplayerGameAction, Operation,
+    RegistrationCheck,
+};
 
 pub struct Game2048Contract {
     state: Game2048,
@@ -62,8 +65,8 @@ impl Contract for Game2048Contract {
         let rankers = include_str!("../db/rankers.txt");
         let leaderboard = self
             .state
-            .singleplayer_leaderboard
-            .load_entry_mut(&0)
+            .leaderboards
+            .load_entry_mut(&"".to_string())
             .await
             .unwrap();
         for line in rankers.lines() {
@@ -87,7 +90,6 @@ impl Contract for Game2048Contract {
 
     async fn execute_operation(&mut self, operation: Self::Operation) -> Self::Response {
         match operation {
-            Operation::ClearMessages => {}
             Operation::RegisterPlayer {
                 username,
                 password_hash,
@@ -115,6 +117,7 @@ impl Contract for Game2048Contract {
                 seed,
                 player,
                 timestamp,
+                leaderboard_id,
             } => {
                 self.check_player_registered(&player, RegistrationCheck::EnsureRegistered)
                     .await;
@@ -122,10 +125,27 @@ impl Contract for Game2048Contract {
                 let board_id = hash_seed(&seed, &player, timestamp).to_string();
                 let new_board = Game::new(&board_id, &player, timestamp).board;
                 let game = self.state.boards.load_entry_mut(&board_id).await.unwrap();
+                let leaderboard_id = leaderboard_id.unwrap_or("".to_string());
 
                 game.board_id.set(board_id);
                 game.board.set(new_board);
                 game.player.set(player.clone());
+                game.leaderboard_id.set(leaderboard_id.clone());
+
+                let leaderboard = self
+                    .state
+                    .leaderboards
+                    .load_entry_mut(&leaderboard_id.clone())
+                    .await
+                    .unwrap();
+
+                let is_player_in_leaderboard = leaderboard.score.get(&player).await.unwrap();
+                if is_player_in_leaderboard.is_none() {
+                    let total_players = leaderboard.total_players.get_mut();
+                    *total_players += 1;
+                }
+                let total_boards = leaderboard.total_boards.get_mut();
+                *total_boards += 1;
 
                 self.ping_player(&player).await;
             }
@@ -177,39 +197,48 @@ impl Contract for Game2048Contract {
                         if *player.highest_score.get() < score {
                             player.highest_score.set(score);
 
+                            let leaderboard_id = board.leaderboard_id.get();
+
+                            if !leaderboard_id.is_empty() {
+                                let leaderboard = self
+                                    .state
+                                    .leaderboards
+                                    .load_entry_or_insert(&leaderboard_id.clone())
+                                    .await
+                                    .unwrap();
+
+                                let start_time = leaderboard.start_time.get();
+                                let end_time = leaderboard.end_time.get();
+                                // TODO: need to implement the better check
+                                if timestamp < *start_time || timestamp > *end_time {
+                                    panic!("Tournament is not active");
+                                }
+                            }
+
                             // check and update singleplayer leaderboard
-                            let singleplayer_leaderboard = self
+                            let leaderboard = self
                                 .state
-                                .singleplayer_leaderboard
-                                .load_entry_mut(&0)
+                                .leaderboards
+                                .load_entry_mut(&leaderboard_id.to_string())
                                 .await
                                 .unwrap();
                             let score = score as u64;
                             let username = board.player.get();
 
-                            let current_player_score = singleplayer_leaderboard
-                                .score
-                                .get(&username.clone())
-                                .await
-                                .unwrap();
+                            let current_player_score =
+                                leaderboard.score.get(&username.clone()).await.unwrap();
 
                             match current_player_score {
                                 Some(existing_score) if score > existing_score => {
-                                    singleplayer_leaderboard
-                                        .score
-                                        .insert(&username.clone(), score)
-                                        .unwrap();
-                                    singleplayer_leaderboard
+                                    leaderboard.score.insert(&username.clone(), score).unwrap();
+                                    leaderboard
                                         .board_ids
                                         .insert(&username.clone(), board_id)
                                         .unwrap();
                                 }
                                 None => {
-                                    singleplayer_leaderboard
-                                        .score
-                                        .insert(&username.clone(), score)
-                                        .unwrap();
-                                    singleplayer_leaderboard
+                                    leaderboard.score.insert(&username.clone(), score).unwrap();
+                                    leaderboard
                                         .board_ids
                                         .insert(&username.clone(), board_id)
                                         .unwrap();
@@ -629,6 +658,90 @@ impl Contract for Game2048Contract {
                 }
 
                 self.ping_game(&game_id).await;
+            }
+            Operation::EventLeaderboardAction {
+                leaderboard_id,
+                action,
+                settings,
+                player,
+                timestamp,
+            } => {
+                let leaderboard = self
+                    .state
+                    .leaderboards
+                    .load_entry_mut(&leaderboard_id)
+                    .await
+                    .unwrap();
+
+                let host = leaderboard.host.get();
+                if !host.is_empty() && host != &player {
+                    panic!("Only host can perform this action");
+                }
+
+                match action {
+                    EventLeaderboardAction::Create => {
+                        let start_time = settings.start_time.parse::<u64>().unwrap();
+                        let end_time = settings.end_time.parse::<u64>().unwrap();
+
+                        if start_time >= end_time {
+                            panic!("Start time cannot be after end time");
+                        } else if timestamp >= end_time {
+                            panic!("Timestamp cannot be after planned end time");
+                        };
+
+                        let chain_ownership = self.runtime.chain_ownership();
+                        let app_id = self.runtime.application_id().forget_abi();
+                        let application_permissions = ApplicationPermissions::new_single(app_id);
+                        let amount = Amount::from_tokens(0);
+                        let (_, chain_id) = self.runtime.open_chain(
+                            chain_ownership,
+                            application_permissions,
+                            amount,
+                        );
+                        let leaderboard_id = chain_id.to_string();
+
+                        let leaderboard = self
+                            .state
+                            .leaderboards
+                            .load_entry_mut(&leaderboard_id)
+                            .await
+                            .unwrap();
+
+                        leaderboard.chain_id.set(chain_id.to_string());
+                        leaderboard.leaderboard_id.set(leaderboard_id);
+                        leaderboard.host.set(player);
+                        leaderboard.start_time.set(start_time);
+                        leaderboard.end_time.set(end_time);
+                    }
+                    EventLeaderboardAction::Update => {
+                        let start_time = settings.start_time.parse::<u64>().unwrap();
+                        let end_time = settings.end_time.parse::<u64>().unwrap();
+
+                        if start_time >= end_time {
+                            panic!("Start time cannot be after end time");
+                        }
+                        if timestamp >= end_time {
+                            panic!("Timestamp cannot be after planned end time");
+                        }
+
+                        if *leaderboard.start_time.get() != 0 {
+                            leaderboard.start_time.set(start_time);
+                        }
+                        if *leaderboard.end_time.get() != 0 {
+                            leaderboard.end_time.set(end_time);
+                        }
+                    }
+                    EventLeaderboardAction::Delete => {
+                        if *leaderboard.total_boards.get() > 0 {
+                            panic!("Cannot delete tournament game with boards");
+                        }
+                        self.state
+                            .leaderboards
+                            .remove_entry(&leaderboard_id)
+                            .unwrap();
+                        self.close_chain(&leaderboard_id).await;
+                    }
+                }
             }
         }
     }

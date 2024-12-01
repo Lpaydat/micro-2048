@@ -1,14 +1,17 @@
 mod direction;
 mod elimination_game;
+mod event_leaderboard;
 mod game;
 mod moves;
 mod random;
 
 pub use crate::direction::Direction;
 pub use crate::elimination_game::{EliminationGameSettings, MultiplayerGameAction};
+pub use crate::event_leaderboard::{EventLeaderboardAction, EventLeaderboardSettings};
 pub use crate::game::Game;
 pub use crate::moves::{Moves, COL_MASK, ROW_MASK};
 pub use crate::random::{hash_seed, rnd_range};
+
 use async_graphql::{Request, Response};
 use linera_sdk::{
     base::{ContractAbi, ServiceAbi},
@@ -30,15 +33,16 @@ impl ServiceAbi for Game2048Abi {
 
 #[derive(Debug, Deserialize, Serialize, GraphQLMutationRoot)]
 pub enum Operation {
-    ClearMessages,
     RegisterPlayer {
         username: String,
         password_hash: String,
     },
+    // TODO: add tournament id here?
     NewBoard {
         seed: String,
         player: String,
         timestamp: u64,
+        leaderboard_id: Option<String>,
     },
     EndBoard {
         board_id: String,
@@ -57,6 +61,13 @@ pub enum Operation {
     EliminationGameAction {
         game_id: String,
         action: MultiplayerGameAction,
+        player: String,
+        timestamp: u64,
+    },
+    EventLeaderboardAction {
+        leaderboard_id: String,
+        action: EventLeaderboardAction,
+        settings: EventLeaderboardSettings,
         player: String,
         timestamp: u64,
     },

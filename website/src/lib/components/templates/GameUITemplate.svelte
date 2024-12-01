@@ -161,6 +161,7 @@
 		const target = `/game/${gameId}-${currentRound}-${player}-${chainId}`;
 		if (currentRound && target !== nextTarget && status === 'Active') {
 			nextTarget = target;
+			// TODO: this line make eliminated players don't trigger the game
 			isTriggered = false;
 			goto(nextTarget);
 		}

@@ -7,7 +7,10 @@ use std::sync::Arc;
 
 use self::state::Game2048;
 use async_graphql::{EmptySubscription, Object, Schema, SimpleObject};
-use game2048::{Direction, EliminationGameSettings, Game, MultiplayerGameAction, Operation};
+use game2048::{
+    Direction, EliminationGameSettings, EventLeaderboardAction, EventLeaderboardSettings, Game,
+    MultiplayerGameAction, Operation,
+};
 use linera_sdk::{base::WithServiceAbi, bcs, views::View, Service, ServiceRuntime};
 
 pub struct Game2048Service {
@@ -62,6 +65,7 @@ struct BoardState {
     is_ended: bool,
     score: u64,
     player: String,
+    leaderboard_id: Option<String>,
 }
 
 #[derive(SimpleObject)]
@@ -94,6 +98,19 @@ struct EliminationGameRoundLeaderboard {
     round: u8,
     players: Vec<LeaderboardEntry>,
     eliminated_players: Vec<LeaderboardEntry>,
+}
+
+#[derive(SimpleObject)]
+struct LeaderboardState {
+    leaderboard_id: String,
+    chain_id: String,
+    name: String,
+    host: String,
+    start_time: String,
+    end_time: String,
+    total_boards: u32,
+    total_players: u32,
+    rankers: Vec<Ranker>,
 }
 
 #[derive(SimpleObject)]
@@ -145,41 +162,6 @@ impl QueryRoot {
         players
     }
 
-    async fn leaderboard(&self) -> Vec<Ranker> {
-        let mut players: HashMap<String, Ranker> = HashMap::new();
-
-        if let Ok(Some(leaderboard)) = self.state.singleplayer_leaderboard.try_load_entry(&0).await
-        {
-            leaderboard
-                .score
-                .for_each_index_value(|username, score| {
-                    players.insert(
-                        username.clone(),
-                        Ranker {
-                            username,
-                            score,
-                            board_id: "".to_string(),
-                        },
-                    );
-                    Ok(())
-                })
-                .await
-                .unwrap();
-            leaderboard
-                .board_ids
-                .for_each_index_value(|username, board_id| {
-                    if let Some(ranker) = players.get_mut(&username) {
-                        ranker.board_id = board_id.to_string();
-                    }
-                    Ok(())
-                })
-                .await
-                .unwrap();
-        }
-
-        players.into_values().collect()
-    }
-
     async fn check_player(&self, username: String, password_hash: String) -> Option<bool> {
         if let Ok(Some(player)) = self.state.players.try_load_entry(&username).await {
             let stored_password_hash = player.password_hash.get().to_string();
@@ -197,6 +179,7 @@ impl QueryRoot {
                 is_ended: *game.is_ended.get(),
                 score: *game.score.get(),
                 player: game.player.get().to_string(),
+                leaderboard_id: Some(game.leaderboard_id.get().to_string()),
             };
             Some(game_state)
         } else {
@@ -220,6 +203,7 @@ impl QueryRoot {
                     is_ended: *board.is_ended.get(),
                     score: *board.score.get(),
                     player: board.player.get().to_string(),
+                    leaderboard_id: Some(board.leaderboard_id.get().to_string()),
                 });
             }
         }
@@ -227,7 +211,97 @@ impl QueryRoot {
         boards
     }
 
-    async fn waiting_rooms(&self) -> Vec<EliminationGameState> {
+    async fn leaderboard(&self, leaderboard_id: Option<String>) -> Option<LeaderboardState> {
+        let mut players: HashMap<String, Ranker> = HashMap::new();
+        let leaderboard_id = leaderboard_id.unwrap_or("".to_string());
+
+        if let Ok(Some(leaderboard)) = self
+            .state
+            .leaderboards
+            .try_load_entry(&leaderboard_id)
+            .await
+        {
+            leaderboard
+                .score
+                .for_each_index_value(|username, score| {
+                    players.insert(
+                        username.clone(),
+                        Ranker {
+                            username,
+                            score,
+                            board_id: leaderboard_id.clone(),
+                        },
+                    );
+                    Ok(())
+                })
+                .await
+                .unwrap();
+            leaderboard
+                .board_ids
+                .for_each_index_value(|username, board_id| {
+                    if let Some(ranker) = players.get_mut(&username) {
+                        ranker.board_id = board_id.to_string();
+                    }
+                    Ok(())
+                })
+                .await
+                .unwrap();
+
+            let leaderboard_state = LeaderboardState {
+                leaderboard_id,
+                chain_id: leaderboard.chain_id.get().to_string(),
+                name: leaderboard.name.get().to_string(),
+                host: leaderboard.host.get().to_string(),
+                start_time: leaderboard.start_time.get().to_string(),
+                end_time: leaderboard.end_time.get().to_string(),
+                total_boards: *leaderboard.total_boards.get(),
+                total_players: *leaderboard.total_players.get(),
+                rankers: players.into_values().collect(),
+            };
+
+            Some(leaderboard_state)
+        } else {
+            None
+        }
+    }
+
+    async fn leaderboards(&self) -> Vec<LeaderboardState> {
+        let mut leaderboard_ids: Vec<String> = Vec::new();
+        self.state
+            .leaderboards
+            .for_each_index_while(|leaderboard_id| {
+                leaderboard_ids.push(leaderboard_id);
+                Ok(true)
+            })
+            .await
+            .unwrap();
+
+        let mut tournament_games: Vec<LeaderboardState> = Vec::new();
+        for leaderboard_id in leaderboard_ids {
+            if let Ok(Some(leaderboard)) = self
+                .state
+                .leaderboards
+                .try_load_entry(&leaderboard_id)
+                .await
+            {
+                tournament_games.push(LeaderboardState {
+                    leaderboard_id,
+                    chain_id: leaderboard.chain_id.get().to_string(),
+                    name: leaderboard.name.get().to_string(),
+                    host: leaderboard.host.get().to_string(),
+                    start_time: leaderboard.start_time.get().to_string(),
+                    end_time: leaderboard.end_time.get().to_string(),
+                    total_boards: *leaderboard.total_boards.get(),
+                    total_players: *leaderboard.total_players.get(),
+                    rankers: Vec::new(),
+                });
+            }
+        }
+
+        tournament_games
+    }
+
+    async fn elimination_games(&self) -> Vec<EliminationGameState> {
         let mut waiting_rooms_ids: Vec<String> = Vec::new();
         self.state
             .waiting_rooms
@@ -341,11 +415,6 @@ struct MutationRoot {
 
 #[Object]
 impl MutationRoot {
-    async fn clear_messages(&self) -> Vec<u8> {
-        let operation = Operation::ClearMessages;
-        bcs::to_bytes(&operation).unwrap()
-    }
-
     async fn register_player(&self, username: String, password_hash: String) -> Vec<u8> {
         let operation = Operation::RegisterPlayer {
             username,
@@ -360,6 +429,7 @@ impl MutationRoot {
         player: String,
         password_hash: String,
         timestamp: String,
+        leaderboard_id: Option<String>,
     ) -> Vec<u8> {
         if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
             if *player.password_hash.get() != password_hash {
@@ -372,6 +442,7 @@ impl MutationRoot {
             seed,
             player,
             timestamp: timestamp.parse::<u64>().unwrap(),
+            leaderboard_id,
         })
         .unwrap()
     }
@@ -432,6 +503,31 @@ impl MutationRoot {
         let operation = Operation::EliminationGameAction {
             game_id,
             action,
+            player,
+            timestamp: timestamp.parse::<u64>().unwrap(),
+        };
+        bcs::to_bytes(&operation).unwrap()
+    }
+
+    async fn event_leaderboard_action(
+        &self,
+        leaderboard_id: String,
+        action: EventLeaderboardAction,
+        settings: EventLeaderboardSettings,
+        player: String,
+        password_hash: String,
+        timestamp: String,
+    ) -> Vec<u8> {
+        if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
+            if *player.password_hash.get() != password_hash {
+                panic!("Invalid password");
+            }
+        }
+
+        let operation = Operation::EventLeaderboardAction {
+            leaderboard_id,
+            action,
+            settings,
             player,
             timestamp: timestamp.parse::<u64>().unwrap(),
         };
