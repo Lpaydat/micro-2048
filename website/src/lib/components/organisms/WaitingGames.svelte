@@ -12,7 +12,7 @@
 
 	const GET_WAITING_GAMES = gql`
 		query GetWaitingGames {
-			waitingRooms {
+			eliminationGames {
 				gameId
 				chainId
 				gameName
@@ -34,7 +34,7 @@
 			query: GET_WAITING_GAMES
 		})
 	);
-	const rooms = $derived($waitingGames.data?.waitingRooms ?? []);
+	const rooms = $derived($waitingGames.data?.eliminationGames ?? []);
 
 	let initialFetch = $state(true);
 	$effect(() => {

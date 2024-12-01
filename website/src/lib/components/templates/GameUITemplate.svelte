@@ -203,7 +203,7 @@
 	{#snippet main()}
 		<div class="flex flex-1 flex-col items-stretch">
 			{#if isMultiplayer}
-				{#if windowWidth > 768}
+				{#if windowWidth > 768 && data?.gameName}
 					<GameSettingsDetails
 						{...data}
 						numberA={currentRound}
@@ -236,7 +236,7 @@
 	{/snippet}
 
 	{#snippet footer()}
-		{#if isMultiplayer && windowWidth <= 768}
+		{#if isMultiplayer && windowWidth <= 768 && data?.gameName}
 			<GameSettingsDetails
 				{...data}
 				numberA={currentRound}
