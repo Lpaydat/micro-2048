@@ -41,6 +41,16 @@
 				{/snippet}
 			</GameModeCard>
 		</a>
+		<a href="/events">
+			<GameModeCard>
+				{#snippet title()}
+					<h2>Events</h2>
+				{/snippet}
+				{#snippet description()}
+					<p>Check out the events and tournaments hosted by the community!</p>
+				{/snippet}
+			</GameModeCard>
+		</a>
 		<a href="/leaderboard">
 			<GameModeCard>
 				{#snippet title()}

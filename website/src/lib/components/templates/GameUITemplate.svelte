@@ -109,11 +109,11 @@
 		} else {
 			canMakeMove = username === $userStore.username;
 		}
-	}
+	};
 
 	const handleMoveCallback = () => {
 		handleEliminationTrigger();
-	}
+	};
 
 	const updateCountdown = () => {
 		const triggerInterval = $game.data?.eliminationGame?.triggerIntervalSeconds || 0;
@@ -175,7 +175,7 @@
 	let shouldRenderGameDetails = $state(false);
 	$effect(() => {
 		if (data?.gameName) shouldRenderGameDetails = true;
-	})
+	});
 </script>
 
 <MainTemplate bind:windowWidth mainCenter>

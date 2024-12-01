@@ -707,6 +707,10 @@ impl Contract for Game2048Contract {
                             .await
                             .unwrap();
 
+                        leaderboard.name.set(settings.name);
+                        leaderboard
+                            .description
+                            .set(settings.description.unwrap_or("".to_string()));
                         leaderboard.chain_id.set(chain_id.to_string());
                         leaderboard.leaderboard_id.set(leaderboard_id);
                         leaderboard.host.set(player);

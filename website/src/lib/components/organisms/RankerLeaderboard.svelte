@@ -1,49 +1,26 @@
 <script lang="ts">
-	import { getContextClient, gql, queryStore } from '@urql/svelte';
 	import RankerCard from '../molecules/RankerCard.svelte';
-	import { onMount } from 'svelte';
 
-	const RANKERS = gql`
-		query Rankers {
-			leaderboard {
-				rankers {
-					username
-					score
-					boardId
-				}
-			}
-		}
-	`;
+	interface Props {
+		leaderboardId?: string;
+		name?: string;
+		host?: string;
+		startDate?: string;
+		endDate?: string;
+		rankers?: {
+			username: string;
+			score: number;
+			boardId: string;
+		}[];
+	}
 
-	const client = getContextClient();
-
-	const rankers = $derived(
-		queryStore({
-			client,
-			query: RANKERS
-		})
-	);
-
-	// Sort the rankers by score in descending order
-	const sortedRankers = $derived(
-		$rankers.data?.leaderboard.rankers.slice().sort((a: any, b: any) => b.score - a.score)
-	);
-
-	onMount(() => {
-		rankers.reexecute({ requestPolicy: 'network-only' });
-
-		const interval = setInterval(() => {
-			rankers.reexecute({ requestPolicy: 'network-only' });
-		}, 5000);
-
-		return () => clearInterval(interval);
-	});
+	let { leaderboardId, name, host, startDate, endDate, rankers = [] }: Props = $props();
 </script>
 
 <div class="mx-auto mt-8 flex h-[calc(100vh-8rem)] w-full max-w-4xl flex-col overflow-hidden">
 	<h1 class="mb-6 text-center text-4xl font-extrabold text-gray-100">Leaderboard</h1>
 	<div class="flex-1 overflow-hidden bg-gray-800 px-2 py-6 shadow-xl lg:rounded-lg lg:p-6">
-		{#if !$rankers.fetching || (sortedRankers?.length ?? 0) > 0}
+		{#if (rankers?.length ?? 0) > 0}
 			<div class="flex h-full flex-col overflow-visible">
 				<!-- Fixed Header Row -->
 				<div
@@ -56,7 +33,7 @@
 				</div>
 				<!-- Scrollable Player Rows -->
 				<div class="flex-1 space-y-4 overflow-y-auto overflow-x-hidden pt-4">
-					{#each sortedRankers as player, index}
+					{#each rankers as player, index}
 						<RankerCard {player} rank={index + 1} />
 					{/each}
 				</div>

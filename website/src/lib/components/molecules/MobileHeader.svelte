@@ -1,5 +1,7 @@
 <script>
 	import BrandLogo from '../atoms/BrandLogo.svelte';
+
+	let { children } = $props();
 </script>
 
 <div class="m-2 flex items-center justify-between rounded-lg bg-[#faf8ef] px-4 py-3 shadow-sm">
@@ -10,6 +12,6 @@
 	</a>
 
 	<div class="flex flex-1 justify-end">
-		<slot />
+		{@render children?.()}
 	</div>
 </div>

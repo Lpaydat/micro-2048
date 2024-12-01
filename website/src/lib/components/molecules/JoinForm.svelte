@@ -98,14 +98,16 @@
 		errorMessage = '';
 
 		// Validate inputs
-		const errors = validateInput(username, password);
+		const playerUsername = username.trim().replace(/\s+/g, ' ');
+		const playerPassword = password.trim();
+		const errors = validateInput(playerUsername, playerPassword);
 		if (errors.length > 0) {
 			errorMessage = errors[0];
 			return;
 		}
 
 		const encoder = new TextEncoder();
-		passwordHash = await hashPassword(password, encoder.encode(username));
+		passwordHash = await hashPassword(playerPassword, encoder.encode(playerUsername));
 		loading = true;
 
 		await checkPlayer();

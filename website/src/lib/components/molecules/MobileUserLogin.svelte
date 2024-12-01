@@ -7,6 +7,8 @@
 	import { getPlayerInfo } from '$lib/graphql/queries/getPlayerInfo';
 	import { preventDefault } from '$lib/utils/preventDefault';
 
+	const client = getContextClient();
+
 	let username = $state('');
 	let submittedUsername = $state('');
 	let password = $state('');
@@ -27,8 +29,6 @@
 			checkPlayer(username: $username, passwordHash: $passwordHash)
 		}
 	`;
-
-	const client = getContextClient();
 
 	const player = $derived(getPlayerInfo(client, username));
 	const playerOnChain = $derived(
@@ -72,14 +72,16 @@
 	const handleSubmit = async () => {
 		errorMessage = '';
 
-		const errors = validateInput(username, password);
+		const playerUsername = username.trim().replace(/\s+/g, ' ');
+		const playerPassword = password.trim();
+		const errors = validateInput(playerUsername, playerPassword);
 		if (errors.length > 0) {
 			errorMessage = errors[0];
 			return;
 		}
 
 		const encoder = new TextEncoder();
-		passwordHash = await hashPassword(password, encoder.encode(username));
+		passwordHash = await hashPassword(playerPassword, encoder.encode(playerUsername));
 		loading = true;
 
 		await checkPlayer();
@@ -125,7 +127,7 @@
 </script>
 
 <div class="relative z-20">
-	<Button variant="outline" size="sm" onclick={() => (showForm = !showForm)}>Login</Button>
+	<Button variant="outline" size="sm" onclick={() => (showForm = !showForm)}>Connect</Button>
 
 	{#if showForm}
 		<div
@@ -161,7 +163,7 @@
 						Cancel
 					</Button>
 					<Button type="submit" variant="primary" size="sm" {loading}>
-						{loading ? 'Loading...' : 'Login'}
+						{loading ? 'Loading...' : 'Connect'}
 					</Button>
 				</div>
 			</form>

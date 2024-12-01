@@ -62,6 +62,7 @@ pub struct ClassicLeaderboard {
     pub leaderboard_id: RegisterView<String>,
     pub chain_id: RegisterView<String>,
     pub name: RegisterView<String>,
+    pub description: RegisterView<String>,
     pub host: RegisterView<String>,
     pub start_time: RegisterView<u64>,
     pub end_time: RegisterView<u64>,
@@ -70,19 +71,6 @@ pub struct ClassicLeaderboard {
 
     pub score: MapView<String, u64>,        // username, score
     pub board_ids: MapView<String, String>, // username, board_id
-}
-
-#[derive(View, SimpleObject)]
-#[view(context = "ViewStorageContext")]
-pub struct EventLeaderboard {
-    pub leaderboard_id: RegisterView<String>,
-    pub chain_id: RegisterView<String>,
-    pub name: RegisterView<String>,
-    pub host: RegisterView<String>,
-    pub start_time: RegisterView<u64>,
-    pub end_time: RegisterView<u64>,
-    pub total_boards: RegisterView<u32>,
-    pub total_players: RegisterView<u32>,
 }
 
 #[derive(View, SimpleObject)]
