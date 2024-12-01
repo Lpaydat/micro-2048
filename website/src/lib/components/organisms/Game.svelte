@@ -74,6 +74,9 @@
 		requestPolicy: 'network-only'
 	});
 
+	$: console.log('gameeeidddd', gameBoardId);
+	$: console.log('gameee', $game?.data?.board);
+
 	let playerMessages: any;
 	$: {
 		if (playerChainId) {
@@ -98,6 +101,7 @@
 
 	$: boardEnded = isEnded || $game.data?.board?.isEnded;
 
+	$: console.log('boardId', boardId);
 	$: if (boardId !== undefined) {
 		gameBoardId = boardId;
 		setGameCreationStatus(true);
@@ -216,58 +220,52 @@
 </script>
 
 <div class="game-container {size}">
-	{#if rendered}
-		<div class="game-board">
-			{#if state}
-				<Board
-					bind:size
-					tablet={state.tablet}
-					{canMakeMove}
-					isEnded={boardEnded}
-					overlayMessage={getOverlayMessage($game.data?.board?.board)}
-					moveCallback={handleMove}
-				>
-					{#snippet header(size)}
-						<BoardHeader
-							bind:boardId={gameBoardId}
-							{canStartNewGame}
-							{showBestScore}
-							{player}
-							{size}
-							value={score}
-						/>
-					{/snippet}
-				</Board>
-			{/if}
-		</div>
-		<div class="mt-2 flex items-center justify-center gap-4 text-sm">
-			<button
-				class="flex items-center gap-2 rounded-lg bg-surface-800/50 px-3 py-1.5 transition-colors hover:bg-black/50"
-				on:click={() => isHashesListVisible.update((current) => !current)}
+	<div class="game-board">
+		<Board
+			bind:size
+			tablet={state?.tablet}
+			{canMakeMove}
+			isEnded={boardEnded}
+			overlayMessage={getOverlayMessage($game.data?.board?.board)}
+			moveCallback={handleMove}
+		>
+			{#snippet header(size)}
+				<BoardHeader
+					bind:boardId={gameBoardId}
+					{canStartNewGame}
+					{showBestScore}
+					{player}
+					{size}
+					value={score}
+				/>
+			{/snippet}
+		</Board>
+	</div>
+	<div class="mt-2 flex items-center justify-center gap-4 text-sm">
+		<button
+			class="flex items-center gap-2 rounded-lg bg-surface-800/50 px-3 py-1.5 transition-colors hover:bg-black/50"
+			on:click={() => isHashesListVisible.update((current) => !current)}
+		>
+			<span
+				class="cursor-pointer font-mono text-emerald-400"
+				title={lastHash || 'No hash available'}
 			>
-				<span
-					class="cursor-pointer font-mono text-emerald-400"
-					title={lastHash || 'No hash available'}
-				>
-					{#if lastHash}
-						{lastHash.slice(0, 6)}...{lastHash.slice(-4)}
-					{:else}
-						---
-					{/if}
-				</span>
-				<span class="text-surface-400">|</span>
-				<span class="text-orange-400"
-					>{pingTime || 0}<span class="ml-1 text-xs text-surface-400">ms</span></span
-				>
-				<span class="text-surface-400">|</span>
-				<span class={isSynced ? 'text-emerald-400' : 'text-yellow-400'}>
-					{isSynced ? 'synced' : 'syncing'}
-				</span>
-			</button>
-		</div>
-	{:else}
-		<Board />
-	{/if}
+				{#if lastHash}
+					{lastHash.slice(0, 6)}...{lastHash.slice(-4)}
+				{:else}
+					---
+				{/if}
+			</span>
+			<span class="text-surface-400">|</span>
+			<span class="text-orange-400"
+				>{pingTime || 0}<span class="ml-1 text-xs text-surface-400">ms</span></span
+			>
+			<span class="text-surface-400">|</span>
+			<span class={isSynced ? 'text-emerald-400' : 'text-yellow-400'}>
+				{isSynced ? 'synced' : 'syncing'}
+			</span>
+		</button>
+	</div>
 </div>
 
 <style>

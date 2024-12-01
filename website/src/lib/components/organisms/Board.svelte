@@ -30,6 +30,13 @@
 	let touchStartX = $state<number | null>(null);
 	let touchStartY = $state<number | null>(null);
 	let keyPressTime = $state<number | null>(null);
+	let isRendered = $state(false);
+
+	$effect(() => {
+		if (!isRendered && tablet) {
+			isRendered = true;
+		}
+	});
 
 	const handleTouchStart = (event: TouchEvent) => {
 		if (event.target instanceof Element && event.target.closest('.game-board')) {
@@ -103,25 +110,28 @@
 		window.addEventListener('resize', updateBoardSize);
 		return () => window.removeEventListener('resize', updateBoardSize);
 	});
-	console.log('isEnded', isEnded);
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
 
 {@render header?.(size)}
-<div
-	class="relative w-full {size}"
-	ontouchstart={handleTouchStart}
-	ontouchmove={handleTouchMove}
-	ontouchend={handleTouchEnd}
->
-	<GameTablet {tablet} {size} />
-	{#if isEnded}
-		<div class="overlay">
-			<p>{overlayMessage}</p>
-		</div>
-	{/if}
-</div>
+{#if isRendered}
+	<div
+		class="relative w-full {size}"
+		ontouchstart={handleTouchStart}
+		ontouchmove={handleTouchMove}
+		ontouchend={handleTouchEnd}
+	>
+		<GameTablet {tablet} {size} />
+		{#if isEnded}
+			<div class="overlay">
+				<p>{overlayMessage}</p>
+			</div>
+		{/if}
+	</div>
+{:else}
+	<GameTablet />
+{/if}
 
 <style>
 	.overlay {
