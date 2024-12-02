@@ -1,12 +1,15 @@
 <script lang="ts">
+	import LeaderboardDetails from '../molecules/LeaderboardDetails.svelte';
 	import RankerCard from '../molecules/RankerCard.svelte';
 
 	interface Props {
 		leaderboardId?: string;
 		name?: string;
 		host?: string;
-		startDate?: string;
-		endDate?: string;
+		startTime?: string;
+		endTime?: string;
+		totalBoards?: number;
+		totalPlayers?: number;
 		rankers?: {
 			username: string;
 			score: number;
@@ -14,11 +17,16 @@
 		}[];
 	}
 
-	let { leaderboardId, name, host, startDate, endDate, rankers = [] }: Props = $props();
+	let { rankers = [], leaderboardId, ...rest }: Props = $props();
 </script>
 
 <div class="mx-auto mt-4 md:mt-8 flex h-[calc(100vh-8rem)] w-full max-w-4xl flex-col overflow-hidden">
-	<h1 class="mb-4 md:mb-6 text-center text-2xl md:text-4xl font-extrabold text-gray-100">Leaderboard</h1>
+	<div class="flex">
+		<h1 class="mb-4 md:mb-6 ms-2 md:ms-none text-center text-2xl md:text-4xl font-extrabold text-gray-100">Leaderboard</h1>
+		{#if leaderboardId}
+			<LeaderboardDetails {...rest} />
+		{/if}
+	</div>
 	<div class="flex-1 overflow-hidden bg-gray-800 px-2 py-6 shadow-xl lg:rounded-lg lg:p-6">
 		{#if (rankers?.length ?? 0) > 0}
 			<div class="flex h-full flex-col overflow-visible">

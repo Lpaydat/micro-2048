@@ -127,12 +127,14 @@
 		handleGameStateUpdate();
 	}
 
+	let isLeaderboardIdSet = false;
 	$: {
 		const leaderboardId = $game.data?.board?.leaderboardId;
-		if (leaderboardId) {
+		if (leaderboardId && !isLeaderboardIdSet) {
+			isLeaderboardIdSet = true;
 			const url = new URL($page.url);
 			url.searchParams.set('leaderboardId', leaderboardId);
-			goto(url.toString());
+			goto(url.toString(), { replaceState: true });
 		}
 	}
 

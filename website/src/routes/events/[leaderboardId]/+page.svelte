@@ -6,4 +6,3 @@
 </script>
 
 <Leaderboard {leaderboardId} prevPage="/events" />
-

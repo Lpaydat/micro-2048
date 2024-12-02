@@ -34,7 +34,6 @@
 				<ActionButton icon="plus" label="CREATE EVENT" onclick={createEvent} />
 			{/snippet}
 		</PageHeader>
-        <EventList />
+		<EventList />
 	{/snippet}
 </MainTemplate>
-

@@ -9,9 +9,9 @@
 	import { userStore } from '$lib/stores/userStore';
 	import { hashSeed } from '$lib/utils/random';
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
 	import { newGame } from '$lib/graphql/mutations/newBoard';
 	import { setGameCreationStatus } from '$lib/stores/gameStore';
+	import LeaderboardDetails from '../molecules/LeaderboardDetails.svelte';
 
 	interface Props {
 		leaderboardId?: string;
@@ -25,7 +25,7 @@
 			leaderboard(leaderboardId: $leaderboardId) {
 				leaderboardId
 				name
-				# description
+				description
 				host
 				startTime
 				endTime
@@ -68,9 +68,8 @@
 
 		const url = new URL('/game', window.location.origin);
 		url.searchParams.set('boardId', boardId);
-		url.searchParams.set('leaderboardId', leaderboardId);
-		goto(url.toString());
-	}
+		goto(url.toString(), { replaceState: false });
+	};
 
 	onMount(() => {
 		leaderboard.reexecute({ requestPolicy: 'network-only' });
@@ -97,7 +96,7 @@
 					<ActionButton icon="plus" label="NEW GAME" onclick={newEventGame} />
 				{/snippet}
 			</PageHeader>
-			<RankerLeaderboard rankers={sortedRankers} />
+			<RankerLeaderboard rankers={sortedRankers} {...$leaderboard.data?.leaderboard} />
 		{/if}
 	{/snippet}
 </MainTemplate>

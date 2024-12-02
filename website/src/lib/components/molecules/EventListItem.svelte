@@ -1,6 +1,7 @@
 <script lang="ts">
 	import BaseListItem from './BaseListItem.svelte';
 	import ActionButton from '../atoms/ActionButton.svelte';
+	import { formatTimeUTC } from '$lib/utils/formatTimeUTC';
 
 	interface Props {
 		leaderboardId: string;
@@ -21,44 +22,32 @@
 		description = 'This is a mock description. It is intended to provide a placeholder for the actual event description. The real description will be more detailed and informative, giving users a clear understanding of the event.',
 		isActive = false
 	}: Props = $props();
-
-	const formatTimeUTC = (time: string) => {
-		return new Date(Number(time)).toLocaleString('en-US', {
-			timeZone: 'UTC',
-			year: 'numeric',
-			month: 'long',
-			day: 'numeric',
-			hour: '2-digit',
-			minute: '2-digit',
-			hour12: true
-		});
-	};
 </script>
 
 <BaseListItem>
 	{#snippet leftContent()}
-		<div class="flex justify-between items-center mb-2">
+		<div class="mb-2 flex items-center justify-between">
 			<h3 class="text-xl font-bold text-gray-800">{name}</h3>
 		</div>
 		<div class="text-sm text-gray-600">
 			<div class="mb-1">
-				<span class="font-semibold me-2">Host:</span><span>{host}</span>
+				<span class="me-2 font-semibold">Host:</span><span>{host}</span>
 			</div>
 			<div class="mb-1">
-				<span class="font-semibold me-2">Start:</span><span>{formatTimeUTC(startTime)} UTC</span>
+				<span class="me-2 font-semibold">Start:</span><span>{formatTimeUTC(startTime)} UTC</span>
 			</div>
 			<div class="mb-1">
-				<span class="font-semibold me-2">End:</span><span>{formatTimeUTC(endTime)} UTC</span>
+				<span class="me-2 font-semibold">End:</span><span>{formatTimeUTC(endTime)} UTC</span>
 			</div>
 			{#if description}
-				<div class="mt-3 text-gray-700 pt-4 border-surface-200 border-t-2">
+				<div class="mt-3 border-t-2 border-surface-200 pt-4 text-gray-700">
 					{description}
 				</div>
 			{/if}
 		</div>
 	{/snippet}
 	{#snippet rightContent()}
-		<div class="flex justify-end mt-4">
+		<div class="mt-4 flex justify-end">
 			{#if isActive}
 				<a href={`/events/${leaderboardId}`}>
 					<ActionButton label="Leaderboard" color="warning" />
