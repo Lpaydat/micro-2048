@@ -42,7 +42,7 @@
 		class="flex w-full items-center bg-gradient-to-r from-warning-500 to-warning-600 font-bold text-white {headerRound} relative p-2 shadow-md transition-all md:p-4"
 	>
 		<div
-			class="header flex items-center justify-center gap-2 rounded-lg px-2 py-2 text-xs font-bold transition-all lg:gap-4 lg:px-4 lg:text-sm {colorClass[
+			class="header flex items-center justify-center gap-2 rounded-lg px-2 py-2 text-sm font-bold transition-all lg:gap-4 lg:px-4 lg:text-sm {colorClass[
 				color
 			]}"
 		>

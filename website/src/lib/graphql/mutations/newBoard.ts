@@ -18,7 +18,12 @@ const NEW_BOARD = gql`
 	}
 `;
 
-export const newGame = (client: Client, seed: string, timestamp: string) => {
+export const newGame = (
+	client: Client,
+	seed: string,
+	timestamp: string,
+	leaderboardId: string = ''
+) => {
 	const player = localStorage.getItem('username');
 	const passwordHash = localStorage.getItem('passwordHash');
 
@@ -26,8 +31,6 @@ export const newGame = (client: Client, seed: string, timestamp: string) => {
 		console.error('Player or password hash not found');
 		return;
 	}
-
-	const leaderboardId = '';
 
 	mutationStore({
 		client,

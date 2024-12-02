@@ -193,58 +193,46 @@ impl Contract for Game2048Contract {
                             board.is_ended.set(true);
                         }
 
+                        // get current board score
+                        // check it against the leaderboard that board belongs to
+                        // if it's higher than the leaderboard score, update the leaderboard
+                        // if it's main leaderboard, update the player's highest score
+
+                        let leaderboard_id = board.leaderboard_id.get();
+                        let leaderboard = self
+                            .state
+                            .leaderboards
+                            .load_entry_mut(&leaderboard_id.to_string())
+                            .await
+                            .unwrap();
+
+                        if !leaderboard_id.is_empty() {
+                            let start_time = leaderboard.start_time.get();
+                            let end_time = leaderboard.end_time.get();
+                            // TODO: need to implement the better check
+                            if timestamp < *start_time || timestamp > *end_time {
+                                panic!("Tournament is not active");
+                            }
+                        }
+
+                        // TODO: it should check on the leaderboard instead of player
                         let player = self.state.players.load_entry_mut(&player).await.unwrap();
-                        if *player.highest_score.get() < score {
-                            player.highest_score.set(score);
+                        let username = board.player.get();
+                        let player_leaderboard_score =
+                            leaderboard.score.get(username.as_str()).await.unwrap();
 
-                            let leaderboard_id = board.leaderboard_id.get();
-
-                            if !leaderboard_id.is_empty() {
-                                let leaderboard = self
-                                    .state
-                                    .leaderboards
-                                    .load_entry_or_insert(&leaderboard_id.clone())
-                                    .await
-                                    .unwrap();
-
-                                let start_time = leaderboard.start_time.get();
-                                let end_time = leaderboard.end_time.get();
-                                // TODO: need to implement the better check
-                                if timestamp < *start_time || timestamp > *end_time {
-                                    panic!("Tournament is not active");
-                                }
+                        if player_leaderboard_score.is_none()
+                            || player_leaderboard_score < Some(score)
+                        {
+                            if leaderboard_id.is_empty() {
+                                player.highest_score.set(score);
                             }
 
-                            // check and update singleplayer leaderboard
-                            let leaderboard = self
-                                .state
-                                .leaderboards
-                                .load_entry_mut(&leaderboard_id.to_string())
-                                .await
+                            leaderboard.score.insert(&username.clone(), score).unwrap();
+                            leaderboard
+                                .board_ids
+                                .insert(&username.clone(), board_id)
                                 .unwrap();
-                            let score = score as u64;
-                            let username = board.player.get();
-
-                            let current_player_score =
-                                leaderboard.score.get(&username.clone()).await.unwrap();
-
-                            match current_player_score {
-                                Some(existing_score) if score > existing_score => {
-                                    leaderboard.score.insert(&username.clone(), score).unwrap();
-                                    leaderboard
-                                        .board_ids
-                                        .insert(&username.clone(), board_id)
-                                        .unwrap();
-                                }
-                                None => {
-                                    leaderboard.score.insert(&username.clone(), score).unwrap();
-                                    leaderboard
-                                        .board_ids
-                                        .insert(&username.clone(), board_id)
-                                        .unwrap();
-                                }
-                                _ => {}
-                            }
                         }
                     } else {
                         let (game_id, round, player, _player_chain_id) =
@@ -718,6 +706,8 @@ impl Contract for Game2048Contract {
                         leaderboard.end_time.set(end_time);
                     }
                     EventLeaderboardAction::Update => {
+                        let name = settings.name;
+                        let description = settings.description.unwrap_or("".to_string());
                         let start_time = settings.start_time.parse::<u64>().unwrap();
                         let end_time = settings.end_time.parse::<u64>().unwrap();
 
@@ -726,6 +716,14 @@ impl Contract for Game2048Contract {
                         }
                         if timestamp >= end_time {
                             panic!("Timestamp cannot be after planned end time");
+                        }
+
+                        if !name.is_empty() {
+                            leaderboard.name.set(name);
+                        }
+
+                        if !description.is_empty() {
+                            leaderboard.description.set(description);
                         }
 
                         if *leaderboard.start_time.get() != 0 {

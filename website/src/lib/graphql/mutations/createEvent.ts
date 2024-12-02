@@ -39,13 +39,6 @@ export const createEvent = (client: Client, settings: EventSettings) => {
 
 	const timestamp = Date.now().toString();
 
-	console.log('player', player);
-	console.log('passwordHash', passwordHash);
-	console.log('settings', settings);
-	console.log('timestamp', timestamp);
-
-	delete settings.description;
-
 	mutationStore({
 		client,
 		query: CREATE_EVENT,

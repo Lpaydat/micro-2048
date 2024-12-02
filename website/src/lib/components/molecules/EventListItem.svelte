@@ -14,7 +14,7 @@
 
 	let {
 		leaderboardId,
-		name = 'Hello World!',
+		name,
 		host,
 		startTime,
 		endTime,
@@ -38,7 +38,7 @@
 <BaseListItem>
 	{#snippet leftContent()}
 		<div class="flex justify-between items-center mb-2">
-			<h3 class="text-xl font-bold text-gray-800">{name || 'Hello World!'}</h3>
+			<h3 class="text-xl font-bold text-gray-800">{name}</h3>
 		</div>
 		<div class="text-sm text-gray-600">
 			<div class="mb-1">

@@ -12,6 +12,7 @@
 	import { isNewGameCreated, setGameCreationStatus } from '$lib/stores/gameStore';
 	import { boardToString } from '$lib/game/utils';
 	import Board from './Board.svelte';
+	import { userStore } from '$lib/stores/userStore';
 
 	// Props
 	export let isMultiplayer: boolean = false;
@@ -39,6 +40,8 @@
 				board
 				score
 				isEnded
+				player
+				leaderboardId
 			}
 		}
 	`;
@@ -74,9 +77,6 @@
 		requestPolicy: 'network-only'
 	});
 
-	$: console.log('gameeeidddd', gameBoardId);
-	$: console.log('gameee', $game?.data?.board);
-
 	let playerMessages: any;
 	$: {
 		if (playerChainId) {
@@ -101,7 +101,6 @@
 
 	$: boardEnded = isEnded || $game.data?.board?.isEnded;
 
-	$: console.log('boardId', boardId);
 	$: if (boardId !== undefined) {
 		gameBoardId = boardId;
 		setGameCreationStatus(true);
@@ -126,6 +125,15 @@
 		(!isInitialized || $isNewGameCreated || $game.data?.board?.isEnded || shouldSyncGame)
 	) {
 		handleGameStateUpdate();
+	}
+
+	$: {
+		const leaderboardId = $game.data?.board?.leaderboardId;
+		if (leaderboardId) {
+			const url = new URL($page.url);
+			url.searchParams.set('leaderboardId', leaderboardId);
+			goto(url.toString());
+		}
 	}
 
 	// Utility Functions
@@ -207,7 +215,6 @@
 		localBoardId = localStorage.getItem('boardId');
 		if (!isMultiplayer && localBoardId && boardId === undefined) {
 			gameBoardId = specBoardId || localBoardId;
-			canMakeMove = !specBoardId;
 		}
 	});
 
@@ -215,6 +222,7 @@
 		if (playerMessages) {
 			playerMessages.pause();
 			hashesStore.set([]);
+			setGameCreationStatus(false);
 		}
 	});
 </script>
@@ -224,7 +232,7 @@
 		<Board
 			bind:size
 			tablet={state?.tablet}
-			{canMakeMove}
+			canMakeMove={canMakeMove && $game.data?.board?.player === $userStore.username}
 			isEnded={boardEnded}
 			overlayMessage={getOverlayMessage($game.data?.board?.board)}
 			moveCallback={handleMove}

@@ -29,6 +29,7 @@
 	let bestScore = $state(0);
 
 	const client = getContextClient();
+	const leaderboardId = $page.url.searchParams.get('leaderboardId') ?? '';
 
 	// Size configurations
 	const sizeConfig = {
@@ -46,10 +47,10 @@
 		boardId = (await hashSeed(seed, player, timestamp)).toString();
 		localStorage.setItem('boardId', boardId);
 		setGameCreationStatus(true);
-		newGame(client, seed, timestamp);
+		newGame(client, seed, timestamp, leaderboardId);
 
 		const url = new URL($page.url);
-		url.searchParams.delete('boardId');
+		url.searchParams.set('boardId', boardId);
 		goto(url.toString(), { replaceState: true });
 	};
 
