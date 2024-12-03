@@ -18,6 +18,7 @@
 
 	let leaderboardId = $state<string | undefined>();
 	let currentPlayerScore = $state<number>(0);
+	let bestScore = $state<number>(0);
 
 	const client = getContextClient();
 	const leaderboard = $derived(
@@ -26,12 +27,22 @@
 
 	const rankers = $derived(
 		$leaderboard?.data?.leaderboard.rankers
-			.sort((a: { score: number }, b: { score: number }) => b.score - a.score)
-			.map((ranker: { username: string; score: number }, index: number) => {
-				const score = ranker.username === $userStore.username ? currentPlayerScore : ranker.score;
-				return { ...ranker, score, rank: index + 1 };
-			}) ?? []
+			.map((ranker: { username: string; score: number }) => {
+				const isUser = ranker.username === $userStore.username;
+				const score =
+					isUser && currentPlayerScore > ranker.score
+						? currentPlayerScore
+						: ranker.score;
+				return { ...ranker, score };
+			})
+			.sort((a: { score: number }, b: { score: number }) => b.score - a.score) ?? []
 	);
+
+	$effect(() => {
+		bestScore =
+			rankers.find((ranker: { username: string; score: number }) => ranker.username === $userStore.username)
+				?.score ?? 0;
+	});
 
 	let intervalId: NodeJS.Timeout;
 	onMount(() => {
@@ -59,12 +70,7 @@
 	{#snippet sidebar()}
 		{#if $userStore.username}
 			<Brand />
-			<SideLeaderboard
-				{...$leaderboard?.data?.leaderboard}
-				showName
-				{rankers}
-				{leaderboardId}
-			/>
+			<SideLeaderboard {...$leaderboard?.data?.leaderboard} showName {rankers} {leaderboardId} />
 		{:else}
 			<UserSidebar />
 		{/if}
@@ -81,6 +87,7 @@
 					canStartNewGame={!!$userStore.username}
 					showBestScore
 					{canMakeMove}
+					{bestScore}
 				/>
 			</div>
 		</div>

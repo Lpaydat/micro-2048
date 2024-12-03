@@ -12,7 +12,7 @@
 		endTime?: string;
 		totalBoards?: number;
 		totalPlayers?: number;
-		rankers?: { username: string; score: number; boardId: string; rank: number }[];
+		rankers?: { username: string; score: number; boardId: string; }[];
 	}
 
 	let { isFullScreen, leaderboardId, rankers = [], ...rest }: Props = $props();
@@ -41,9 +41,9 @@
 
 		<div class="list-container h-[calc(100%-3rem)] overflow-y-auto overflow-x-hidden">
 			<ul class="border-sm list-none p-0">
-				{#each rankers as { rank, username, score, boardId }}
+				{#each rankers as { username, score, boardId }, index}
 					<ListItem
-						{rank}
+						rank={index + 1}
 						name={username}
 						isCurrentPlayer={username === player}
 						{score}

@@ -6,12 +6,12 @@
 	import { newGame } from '$lib/graphql/mutations/newBoard';
 	import { hashSeed } from '$lib/utils/random';
 	import { setGameCreationStatus } from '$lib/stores/gameStore';
-	import { userStore } from '$lib/stores/userStore';
 	import { getBoardId, setBoardId } from '$lib/stores/boardId';
 
 	interface Props {
 		player: string;
-		value: number;
+		score: number;
+		bestScore?: number;
 		canStartNewGame?: boolean;
 		showBestScore?: boolean;
 		boardId?: string | undefined;
@@ -20,17 +20,16 @@
 
 	let {
 		player,
-		value,
+		score,
+		bestScore = 0,
 		canStartNewGame = true,
 		showBestScore = true,
 		boardId = $bindable(),
 		size = 'lg'
 	}: Props = $props();
 
-	let bestScore = $state(0);
-
 	const client = getContextClient();
-	const leaderboardId = $page.url.searchParams.get('leaderboardId') ?? '';
+	const leaderboardId = $derived($page.url.searchParams.get('leaderboardId') ?? '');
 
 	// Size configurations
 	const sizeConfig = {
@@ -56,8 +55,6 @@
 	};
 
 	onMount(() => {
-		bestScore = Number(localStorage.getItem('highestScore'));
-
 		setTimeout(() => {
 			if (!getBoardId(leaderboardId)) {
 				newSingleGame();
@@ -65,16 +62,9 @@
 		}, 50);
 	});
 
-	$effect(() => {
-		if (bestScore < value && player === $userStore.username) {
-			localStorage.setItem('highestScore', String(value));
-		}
-	});
-
-	const bestScoreValue = $derived(bestScore < value ? value : bestScore);
 	const shouldShowBestScore = $derived(showBestScore && canStartNewGame);
-	const scoreLabelAlign = $derived(value.toString().length > 3 ? 'left' : 'center');
-	const bestScoreLabelAlign = $derived(bestScoreValue.toString().length > 3 ? 'left' : 'center');
+	const scoreLabelAlign = $derived(score.toString().length > 3 ? 'left' : 'center');
+	const bestScoreLabelAlign = $derived(bestScore.toString().length > 3 ? 'left' : 'center');
 	const currentSize = $derived(sizeConfig[size]);
 </script>
 
@@ -100,14 +90,14 @@
 	<div class="flex flex-row items-center transition-all">
 		<div class="mb-2 ml-2 flex min-w-16 flex-col rounded-md bg-[#bbada0] p-2 font-bold text-white">
 			<div class="text-xs text-[#eee4da] text-{scoreLabelAlign}">Score</div>
-			<div class="{currentSize.scoreSize} text-center">{value}</div>
+			<div class="{currentSize.scoreSize} text-center">{score}</div>
 		</div>
 		{#if shouldShowBestScore}
 			<div
 				class="mb-2 ml-2 flex min-w-16 flex-col rounded-md bg-[#bbada0] p-2 font-bold text-white"
 			>
 				<div class="text-xs text-[#eee4da] text-{bestScoreLabelAlign}">Best</div>
-				<div class="{currentSize.scoreSize} text-center">{bestScoreValue}</div>
+				<div class="{currentSize.scoreSize} text-center">{bestScore}</div>
 			</div>
 		{/if}
 	</div>

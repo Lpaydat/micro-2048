@@ -11,7 +11,7 @@
 	import { goto } from '$app/navigation';
 	import { newGame } from '$lib/graphql/mutations/newBoard';
 	import { setGameCreationStatus } from '$lib/stores/gameStore';
-	import { setBoardId } from '$lib/stores/boardId';
+	import { getBoardId, setBoardId } from '$lib/stores/boardId';
 
 	interface Props {
 		leaderboardId?: string;
@@ -49,6 +49,8 @@
 			variables: { leaderboardId }
 		})
 	);
+
+	const currentBoardId = $derived(getBoardId(leaderboardId));
 
 	// Sort the rankers by score in descending order
 	const sortedRankers = $derived(
@@ -93,6 +95,11 @@
 		{:else}
 			<PageHeader title={$leaderboard?.data?.leaderboard?.name} {prevPage}>
 				{#snippet actions()}
+					{#if currentBoardId}
+						<a href={`/game/?boardId=${currentBoardId}`}>
+							<ActionButton icon="plus" label="RESUME GAME" />
+						</a>
+					{/if}
 					<ActionButton icon="plus" label="NEW GAME" onclick={newEventGame} />
 				{/snippet}
 			</PageHeader>

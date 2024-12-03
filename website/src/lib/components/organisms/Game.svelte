@@ -20,6 +20,7 @@
 	export let isEnded: boolean = false;
 	export let player: string;
 	export let score: number = 0;
+	export let bestScore: number = 0;
 	export let playerChainId: string;
 	export let boardId: string | undefined = undefined;
 	export let canStartNewGame: boolean = true;
@@ -253,7 +254,8 @@
 					{showBestScore}
 					{player}
 					{size}
-					value={score}
+					{score}
+					{bestScore}
 				/>
 			{/snippet}
 		</Board>
