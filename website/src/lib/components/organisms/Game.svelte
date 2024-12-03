@@ -33,7 +33,7 @@
 	// Board ID Management
 	let specBoardId = $page.url.searchParams.get('boardId');
 	let localBoardId: string | null = null;
-	let gameBoardId: string | undefined = boardId || (specBoardId ?? undefined);
+	let gameBoardId: string | undefined = (specBoardId ?? undefined) || boardId;
 
 	// GraphQL Definitions
 	const GET_BOARD_STATE = gql`
@@ -223,8 +223,15 @@
 	// Lifecycle Hooks
 	onMount(() => {
 		localBoardId = getBoardId(leaderboardId);
-		if (!isMultiplayer && localBoardId && boardId === undefined) {
-			gameBoardId = specBoardId || localBoardId;
+		if (!isMultiplayer && (localBoardId || specBoardId) && boardId === undefined) {
+			gameBoardId = (specBoardId || localBoardId) ?? undefined;
+
+			if (gameBoardId) {
+				game.reexecute({ requestPolicy: 'network-only' });
+				setTimeout(() => {
+					game.reexecute({ requestPolicy: 'network-only' });
+				}, 1000);
+			}
 		}
 	});
 

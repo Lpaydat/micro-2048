@@ -12,8 +12,7 @@
 	import EliminationLeaderboard from '$lib/components/organisms/EliminationLeaderboard.svelte';
 	import HowToPlayElimination from '$lib/components/organisms/HowToPlayElimination.svelte';
 	import HowToPlay2048 from '$lib/components/organisms/HowToPlay2048.svelte';
-	import { applicationId, appVersion, chainId, port } from '$lib/constants';
-	import { logout } from '$lib/utils/logout';
+	import { applicationId, chainId, port } from '$lib/constants';
 	import SideLeaderboard from '$lib/components/organisms/SideLeaderboard.svelte';
 
 	initializeStores();
@@ -22,14 +21,14 @@
 	setContextClient(client);
 
 	onMount(() => {
-		const version = localStorage.getItem('version');
-		if (version !== appVersion) {
-			// update version
-			localStorage.setItem('version', appVersion);
+		// const version = localStorage.getItem('version');
+		// if (version !== appVersion) {
+		// 	// update version
+		// 	localStorage.setItem('version', appVersion);
 
-			// force logout on new version
-			logout();
-		}
+		// 	// force logout on new version
+		// 	logout();
+		// }
 
 		const username = localStorage.getItem('username');
 		const passwordHash = localStorage.getItem('passwordHash');

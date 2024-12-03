@@ -9,7 +9,7 @@
 		host: string;
 		startTime: string;
 		endTime: string;
-		description: string;
+		description?: string;
 		isActive?: boolean;
 	}
 
@@ -19,7 +19,7 @@
 		host,
 		startTime,
 		endTime,
-		description = 'This is a mock description. It is intended to provide a placeholder for the actual event description. The real description will be more detailed and informative, giving users a clear understanding of the event.',
+		description,
 		isActive = false
 	}: Props = $props();
 </script>

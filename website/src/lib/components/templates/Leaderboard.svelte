@@ -62,6 +62,9 @@
 		$leaderboard?.data?.leaderboard?.host === $userStore.username &&
 			$leaderboard?.data?.leaderboard?.totalBoards === 0
 	);
+	const canPlayGame = $derived(
+		Number($leaderboard?.data?.leaderboard?.endTime ?? '0') - Date.now() > 0
+	);
 
 	const newEventGame = async () => {
 		if (!leaderboardId) return;
@@ -77,7 +80,9 @@
 		const url = new URL('/game', window.location.origin);
 		url.searchParams.set('boardId', boardId);
 		url.searchParams.set('leaderboardId', leaderboardId);
-		goto(url.toString(), { replaceState: false });
+		setTimeout(() => {
+			goto(url.toString(), { replaceState: false });
+		}, 1000);
 	};
 
 	const deleteEventGame = () => {
@@ -116,12 +121,14 @@
 					{/if}
 				{/snippet}
 				{#snippet actions()}
-					{#if currentBoardId}
-						<a href={`/game/?boardId=${currentBoardId}&leaderboardId=${leaderboardId}`}>
-							<ActionButton icon="plus" label="RESUME GAME" />
-						</a>
+					{#if canPlayGame}
+						{#if currentBoardId}
+							<a href={`/game/?boardId=${currentBoardId}&leaderboardId=${leaderboardId}`}>
+								<ActionButton icon="plus" label="RESUME GAME" />
+							</a>
+						{/if}
+						<ActionButton icon="plus" label="NEW GAME" onclick={newEventGame} />
 					{/if}
-					<ActionButton icon="plus" label="NEW GAME" onclick={newEventGame} />
 				{/snippet}
 			</PageHeader>
 			<RankerLeaderboard rankers={sortedRankers} {...$leaderboard.data?.leaderboard} />
