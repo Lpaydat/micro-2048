@@ -7,6 +7,10 @@ export const GET_LEADERBOARD_DETAILS = gql`
 			leaderboardId
 			name
 			host
+			startTime
+			endTime
+			totalBoards
+			totalPlayers
 			rankers {
 				username
 				score

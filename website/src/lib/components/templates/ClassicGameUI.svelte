@@ -48,7 +48,7 @@
 	{#snippet sidebar()}
 		{#if $userStore.username}
 			<Brand />
-			<SideLeaderboard {rankers} {leaderboardId} />
+			<SideLeaderboard {rankers} {leaderboardId} {...$leaderboard?.data?.leaderboard} />
 		{:else}
 			<UserSidebar />
 		{/if}
