@@ -15,7 +15,7 @@
 		rankers?: { username: string; score: number; boardId: string; rank: number }[];
 	}
 
-	let { isFullScreen, leaderboardId = '', rankers = [], ...rest }: Props = $props();
+	let { isFullScreen, leaderboardId, rankers = [], ...rest }: Props = $props();
 
 	const player = $derived($userStore.username);
 	const customClass = isFullScreen ? 'w-full h-full' : 'p-6 w-80 max-h-full max-w-md mx-auto';

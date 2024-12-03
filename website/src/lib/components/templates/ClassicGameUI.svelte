@@ -21,7 +21,7 @@
 
 	const client = getContextClient();
 	const leaderboard = $derived(
-		leaderboardId ? getLeaderboardDetails(client, leaderboardId) : undefined
+		leaderboardId !== undefined ? getLeaderboardDetails(client, leaderboardId) : undefined
 	);
 
 	const rankers = $derived(
@@ -49,15 +49,22 @@
 	{/snippet}
 
 	{#snippet subHeader()}
-		<div class="mx-4 mt-4 w-fit flex-none md:mt-6">
-			<LeaderboardDetails showName {leaderboardId} {...$leaderboard?.data?.leaderboard} />
-		</div>
+		{#if leaderboardId}
+			<div class="mx-4 mt-4 w-fit flex-none md:mt-6">
+				<LeaderboardDetails {...$leaderboard?.data?.leaderboard} showName {leaderboardId} />
+			</div>
+		{/if}
 	{/snippet}
 
 	{#snippet sidebar()}
 		{#if $userStore.username}
 			<Brand />
-			<SideLeaderboard showName {rankers} {leaderboardId} {...$leaderboard?.data?.leaderboard} />
+			<SideLeaderboard
+				{...$leaderboard?.data?.leaderboard}
+				showName
+				{rankers}
+				{leaderboardId}
+			/>
 		{:else}
 			<UserSidebar />
 		{/if}

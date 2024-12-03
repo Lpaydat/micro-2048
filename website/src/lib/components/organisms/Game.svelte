@@ -13,6 +13,7 @@
 	import { boardToString } from '$lib/game/utils';
 	import Board from './Board.svelte';
 	import { userStore } from '$lib/stores/userStore';
+	import { getBoardId } from '$lib/stores/boardId';
 
 	// Props
 	export let isMultiplayer: boolean = false;
@@ -138,7 +139,7 @@
 				const url = new URL($page.url);
 				url.searchParams.set('leaderboardId', gameLeaderboardId);
 				goto(url.toString(), { replaceState: true });
-			} else {
+			} else if (gameLeaderboardId !== undefined) {
 				leaderboardId = '';
 			}
 		}
@@ -220,7 +221,7 @@
 
 	// Lifecycle Hooks
 	onMount(() => {
-		localBoardId = localStorage.getItem('boardId');
+		localBoardId = getBoardId(leaderboardId);
 		if (!isMultiplayer && localBoardId && boardId === undefined) {
 			gameBoardId = specBoardId || localBoardId;
 		}

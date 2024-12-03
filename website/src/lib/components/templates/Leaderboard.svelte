@@ -11,6 +11,7 @@
 	import { goto } from '$app/navigation';
 	import { newGame } from '$lib/graphql/mutations/newBoard';
 	import { setGameCreationStatus } from '$lib/stores/gameStore';
+	import { setBoardId } from '$lib/stores/boardId';
 
 	interface Props {
 		leaderboardId?: string;
@@ -61,7 +62,7 @@
 		const seed = Math.floor(Math.random() * 10_000_000).toString();
 		const timestamp = Date.now().toString();
 		const boardId = (await hashSeed(seed, $userStore.username, timestamp)).toString();
-		localStorage.setItem('boardId', boardId);
+		setBoardId(boardId, leaderboardId);
 		setGameCreationStatus(true);
 		newGame(client, seed, timestamp, leaderboardId);
 
