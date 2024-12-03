@@ -215,6 +215,7 @@ impl Contract for Game2048Contract {
                             }
                         }
 
+                        // TODO: it should check on the leaderboard instead of player
                         let username = board.player.get();
                         let player_leaderboard_score =
                             leaderboard.score.get(username.as_str()).await.unwrap();
@@ -731,11 +732,15 @@ impl Contract for Game2048Contract {
                         if *leaderboard.total_boards.get() > 0 {
                             panic!("Cannot delete tournament game with boards");
                         }
+                        if *leaderboard.host.get() != player {
+                            panic!("Only host can delete event");
+                        }
                         self.state
                             .leaderboards
                             .remove_entry(&leaderboard_id)
                             .unwrap();
-                        self.close_chain(&leaderboard_id).await;
+                        // TODO: this cause error when trying to close empty chain
+                        // self.close_chain(&leaderboard_id).await;
                     }
                 }
             }

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { getContextClient, gql, queryStore } from '@urql/svelte';
+	import Trash from 'lucide-svelte/icons/trash-2';
 	import MainTemplate from '../organisms/MainTemplate.svelte';
 	import RankerLeaderboard from '../organisms/RankerLeaderboard.svelte';
 	import UserSidebar from '../organisms/UserSidebar.svelte';
@@ -12,6 +13,7 @@
 	import { newGame } from '$lib/graphql/mutations/newBoard';
 	import { setGameCreationStatus } from '$lib/stores/gameStore';
 	import { getBoardId, setBoardId } from '$lib/stores/boardId';
+	import { deleteEvent } from '$lib/graphql/mutations/createEvent';
 
 	interface Props {
 		leaderboardId?: string;
@@ -54,7 +56,11 @@
 
 	// Sort the rankers by score in descending order
 	const sortedRankers = $derived(
-		$leaderboard.data?.leaderboard.rankers.slice().sort((a: any, b: any) => b.score - a.score)
+		$leaderboard?.data?.leaderboard?.rankers.slice().sort((a: any, b: any) => b.score - a.score)
+	);
+	const canDeleteEvent = $derived(
+		$leaderboard?.data?.leaderboard?.host === $userStore.username &&
+			$leaderboard?.data?.leaderboard?.totalBoards === 0
 	);
 
 	const newEventGame = async () => {
@@ -71,6 +77,13 @@
 		const url = new URL('/game', window.location.origin);
 		url.searchParams.set('boardId', boardId);
 		goto(url.toString(), { replaceState: false });
+	};
+
+	const deleteEventGame = () => {
+		deleteEvent(client, leaderboardId);
+		setTimeout(() => {
+			goto('/events');
+		}, 100);
 	};
 
 	onMount(() => {
@@ -94,6 +107,13 @@
 			<RankerLeaderboard rankers={sortedRankers} />
 		{:else}
 			<PageHeader title={$leaderboard?.data?.leaderboard?.name} {prevPage}>
+				{#snippet subActions()}
+					{#if canDeleteEvent}
+						<button type="button" class="btn" onclick={deleteEventGame}>
+							<Trash size={20} />
+						</button>
+					{/if}
+				{/snippet}
 				{#snippet actions()}
 					{#if currentBoardId}
 						<a href={`/game/?boardId=${currentBoardId}`}>

@@ -12,7 +12,7 @@
 		endTime?: string;
 		totalBoards?: number;
 		totalPlayers?: number;
-		rankers?: { username: string; score: number; boardId: string; }[];
+		rankers?: { username: string; score: number; boardId: string }[];
 	}
 
 	let { isFullScreen, leaderboardId, rankers = [], ...rest }: Props = $props();

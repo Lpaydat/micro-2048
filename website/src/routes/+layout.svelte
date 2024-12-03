@@ -40,7 +40,7 @@
 				...store,
 				username,
 				passwordHash,
-				chainId,
+				chainId
 			}));
 		}
 	});

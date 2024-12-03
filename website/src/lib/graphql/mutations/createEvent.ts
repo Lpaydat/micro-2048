@@ -1,7 +1,13 @@
 import { Client, gql, mutationStore } from '@urql/svelte';
 
-const CREATE_EVENT = gql`
-	mutation CreateEvent(
+enum EventLeaderboardAction {
+	Create = 'Create',
+	Update = 'Update',
+	Delete = 'Delete'
+}
+
+export const EVENT_LEADERBOARD_ACTION = gql`
+	mutation EventLeaderboardAction(
 		$leaderboardId: String!
 		$action: EventLeaderboardAction!
 		$settings: EventLeaderboardSettings!
@@ -28,7 +34,12 @@ export type EventSettings = {
 	endTime: string;
 };
 
-export const createEvent = (client: Client, settings: EventSettings) => {
+const mutation = (
+	client: Client,
+	leaderboardId: string,
+	action: EventLeaderboardAction,
+	settings: EventSettings
+) => {
 	const player = localStorage.getItem('username');
 	const passwordHash = localStorage.getItem('passwordHash');
 
@@ -41,7 +52,23 @@ export const createEvent = (client: Client, settings: EventSettings) => {
 
 	mutationStore({
 		client,
-		query: CREATE_EVENT,
-		variables: { leaderboardId: '', action: 'Create', player, passwordHash, settings, timestamp }
+		query: EVENT_LEADERBOARD_ACTION,
+		variables: { leaderboardId, action, player, passwordHash, settings, timestamp }
+	});
+};
+
+export const createEvent = (client: Client, settings: EventSettings) => {
+	mutation(client, '', EventLeaderboardAction.Create, settings);
+};
+
+export const updateEvent = (client: Client, leaderboardId: string, settings: EventSettings) => {
+	mutation(client, leaderboardId, EventLeaderboardAction.Update, settings);
+};
+
+export const deleteEvent = (client: Client, leaderboardId: string) => {
+	mutation(client, leaderboardId, EventLeaderboardAction.Delete, {
+		name: '',
+		startTime: '',
+		endTime: ''
 	});
 };

@@ -64,7 +64,14 @@
 
 		<!-- Name Field -->
 		<div class="form-field">
-			<Input id="name" label="Name" bind:value={name} placeholder="Enter name" required />
+			<Input
+				id="name"
+				label="Name"
+				bind:value={name}
+				placeholder="Enter name (max 25 chars)"
+				required
+				maxlength={25}
+			/>
 		</div>
 
 		<!-- Start Time Field -->

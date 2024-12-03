@@ -1,4 +1,5 @@
-import { Client, gql, mutationStore } from '@urql/svelte';
+import type { Client } from '@urql/svelte';
+import { gql, mutationStore } from '@urql/svelte';
 
 // Define the MultiplayerGameAction enum
 enum MultiplayerGameAction {

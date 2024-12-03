@@ -36,7 +36,7 @@
 </script>
 
 <div
-	class="container mx-auto w-full max-w-sm rounded-md border-[8px] border-[#BBADA0] bg-[#FAF8EF] p-6 shadow-md"
+	class="mx-auto w-80 max-w-md rounded-md border-[8px] border-[#BBADA0] bg-[#FAF8EF] p-6 shadow-md"
 >
 	<div class="space-y-6">
 		<!-- Title -->
@@ -68,10 +68,10 @@
 	}
 
 	/* Responsive padding */
-	@media (max-width: 640px) {
+	/* @media (max-width: 640px) {
 		div.container {
 			border-width: 4px;
 			margin: 0 1rem;
 		}
-	}
+	} */
 </style>

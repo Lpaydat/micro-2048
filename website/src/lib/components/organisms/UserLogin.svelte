@@ -6,9 +6,7 @@
 
 <div class="flex h-full w-full items-end">
 	{#if $userStore.username}
-		<div class="mx-auto w-full px-16">
-			<UserDetails />
-		</div>
+		<UserDetails />
 	{:else}
 		<div class="mx-auto mb-16 flex items-center justify-center">
 			<JoinForm />

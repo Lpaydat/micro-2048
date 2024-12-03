@@ -30,9 +30,7 @@
 			.map((ranker: { username: string; score: number }) => {
 				const isUser = ranker.username === $userStore.username;
 				const score =
-					isUser && currentPlayerScore > ranker.score
-						? currentPlayerScore
-						: ranker.score;
+					isUser && currentPlayerScore > ranker.score ? currentPlayerScore : ranker.score;
 				return { ...ranker, score };
 			})
 			.sort((a: { score: number }, b: { score: number }) => b.score - a.score) ?? []
@@ -40,8 +38,9 @@
 
 	$effect(() => {
 		bestScore =
-			rankers.find((ranker: { username: string; score: number }) => ranker.username === $userStore.username)
-				?.score ?? 0;
+			rankers.find(
+				(ranker: { username: string; score: number }) => ranker.username === $userStore.username
+			)?.score ?? 0;
 	});
 
 	let intervalId: NodeJS.Timeout;

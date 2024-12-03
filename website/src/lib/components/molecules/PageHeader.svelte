@@ -5,6 +5,7 @@
 	interface Props {
 		icon?: Snippet;
 		actions?: Snippet;
+		subActions?: Snippet;
 		title: string;
 		prevPage?: string;
 		color?:
@@ -20,7 +21,7 @@
 			| 'cyan';
 	}
 
-	let { icon, actions, title, prevPage, color = 'green' }: Props = $props();
+	let { icon, actions, subActions, title, prevPage, color = 'green' }: Props = $props();
 
 	const headerRound = $derived(!prevPage ? 'md:rounded-bl-lg mb-4 md:mb-0' : '');
 
@@ -39,9 +40,9 @@
 	const iconClass = $derived(prevPage || icon ? 'ps-1 md:ps-2' : 'ps-2');
 </script>
 
-<div class="flex w-full flex-col">
+<div class="flex w-full flex-col md:flex-row">
 	<div
-		class="flex w-full items-center font-bold text-white {headerRound} relative p-2 transition-all md:p-4"
+		class="flex w-full flex-row items-center font-bold text-white {headerRound} relative p-2 transition-all md:p-4"
 	>
 		<a href={prevPage ?? '#'}>
 			<div
@@ -57,22 +58,12 @@
 				<span class="text-md tracking-wider lg:text-2xl">{title}</span>
 			</div>
 		</a>
-
-		<div class="ms-auto flex items-center gap-2">
-			{@render actions?.()}
-		</div>
+		{@render subActions?.()}
 	</div>
 
-	<!-- {#if prevPage}
-		<div class="flex">
-			<a
-				href={prevPage}
-				class="inline-block rounded-br-md bg-surface-400 px-3 py-2 text-xs text-white transition-colors hover:bg-surface-800 lg:rounded-b-md lg:text-sm"
-			>
-				Back
-			</a>
-		</div>
-	{/if} -->
+	<div class="mt-4 flex w-full items-center justify-center gap-2 sm:mt-0 md:justify-end">
+		{@render actions?.()}
+	</div>
 </div>
 
 <style>
