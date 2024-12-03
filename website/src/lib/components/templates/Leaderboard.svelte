@@ -11,7 +11,6 @@
 	import { goto } from '$app/navigation';
 	import { newGame } from '$lib/graphql/mutations/newBoard';
 	import { setGameCreationStatus } from '$lib/stores/gameStore';
-	import LeaderboardDetails from '../molecules/LeaderboardDetails.svelte';
 
 	interface Props {
 		leaderboardId?: string;

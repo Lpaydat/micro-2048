@@ -1,4 +1,5 @@
-import { Client, gql, queryStore } from '@urql/svelte';
+import type { Client } from '@urql/svelte';
+import { gql, queryStore } from '@urql/svelte';
 
 const GET_PLAYER = gql`
 	query GetPlayer($username: String!) {

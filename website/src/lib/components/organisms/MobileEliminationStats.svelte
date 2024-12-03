@@ -2,6 +2,7 @@
 	import type { PlayerStats, RoundResults } from '$lib/types/leaderboard';
 	import { getDrawerStore } from '@skeletonlabs/skeleton';
 	import type { DrawerSettings } from '@skeletonlabs/skeleton';
+	import HeaderRankButton from '../molecules/HeaderRankButton.svelte';
 
 	interface Props {
 		currentRound?: number;
@@ -44,7 +45,7 @@
 
 	const drawerStore = getDrawerStore();
 	const drawerSettings = $derived<DrawerSettings>({
-		id: 'mobile-user-stats',
+		id: 'mobile-elimination-stats',
 		position: 'bottom',
 		bgDrawer: 'bg-[#FAF8EF]',
 		bgBackdrop: 'bg-black/60',
@@ -59,31 +60,4 @@
 	});
 </script>
 
-<button
-	type="button"
-	onclick={() => drawerStore.open(drawerSettings)}
-	class="flex items-center justify-end rounded-lg bg-[#FAF8EF] p-2 shadow-md"
->
-	<div class="flex items-center space-x-4 rounded-md bg-[#ed8d33] px-4 py-2">
-		<!-- Rank -->
-		<div class="flex flex-col items-center">
-			<span class="text-xs uppercase text-[#EEE4DA]">Rank</span>
-			<span class="font-bold text-white">#{userRank}</span>
-		</div>
-
-		<!-- Divider -->
-		<div class="h-8 w-px bg-[#CDC1B4]"></div>
-
-		<!-- Score -->
-		<div class="flex flex-col items-center">
-			<span class="text-xs uppercase text-[#EEE4DA]">Score</span>
-			<span class="font-bold text-white">{userScore}</span>
-		</div>
-	</div>
-</button>
-
-<style>
-	div {
-		transition: all 0.3s ease;
-	}
-</style>
+<HeaderRankButton {userRank} {userScore} onclick={() => drawerStore.open(drawerSettings)} />

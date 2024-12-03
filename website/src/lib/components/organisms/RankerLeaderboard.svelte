@@ -20,9 +20,15 @@
 	let { rankers = [], leaderboardId, ...rest }: Props = $props();
 </script>
 
-<div class="mx-auto mt-4 md:mt-8 flex h-[calc(100vh-8rem)] w-full max-w-4xl flex-col overflow-hidden">
+<div
+	class="mx-auto mt-4 flex h-[calc(100vh-8rem)] w-full max-w-4xl flex-col overflow-hidden md:mt-8"
+>
 	<div class="flex">
-		<h1 class="mb-4 md:mb-6 ms-2 md:ms-none text-center text-2xl md:text-4xl font-extrabold text-gray-100">Leaderboard</h1>
+		<h1
+			class="md:ms-none mb-4 ms-2 text-center text-2xl font-extrabold text-gray-100 md:mb-6 md:text-4xl"
+		>
+			Leaderboard
+		</h1>
 		{#if leaderboardId}
 			<LeaderboardDetails {...rest} />
 		{/if}
@@ -47,9 +53,11 @@
 				</div>
 			</div>
 		{:else}
-			<div class="flex flex-col text-md md:text-lg h-full items-center justify-center">
+			<div class="text-md flex h-full flex-col items-center justify-center md:text-lg">
 				<p class="text-center font-semibold text-gray-400">No players yet.</p>
-				<p class="text-center font-semibold text-gray-400">Be the first to join and claim the top spot!</p>
+				<p class="text-center font-semibold text-gray-400">
+					Be the first to join and claim the top spot!
+				</p>
 			</div>
 		{/if}
 	</div>

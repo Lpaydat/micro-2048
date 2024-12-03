@@ -1,0 +1,63 @@
+<script lang="ts">
+	import { userStore } from '$lib/stores/userStore';
+	import ListItem from '../molecules/LeaderboardItem.svelte';
+
+	interface Props {
+		isFullScreen?: boolean;
+		leaderboardId?: string;
+		rankers?: { username: string; score: number; boardId: string; rank: number }[];
+	}
+
+	let { isFullScreen, leaderboardId = '', rankers = [] }: Props = $props();
+
+	const player = $derived($userStore.username);
+	const customClass = $derived(
+		isFullScreen ? 'w-full h-full mt-4' : 'p-6 w-80 mt-6 max-h-full max-w-md mx-auto'
+	);
+
+	const getBoardUrl = (boardId: string) => {
+		return leaderboardId
+			? `/game/?boardId=${boardId}&leaderboardId=${leaderboardId}`
+			: `/game/?boardId=${boardId}`;
+	};
+</script>
+
+<div class="text-center {customClass} rounded-lg bg-[#FAF8EF] shadow-md">
+	<header class="mb-4 flex flex-col items-center">
+		<h1 class="mb-2 text-3xl font-bold text-[#776E65]">Leaderboard</h1>
+	</header>
+
+	<div class="list-container h-[calc(100%-3rem)] overflow-y-auto overflow-x-hidden">
+		<ul class="border-sm list-none p-0">
+			{#each rankers as { rank, username, score, boardId }}
+				<ListItem
+					{rank}
+					name={username}
+					isCurrentPlayer={username === player}
+					{score}
+					boardUrl={getBoardUrl(boardId)}
+				/>
+			{/each}
+		</ul>
+	</div>
+</div>
+
+<style>
+	div {
+		font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
+	}
+
+	h1 {
+		text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+	}
+
+	.border-sm {
+		border-radius: 6px !important;
+	}
+
+	.list-container {
+		max-height: calc(100vh - 10rem); /* Adjust the height as needed */
+		overflow-y: auto;
+		scroll-snap-type: y mandatory; /* Enable vertical snapping */
+	}
+</style>

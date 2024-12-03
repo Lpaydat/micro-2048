@@ -1,5 +1,5 @@
 <script lang="ts">
-	import GameUITemplate from '$lib/components/templates/GameUITemplate.svelte';
+	import EliminationGameUI from '$lib/components/templates/EliminationGameUI.svelte';
 </script>
 
-<GameUITemplate />
+<EliminationGameUI />

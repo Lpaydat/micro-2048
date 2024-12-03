@@ -24,6 +24,7 @@
 	export let canStartNewGame: boolean = true;
 	export let canMakeMove: boolean = true;
 	export let showBestScore: boolean = true;
+	export let leaderboardId: string | undefined = undefined;
 
 	const dispatch = createEventDispatcher();
 
@@ -129,11 +130,12 @@
 
 	let isLeaderboardIdSet = false;
 	$: {
-		const leaderboardId = $game.data?.board?.leaderboardId;
-		if (leaderboardId && !isLeaderboardIdSet) {
+		const gameLeaderboardId = $game.data?.board?.leaderboardId;
+		if (gameLeaderboardId && !isLeaderboardIdSet) {
+			leaderboardId = gameLeaderboardId;
 			isLeaderboardIdSet = true;
 			const url = new URL($page.url);
-			url.searchParams.set('leaderboardId', leaderboardId);
+			url.searchParams.set('leaderboardId', gameLeaderboardId);
 			goto(url.toString(), { replaceState: true });
 		}
 	}

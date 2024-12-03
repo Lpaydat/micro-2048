@@ -1,5 +1,4 @@
-import { Client } from 'urql';
-
+import type { Client } from '@urql/svelte';
 import { gql, queryStore } from '@urql/svelte';
 
 export const GET_GAME_DETAILS = gql`

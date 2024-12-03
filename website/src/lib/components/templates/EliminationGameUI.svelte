@@ -3,7 +3,7 @@
 	import BlockHashes from '../molecules/BlockHashes.svelte';
 	import Game from '../organisms/Game.svelte';
 	import MainTemplate from '../organisms/MainTemplate.svelte';
-	import Leaderboard from '../organisms/Leaderboard.svelte';
+	import EliminationLeaderboard from '../organisms/EliminationLeaderboard.svelte';
 	import Brand from '../molecules/Brand.svelte';
 	import GameSettingsDetails from '../organisms/GameSettingsDetails.svelte';
 	import UserSidebar from '../organisms/UserSidebar.svelte';
@@ -17,7 +17,7 @@
 	import { nextRound, triggerGame } from '$lib/graphql/mutations';
 	import { isHashesListVisible } from '$lib/stores/hashesStore';
 	import RoundButton from '../molecules/RoundButton.svelte';
-	import MobileUserStats from '../organisms/MobileUserStats.svelte';
+	import MobileUserStats from '../organisms/MobileEliminationStats.svelte';
 
 	let boardId = $state<string>($page.params.boardId);
 
@@ -106,8 +106,6 @@
 			triggerGameEventMutation();
 			isTriggered = true;
 			canMakeMove = false;
-		} else {
-			canMakeMove = username === $userStore.username;
 		}
 	};
 
@@ -161,8 +159,8 @@
 		const target = `/game/${gameId}-${currentRound}-${player}-${chainId}`;
 		if (currentRound && target !== nextTarget && status === 'Active') {
 			nextTarget = target;
-			// TODO: this line make eliminated players don't trigger the game
 			isTriggered = false;
+			initCanMakeMove = false;
 			goto(nextTarget);
 		}
 	});
@@ -192,7 +190,7 @@
 	{#snippet sidebar()}
 		{#if isMultiplayer && $userStore.username}
 			<Brand />
-			<Leaderboard
+			<EliminationLeaderboard
 				player={username}
 				{currentRound}
 				{gameLeaderboard}

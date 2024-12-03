@@ -9,11 +9,12 @@
 
 	import { setContextClient } from '@urql/svelte';
 	import { userStore } from '$lib/stores/userStore';
-	import Leaderboard from '$lib/components/organisms/Leaderboard.svelte';
+	import EliminationLeaderboard from '$lib/components/organisms/EliminationLeaderboard.svelte';
 	import HowToPlayElimination from '$lib/components/organisms/HowToPlayElimination.svelte';
 	import HowToPlay2048 from '$lib/components/organisms/HowToPlay2048.svelte';
 	import { applicationId, appVersion, chainId, port } from '$lib/constants';
 	import { logout } from '$lib/utils/logout';
+	import SideLeaderboard from '$lib/components/organisms/SideLeaderboard.svelte';
 
 	initializeStores();
 
@@ -57,8 +58,8 @@
 
 <Modal components={modalRegistry} />
 <Drawer>
-	{#if $drawerStore.id === 'mobile-user-stats'}
-		<Leaderboard
+	{#if $drawerStore.id === 'mobile-elimination-stats'}
+		<EliminationLeaderboard
 			isFullScreen
 			player={$drawerStore.meta?.player}
 			currentRound={$drawerStore.meta?.currentRound}
@@ -66,6 +67,9 @@
 			roundLeaderboard={$drawerStore.meta?.roundLeaderboard}
 			currentPlayerScore={$drawerStore.meta?.currentPlayerScore}
 		/>
+	{/if}
+	{#if $drawerStore.id === 'mobile-ranker-stats'}
+		<SideLeaderboard isFullScreen rankers={$drawerStore.meta?.rankers} />
 	{/if}
 </Drawer>
 
