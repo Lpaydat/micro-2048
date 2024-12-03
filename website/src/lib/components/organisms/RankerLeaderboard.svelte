@@ -33,7 +33,7 @@
 			<LeaderboardDetails {...rest} />
 		{/if}
 	</div>
-	<div class="flex-1 overflow-hidden bg-gray-800 px-2 py-6 shadow-xl lg:rounded-lg lg:p-6">
+	<div class="flex-1 overflow-hidden bg-black/40 px-2 py-6 shadow-xl lg:rounded-lg lg:p-6">
 		{#if (rankers?.length ?? 0) > 0}
 			<div class="flex h-full flex-col overflow-visible">
 				<div
