@@ -11,6 +11,7 @@
 		overflowHidden?: boolean;
 		sidebar?: Snippet;
 		header?: Snippet;
+		subHeader?: Snippet;
 		main?: Snippet;
 		footer?: Snippet;
 	}
@@ -21,6 +22,7 @@
 		overflowHidden,
 		sidebar,
 		header,
+		subHeader,
 		main,
 		footer
 	}: Props = $props();
@@ -55,6 +57,7 @@
 							<MobileUserDetails />
 						{/if}
 					</MobileHeader>
+					{@render subHeader?.()}
 				</div>
 			{/if}
 

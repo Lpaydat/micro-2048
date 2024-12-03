@@ -11,6 +11,7 @@
 	import { getContextClient } from '@urql/svelte';
 	import { getLeaderboardDetails } from '$lib/graphql/queries/getLeaderboardDetails';
 	import { onMount } from 'svelte';
+	import LeaderboardDetails from '../molecules/LeaderboardDetails.svelte';
 
 	const canMakeMove = $derived(!!$userStore.username);
 	const chainId = $derived($userStore.chainId);
@@ -45,6 +46,12 @@
 <MainTemplate mainCenter>
 	{#snippet header()}
 		<MobileRankerStats player={$userStore.username ?? ''} {rankers} />
+	{/snippet}
+
+	{#snippet subHeader()}
+		<div class="mx-4 mt-4 w-fit flex-none md:mt-6">
+			<LeaderboardDetails showName {leaderboardId} {...$leaderboard?.data?.leaderboard} />
+		</div>
 	{/snippet}
 
 	{#snippet sidebar()}
