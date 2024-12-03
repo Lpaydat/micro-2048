@@ -127,7 +127,7 @@ impl Contract for Game2048Contract {
                 let game = self.state.boards.load_entry_mut(&board_id).await.unwrap();
                 let leaderboard_id = leaderboard_id.unwrap_or("".to_string());
 
-                game.board_id.set(board_id);
+                game.board_id.set(board_id.clone());
                 game.board.set(new_board);
                 game.player.set(player.clone());
                 game.leaderboard_id.set(leaderboard_id.clone());
@@ -139,13 +139,22 @@ impl Contract for Game2048Contract {
                     .await
                     .unwrap();
 
-                let is_player_in_leaderboard = leaderboard.score.get(&player).await.unwrap();
-                if is_player_in_leaderboard.is_none() {
-                    let total_players = leaderboard.total_players.get_mut();
-                    *total_players += 1;
-                }
                 let total_boards = leaderboard.total_boards.get_mut();
                 *total_boards += 1;
+
+                let participant = leaderboard.score.get(&player).await.unwrap();
+                match participant {
+                    Some(_) => (),
+                    None => {
+                        let total_players = leaderboard.total_players.get_mut();
+                        *total_players += 1;
+                        leaderboard.score.insert(&player, 0).unwrap();
+                        leaderboard
+                            .board_ids
+                            .insert(&player, board_id.clone())
+                            .unwrap();
+                    }
+                }
 
                 self.ping_player(&player).await;
             }

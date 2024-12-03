@@ -2,6 +2,7 @@
 	import type { GameKeys, Tablet } from '$lib/game/models';
 	import { onMount, type Snippet } from 'svelte';
 	import GameTablet from '../molecules/Tablet.svelte';
+	import { preventDefault } from '$lib/utils/preventDefault';
 
 	export type BoardSize = 'sm' | 'md' | 'lg';
 
@@ -115,12 +116,13 @@
 <svelte:window onkeydown={handleKeydown} />
 
 {@render header?.(size)}
+<!-- TODO: svelte5 onevent not preventing default for touch events -->
 {#if isRendered}
 	<div
 		class="relative w-full {size}"
-		ontouchstart={handleTouchStart}
-		ontouchmove={handleTouchMove}
-		ontouchend={handleTouchEnd}
+		on:touchstart={preventDefault(handleTouchStart)}
+		on:touchmove={preventDefault(handleTouchMove)}
+		on:touchend={preventDefault(handleTouchEnd)}
 	>
 		<GameTablet {tablet} {size} />
 		{#if isEnded}

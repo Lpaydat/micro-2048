@@ -142,7 +142,6 @@
 				...store,
 				username: $player.data.player.username,
 				chainId: $player.data.player.chainId,
-				highestScore: $player.data.player.highestScore,
 				...(passwordHash && { passwordHash })
 			}));
 			canLogin = false;

@@ -76,6 +76,7 @@
 
 		const url = new URL('/game', window.location.origin);
 		url.searchParams.set('boardId', boardId);
+		url.searchParams.set('leaderboardId', leaderboardId);
 		goto(url.toString(), { replaceState: false });
 	};
 
@@ -116,7 +117,7 @@
 				{/snippet}
 				{#snippet actions()}
 					{#if currentBoardId}
-						<a href={`/game/?boardId=${currentBoardId}`}>
+						<a href={`/game/?boardId=${currentBoardId}&leaderboardId=${leaderboardId}`}>
 							<ActionButton icon="plus" label="RESUME GAME" />
 						</a>
 					{/if}

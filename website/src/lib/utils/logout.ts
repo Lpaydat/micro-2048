@@ -5,8 +5,7 @@ export const logout = () => {
 		...store,
 		chainId: undefined,
 		username: undefined,
-		passwordHash: undefined,
-		highestScore: undefined
+		passwordHash: undefined
 	}));
 
 	localStorage.removeItem('username');

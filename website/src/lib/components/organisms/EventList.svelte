@@ -21,12 +21,10 @@
 	const leaderboards = $derived(queryStore({ client, query: GET_LEADERBOARDS }));
 
 	const activeEvents = $derived(
-		$leaderboards?.data?.leaderboards.filter(
-			(event: EventSettings) => {
-				const now = Date.now();
-				return now >= Number(event.startTime) && now < Number(event.endTime);
-			}
-		)
+		$leaderboards?.data?.leaderboards.filter((event: EventSettings) => {
+			const now = Date.now();
+			return now >= Number(event.startTime) && now < Number(event.endTime);
+		})
 	);
 	const upcomingEvents = $derived(
 		$leaderboards?.data?.leaderboards.filter(
@@ -36,7 +34,7 @@
 
 	let interval: NodeJS.Timeout;
 	onMount(() => {
-        leaderboards.reexecute({ requestPolicy: 'network-only' });
+		leaderboards.reexecute({ requestPolicy: 'network-only' });
 
 		interval = setInterval(() => {
 			leaderboards.reexecute({ requestPolicy: 'network-only' });

@@ -33,7 +33,7 @@
 	// Board ID Management
 	let specBoardId = $page.url.searchParams.get('boardId');
 	let localBoardId: string | null = null;
-	let gameBoardId: string | undefined = boardId;
+	let gameBoardId: string | undefined = boardId || (specBoardId ?? undefined);
 
 	// GraphQL Definitions
 	const GET_BOARD_STATE = gql`

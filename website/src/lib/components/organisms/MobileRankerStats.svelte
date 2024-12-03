@@ -10,8 +10,11 @@
 
 	let { player, rankers = [] }: Props = $props();
 
-	const currentPlayer = $derived(rankers?.find((p) => p.username === player));
-	const userRank = $derived(currentPlayer?.rank ?? 0);
+	const currentPlayerIndex = $derived(rankers?.findIndex((p) => p.username === player));
+	const currentPlayer = $derived(
+		currentPlayerIndex !== -1 ? rankers[currentPlayerIndex] : undefined
+	);
+	const userRank = $derived(currentPlayerIndex + 1);
 	const userScore = $derived(currentPlayer?.score ?? 0);
 
 	const drawerStore = getDrawerStore();
