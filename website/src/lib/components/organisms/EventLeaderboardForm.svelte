@@ -19,10 +19,6 @@
 		loading = true;
 		const eventName = name.trim().replace(/\s+/g, ' ');
 
-		console.log('eventName', eventName);
-		console.log('startTime', startTime);
-		console.log('endTime', endTime);
-
 		try {
 			// Validate inputs
 			if (!eventName) {

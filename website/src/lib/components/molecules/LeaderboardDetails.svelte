@@ -26,7 +26,6 @@
 	let isTimeSet = $state(false);
 
 	const calculateRemainingTime = () => {
-		console.log('name', name);
 		const end = Number(endTime);
 		const now = Date.now();
 		const diff = end - now;

@@ -193,11 +193,6 @@ impl Contract for Game2048Contract {
                             board.is_ended.set(true);
                         }
 
-                        // get current board score
-                        // check it against the leaderboard that board belongs to
-                        // if it's higher than the leaderboard score, update the leaderboard
-                        // if it's main leaderboard, update the player's highest score
-
                         let leaderboard_id = board.leaderboard_id.get();
                         let leaderboard = self
                             .state
@@ -318,6 +313,9 @@ impl Contract for Game2048Contract {
                 player,
                 timestamp,
             } => {
+                self.check_player_registered(&player, RegistrationCheck::EnsureRegistered)
+                    .await;
+
                 let elimination_game = self
                     .state
                     .elimination_games
@@ -649,6 +647,9 @@ impl Contract for Game2048Contract {
                 player,
                 timestamp,
             } => {
+                self.check_player_registered(&player, RegistrationCheck::EnsureRegistered)
+                    .await;
+
                 let leaderboard = self
                     .state
                     .leaderboards
