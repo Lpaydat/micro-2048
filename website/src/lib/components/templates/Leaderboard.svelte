@@ -59,11 +59,11 @@
 		$leaderboard?.data?.leaderboard?.rankers.slice().sort((a: any, b: any) => b.score - a.score)
 	);
 	const canDeleteEvent = $derived(
-		$leaderboard?.data?.leaderboard?.host === $userStore.username &&
-			$leaderboard?.data?.leaderboard?.totalBoards === 0
+		$leaderboard?.data?.leaderboard?.host === $userStore.username
 	);
 	const canPlayGame = $derived(
-		Number($leaderboard?.data?.leaderboard?.endTime ?? '0') - Date.now() > 0
+		Number($leaderboard?.data?.leaderboard?.endTime ?? '0') - Date.now() > 0 &&
+			Number($leaderboard?.data?.leaderboard?.startTime ?? '0') - Date.now() < 0
 	);
 
 	const newEventGame = async () => {

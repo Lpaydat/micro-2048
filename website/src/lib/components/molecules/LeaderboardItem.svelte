@@ -29,13 +29,13 @@
 {#if boardUrl}
 	<a href={boardUrl} class={commonClasses}>
 		<span class="w-12 text-left font-bold text-surface-700">#{rank}</span>
-		<span class="ml-4 flex-1 text-left text-surface-800 truncate">{name}</span>
+		<span class="ml-4 flex-1 truncate text-left text-surface-800">{name}</span>
 		<span class="w-16 text-right text-surface-600">{score}</span>
 	</a>
 {:else}
 	<div class={commonClasses}>
 		<span class="w-12 text-left font-bold text-surface-700">#{rank}</span>
-		<span class="ml-4 flex-1 text-left text-surface-800 truncate">{name}</span>
+		<span class="ml-4 flex-1 truncate text-left text-surface-800">{name}</span>
 		<span class="w-16 text-right text-surface-600">{score}</span>
 	</div>
 {/if}

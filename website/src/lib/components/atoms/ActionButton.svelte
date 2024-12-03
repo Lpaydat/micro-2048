@@ -6,7 +6,7 @@
 		color?: 'default' | 'important' | 'warning' | 'danger' | 'disabled';
 		hoverColor?: 'default' | 'important' | 'warning' | 'danger' | 'disabled';
 		loading?: boolean;
-		onclick?: () => void;
+		onclick?: (event: MouseEvent) => void;
 	}
 
 	let {

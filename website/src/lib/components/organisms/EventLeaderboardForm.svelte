@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { fromZonedTime } from 'date-fns-tz';
 	import Input from '../atoms/Input.svelte';
 	import Button from '../atoms/Button.svelte';
 	import { preventDefault } from '$lib/utils/preventDefault';
@@ -30,12 +31,15 @@
 				return;
 			}
 
+			const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 			const settings: EventSettings = {
 				name: eventName,
 				description,
-				startTime: new Date(startTime).getTime().toString(),
-				endTime: new Date(endTime).getTime().toString()
+				startTime: fromZonedTime(new Date(startTime), userTimeZone).getTime().toString(),
+				endTime: fromZonedTime(new Date(endTime), userTimeZone).getTime().toString()
 			};
+
+			console.log('settings', settings);
 
 			createEvent(client, settings);
 
@@ -74,7 +78,7 @@
 		<div class="form-field">
 			<Input
 				id="startTime"
-				label="Start Time (UTC)"
+				label="Start Time"
 				bind:value={startTime}
 				placeholder="Enter start time"
 				required
@@ -86,7 +90,7 @@
 		<div class="form-field">
 			<Input
 				id="endTime"
-				label="End Time (UTC)"
+				label="End Time"
 				bind:value={endTime}
 				placeholder="Enter end time"
 				required

@@ -739,9 +739,6 @@ impl Contract for Game2048Contract {
                         }
                     }
                     EventLeaderboardAction::Delete => {
-                        if *leaderboard.total_boards.get() > 0 {
-                            panic!("Cannot delete tournament game with boards");
-                        }
                         if *leaderboard.host.get() != player {
                             panic!("Only host can delete event");
                         }

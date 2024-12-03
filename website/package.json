@@ -58,6 +58,7 @@
 		"@aws-crypto/sha256-browser": "^5.2.0",
 		"@floating-ui/dom": "^1.6.12",
 		"@urql/exchange-throw-on-error": "^0.1.0",
+		"date-fns-tz": "^3.2.0",
 		"queue-fifo": "^0.2.6",
 		"siphash": "^1.1.0",
 		"siphash24": "^1.3.1"

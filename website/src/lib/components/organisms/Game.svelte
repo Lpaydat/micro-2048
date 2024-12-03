@@ -206,7 +206,7 @@
 		if (syncTimeout) clearTimeout(syncTimeout);
 		syncTimeout = setTimeout(() => {
 			shouldSyncGame = true;
-		}, 1200);
+		}, 2000);
 
 		const timestamp = Date.now().toString();
 		makeMove(client, boardId, direction, timestamp);

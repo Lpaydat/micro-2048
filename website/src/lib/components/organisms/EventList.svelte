@@ -47,7 +47,7 @@
 <div class="flex h-[80vh] w-full flex-col gap-6 overflow-y-auto pb-12 pt-6 md:h-[90vh]">
 	{#if activeEvents?.length > 0 || upcomingEvents?.length > 0}
 		{#if activeEvents?.length > 0}
-			<div class="mx-auto flex max-w-4xl flex-col gap-4">
+			<div class="mx-auto flex w-full max-w-3xl flex-col gap-4">
 				<h2 class="text-xl font-bold text-yellow-600">Active Events</h2>
 				{#each activeEvents as event}
 					{#if event && event.leaderboardId}
@@ -58,7 +58,7 @@
 		{/if}
 
 		{#if upcomingEvents?.length > 0}
-			<div class="mx-auto flex max-w-4xl flex-col gap-4">
+			<div class="mx-auto flex w-full max-w-3xl flex-col gap-4">
 				<h2 class="text-xl font-bold text-yellow-600">Upcoming Events</h2>
 				{#each upcomingEvents as event}
 					{#if event && event.leaderboardId}
