@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import BackIcon from 'lucide-svelte/icons/chevron-left'
+	import BackIcon from 'lucide-svelte/icons/chevron-left';
 
 	interface Props {
 		icon?: Snippet;
@@ -44,19 +44,19 @@
 		class="flex w-full items-center font-bold text-white {headerRound} relative p-2 transition-all md:p-4"
 	>
 		<a href={prevPage ?? '#'}>
-		<div
-			class="header flex items-center justify-center gap-1 md:gap-2 rounded-lg {iconClass} pe-2 lg:pe-4 py-2 text-sm font-bold transition-all lg:text-sm {colorClass[
-				color
-			]}"
-		>
-			{#if prevPage}
-				<BackIcon color="white" />
-			{:else}
-				{@render icon?.()}
-			{/if}
-			<span class="text-md tracking-wider lg:text-2xl">{title}</span>
-		</div>
-	</a>
+			<div
+				class="header flex items-center justify-center gap-1 rounded-lg md:gap-2 {iconClass} py-2 pe-2 text-sm font-bold transition-all lg:pe-4 lg:text-sm {colorClass[
+					color
+				]}"
+			>
+				{#if prevPage}
+					<BackIcon color="white" />
+				{:else}
+					{@render icon?.()}
+				{/if}
+				<span class="text-md tracking-wider lg:text-2xl">{title}</span>
+			</div>
+		</a>
 
 		<div class="ms-auto flex items-center gap-2">
 			{@render actions?.()}

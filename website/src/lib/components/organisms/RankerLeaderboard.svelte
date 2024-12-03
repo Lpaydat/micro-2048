@@ -20,9 +20,7 @@
 	let { rankers = [], leaderboardId, ...rest }: Props = $props();
 </script>
 
-<div
-	class="mx-auto mt-4 flex h-[calc(100vh-8rem)] w-full max-w-4xl flex-col overflow-hidden md:mt-8"
->
+<div class="mx-auto mt-4 flex h-[calc(100vh-8rem)] w-full max-w-4xl flex-col overflow-hidden">
 	<div class="flex gap-3 md:gap-6">
 		<h1
 			class="md:ms-none mb-4 ms-2 text-center text-2xl font-extrabold text-gray-100 md:mb-6 md:text-4xl"

@@ -1,5 +1,6 @@
 <script lang="ts">
 	interface Props {
+		leaderboardId?: string;
 		showName?: boolean;
 		name?: string;
 		host?: string;
@@ -8,7 +9,15 @@
 		endTime?: string;
 	}
 
-	let { host, totalBoards, totalPlayers, name, endTime, showName = false }: Props = $props();
+	let {
+		host,
+		totalBoards,
+		totalPlayers,
+		name,
+		endTime,
+		showName = false,
+		leaderboardId
+	}: Props = $props();
 
 	import { onMount } from 'svelte';
 
@@ -18,6 +27,7 @@
 	onMount(() => {
 		if (endTime) {
 			const calculateRemainingTime = () => {
+				console.log('name', name);
 				const end = Number(endTime);
 				const now = Date.now();
 				const diff = end - now;
@@ -61,10 +71,21 @@
 
 			calculateRemainingTime();
 		}
+
+		return () => clearInterval(timer);
 	});
 </script>
 
 <div class="game-details relative text-xs md:text-base">
+	{#if name && showName}
+		<div class="flex items-center gap-2 text-lg">
+			<a href={`/events/${leaderboardId}`}>
+				<span class="game-details line-clamp-4 font-bold text-orange-600 hover:underline">
+					{name}
+				</span>
+			</a>
+		</div>
+	{/if}
 	<div class="flex items-center justify-between gap-2 md:gap-4">
 		<div class="flex items-center gap-2 text-surface-200 md:gap-3">
 			[<span class="font-bold text-cyan-600">{host}</span>]
@@ -79,11 +100,11 @@
 		</div>
 	</div>
 	{#if endTime}
-        <div class="flex items-center gap-2 md:text-sm">
-            <span class="font-semibold text-surface-400">Time Left:</span>
-            <span class="game-details font-bold text-green-600">{remainingTime}</span>
-        </div>
-    {/if}
+		<div class="flex items-center gap-2 md:text-sm">
+			<span class="font-semibold text-surface-400">Time Left:</span>
+			<span class="game-details font-bold text-green-600">{remainingTime}</span>
+		</div>
+	{/if}
 </div>
 
 <style>

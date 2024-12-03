@@ -131,12 +131,16 @@
 	let isLeaderboardIdSet = false;
 	$: {
 		const gameLeaderboardId = $game.data?.board?.leaderboardId;
-		if (gameLeaderboardId && !isLeaderboardIdSet) {
-			leaderboardId = gameLeaderboardId;
-			isLeaderboardIdSet = true;
-			const url = new URL($page.url);
-			url.searchParams.set('leaderboardId', gameLeaderboardId);
-			goto(url.toString(), { replaceState: true });
+		if (!isLeaderboardIdSet) {
+			if (gameLeaderboardId) {
+				leaderboardId = gameLeaderboardId;
+				isLeaderboardIdSet = true;
+				const url = new URL($page.url);
+				url.searchParams.set('leaderboardId', gameLeaderboardId);
+				goto(url.toString(), { replaceState: true });
+			} else {
+				leaderboardId = '';
+			}
 		}
 	}
 

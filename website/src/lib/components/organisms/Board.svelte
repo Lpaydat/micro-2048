@@ -101,7 +101,7 @@
 
 	const updateBoardSize = () => {
 		if (window.innerWidth < 480) size = 'sm';
-		else if (window.innerWidth < 1280) size = 'md';
+		else if (window.innerWidth < 1440) size = 'md';
 		else size = 'lg';
 	};
 

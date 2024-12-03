@@ -15,11 +15,13 @@
 	const canMakeMove = $derived(!!$userStore.username);
 	const chainId = $derived($userStore.chainId);
 
-	let leaderboardId = $state<string>('');
+	let leaderboardId = $state<string | undefined>();
 	let currentPlayerScore = $state<number>(0);
 
 	const client = getContextClient();
-	const leaderboard = $derived(getLeaderboardDetails(client, leaderboardId));
+	const leaderboard = $derived(
+		leaderboardId ? getLeaderboardDetails(client, leaderboardId) : undefined
+	);
 
 	const rankers = $derived(
 		$leaderboard?.data?.leaderboard.rankers
@@ -33,7 +35,7 @@
 	let intervalId: NodeJS.Timeout;
 	onMount(() => {
 		intervalId = setInterval(() => {
-			leaderboard.reexecute({ requestPolicy: 'network-only' });
+			leaderboard?.reexecute({ requestPolicy: 'network-only' });
 		}, 1000);
 
 		return () => clearInterval(intervalId);
@@ -48,7 +50,7 @@
 	{#snippet sidebar()}
 		{#if $userStore.username}
 			<Brand />
-			<SideLeaderboard {rankers} {leaderboardId} {...$leaderboard?.data?.leaderboard} />
+			<SideLeaderboard showName {rankers} {leaderboardId} {...$leaderboard?.data?.leaderboard} />
 		{:else}
 			<UserSidebar />
 		{/if}

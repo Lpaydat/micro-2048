@@ -30,13 +30,13 @@
 
 <div class="mx-auto flex max-w-sm flex-col gap-4 {containerClass}">
 	{#if leaderboardId}
-		<div class="mx-auto flex">
-			<LeaderboardDetails {...rest} />
+		<div class="me-auto flex">
+			<LeaderboardDetails {leaderboardId} {...rest} />
 		</div>
 	{/if}
 	<div class="text-center {customClass} rounded-lg bg-[#FAF8EF] shadow-md">
 		<header class="mb-4 flex flex-col items-center">
-			<h1 class="mb-2 text-3xl font-bold text-[#776E65]">Leaderboard</h1>
+			<h1 class="mb-2 text-2xl font-bold text-[#776E65]">Leaderboard</h1>
 		</header>
 
 		<div class="list-container h-[calc(100%-3rem)] overflow-y-auto overflow-x-hidden">
