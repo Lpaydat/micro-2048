@@ -34,7 +34,6 @@
 		const username = localStorage.getItem('username');
 		const passwordHash = localStorage.getItem('passwordHash');
 		const chainId = localStorage.getItem('chainId');
-		const highestScore = Number(localStorage.getItem('highestScore'));
 
 		if (username && passwordHash && chainId) {
 			userStore.update((store) => ({
@@ -42,7 +41,6 @@
 				username,
 				passwordHash,
 				chainId,
-				highestScore
 			}));
 		}
 	});

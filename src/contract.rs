@@ -215,8 +215,6 @@ impl Contract for Game2048Contract {
                             }
                         }
 
-                        // TODO: it should check on the leaderboard instead of player
-                        let player = self.state.players.load_entry_mut(&player).await.unwrap();
                         let username = board.player.get();
                         let player_leaderboard_score =
                             leaderboard.score.get(username.as_str()).await.unwrap();
@@ -224,10 +222,6 @@ impl Contract for Game2048Contract {
                         if player_leaderboard_score.is_none()
                             || player_leaderboard_score < Some(score)
                         {
-                            if leaderboard_id.is_empty() {
-                                player.highest_score.set(score);
-                            }
-
                             leaderboard.score.insert(&username.clone(), score).unwrap();
                             leaderboard
                                 .board_ids

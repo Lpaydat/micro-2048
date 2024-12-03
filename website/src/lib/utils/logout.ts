@@ -12,6 +12,5 @@ export const logout = () => {
 	localStorage.removeItem('username');
 	localStorage.removeItem('passwordHash');
 	localStorage.removeItem('chainId');
-	localStorage.removeItem('highestScore');
 	localStorage.removeItem('boardId');
 };

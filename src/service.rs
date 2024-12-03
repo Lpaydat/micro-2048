@@ -118,7 +118,6 @@ struct LeaderboardState {
 struct Player {
     username: String,
     chain_id: String,
-    highest_score: u64,
 }
 
 #[derive(SimpleObject, serde::Serialize)]
@@ -135,7 +134,6 @@ impl QueryRoot {
             Some(Player {
                 username: player.username.get().to_string(),
                 chain_id: player.chain_id.get().to_string(),
-                highest_score: *player.highest_score.get(),
             })
         } else {
             None
@@ -155,7 +153,6 @@ impl QueryRoot {
                 players.push(Player {
                     username,
                     chain_id: player.chain_id.get().to_string(),
-                    highest_score: *player.highest_score.get(),
                 });
             }
         }

@@ -35,7 +35,6 @@ pub struct Player {
     pub username: RegisterView<String>,
     pub password_hash: RegisterView<String>,
     pub chain_id: RegisterView<String>,
-    pub highest_score: RegisterView<u64>, // single player only
 }
 
 #[derive(View, SimpleObject)]
