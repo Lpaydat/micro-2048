@@ -44,8 +44,14 @@
 
 	let isPlayerInfoLoaded = $state(false);
 	$effect(() => {
-		if ($player?.data?.player && !isPlayerInfoLoaded) {
+		if (typeof window !== 'undefined' && $player?.data?.player && !isPlayerInfoLoaded) {
 			isPlayerInfoLoaded = true;
+
+			playerUsername = localStorage.getItem('username');
+			playerPasswordHash = localStorage.getItem('passwordHash');
+			playerChainId = localStorage.getItem('chainId');
+			playerIsAdmin = localStorage.getItem('isAdmin');
+
 			userStore.update((store) => ({
 				...store,
 				username: playerUsername,
