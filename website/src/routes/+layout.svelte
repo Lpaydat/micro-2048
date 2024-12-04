@@ -1,7 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import { getClient } from '$lib/client';
-	import { onMount } from 'svelte';
+	import { onMount, type Snippet } from 'svelte';
 	import { initializeStores, Modal, Drawer, getDrawerStore } from '@skeletonlabs/skeleton';
 	import { computePosition, autoUpdate, offset, shift, flip, arrow } from '@floating-ui/dom';
 	import { storePopup } from '@skeletonlabs/skeleton';
@@ -14,35 +14,48 @@
 	import HowToPlay2048 from '$lib/components/organisms/HowToPlay2048.svelte';
 	import { applicationId, chainId, port } from '$lib/constants';
 	import SideLeaderboard from '$lib/components/organisms/SideLeaderboard.svelte';
+	import { getPlayerInfo } from '$lib/graphql/queries/getPlayerInfo';
+	import { logout } from '$lib/utils/logout';
+
+	interface Props {
+		children: Snippet;
+	}
+
+	let { children }: Props = $props();
 
 	initializeStores();
 
 	const client = getClient(chainId, applicationId, port);
 	setContextClient(client);
 
+	let playerUsername: string | null = $state(null);
+	let playerPasswordHash: string | null = $state(null);
+	let playerChainId: string | null = $state(null);	
+	let playerIsAdmin: string | null = $state(null);
+
 	onMount(() => {
-		// const version = localStorage.getItem('version');
-		// if (version !== appVersion) {
-		// 	// update version
-		// 	localStorage.setItem('version', appVersion);
+		playerUsername = localStorage.getItem('username');
+		playerPasswordHash = localStorage.getItem('passwordHash');
+		playerChainId = localStorage.getItem('chainId');
+		playerIsAdmin = localStorage.getItem('isAdmin');
+	});
 
-		// 	// force logout on new version
-		// 	logout();
-		// }
+	const player = $derived(playerUsername ? getPlayerInfo(client, playerUsername) : null);
 
-		const username = localStorage.getItem('username');
-		const passwordHash = localStorage.getItem('passwordHash');
-		const chainId = localStorage.getItem('chainId');
-		const isAdmin = localStorage.getItem('isAdmin');
-
-		if (username && passwordHash && chainId) {
+	let isPlayerInfoLoaded = $state(false);
+	$effect(() => {
+		if ($player?.data?.player && !isPlayerInfoLoaded) {
+			isPlayerInfoLoaded = true;
 			userStore.update((store) => ({
 				...store,
-				username,
-				passwordHash,
-				chainId,
-				isAdmin: isAdmin === 'true'
+				username: playerUsername,
+				passwordHash: playerPasswordHash,
+				chainId: playerChainId,
+				isAdmin: playerIsAdmin === 'true'
 			}));
+		} else if (!$player?.data && !$player?.fetching && playerUsername) {
+			logout();
+			isPlayerInfoLoaded = false;
 		}
 	});
 
@@ -72,4 +85,4 @@
 	{/if}
 </Drawer>
 
-<slot />
+{@render children?.()}
