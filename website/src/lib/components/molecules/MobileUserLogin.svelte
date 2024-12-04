@@ -136,6 +136,11 @@
 					<div class="error-message text-sm">{errorMessage}</div>
 				{/if}
 
+				<div class="text-sm text-gray-600 mb-3">
+					<p>First time users will be automatically registered.</p>
+					<p class="font-semibold pt-2">Please remember your password as it cannot be changed yet.</p>
+				</div>
+
 				<Input
 					id="username"
 					label="Username"

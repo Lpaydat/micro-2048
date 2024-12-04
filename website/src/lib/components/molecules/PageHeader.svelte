@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
+	import { onMount, type Snippet } from 'svelte';
 	import BackIcon from 'lucide-svelte/icons/chevron-left';
 
 	interface Props {
@@ -37,12 +37,28 @@
 		teal: 'bg-teal-600',
 		cyan: 'bg-cyan-600'
 	};
+	const smTitle = 12;
 	const iconClass = $derived(prevPage || icon ? 'ps-1 md:ps-2' : 'ps-2');
+
+	let size = $state('md');
+	const displayTitle = $derived(size === 'sm' && title.length > smTitle ? `${title.slice(0, smTitle)}...` : title);
+
+	const updateSize = () => {
+		if (window.innerWidth < 480) size = 'sm';
+		else if (window.innerWidth < 1440) size = 'md';
+		else size = 'lg';
+	};
+
+	onMount(() => {
+		updateSize();
+		window.addEventListener('resize', updateSize);
+		return () => window.removeEventListener('resize', updateSize);
+	});
 </script>
 
-<div class="flex w-full flex-col md:flex-row">
+<div class="flex w-full">
 	<div
-		class="flex w-full flex-row items-center font-bold text-white {headerRound} relative p-2 transition-all md:p-4"
+		class="flex flex-grow flex-row items-center font-bold text-white {headerRound} relative p-2 transition-all md:p-4"
 	>
 		<a href={prevPage ?? '#'}>
 			<div
@@ -55,13 +71,13 @@
 				{:else}
 					{@render icon?.()}
 				{/if}
-				<span class="text-md tracking-wider lg:text-2xl">{title}</span>
+				<span class="text-md tracking-wider lg:text-2xl" title="{title}">{displayTitle}</span>
 			</div>
 		</a>
 		{@render subActions?.()}
 	</div>
 
-	<div class="mt-4 flex w-full items-center justify-center gap-2 sm:mt-0 md:justify-end">
+	<div class="flex flex-shrink-0 items-center justify-end gap-2 me-2 md:me-4">
 		{@render actions?.()}
 	</div>
 </div>

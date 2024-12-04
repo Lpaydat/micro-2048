@@ -30,6 +30,10 @@
 				alert('Start time and end time are required.');
 				return;
 			}
+			if (new Date(startTime) >= new Date(endTime)) {
+				alert('Start time must be before end time.');
+				return;
+			}
 
 			const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 			const settings: EventSettings = {

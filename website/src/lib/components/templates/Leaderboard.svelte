@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { getContextClient, gql, queryStore } from '@urql/svelte';
 	import Trash from 'lucide-svelte/icons/trash-2';
+	import ContinueIcon from 'lucide-svelte/icons/step-forward';
 	import MainTemplate from '../organisms/MainTemplate.svelte';
 	import RankerLeaderboard from '../organisms/RankerLeaderboard.svelte';
 	import UserSidebar from '../organisms/UserSidebar.svelte';
@@ -58,13 +59,16 @@
 	const sortedRankers = $derived(
 		$leaderboard?.data?.leaderboard?.rankers.slice().sort((a: any, b: any) => b.score - a.score)
 	);
+	const isEnded = $derived(
+		Number($leaderboard?.data?.leaderboard?.endTime ?? '0') - Date.now() < 0
+	);
+	const isStarted = $derived(
+		Number($leaderboard?.data?.leaderboard?.startTime ?? '0') - Date.now() < 0
+	);
 	const canDeleteEvent = $derived(
-		$leaderboard?.data?.leaderboard?.host === $userStore.username
+		$leaderboard?.data?.leaderboard?.host === $userStore.username && !isEnded
 	);
-	const canPlayGame = $derived(
-		Number($leaderboard?.data?.leaderboard?.endTime ?? '0') - Date.now() > 0 &&
-			Number($leaderboard?.data?.leaderboard?.startTime ?? '0') - Date.now() < 0
-	);
+	const canPlayGame = $derived(isStarted && !isEnded);
 
 	const newEventGame = async () => {
 		if (!leaderboardId) return;
@@ -89,7 +93,14 @@
 		deleteEvent(client, leaderboardId);
 		setTimeout(() => {
 			goto('/events');
-		}, 100);
+		}, 250);
+	};
+
+	let size = $state('md');
+	const updateSize = () => {
+		if (window.innerWidth < 480) size = 'sm';
+		else if (window.innerWidth < 1440) size = 'md';
+		else size = 'lg';
 	};
 
 	onMount(() => {
@@ -100,6 +111,12 @@
 		}, 5000);
 
 		return () => clearInterval(interval);
+	});
+
+	onMount(() => {
+		updateSize();
+		window.addEventListener('resize', updateSize);
+		return () => window.removeEventListener('resize', updateSize);
 	});
 </script>
 
@@ -124,10 +141,16 @@
 					{#if canPlayGame}
 						{#if currentBoardId}
 							<a href={`/game/?boardId=${currentBoardId}&leaderboardId=${leaderboardId}`}>
-								<ActionButton icon="plus" label="RESUME GAME" />
+								<ActionButton label="RESUME GAME" onlyIcon={size === 'sm'}>
+									{#snippet icon()}
+										{#if size === 'sm'}
+											<ContinueIcon size={16} />
+										{/if}
+									{/snippet}
+								</ActionButton>
 							</a>
 						{/if}
-						<ActionButton icon="plus" label="NEW GAME" onclick={newEventGame} />
+						<ActionButton label="NEW GAME" onclick={newEventGame} />
 					{/if}
 				{/snippet}
 			</PageHeader>

@@ -31,7 +31,7 @@
 				<Calendar size={28} />
 			{/snippet}
 			{#snippet actions()}
-				<ActionButton icon="plus" label="CREATE EVENT" onclick={createEvent} />
+				<ActionButton label="CREATE EVENT" onclick={createEvent} />
 			{/snippet}
 		</PageHeader>
 		<EventList />

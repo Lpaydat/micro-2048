@@ -1,6 +1,9 @@
 <script lang="ts">
+	import type { Snippet } from "svelte";
+
 	interface Props {
-		icon?: string;
+		onlyIcon?: boolean;
+		icon?: Snippet;
 		label?: string;
 		disabled?: boolean;
 		color?: 'default' | 'important' | 'warning' | 'danger' | 'disabled';
@@ -10,6 +13,7 @@
 	}
 
 	let {
+		onlyIcon = false,
 		icon,
 		label,
 		disabled,
@@ -50,9 +54,11 @@
 	{#if loading}
 		<div class="loading-spinner mr-2"></div>
 	{:else if icon}
-		<i class="fas fa-{icon}"></i>
+		{@render icon?.()}
 	{/if}
-	<span class="tracking-wider {loadingClass}">{label}</span>
+	{#if !onlyIcon}
+		<span class="tracking-wider {loadingClass}">{label}</span>
+	{/if}
 </button>
 
 <style>

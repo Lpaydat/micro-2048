@@ -14,6 +14,7 @@
 		endTime: string;
 		description?: string;
 		isActive?: boolean;
+		canDeleteEvent?: boolean;
 	}
 
 	let {
@@ -23,7 +24,8 @@
 		startTime,
 		endTime,
 		description,
-		isActive = false
+		isActive = false,
+		canDeleteEvent = true
 	}: Props = $props();
 
 	const client = getContextClient();
@@ -38,7 +40,7 @@
 	// Format function that converts timestamp to local time
 	const formatLocalTime = (timestamp: string) => {
 		return formatInTimeZone(
-			new Date(Number(timestamp)), 
+			new Date(Number(timestamp)),
 			userTimeZone,
 			"MMM d, yyyy 'at' h:mm a (zzz)"
 		);
@@ -48,7 +50,7 @@
 <BaseListItem>
 	{#snippet leftContent()}
 		<a href={`/events/${leaderboardId}`}>
-			<div class="pb-3 flex w-full items-center justify-between">
+			<div class="flex w-full items-center justify-between pb-3">
 				<h3 class="text-xl font-bold text-gray-800">{name}</h3>
 			</div>
 			<div class="text-sm text-gray-600">
@@ -72,7 +74,7 @@
 		</a>
 	{/snippet}
 	{#snippet rightContent()}
-		{#if host === $userStore?.username}
+		{#if host === $userStore?.username && canDeleteEvent}
 			<div class="mt-4 flex justify-end">
 				<ActionButton label="Delete" color="warning" onclick={deleteEventLeaderboard} />
 			</div>
