@@ -55,14 +55,14 @@
 			</div>
 			<div class="text-sm text-gray-600">
 				<div class="pb-1">
-					<span class="me-2 font-semibold">Host:</span><span>{host}</span>
+					<span class="me-1 font-semibold">Host:</span><span>{host}</span>
 				</div>
 				<div class="pb-1">
-					<span class="me-2 font-semibold">Start:</span>
+					<span class="me-1 font-semibold">Start:</span>
 					<span>{formatLocalTime(startTime)}</span>
 				</div>
 				<div class="pb-1">
-					<span class="me-2 font-semibold">End:</span>
+					<span class="me-1 font-semibold">End:</span>
 					<span>{formatLocalTime(endTime)}</span>
 				</div>
 				{#if description}
