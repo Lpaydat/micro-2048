@@ -64,7 +64,7 @@
 	>
 		<a href={prevPage ?? '#'}>
 			<div
-				class="header flex items-center justify-center gap-1 rounded-lg md:gap-2 {iconClass} py-2 pe-2 text-sm font-bold transition-all lg:pe-4 lg:text-sm {colorClass[
+				class="header me-2 flex items-center justify-center gap-1 rounded-lg md:me-6 md:gap-2 {iconClass} py-2 pe-2 text-sm font-bold transition-all lg:pe-4 lg:text-sm {colorClass[
 					color
 				]}"
 			>

@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { getContextClient, gql, queryStore } from '@urql/svelte';
+	import { Client, getContextClient, gql, queryStore } from '@urql/svelte';
 	import Trash from 'lucide-svelte/icons/trash-2';
+	import Star from 'lucide-svelte/icons/star';
 	import ContinueIcon from 'lucide-svelte/icons/step-forward';
 	import MainTemplate from '../organisms/MainTemplate.svelte';
 	import RankerLeaderboard from '../organisms/RankerLeaderboard.svelte';
@@ -14,7 +15,7 @@
 	import { newGame } from '$lib/graphql/mutations/newBoard';
 	import { setGameCreationStatus } from '$lib/stores/gameStore';
 	import { getBoardId, setBoardId } from '$lib/stores/boardId';
-	import { deleteEvent } from '$lib/graphql/mutations/leaderboardAction.ts';
+	import { deleteEvent, togglePinEvent } from '$lib/graphql/mutations/leaderboardAction.ts';
 	import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
 
 	interface Props {
@@ -35,6 +36,7 @@
 				endTime
 				totalBoards
 				totalPlayers
+				isPinned
 				rankers {
 					username
 					score
@@ -67,9 +69,12 @@
 		Number($leaderboard?.data?.leaderboard?.startTime ?? '0') - Date.now() < 0
 	);
 	const canDeleteEvent = $derived(
-		($leaderboard?.data?.leaderboard?.host === $userStore.username || $userStore.isAdmin) && !isEnded
+		($leaderboard?.data?.leaderboard?.host === $userStore.username || $userStore.isAdmin) &&
+			!isEnded
 	);
+	const canPinEvent = $derived($userStore.isAdmin && !isEnded);
 	const canPlayGame = $derived(isStarted && !isEnded);
+	const isPinned = $derived($leaderboard?.data?.leaderboard?.isPinned);
 
 	const newEventGame = async () => {
 		if (!leaderboardId) return;
@@ -97,7 +102,14 @@
 		}, 250);
 	};
 
-    const modalStore = getModalStore();
+	const togglePin = () => {
+		togglePinEvent(client, leaderboardId);
+		setTimeout(() => {
+			leaderboard.reexecute({ requestPolicy: 'network-only' });
+		}, 500);
+	};
+
+	const modalStore = getModalStore();
 	const modal: ModalSettings = {
 		type: 'confirm',
 		title: 'Delete Event',
@@ -144,8 +156,13 @@
 		{:else}
 			<PageHeader title={$leaderboard?.data?.leaderboard?.name} {prevPage}>
 				{#snippet subActions()}
+					{#if canPinEvent}
+						<button type="button" class="btn-icon" onclick={togglePin}>
+							<Star size={20} fill={isPinned ? '#FFCC00' : 'none'} strokeWidth={isPinned ? 0 : 2} />
+						</button>
+					{/if}
 					{#if canDeleteEvent}
-						<button type="button" class="btn" onclick={() => modalStore.trigger(modal)}>
+						<button type="button" class="btn-icon" onclick={() => modalStore.trigger(modal)}>
 							<Trash size={20} />
 						</button>
 					{/if}

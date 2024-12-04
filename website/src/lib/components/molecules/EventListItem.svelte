@@ -17,6 +17,7 @@
 		isActive?: boolean;
 		isPinned?: boolean;
 		canDeleteEvent?: boolean;
+		canPinEvent?: boolean;
 		callback?: () => void;
 	}
 
@@ -30,10 +31,11 @@
 		isPinned = false,
 		isActive = false,
 		canDeleteEvent = true,
+		canPinEvent = true,
 		callback
 	}: Props = $props();
 
-    const modalStore = getModalStore();
+	const modalStore = getModalStore();
 	const modal: ModalSettings = {
 		type: 'confirm',
 		title: 'Delete Event',
@@ -97,8 +99,8 @@
 		</a>
 	{/snippet}
 	{#snippet rightContent()}
-		<div class="flex flex-row md:flex-col w-full gap-2 items-end">
-			{#if $userStore?.isAdmin}
+		<div class="flex w-full flex-row items-end gap-2 md:flex-col">
+			{#if $userStore?.isAdmin && canPinEvent}
 				<div class="mt-2">
 					<ActionButton label={isPinned ? 'Unpin' : 'Pin'} color="warning" onclick={togglePin} />
 				</div>

@@ -32,7 +32,9 @@
 	const leaderboards = $derived(queryStore({ client, query: GET_LEADERBOARDS }));
 
 	const pinnedEvents = $derived(
-		$leaderboards?.data?.leaderboards.filter((event: EventSettings) => event.isPinned)
+		$leaderboards?.data?.leaderboards.filter(
+			(event: EventSettings) => event.isPinned && Number(event.endTime) >= Date.now()
+		)
 	);
 	const activeEvents = $derived(
 		$leaderboards?.data?.leaderboards.filter((event: EventSettings) => {
@@ -78,7 +80,7 @@
 				<h2
 					class="card flex w-fit flex-row items-center gap-2 rounded-none bg-black/30 px-4 py-2 text-xl font-extrabold text-red-400 shadow-lg"
 				>
-					<Star size={20} />
+					<Star size={20} fill="#F87171" strokeWidth={0} />
 					Events
 				</h2>
 			</div>
@@ -117,7 +119,7 @@
 		{:else if eventGroup === 'past' && pastEvents?.length > 0}
 			{#each pastEvents as event}
 				{#if event && event.leaderboardId}
-					<EventListItem canDeleteEvent={false} {...event} {callback} />
+					<EventListItem canDeleteEvent={false} canPinEvent={false} {...event} {callback} />
 				{/if}
 			{/each}
 		{:else}
