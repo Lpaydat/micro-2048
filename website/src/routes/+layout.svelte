@@ -38,14 +38,6 @@
 		playerPasswordHash = localStorage.getItem('passwordHash');
 		playerChainId = localStorage.getItem('chainId');
 		playerIsMod = localStorage.getItem('isMod');
-
-		userStore.update((store) => ({
-			...store,
-			username: playerUsername,
-			passwordHash: playerPasswordHash,
-			chainId: playerChainId,
-			isMod: playerIsMod === 'true'
-		}));
 	});
 
 	const player = $derived(playerUsername ? getPlayerInfo(client, playerUsername) : null);
@@ -67,9 +59,9 @@
 				chainId: playerChainId,
 				isMod: playerIsMod === 'true'
 			}));
-			// } else if (!$player?.data && !$player?.fetching && playerUsername) {
-			// 	logout();
-			// 	isPlayerInfoLoaded = false;
+			} else if (!$player?.data && !$player?.fetching && playerUsername) {
+				logout();
+				isPlayerInfoLoaded = false;
 		}
 	});
 
