@@ -8,12 +8,19 @@
 	import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
 	import { preventDefault } from '$lib/utils/preventDefault';
 
+	interface Props {
+		isMobile?: boolean;
+	}
+
+	const { isMobile = false }: Props = $props();
+
 	let username = $state('');
 	let submittedUsername = $state('');
 	let passwordHash = $state('');
 	let password = $state('');
 	let loading = $state(false);
 	let canLogin = $state(false);
+	let showForm = $state(false);
 
 	const REGISTER_PLAYER = gql`
 		mutation RegisterPlayer($username: String!, $passwordHash: String!) {
@@ -151,65 +158,119 @@
 	});
 </script>
 
-<form
-	onsubmit={preventDefault(handleSubmit)}
-	class="mx-auto w-full max-w-md rounded-md bg-[#FAF8EF] p-6 shadow-md"
->
-	<div class="space-y-6">
-		<!-- Title -->
-		<div class="text-center">
-			<h2 class="game-font text-2xl font-bold text-[#776E65]">Join Game</h2>
-			<p class="game-font mt-2 text-[#776E65]/80">Sign in to save your progress</p>
-		</div>
+{#if !isMobile}
+	<form
+		onsubmit={preventDefault(handleSubmit)}
+		class="pc mx-auto w-full max-w-md rounded-md bg-[#FAF8EF] p-6 shadow-md"
+	>
+		<div class="space-y-6">
+			<!-- Title -->
+			<div class="text-center">
+				<h2 class="game-font text-2xl font-bold text-[#776E65]">Join Game</h2>
+				<p class="game-font mt-2 text-[#776E65]/80">Sign in to save your progress</p>
+			</div>
 
-		<!-- Error Message -->
-		{#if errorMessage}
-			<div class="error-message shake-animation">
-				{errorMessage}
+			<!-- Error Message -->
+			{#if errorMessage}
+				<div class="pc error-message shake-animation">
+					{errorMessage}
+				</div>
+			{/if}
+
+			<!-- Username Field -->
+			<div class="form-field">
+				<Input
+					id="username"
+					label="Username"
+					bind:value={username}
+					placeholder="Enter your username"
+					required
+				/>
+			</div>
+
+			<!-- Password Field -->
+			<div class="form-field">
+				<Input
+					id="password"
+					type="password"
+					label="Password"
+					bind:value={password}
+					placeholder="Enter your password"
+					required
+					showToggle
+				/>
+			</div>
+
+			<!-- Submit Button -->
+			<Button type="submit" variant="primary" {loading} class="w-full">
+				{loading ? 'Joining...' : 'Join Now'}
+			</Button>
+
+			<!-- Additional Actions -->
+			<div class="flex items-center justify-between border-t border-[#CDC1B4] pt-4">
+				<Button variant="outline" size="sm" onclick={() => modalStore.trigger(howToPlayModal)}>
+					How to Play
+				</Button>
+
+				<Button variant="default" size="sm" onclick={() => modalStore.trigger(guestModeModal)}>
+					Play as Guest
+				</Button>
+			</div>
+		</div>
+	</form>
+{:else}
+	<div class="relative z-20">
+		<Button variant="outline" size="sm" onclick={() => (showForm = !showForm)}>Connect</Button>
+
+		{#if showForm}
+			<div
+				class="absolute right-0 top-12 w-72 rounded-md border-4 border-[#BBADA0] bg-[#FAF8EF] p-4 shadow-lg"
+			>
+				<form onsubmit={preventDefault(handleSubmit)} class="space-y-3">
+					{#if errorMessage}
+						<div class="mobile error-message text-sm">{errorMessage}</div>
+					{/if}
+
+					<div class="mb-3 text-sm text-gray-600">
+						<p>First time users will be automatically registered.</p>
+						<p class="pt-2 font-semibold">
+							Please remember your password as it cannot be changed yet.
+						</p>
+					</div>
+
+					<Input
+						id="username"
+						label="Username"
+						bind:value={username}
+						placeholder="Username"
+						required
+						size="sm"
+					/>
+
+					<Input
+						id="password"
+						type="password"
+						label="Password"
+						bind:value={password}
+						placeholder="Password"
+						required
+						showToggle
+						size="sm"
+					/>
+
+					<div class="flex justify-end gap-2">
+						<Button variant="outline" size="sm" type="button" onclick={() => (showForm = false)}>
+							Cancel
+						</Button>
+						<Button type="submit" variant="primary" size="sm" {loading}>
+							{loading ? 'Loading...' : 'Connect'}
+						</Button>
+					</div>
+				</form>
 			</div>
 		{/if}
-
-		<!-- Username Field -->
-		<div class="form-field">
-			<Input
-				id="username"
-				label="Username"
-				bind:value={username}
-				placeholder="Enter your username"
-				required
-			/>
-		</div>
-
-		<!-- Password Field -->
-		<div class="form-field">
-			<Input
-				id="password"
-				type="password"
-				label="Password"
-				bind:value={password}
-				placeholder="Enter your password"
-				required
-				showToggle
-			/>
-		</div>
-
-		<!-- Submit Button -->
-		<Button type="submit" variant="primary" {loading} class="w-full">
-			{loading ? 'Joining...' : 'Join Now'}
-		</Button>
-
-		<!-- Additional Actions -->
-		<div class="flex items-center justify-between border-t border-[#CDC1B4] pt-4">
-			<Button variant="outline" size="sm" onclick={() => modalStore.trigger(howToPlayModal)}>
-				How to Play
-			</Button>
-
-			<Button variant="default" size="sm" onclick={() => modalStore.trigger(guestModeModal)}>
-				Play as Guest
-			</Button>
-		</div>
 	</div>
-</form>
+{/if}
 
 <style>
 	/* 2048 font style */
@@ -222,11 +283,18 @@
 	.error-message {
 		color: #d9534f; /* Bootstrap danger color */
 		background-color: #f2dede; /* Light red background */
-		padding: 5px; /* Reduced padding */
 		border-radius: 4px;
 		text-align: center;
+		margin-bottom: 0.5rem;
+	}
+
+	div.pc {
+		padding: 5px; /* Reduced padding */
 		font-size: 0.875rem; /* Smaller font size */
-		margin-bottom: 0.5rem; /* Reduced margin */
+	}
+
+	div.mobile {
+		padding: 4px 8px;
 	}
 
 	/* Shake animation */
@@ -255,7 +323,7 @@
 	}
 
 	/* Form container style */
-	form {
+	form.pc {
 		border: 8px solid #bbada0;
 		box-shadow:
 			0 0 0 1px rgba(119, 110, 101, 0.08),
@@ -264,14 +332,14 @@
 
 	/* Responsive padding */
 	@media (max-width: 640px) {
-		form {
+		form.pc {
 			border-width: 4px;
 			margin: 0 1rem;
 		}
 	}
 
 	/* Optional: Add subtle grid pattern */
-	form::before {
+	form.pc::before {
 		content: '';
 		position: absolute;
 		top: 0;

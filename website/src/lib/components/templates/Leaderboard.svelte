@@ -73,7 +73,7 @@
 			!isEnded
 	);
 	const canPinEvent = $derived($userStore.isAdmin && !isEnded);
-	const canPlayGame = $derived(isStarted && !isEnded);
+	const canPlayGame = $derived(isStarted && !isEnded && $userStore.username);
 	const isPinned = $derived($leaderboard?.data?.leaderboard?.isPinned);
 
 	const newEventGame = async () => {

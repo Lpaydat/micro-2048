@@ -3,8 +3,8 @@
 	import { goto } from '$app/navigation';
 	import { userStore } from '$lib/stores/userStore';
 	import LogOut from 'lucide-svelte/icons/log-out';
-	import MobileUserLogin from './MobileUserLogin.svelte';
 	import { logout } from '$lib/utils/logout';
+	import JoinForm from './JoinForm.svelte';
 
 	const handleLogout = () => {
 		logout();
@@ -26,6 +26,6 @@
 			<LogOut size={16} />
 		</button>
 	{:else}
-		<MobileUserLogin />
+		<JoinForm isMobile />
 	{/if}
 </div>

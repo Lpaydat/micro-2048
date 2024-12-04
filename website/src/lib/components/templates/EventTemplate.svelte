@@ -7,6 +7,7 @@
 	import EventLeaderboardForm from '$lib/components/organisms/EventLeaderboardForm.svelte';
 	import { getModalStore, type ModalSettings, type ModalStore } from '@skeletonlabs/skeleton';
 	import EventList from '$lib/components/organisms/EventList.svelte';
+	import { userStore } from '$lib/stores/userStore';
 
 	const modalStore: ModalStore = getModalStore();
 
@@ -31,7 +32,9 @@
 				<Calendar size={28} />
 			{/snippet}
 			{#snippet actions()}
-				<ActionButton label="CREATE EVENT" onclick={createEvent} />
+				{#if $userStore.username}
+					<ActionButton label="CREATE EVENT" onclick={createEvent} />
+				{/if}
 			{/snippet}
 		</PageHeader>
 		<EventList />
