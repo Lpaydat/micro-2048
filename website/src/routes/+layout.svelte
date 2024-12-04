@@ -33,13 +33,15 @@
 		const username = localStorage.getItem('username');
 		const passwordHash = localStorage.getItem('passwordHash');
 		const chainId = localStorage.getItem('chainId');
+		const isAdmin = localStorage.getItem('isAdmin');
 
 		if (username && passwordHash && chainId) {
 			userStore.update((store) => ({
 				...store,
 				username,
 				passwordHash,
-				chainId
+				chainId,
+				isAdmin: isAdmin === 'true'
 			}));
 		}
 	});

@@ -35,6 +35,7 @@ pub struct Player {
     pub username: RegisterView<String>,
     pub password_hash: RegisterView<String>,
     pub chain_id: RegisterView<String>,
+    pub is_admin: RegisterView<bool>,
 }
 
 #[derive(View, SimpleObject)]
@@ -45,6 +46,7 @@ pub struct BoardState {
     pub score: RegisterView<u64>,
     pub is_ended: RegisterView<bool>,
     pub player: RegisterView<String>,
+    pub chain_id: RegisterView<String>,
     pub leaderboard_id: RegisterView<String>,
 }
 
@@ -67,6 +69,7 @@ pub struct ClassicLeaderboard {
     pub end_time: RegisterView<u64>,
     pub total_boards: RegisterView<u32>,
     pub total_players: RegisterView<u32>,
+    pub is_pinned: RegisterView<bool>,
 
     pub score: MapView<String, u64>,        // username, score
     pub board_ids: MapView<String, String>, // username, board_id

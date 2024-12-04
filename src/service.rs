@@ -65,6 +65,7 @@ struct BoardState {
     is_ended: bool,
     score: u64,
     player: String,
+    chain_id: String,
     leaderboard_id: Option<String>,
 }
 
@@ -106,6 +107,7 @@ struct LeaderboardState {
     chain_id: String,
     name: String,
     description: Option<String>,
+    is_pinned: bool,
     host: String,
     start_time: String,
     end_time: String,
@@ -118,6 +120,7 @@ struct LeaderboardState {
 struct Player {
     username: String,
     chain_id: String,
+    is_admin: bool,
 }
 
 #[derive(SimpleObject, serde::Serialize)]
@@ -134,6 +137,7 @@ impl QueryRoot {
             Some(Player {
                 username: player.username.get().to_string(),
                 chain_id: player.chain_id.get().to_string(),
+                is_admin: *player.is_admin.get(),
             })
         } else {
             None
@@ -153,6 +157,7 @@ impl QueryRoot {
                 players.push(Player {
                     username,
                     chain_id: player.chain_id.get().to_string(),
+                    is_admin: *player.is_admin.get(),
                 });
             }
         }
@@ -177,6 +182,7 @@ impl QueryRoot {
                 is_ended: *game.is_ended.get(),
                 score: *game.score.get(),
                 player: game.player.get().to_string(),
+                chain_id: game.chain_id.get().to_string(),
                 leaderboard_id: Some(game.leaderboard_id.get().to_string()),
             };
             Some(game_state)
@@ -201,6 +207,7 @@ impl QueryRoot {
                     is_ended: *board.is_ended.get(),
                     score: *board.score.get(),
                     player: board.player.get().to_string(),
+                    chain_id: board.chain_id.get().to_string(),
                     leaderboard_id: Some(board.leaderboard_id.get().to_string()),
                 });
             }
@@ -250,6 +257,7 @@ impl QueryRoot {
                 chain_id: leaderboard.chain_id.get().to_string(),
                 name: leaderboard.name.get().to_string(),
                 description: Some(leaderboard.description.get().to_string()),
+                is_pinned: *leaderboard.is_pinned.get(),
                 host: leaderboard.host.get().to_string(),
                 start_time: leaderboard.start_time.get().to_string(),
                 end_time: leaderboard.end_time.get().to_string(),
@@ -288,6 +296,7 @@ impl QueryRoot {
                     chain_id: leaderboard.chain_id.get().to_string(),
                     name: leaderboard.name.get().to_string(),
                     description: Some(leaderboard.description.get().to_string()),
+                    is_pinned: *leaderboard.is_pinned.get(),
                     host: leaderboard.host.get().to_string(),
                     start_time: leaderboard.start_time.get().to_string(),
                     end_time: leaderboard.end_time.get().to_string(),
@@ -531,6 +540,25 @@ impl MutationRoot {
             player,
             timestamp: timestamp.parse::<u64>().unwrap(),
         };
+        bcs::to_bytes(&operation).unwrap()
+    }
+
+    async fn toggle_admin(
+        &self,
+        player: String,
+        password_hash: String,
+        username: String,
+    ) -> Vec<u8> {
+        if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
+            if *player.password_hash.get() != password_hash {
+                panic!("Invalid password");
+            }
+            if *player.username.get() != "lpaydat" {
+                panic!("Only lpaydat can toggle admin");
+            }
+        }
+
+        let operation = Operation::ToggleAdmin { username };
         bcs::to_bytes(&operation).unwrap()
     }
 }

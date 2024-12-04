@@ -5,11 +5,13 @@ export const logout = () => {
 		...store,
 		chainId: undefined,
 		username: undefined,
-		passwordHash: undefined
+		passwordHash: undefined,
+		isAdmin: undefined
 	}));
 
 	localStorage.removeItem('username');
 	localStorage.removeItem('passwordHash');
 	localStorage.removeItem('chainId');
 	localStorage.removeItem('boardId');
+	localStorage.removeItem('isAdmin');
 };

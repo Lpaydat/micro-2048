@@ -37,7 +37,6 @@ pub enum Operation {
         username: String,
         password_hash: String,
     },
-    // TODO: add tournament id here?
     NewBoard {
         seed: String,
         player: String,
@@ -70,6 +69,9 @@ pub enum Operation {
         settings: EventLeaderboardSettings,
         player: String,
         timestamp: u64,
+    },
+    ToggleAdmin {
+        username: String,
     },
 }
 

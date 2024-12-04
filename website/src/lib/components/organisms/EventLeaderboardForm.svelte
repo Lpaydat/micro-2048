@@ -3,7 +3,7 @@
 	import Input from '../atoms/Input.svelte';
 	import Button from '../atoms/Button.svelte';
 	import { preventDefault } from '$lib/utils/preventDefault';
-	import { createEvent, type EventSettings } from '$lib/graphql/mutations/createEvent';
+	import { createEvent, type EventSettings } from '$lib/graphql/mutations/leaderboardAction.ts';
 	import { getContextClient } from '@urql/svelte';
 	import { getModalStore } from '@skeletonlabs/skeleton';
 

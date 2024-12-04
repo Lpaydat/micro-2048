@@ -3,7 +3,8 @@ import { Client, gql, mutationStore } from '@urql/svelte';
 enum EventLeaderboardAction {
 	Create = 'Create',
 	Update = 'Update',
-	Delete = 'Delete'
+	Delete = 'Delete',
+	TogglePin = 'TogglePin'
 }
 
 export const EVENT_LEADERBOARD_ACTION = gql`
@@ -32,6 +33,7 @@ export type EventSettings = {
 	description?: string;
 	startTime: string;
 	endTime: string;
+	isPinned?: boolean;
 };
 
 const mutation = (
@@ -70,5 +72,13 @@ export const deleteEvent = (client: Client, leaderboardId: string) => {
 		name: '',
 		startTime: '',
 		endTime: ''
+	});
+};
+
+export const togglePinEvent = (client: Client, leaderboardId: string) => {
+	mutation(client, leaderboardId, EventLeaderboardAction.TogglePin, {
+		name: '',
+		startTime: '0',
+		endTime: '0'
 	});
 };

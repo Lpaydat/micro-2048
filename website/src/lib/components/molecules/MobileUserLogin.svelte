@@ -111,11 +111,13 @@
 			localStorage.setItem('username', username);
 			localStorage.setItem('passwordHash', passwordHash);
 			localStorage.setItem('chainId', $player.data.player.chainId);
+			localStorage.setItem('isAdmin', $player.data.player.isAdmin);
 
 			userStore.update((store) => ({
 				...store,
 				username: $player.data.player.username,
 				chainId: $player.data.player.chainId,
+				isAdmin: $player.data.player.isAdmin,
 				...(passwordHash && { passwordHash })
 			}));
 			canLogin = false;
@@ -136,9 +138,11 @@
 					<div class="error-message text-sm">{errorMessage}</div>
 				{/if}
 
-				<div class="text-sm text-gray-600 mb-3">
+				<div class="mb-3 text-sm text-gray-600">
 					<p>First time users will be automatically registered.</p>
-					<p class="font-semibold pt-2">Please remember your password as it cannot be changed yet.</p>
+					<p class="pt-2 font-semibold">
+						Please remember your password as it cannot be changed yet.
+					</p>
 				</div>
 
 				<Input

@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-    import ArrowSwap from 'lucide-svelte/icons/arrow-left-right';
-	import type { EventSettings } from '$lib/graphql/mutations/createEvent';
+	import ArrowSwap from 'lucide-svelte/icons/arrow-left-right';
+	import Star from 'lucide-svelte/icons/star';
+	import type { EventSettings } from '$lib/graphql/mutations/leaderboardAction.ts';
 	import { getContextClient, gql, queryStore } from '@urql/svelte';
 	import EventListItem from '../molecules/EventListItem.svelte';
 
@@ -12,9 +13,11 @@
 			leaderboards {
 				leaderboardId
 				name
+				description
 				host
 				startTime
 				endTime
+				isPinned
 			}
 		}
 	`;
@@ -28,6 +31,9 @@
 
 	const leaderboards = $derived(queryStore({ client, query: GET_LEADERBOARDS }));
 
+	const pinnedEvents = $derived(
+		$leaderboards?.data?.leaderboards.filter((event: EventSettings) => event.isPinned)
+	);
 	const activeEvents = $derived(
 		$leaderboards?.data?.leaderboards.filter((event: EventSettings) => {
 			const now = Date.now();
@@ -45,6 +51,14 @@
 		)
 	);
 
+	const callback = () => {
+		setTimeout(() => {
+			leaderboards.reexecute({ requestPolicy: 'network-only' });
+		}, 500);
+	};
+
+	let titleClass = $derived(pinnedEvents?.length > 0 ? 'text-lg mt-4' : 'text-xl');
+
 	let interval: NodeJS.Timeout;
 	onMount(() => {
 		leaderboards.reexecute({ requestPolicy: 'network-only' });
@@ -59,7 +73,27 @@
 
 <div class="flex h-[80vh] w-full flex-col gap-6 overflow-y-auto pb-12 pt-6 md:h-[90vh]">
 	<div class="mx-auto flex w-full max-w-3xl flex-col gap-4">
-		<button type="button" onclick={loopGroup} class="flex items-center flex-row gap-2 ms-3 md:ms-0 py-1 md:py-2 text-xl font-bold text-yellow-600">
+		{#if pinnedEvents?.length > 0}
+			<div class="border-s-8 border-red-600">
+				<h2
+					class="card flex w-fit flex-row items-center gap-2 rounded-none bg-black/30 px-4 py-2 text-xl font-extrabold text-red-400 shadow-lg"
+				>
+					<Star size={20} />
+					Events
+				</h2>
+			</div>
+			{#each pinnedEvents as event}
+				{#if event && event.leaderboardId}
+					<EventListItem {...event} {callback} />
+				{/if}
+			{/each}
+		{/if}
+
+		<button
+			type="button"
+			onclick={loopGroup}
+			class="ms-3 flex flex-row items-center gap-2 py-1 {titleClass} font-bold text-yellow-500 md:ms-0 md:py-2"
+		>
 			{eventGroup === 'active'
 				? 'Active Events'
 				: eventGroup === 'upcoming'
@@ -71,19 +105,19 @@
 		{#if eventGroup === 'active' && activeEvents?.length > 0}
 			{#each activeEvents as event}
 				{#if event && event.leaderboardId}
-					<EventListItem isActive {...event} />
+					<EventListItem isActive {...event} {callback} />
 				{/if}
 			{/each}
 		{:else if eventGroup === 'upcoming' && upcomingEvents?.length > 0}
 			{#each upcomingEvents as event}
 				{#if event && event.leaderboardId}
-					<EventListItem {...event} />
+					<EventListItem {...event} {callback} />
 				{/if}
 			{/each}
 		{:else if eventGroup === 'past' && pastEvents?.length > 0}
 			{#each pastEvents as event}
 				{#if event && event.leaderboardId}
-					<EventListItem canDeleteEvent={false} {...event} />
+					<EventListItem canDeleteEvent={false} {...event} {callback} />
 				{/if}
 			{/each}
 		{:else}

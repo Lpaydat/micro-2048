@@ -14,7 +14,7 @@
 	import { newGame } from '$lib/graphql/mutations/newBoard';
 	import { setGameCreationStatus } from '$lib/stores/gameStore';
 	import { getBoardId, setBoardId } from '$lib/stores/boardId';
-	import { deleteEvent } from '$lib/graphql/mutations/createEvent';
+	import { deleteEvent } from '$lib/graphql/mutations/leaderboardAction.ts';
 
 	interface Props {
 		leaderboardId?: string;

@@ -41,7 +41,9 @@
 	const iconClass = $derived(prevPage || icon ? 'ps-1 md:ps-2' : 'ps-2');
 
 	let size = $state('md');
-	const displayTitle = $derived(size === 'sm' && title.length > smTitle ? `${title.slice(0, smTitle)}...` : title);
+	const displayTitle = $derived(
+		size === 'sm' && title.length > smTitle ? `${title.slice(0, smTitle)}...` : title
+	);
 
 	const updateSize = () => {
 		if (window.innerWidth < 480) size = 'sm';
@@ -71,13 +73,13 @@
 				{:else}
 					{@render icon?.()}
 				{/if}
-				<span class="text-md tracking-wider lg:text-2xl" title="{title}">{displayTitle}</span>
+				<span class="text-md tracking-wider lg:text-2xl" {title}>{displayTitle}</span>
 			</div>
 		</a>
 		{@render subActions?.()}
 	</div>
 
-	<div class="flex flex-shrink-0 items-center justify-end gap-2 me-2 md:me-4">
+	<div class="me-2 flex flex-shrink-0 items-center justify-end gap-2 md:me-4">
 		{@render actions?.()}
 	</div>
 </div>

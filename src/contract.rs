@@ -126,11 +126,18 @@ impl Contract for Game2048Contract {
                 let new_board = Game::new(&board_id, &player, timestamp).board;
                 let game = self.state.boards.load_entry_mut(&board_id).await.unwrap();
                 let leaderboard_id = leaderboard_id.unwrap_or("".to_string());
+                let player_obj = self
+                    .state
+                    .players
+                    .load_entry_or_insert(&player)
+                    .await
+                    .unwrap();
 
                 game.board_id.set(board_id.clone());
                 game.board.set(new_board);
                 game.player.set(player.clone());
                 game.leaderboard_id.set(leaderboard_id.clone());
+                game.chain_id.set(player_obj.chain_id.get().clone());
 
                 let leaderboard = self
                     .state
@@ -185,6 +192,23 @@ impl Contract for Game2048Contract {
                         timestamp,
                     };
 
+                    let leaderboard_id = board.leaderboard_id.get();
+                    let leaderboard = self
+                        .state
+                        .leaderboards
+                        .load_entry_mut(&leaderboard_id.to_string())
+                        .await
+                        .unwrap();
+
+                    if !leaderboard_id.is_empty() {
+                        let start_time = leaderboard.start_time.get();
+                        let end_time = leaderboard.end_time.get();
+                        // TODO: need to implement the better check
+                        if timestamp < *start_time || timestamp > *end_time {
+                            panic!("Tournament is not active");
+                        }
+                    }
+
                     let new_board = Game::execute(&mut game, direction);
                     let score = Game::score(new_board);
                     let player = board.player.get().clone();
@@ -202,24 +226,6 @@ impl Contract for Game2048Contract {
                             board.is_ended.set(true);
                         }
 
-                        let leaderboard_id = board.leaderboard_id.get();
-                        let leaderboard = self
-                            .state
-                            .leaderboards
-                            .load_entry_mut(&leaderboard_id.to_string())
-                            .await
-                            .unwrap();
-
-                        if !leaderboard_id.is_empty() {
-                            let start_time = leaderboard.start_time.get();
-                            let end_time = leaderboard.end_time.get();
-                            // TODO: need to implement the better check
-                            if timestamp < *start_time || timestamp > *end_time {
-                                panic!("Tournament is not active");
-                            }
-                        }
-
-                        // TODO: it should check on the leaderboard instead of player
                         let username = board.player.get();
                         let player_leaderboard_score =
                             leaderboard.score.get(username.as_str()).await.unwrap();
@@ -749,7 +755,30 @@ impl Contract for Game2048Contract {
                         // TODO: this cause error when trying to close empty chain
                         // self.close_chain(&leaderboard_id).await;
                     }
+                    EventLeaderboardAction::TogglePin => {
+                        let is_admin = self
+                            .state
+                            .players
+                            .load_entry_or_insert(&player)
+                            .await
+                            .unwrap()
+                            .is_admin
+                            .get();
+
+                        if !is_admin {
+                            panic!("Only admin can pin event");
+                        }
+
+                        leaderboard.is_pinned.set(!*leaderboard.is_pinned.get());
+                    }
                 }
+            }
+            Operation::ToggleAdmin { username } => {
+                self.check_player_registered(&username, RegistrationCheck::EnsureRegistered)
+                    .await;
+
+                let player = self.state.players.load_entry_mut(&username).await.unwrap();
+                player.is_admin.set(!*player.is_admin.get());
             }
         }
     }

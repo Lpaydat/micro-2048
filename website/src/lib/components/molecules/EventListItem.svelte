@@ -1,7 +1,7 @@
 <script lang="ts">
 	import BaseListItem from './BaseListItem.svelte';
 	import ActionButton from '../atoms/ActionButton.svelte';
-	import { deleteEvent } from '$lib/graphql/mutations/createEvent';
+	import { deleteEvent, togglePinEvent } from '$lib/graphql/mutations/leaderboardAction.ts';
 	import { getContextClient } from '@urql/svelte';
 	import { userStore } from '$lib/stores/userStore';
 	import { formatInTimeZone } from 'date-fns-tz';
@@ -14,7 +14,9 @@
 		endTime: string;
 		description?: string;
 		isActive?: boolean;
+		isPinned?: boolean;
 		canDeleteEvent?: boolean;
+		callback?: () => void;
 	}
 
 	let {
@@ -24,14 +26,22 @@
 		startTime,
 		endTime,
 		description,
+		isPinned = false,
 		isActive = false,
-		canDeleteEvent = true
+		canDeleteEvent = true,
+		callback
 	}: Props = $props();
 
 	const client = getContextClient();
 
 	const deleteEventLeaderboard = (event: MouseEvent) => {
 		deleteEvent(client, leaderboardId);
+		callback?.();
+	};
+
+	const togglePin = (event: MouseEvent) => {
+		togglePinEvent(client, leaderboardId);
+		callback?.();
 	};
 
 	// Get user's timezone
@@ -74,10 +84,17 @@
 		</a>
 	{/snippet}
 	{#snippet rightContent()}
-		{#if host === $userStore?.username && canDeleteEvent}
-			<div class="mt-4 flex justify-end">
-				<ActionButton label="Delete" color="warning" onclick={deleteEventLeaderboard} />
-			</div>
-		{/if}
+		<div class="flex flex-col items-end">
+			{#if $userStore?.isAdmin}
+				<div class="mt-2">
+					<ActionButton label={isPinned ? 'Unpin' : 'Pin'} color="warning" onclick={togglePin} />
+				</div>
+			{/if}
+			{#if host === $userStore?.username && canDeleteEvent}
+				<div class="mt-2">
+					<ActionButton label="Delete" color="warning" onclick={deleteEventLeaderboard} />
+				</div>
+			{/if}
+		</div>
 	{/snippet}
 </BaseListItem>

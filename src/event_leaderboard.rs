@@ -6,6 +6,7 @@ pub enum EventLeaderboardAction {
     Create,
     Update,
     Delete,
+    TogglePin,
 }
 
 scalar!(EventLeaderboardAction);

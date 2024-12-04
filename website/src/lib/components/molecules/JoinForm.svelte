@@ -137,11 +137,13 @@
 			localStorage.setItem('username', username);
 			localStorage.setItem('passwordHash', passwordHash);
 			localStorage.setItem('chainId', $player.data.player.chainId);
+			localStorage.setItem('isAdmin', $player.data.player.isAdmin);
 
 			userStore.update((store) => ({
 				...store,
 				username: $player.data.player.username,
 				chainId: $player.data.player.chainId,
+				isAdmin: $player.data.player.isAdmin,
 				...(passwordHash && { passwordHash })
 			}));
 			canLogin = false;
