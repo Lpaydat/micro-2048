@@ -745,9 +745,22 @@ impl Contract for Game2048Contract {
                         }
                     }
                     EventLeaderboardAction::Delete => {
-                        if *leaderboard.host.get() != player {
-                            panic!("Only host can delete event");
+                        let is_admin = self
+                            .state
+                            .players
+                            .load_entry_or_insert(&player)
+                            .await
+                            .unwrap()
+                            .is_admin
+                            .get();
+
+                        if *leaderboard.host.get() != player && !is_admin {
+                            panic!("Only host or admin can delete event");
                         }
+                        if leaderboard.leaderboard_id.get().is_empty() {
+                            panic!("Cannot delete the main leaderboard");
+                        }
+
                         self.state
                             .leaderboards
                             .remove_entry(&leaderboard_id)

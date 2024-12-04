@@ -40,20 +40,19 @@
 		body: 'Are you sure you want to delete this event?',
 		response: (confirmed) => {
 			if (confirmed) {
-				deleteEvent(client, leaderboardId);
-				callback?.();
+				deleteEventLeaderboard();
 			}
 		}
 	};
 
 	const client = getContextClient();
 
-	const deleteEventLeaderboard = (event: MouseEvent) => {
+	const deleteEventLeaderboard = () => {
 		deleteEvent(client, leaderboardId);
 		callback?.();
 	};
 
-	const togglePin = (event: MouseEvent) => {
+	const togglePin = () => {
 		togglePinEvent(client, leaderboardId);
 		callback?.();
 	};
@@ -104,7 +103,7 @@
 					<ActionButton label={isPinned ? 'Unpin' : 'Pin'} color="warning" onclick={togglePin} />
 				</div>
 			{/if}
-			{#if host === $userStore?.username && canDeleteEvent}
+			{#if (host === $userStore?.username || $userStore?.isAdmin) && canDeleteEvent}
 				<div class="mt-2">
 					<ActionButton label="Delete" color="warning" onclick={() => modalStore.trigger(modal)} />
 				</div>

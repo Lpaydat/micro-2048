@@ -67,7 +67,7 @@
 		Number($leaderboard?.data?.leaderboard?.startTime ?? '0') - Date.now() < 0
 	);
 	const canDeleteEvent = $derived(
-		$leaderboard?.data?.leaderboard?.host === $userStore.username && !isEnded
+		($leaderboard?.data?.leaderboard?.host === $userStore.username || $userStore.isAdmin) && !isEnded
 	);
 	const canPlayGame = $derived(isStarted && !isEnded);
 
