@@ -6,12 +6,12 @@ export const logout = () => {
 		chainId: undefined,
 		username: undefined,
 		passwordHash: undefined,
-		isAdmin: undefined
+		isMod: undefined
 	}));
 
 	localStorage.removeItem('username');
 	localStorage.removeItem('passwordHash');
 	localStorage.removeItem('chainId');
 	localStorage.removeItem('boardId');
-	localStorage.removeItem('isAdmin');
+	localStorage.removeItem('isMod');
 };

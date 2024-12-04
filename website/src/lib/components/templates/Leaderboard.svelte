@@ -69,10 +69,9 @@
 		Number($leaderboard?.data?.leaderboard?.startTime ?? '0') - Date.now() < 0
 	);
 	const canDeleteEvent = $derived(
-		($leaderboard?.data?.leaderboard?.host === $userStore.username || $userStore.isAdmin) &&
-			!isEnded
+		($leaderboard?.data?.leaderboard?.host === $userStore.username || $userStore.isMod) && !isEnded
 	);
-	const canPinEvent = $derived($userStore.isAdmin && !isEnded);
+	const canPinEvent = $derived($userStore.isMod && !isEnded);
 	const canPlayGame = $derived(isStarted && !isEnded && $userStore.username);
 	const isPinned = $derived($leaderboard?.data?.leaderboard?.isPinned);
 

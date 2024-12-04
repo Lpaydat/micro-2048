@@ -30,14 +30,22 @@
 
 	let playerUsername: string | null = $state(null);
 	let playerPasswordHash: string | null = $state(null);
-	let playerChainId: string | null = $state(null);	
-	let playerIsAdmin: string | null = $state(null);
+	let playerChainId: string | null = $state(null);
+	let playerIsMod: string | null = $state(null);
 
 	onMount(() => {
 		playerUsername = localStorage.getItem('username');
 		playerPasswordHash = localStorage.getItem('passwordHash');
 		playerChainId = localStorage.getItem('chainId');
-		playerIsAdmin = localStorage.getItem('isAdmin');
+		playerIsMod = localStorage.getItem('isMod');
+
+		userStore.update((store) => ({
+			...store,
+			username: playerUsername,
+			passwordHash: playerPasswordHash,
+			chainId: playerChainId,
+			isMod: playerIsMod === 'true'
+		}));
 	});
 
 	const player = $derived(playerUsername ? getPlayerInfo(client, playerUsername) : null);
@@ -50,18 +58,18 @@
 			playerUsername = localStorage.getItem('username');
 			playerPasswordHash = localStorage.getItem('passwordHash');
 			playerChainId = localStorage.getItem('chainId');
-			playerIsAdmin = localStorage.getItem('isAdmin');
+			playerIsMod = localStorage.getItem('isMod');
 
 			userStore.update((store) => ({
 				...store,
 				username: playerUsername,
 				passwordHash: playerPasswordHash,
 				chainId: playerChainId,
-				isAdmin: playerIsAdmin === 'true'
+				isMod: playerIsMod === 'true'
 			}));
-		} else if (!$player?.data && !$player?.fetching && playerUsername) {
-			logout();
-			isPlayerInfoLoaded = false;
+			// } else if (!$player?.data && !$player?.fetching && playerUsername) {
+			// 	logout();
+			// 	isPlayerInfoLoaded = false;
 		}
 	});
 

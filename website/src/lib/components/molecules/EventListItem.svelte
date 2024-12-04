@@ -100,12 +100,12 @@
 	{/snippet}
 	{#snippet rightContent()}
 		<div class="flex w-full flex-row items-end gap-2 md:flex-col">
-			{#if $userStore?.isAdmin && canPinEvent}
+			{#if $userStore?.isMod && canPinEvent}
 				<div class="mt-2">
 					<ActionButton label={isPinned ? 'Unpin' : 'Pin'} color="warning" onclick={togglePin} />
 				</div>
 			{/if}
-			{#if (host === $userStore?.username || $userStore?.isAdmin) && canDeleteEvent}
+			{#if (host === $userStore?.username || $userStore?.isMod) && canDeleteEvent}
 				<div class="mt-2">
 					<ActionButton label="Delete" color="warning" onclick={() => modalStore.trigger(modal)} />
 				</div>

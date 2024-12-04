@@ -745,16 +745,16 @@ impl Contract for Game2048Contract {
                         }
                     }
                     EventLeaderboardAction::Delete => {
-                        let is_admin = self
+                        let is_mod = self
                             .state
                             .players
                             .load_entry_or_insert(&player)
                             .await
                             .unwrap()
-                            .is_admin
+                            .is_mod
                             .get();
 
-                        if *leaderboard.host.get() != player && !is_admin {
+                        if *leaderboard.host.get() != player && !is_mod {
                             panic!("Only host or admin can delete event");
                         }
                         if leaderboard.leaderboard_id.get().is_empty() {
@@ -769,16 +769,16 @@ impl Contract for Game2048Contract {
                         // self.close_chain(&leaderboard_id).await;
                     }
                     EventLeaderboardAction::TogglePin => {
-                        let is_admin = self
+                        let is_mod = self
                             .state
                             .players
                             .load_entry_or_insert(&player)
                             .await
                             .unwrap()
-                            .is_admin
+                            .is_mod
                             .get();
 
-                        if !is_admin {
+                        if !is_mod {
                             panic!("Only admin can pin event");
                         }
 
@@ -791,7 +791,7 @@ impl Contract for Game2048Contract {
                     .await;
 
                 let player = self.state.players.load_entry_mut(&username).await.unwrap();
-                player.is_admin.set(!*player.is_admin.get());
+                player.is_mod.set(!*player.is_mod.get());
             }
         }
     }

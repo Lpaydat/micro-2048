@@ -1,4 +1,5 @@
-import { Client, gql, mutationStore } from '@urql/svelte';
+import type { Client } from '@urql/svelte';
+import { gql, mutationStore } from '@urql/svelte';
 
 const MAKE_MOVE = gql`
 	mutation MakeMove(
@@ -35,6 +36,11 @@ export const makeMove = (client: Client, boardId: string, direction: string, tim
 
 	const player = localStorage.getItem('username');
 	const passwordHash = localStorage.getItem('passwordHash');
+
+	if (!player || !passwordHash) {
+		console.error('Player or password hash not found');
+		return;
+	}
 
 	mutationStore({
 		client,

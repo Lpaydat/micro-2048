@@ -120,7 +120,7 @@ struct LeaderboardState {
 struct Player {
     username: String,
     chain_id: String,
-    is_admin: bool,
+    is_mod: bool,
 }
 
 #[derive(SimpleObject, serde::Serialize)]
@@ -137,7 +137,7 @@ impl QueryRoot {
             Some(Player {
                 username: player.username.get().to_string(),
                 chain_id: player.chain_id.get().to_string(),
-                is_admin: *player.is_admin.get(),
+                is_mod: *player.is_mod.get(),
             })
         } else {
             None
@@ -157,7 +157,7 @@ impl QueryRoot {
                 players.push(Player {
                     username,
                     chain_id: player.chain_id.get().to_string(),
-                    is_admin: *player.is_admin.get(),
+                    is_mod: *player.is_mod.get(),
                 });
             }
         }
@@ -543,12 +543,7 @@ impl MutationRoot {
         bcs::to_bytes(&operation).unwrap()
     }
 
-    async fn toggle_admin(
-        &self,
-        player: String,
-        password_hash: String,
-        username: String,
-    ) -> Vec<u8> {
+    async fn toggle_mod(&self, player: String, password_hash: String, username: String) -> Vec<u8> {
         if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
             if *player.password_hash.get() != password_hash {
                 panic!("Invalid password");

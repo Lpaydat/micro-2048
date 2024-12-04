@@ -35,7 +35,7 @@ pub struct Player {
     pub username: RegisterView<String>,
     pub password_hash: RegisterView<String>,
     pub chain_id: RegisterView<String>,
-    pub is_admin: RegisterView<bool>,
+    pub is_mod: RegisterView<bool>,
 }
 
 #[derive(View, SimpleObject)]
