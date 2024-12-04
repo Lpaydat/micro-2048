@@ -59,9 +59,9 @@
 				chainId: playerChainId,
 				isMod: playerIsMod === 'true'
 			}));
-			} else if (!$player?.data && !$player?.fetching && playerUsername) {
-				logout();
-				isPlayerInfoLoaded = false;
+		} else if (!$player?.data && !$player?.fetching && playerUsername) {
+			logout();
+			isPlayerInfoLoaded = false;
 		}
 	});
 
