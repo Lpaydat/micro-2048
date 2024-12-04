@@ -5,9 +5,11 @@
 	import HeaderNav from '../organisms/HeaderNav.svelte';
 	import MainTemplate from '../organisms/MainTemplate.svelte';
 	import UserSidebar from '../organisms/UserSidebar.svelte';
+
+	const hidden = $derived($userStore.username ? false : true);
 </script>
 
-<MainTemplate overflowHidden>
+<MainTemplate overflowHidden={hidden}>
 	{#snippet sidebar()}
 		<UserSidebar />
 	{/snippet}

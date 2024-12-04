@@ -3,6 +3,7 @@
 	import RankerCard from '../molecules/RankerCard.svelte';
 
 	interface Props {
+		hasSubHeader?: boolean;
 		leaderboardId?: string;
 		name?: string;
 		host?: string;
@@ -17,10 +18,12 @@
 		}[];
 	}
 
-	let { rankers = [], leaderboardId, ...rest }: Props = $props();
+	let { rankers = [], leaderboardId, hasSubHeader = false, ...rest }: Props = $props();
+
+	const height = $derived(hasSubHeader ? 'h-[calc(100vh-152px)] md:h-[calc(100vh-120px)]' : 'h-[calc(100vh-120px)]');
 </script>
 
-<div class="mx-auto mt-4 flex h-[calc(100vh-8rem)] w-full max-w-4xl flex-col overflow-hidden">
+<div class="mx-auto mt-4 flex {height} w-full max-w-4xl flex-col overflow-hidden">
 	<div class="flex gap-3 md:gap-6">
 		<h1
 			class="md:ms-none mb-4 ms-2 text-center text-2xl font-extrabold text-gray-100 md:mb-6 md:text-4xl"

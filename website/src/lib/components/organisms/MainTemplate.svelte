@@ -7,6 +7,7 @@
 
 	interface Props {
 		windowWidth?: number;
+		windowHeight?: number;
 		mainCenter?: boolean;
 		overflowHidden?: boolean;
 		sidebar?: Snippet;
@@ -18,6 +19,7 @@
 
 	let {
 		windowWidth = $bindable(0),
+		windowHeight = $bindable(0),
 		mainCenter,
 		overflowHidden,
 		sidebar,
@@ -28,10 +30,13 @@
 	}: Props = $props();
 
 	onMount(() => {
-		const updateWidth = () => (windowWidth = window.innerWidth);
-		window.addEventListener('resize', updateWidth);
-		updateWidth();
-		return () => window.removeEventListener('resize', updateWidth);
+		const updateDimensions = () => {
+			windowWidth = window.innerWidth;
+			windowHeight = window.innerHeight;
+		};
+		window.addEventListener('resize', updateDimensions);
+		updateDimensions();
+		return () => window.removeEventListener('resize', updateDimensions);
 	});
 
 	const isMobile = $derived(windowWidth <= 768);
