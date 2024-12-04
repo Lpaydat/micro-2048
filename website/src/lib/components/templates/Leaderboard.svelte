@@ -15,6 +15,7 @@
 	import { setGameCreationStatus } from '$lib/stores/gameStore';
 	import { getBoardId, setBoardId } from '$lib/stores/boardId';
 	import { deleteEvent } from '$lib/graphql/mutations/leaderboardAction.ts';
+	import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
 
 	interface Props {
 		leaderboardId?: string;
@@ -96,6 +97,18 @@
 		}, 250);
 	};
 
+    const modalStore = getModalStore();
+	const modal: ModalSettings = {
+		type: 'confirm',
+		title: 'Delete Event',
+		body: 'Are you sure you want to delete this event?',
+		response: (confirmed) => {
+			if (confirmed) {
+				deleteEventGame();
+			}
+		}
+	};
+
 	let size = $state('md');
 	const updateSize = () => {
 		if (window.innerWidth < 480) size = 'sm';
@@ -132,7 +145,7 @@
 			<PageHeader title={$leaderboard?.data?.leaderboard?.name} {prevPage}>
 				{#snippet subActions()}
 					{#if canDeleteEvent}
-						<button type="button" class="btn" onclick={deleteEventGame}>
+						<button type="button" class="btn" onclick={() => modalStore.trigger(modal)}>
 							<Trash size={20} />
 						</button>
 					{/if}

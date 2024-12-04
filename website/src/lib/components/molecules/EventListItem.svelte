@@ -5,6 +5,7 @@
 	import { getContextClient } from '@urql/svelte';
 	import { userStore } from '$lib/stores/userStore';
 	import { formatInTimeZone } from 'date-fns-tz';
+	import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
 
 	interface Props {
 		leaderboardId: string;
@@ -31,6 +32,19 @@
 		canDeleteEvent = true,
 		callback
 	}: Props = $props();
+
+    const modalStore = getModalStore();
+	const modal: ModalSettings = {
+		type: 'confirm',
+		title: 'Delete Event',
+		body: 'Are you sure you want to delete this event?',
+		response: (confirmed) => {
+			if (confirmed) {
+				deleteEvent(client, leaderboardId);
+				callback?.();
+			}
+		}
+	};
 
 	const client = getContextClient();
 
@@ -84,7 +98,7 @@
 		</a>
 	{/snippet}
 	{#snippet rightContent()}
-		<div class="flex flex-col items-end">
+		<div class="flex flex-row md:flex-col w-full gap-2 items-end">
 			{#if $userStore?.isAdmin}
 				<div class="mt-2">
 					<ActionButton label={isPinned ? 'Unpin' : 'Pin'} color="warning" onclick={togglePin} />
@@ -92,7 +106,7 @@
 			{/if}
 			{#if host === $userStore?.username && canDeleteEvent}
 				<div class="mt-2">
-					<ActionButton label="Delete" color="warning" onclick={deleteEventLeaderboard} />
+					<ActionButton label="Delete" color="warning" onclick={() => modalStore.trigger(modal)} />
 				</div>
 			{/if}
 		</div>
