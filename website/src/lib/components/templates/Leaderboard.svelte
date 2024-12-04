@@ -183,7 +183,7 @@
 					{/if}
 				{/snippet}
 			</PageHeader>
-			<RankerLeaderboard rankers={sortedRankers} {...$leaderboard.data?.leaderboard} />
+			<RankerLeaderboard rankers={sortedRankers} hasSubHeader {...$leaderboard.data?.leaderboard} />
 		{/if}
 	{/snippet}
 </MainTemplate>
