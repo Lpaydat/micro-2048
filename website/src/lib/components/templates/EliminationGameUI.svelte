@@ -36,7 +36,6 @@
 	const [gameId, _, _username, playerChainId] = $derived($page.params.boardId.split('-'));
 	const r = $derived(parseInt($page.params.boardId.match(/\-(\d+)\-/)?.[1] || '0'));
 	const username = $derived($page.params.boardId.split('-')[2] || '');
-	const chainId = $derived($page.params.boardId.match(/\-[^-]+-([^-]+)$/)?.[1] || '');
 	let canMakeMove = $state(false);
 	let initCanMakeMove = $state(false);
 
@@ -221,7 +220,6 @@
 						{isMultiplayer}
 						{isEnded}
 						player={username}
-						playerChainId={chainId}
 						{boardId}
 						canStartNewGame={!isMultiplayer}
 						showBestScore={!isMultiplayer}

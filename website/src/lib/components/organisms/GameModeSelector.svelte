@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { getBoardId } from '$lib/stores/boardId';
 	import GameModeCard from '../molecules/GameModeCard.svelte';
 	// import GameModeDescription from "../molecules/GameModeDescription.svelte";
 	// import classicImage from "$lib/assets/classic.webp";
@@ -17,11 +18,14 @@
 	//     imageUrl = classicImage;
 	//     description = "Challenge yourself with the timeless 2048 puzzle. Strategically merge tiles to reach the elusive 2048 tile and beyond!";
 	// }
+
+	const lastBoardId = $derived(getBoardId());
+	const lastBoardIdUrl = $derived(lastBoardId ? `/game?boardId=${lastBoardId}` : '/game');
 </script>
 
 <div class="mx-auto flex h-full max-w-4xl flex-col gap-4 p-4">
 	<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-		<a href="/game">
+		<a href={lastBoardIdUrl}>
 			<GameModeCard>
 				{#snippet title()}
 					<h2>Classic</h2>

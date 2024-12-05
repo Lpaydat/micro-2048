@@ -21,7 +21,6 @@
 	export let player: string;
 	export let score: number = 0;
 	export let bestScore: number = 0;
-	export let playerChainId: string;
 	export let boardId: string | undefined = undefined;
 	export let canStartNewGame: boolean = true;
 	export let canMakeMove: boolean = true;
@@ -45,6 +44,7 @@
 				isEnded
 				player
 				leaderboardId
+				chainId
 			}
 		}
 	`;
@@ -80,13 +80,25 @@
 		requestPolicy: 'network-only'
 	});
 
+	let intervalId: NodeJS.Timeout;
+	onMount(() => {
+		intervalId = setInterval(() => {
+			if (gameBoardId && !$game.data?.board?.chainId) {	
+				game.reexecute({ requestPolicy: 'network-only' });
+			}
+		}, 1000);
+
+		return () => clearInterval(intervalId);
+	});
+
 	let playerMessages: any;
 	$: {
-		if (playerChainId) {
+		// if (playerChainId) {
+		if ($game.data?.board?.chainId) {
 			playerMessages = subscriptionStore({
 				client,
 				query: PLAYER_PING_SUBSCRIPTION,
-				variables: { chainId: playerChainId }
+				variables: { chainId: $game.data?.board?.chainId }
 			});
 		}
 	}
@@ -104,9 +116,13 @@
 
 	$: boardEnded = isEnded || $game.data?.board?.isEnded;
 
-	$: if (boardId !== undefined) {
-		gameBoardId = boardId;
-		setGameCreationStatus(true);
+	$: {
+		console.log('specBoardId', specBoardId);
+		console.log('boardId', boardId);
+		if (boardId !== undefined || specBoardId) {
+			gameBoardId = specBoardId ?? boardId;
+			setGameCreationStatus(true);
+		}
 	}
 
 	$: bh = $playerMessages?.data?.notifications?.reason?.NewBlock?.height;

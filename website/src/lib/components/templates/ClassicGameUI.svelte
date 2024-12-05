@@ -10,11 +10,25 @@
 	import MobileRankerStats from '../organisms/MobileRankerStats.svelte';
 	import { getContextClient } from '@urql/svelte';
 	import { getLeaderboardDetails } from '$lib/graphql/queries/getLeaderboardDetails';
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import LeaderboardDetails from '../molecules/LeaderboardDetails.svelte';
+	import { page } from '$app/stores';
+
+	let boardId = $state<string>($page.url.searchParams.get('boardId') ?? '');
+
+	let unsubscribe: any;
+
+	$effect(() => {
+		unsubscribe = page.subscribe(($page) => {
+			boardId = $page.url.searchParams.get('boardId') ?? '';
+		});
+	});
+
+	onDestroy(() => {
+		if (unsubscribe) unsubscribe();
+	});
 
 	const canMakeMove = $derived(!!$userStore.username);
-	const chainId = $derived($userStore.chainId);
 
 	let leaderboardId = $state<string | undefined>();
 	let currentPlayerScore = $state<number>(0);
@@ -82,7 +96,7 @@
 					bind:leaderboardId
 					bind:score={currentPlayerScore}
 					player={$userStore.username ?? ''}
-					playerChainId={chainId as string}
+					{boardId}
 					canStartNewGame={!!$userStore.username}
 					showBestScore
 					{canMakeMove}
