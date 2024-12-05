@@ -28,7 +28,7 @@
 	};
 </script>
 
-<div class="mx-auto flex max-w-sm flex-col gap-4 {containerClass}">
+<div class="mx-auto flex max-w-sm flex-col gap-4 {containerClass} overflow-hidden">
 	{#if leaderboardId}
 		<div class="me-auto flex">
 			<LeaderboardDetails {leaderboardId} {...rest} />
