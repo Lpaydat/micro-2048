@@ -5,6 +5,8 @@ import { writable } from 'svelte/store';
 // Create a writable store with an initial value of false
 export const isNewGameCreated = writable(false);
 
+export const boardSize = writable<'xs' | 'sm' | 'md' | 'lg'>('md');
+
 // Create a queue to hold the board states
 const boardQueue = new Queue<string>();
 

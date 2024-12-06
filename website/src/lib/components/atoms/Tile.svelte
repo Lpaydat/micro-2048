@@ -3,15 +3,16 @@
 	import { tweened, spring } from 'svelte/motion';
 	import { cubicOut } from 'svelte/easing';
 	import { onMount } from 'svelte';
+	import { boardSize } from '$lib/stores/gameStore';
 
 	interface Props {
 		tile: TileContent;
-		size: 'sm' | 'md' | 'lg';
 	}
 
-	let { tile, size = 'lg' }: Props = $props();
+	let { tile }: Props = $props();
 
 	const sizeConfig = {
+		xs: { tile: 216.5, gap: 7.5, fontSize: { default: 33.75, medium: 22.5, small: 15 } },
 		sm: { tile: 270, gap: 10, fontSize: { default: 45, medium: 30, small: 20 } },
 		md: { tile: 337.5, gap: 12, fontSize: { default: 55, medium: 37.5, small: 27.5 } },
 		lg: { tile: 405, gap: 15, fontSize: { default: 65, medium: 40, small: 30 } }
@@ -43,7 +44,7 @@
 	let mergedValue = $state(0);
 
 	// Based on composite rule of three
-	const currentSize = $derived(sizeConfig[size]);
+	const currentSize = $derived(sizeConfig[$boardSize]);
 	const top = $derived($topTweened * currentSize.tile + currentSize.gap);
 	const left = $derived($leftTweened * currentSize.tile + currentSize.gap);
 	const wasMerged = $derived(tile.merged && mergedValue !== tile.value);
@@ -78,7 +79,7 @@
 	};
 
 	// Add this function to determine font size
-	const getFontSize = (value: number, size: 'sm' | 'md' | 'lg'): number => {
+	const getFontSize = (value: number, size: 'xs' | 'sm' | 'md' | 'lg'): number => {
 		const config = sizeConfig[size].fontSize;
 		if (value <= 6) return config.default;
 		if (value <= 9) return config.medium;
@@ -87,10 +88,10 @@
 </script>
 
 <div
-	class="tile tile-{tile.value} size-{size}"
+	class="tile tile-{tile.value} size-{$boardSize}"
 	style="top: {top}px; left: {left}px; font-size: {getFontSize(
 		tile.value,
-		size
+		$boardSize
 	)}px; transform: scale({wasMerged ? $mergeSpring.scale : 1})"
 	in:scale={{ duration: 100 }}
 >
@@ -98,6 +99,11 @@
 </div>
 
 <style>
+	.size-xs {
+		line-height: 64px;
+		width: 64px;
+		height: 64px;
+	}
 	.size-sm {
 		line-height: 80px;
 		width: 80px;

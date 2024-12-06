@@ -3,28 +3,18 @@
 	import { onMount, type Snippet } from 'svelte';
 	import GameTablet from '../molecules/Tablet.svelte';
 	import { preventDefault } from '$lib/utils/preventDefault';
-
-	export type BoardSize = 'sm' | 'md' | 'lg';
+	import { boardSize } from '$lib/stores/gameStore';
 
 	export interface Props {
-		size?: BoardSize;
 		tablet?: Tablet;
 		canMakeMove?: boolean;
 		isEnded?: boolean;
 		overlayMessage?: string;
-		header?: Snippet<[BoardSize]>;
+		header?: Snippet; // Snippet<[BoardSize]>;
 		moveCallback?: (direction: GameKeys, timestamp: string) => void;
 	}
 
-	let {
-		size = $bindable('lg'),
-		tablet,
-		canMakeMove,
-		header,
-		isEnded,
-		overlayMessage,
-		moveCallback
-	}: Props = $props();
+	let { tablet, canMakeMove, header, isEnded, overlayMessage, moveCallback }: Props = $props();
 
 	const SWIPE_THRESHOLD = 50;
 
@@ -101,9 +91,10 @@
 	};
 
 	const updateBoardSize = () => {
-		if (window.innerWidth < 480) size = 'sm';
-		else if (window.innerWidth < 1440) size = 'md';
-		else size = 'lg';
+		if (window.innerWidth < 376) boardSize.set('xs');
+		else if (window.innerWidth < 480) boardSize.set('sm');
+		else if (window.innerWidth < 1440) boardSize.set('md');
+		else boardSize.set('lg');
 	};
 
 	onMount(() => {
@@ -115,18 +106,19 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-{@render header?.(size)}
+<!-- {@render header?.(size)} -->
+{@render header?.()}
 <!-- TODO: svelte5 onevent not preventing default for touch events -->
 {#if isRendered}
 	<div
-		class="relative w-full {size}"
+		class="relative w-full {$boardSize}"
 		on:touchstart={preventDefault(handleTouchStart)}
 		on:touchmove={preventDefault(handleTouchMove)}
 		on:touchend={preventDefault(handleTouchEnd)}
 	>
-		<GameTablet {tablet} {size} />
+		<GameTablet {tablet} />
 		{#if isEnded}
-			<div class="overlay {size}">
+			<div class="overlay {$boardSize}">
 				<p>{overlayMessage}</p>
 			</div>
 		{/if}

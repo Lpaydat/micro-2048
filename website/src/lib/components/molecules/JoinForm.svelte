@@ -79,7 +79,6 @@
 		username = '';
 		password = '';
 		intervalId = setInterval(() => {
-			console.log('reexecuting player');
 			player.reexecute({ requestPolicy: 'network-only' });
 		}, 200);
 	};

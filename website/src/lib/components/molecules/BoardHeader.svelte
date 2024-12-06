@@ -5,7 +5,7 @@
 	import { goto } from '$app/navigation';
 	import { newGame } from '$lib/graphql/mutations/newBoard';
 	import { hashSeed } from '$lib/utils/random';
-	import { setGameCreationStatus } from '$lib/stores/gameStore';
+	import { boardSize, setGameCreationStatus } from '$lib/stores/gameStore';
 	import { getBoardId, setBoardId } from '$lib/stores/boardId';
 
 	interface Props {
@@ -15,7 +15,6 @@
 		canStartNewGame?: boolean;
 		showBestScore?: boolean;
 		boardId?: string | undefined;
-		size?: 'sm' | 'md' | 'lg';
 	}
 
 	let {
@@ -24,8 +23,7 @@
 		bestScore = 0,
 		canStartNewGame = true,
 		showBestScore = true,
-		boardId = $bindable(),
-		size = 'lg'
+		boardId = $bindable()
 	}: Props = $props();
 
 	const client = getContextClient();
@@ -33,6 +31,7 @@
 
 	// Size configurations
 	const sizeConfig = {
+		xs: { width: 296, buttonHeight: 5, fontSize: 'text-sm', scoreSize: 'text-md' },
 		sm: { width: 370, buttonHeight: 6, fontSize: 'text-base', scoreSize: 'text-lg' },
 		md: { width: 460, buttonHeight: 9, fontSize: 'text-xl', scoreSize: 'text-2xl' },
 		lg: { width: 555, buttonHeight: 10, fontSize: 'text-2xl', scoreSize: 'text-2xl' }
@@ -65,7 +64,7 @@
 	const shouldShowBestScore = $derived(showBestScore && canStartNewGame);
 	const scoreLabelAlign = $derived(score.toString().length > 3 ? 'left' : 'center');
 	const bestScoreLabelAlign = $derived(bestScore.toString().length > 3 ? 'left' : 'center');
-	const currentSize = $derived(sizeConfig[size]);
+	const currentSize = $derived(sizeConfig[$boardSize]);
 </script>
 
 <div class="flex items-center justify-between" style="width: {currentSize.width}px">

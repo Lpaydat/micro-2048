@@ -9,7 +9,7 @@
 	import { page } from '$app/stores';
 	import { genInitialState as createState } from '$lib/game/game';
 	import type { GameKeys, GameState } from '$lib/game/models';
-	import { isNewGameCreated, setGameCreationStatus } from '$lib/stores/gameStore';
+	import { boardSize, isNewGameCreated, setGameCreationStatus } from '$lib/stores/gameStore';
 	import { boardToString } from '$lib/game/utils';
 	import Board from './Board.svelte';
 	import { userStore } from '$lib/stores/userStore';
@@ -62,7 +62,6 @@
 	let lastHash = '';
 	let moveStartTimes: Record<string, number> = {};
 	let isSynced: boolean = false;
-	let size: 'sm' | 'md' | 'lg' = 'lg';
 
 	// Timers and Flags
 	let moveTimeout: NodeJS.Timeout | null = null;
@@ -91,7 +90,6 @@
 
 	let playerMessages: any;
 	$: {
-		console.log('boardId', boardId);
 		if ($game.data?.board?.chainId) {
 			playerMessages = subscriptionStore({
 				client,
@@ -266,26 +264,18 @@
 	});
 </script>
 
-<div class="game-container {size}">
+<div class="game-container {$boardSize}">
 	<div class="game-board">
 		<Board
-			bind:size
 			tablet={state?.tablet}
 			canMakeMove={canMakeMove && $game.data?.board?.player === $userStore.username}
 			isEnded={boardEnded}
 			overlayMessage={getOverlayMessage($game.data?.board?.board)}
 			moveCallback={handleMove}
 		>
-			{#snippet header(size)}
-				<BoardHeader
-					bind:boardId
-					{canStartNewGame}
-					{showBestScore}
-					{player}
-					{size}
-					{score}
-					{bestScore}
-				/>
+			<!-- {#snippet header(size)} -->
+			{#snippet header()}
+				<BoardHeader bind:boardId {canStartNewGame} {showBestScore} {player} {score} {bestScore} />
 			{/snippet}
 		</Board>
 	</div>

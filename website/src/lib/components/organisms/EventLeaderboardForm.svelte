@@ -43,8 +43,6 @@
 				endTime: fromZonedTime(new Date(endTime), userTimeZone).getTime().toString()
 			};
 
-			console.log('settings', settings);
-
 			createEvent(client, settings);
 
 			setTimeout(() => {

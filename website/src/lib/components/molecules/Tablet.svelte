@@ -1,11 +1,11 @@
 <script lang="ts">
 	import type { Tablet } from '$lib/game/models';
 	import { generateTabletFromMatrix } from '$lib/game/utils';
+	import { boardSize } from '$lib/stores/gameStore';
 	import Tile from '../atoms/Tile.svelte';
 
 	interface Props {
 		tablet?: Tablet;
-		size?: 'sm' | 'md' | 'lg';
 	}
 
 	const defaultTablet = generateTabletFromMatrix([
@@ -15,15 +15,16 @@
 		[0, 0, 0, 0]
 	]);
 
-	let { tablet = defaultTablet, size = 'lg' }: Props = $props();
+	let { tablet = defaultTablet }: Props = $props();
 
 	const sizeConfig = {
+		xs: { tile: 64, gap: 8, wrapper: 8 },
 		sm: { tile: 80, gap: 10, wrapper: 10 },
 		md: { tile: 100, gap: 12.5, wrapper: 12.5 },
 		lg: { tile: 120, gap: 15, wrapper: 15 }
 	};
 
-	const currentSize = $derived(sizeConfig[size]);
+	const currentSize = $derived(sizeConfig[$boardSize]);
 </script>
 
 <div
@@ -40,7 +41,7 @@
 	<div class="tiles">
 		{#each tablet.flatMap((row) => row) as tile}
 			{#if tile.position}
-				<Tile {tile} {size} />
+				<Tile {tile} />
 			{/if}
 		{/each}
 	</div>
