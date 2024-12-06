@@ -42,11 +42,11 @@
 
 	// Mutation functions
 	const newSingleGame = async () => {
-		if (!canStartNewGame) return;
+		if (!canStartNewGame || !$userStore.username) return;
 		const seed = Math.floor(Math.random() * 10_000_000).toString();
 		const timestamp = Date.now().toString();
 
-		boardId = (await hashSeed(seed, player, timestamp)).toString();
+		boardId = (await hashSeed(seed, $userStore.username, timestamp)).toString();
 		setBoardId(boardId, leaderboardId);
 		setGameCreationStatus(true);
 		newGame(client, seed, timestamp, leaderboardId);
