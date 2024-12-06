@@ -9,7 +9,7 @@
 	const hidden = $derived($userStore.username ? false : true);
 </script>
 
-<MainTemplate overflowHidden={hidden}>
+<MainTemplate overflowHidden={hidden} hideCredits={!$userStore.username}>
 	{#snippet sidebar()}
 		<UserSidebar />
 	{/snippet}

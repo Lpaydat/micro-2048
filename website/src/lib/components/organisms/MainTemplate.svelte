@@ -11,6 +11,7 @@
 		windowHeight?: number;
 		mainCenter?: boolean;
 		overflowHidden?: boolean;
+		hideCredits?: boolean;
 		sidebar?: Snippet;
 		header?: Snippet;
 		subHeader?: Snippet;
@@ -23,6 +24,7 @@
 		windowHeight = $bindable(0),
 		mainCenter,
 		overflowHidden,
+		hideCredits = false,
 		sidebar,
 		header,
 		subHeader,
@@ -73,7 +75,9 @@
 
 			<div class="flex-none">
 				{@render footer?.()}
-				<Credits />
+				{#if !hideCredits}
+					<Credits />
+				{/if}
 			</div>
 		</div>
 	</Main>
