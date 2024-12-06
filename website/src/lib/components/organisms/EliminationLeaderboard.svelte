@@ -44,14 +44,14 @@
 	const currentUrl = $derived($page.url.pathname);
 	const otherPlayersBoards = $derived(
 		$players.data?.players.reduce(
-			(acc: Record<string, string>, p: { username: string; chainId: string }) => {
+			(acc: Record<string, string>, p: { username: string }) => {
 				// Extract game ID and round from current URL
-				const matches = currentUrl.match(/\/game\/(.+)-(\d+)-[^-]+-[^-]+$/);
+				const matches = currentUrl.match(/\/game\/(.+)-(\d+)-[^-]+$/);
 				if (!matches) return acc;
 
 				const [_, gameId, round] = matches;
 				// Create new URL with player's username and chainId
-				const boardUrl = `/game/${gameId}-${round}-${p.username}-${p.chainId}`;
+				const boardUrl = `/game/${gameId}-${round}-${p.username}`;
 
 				acc[p.username] = boardUrl;
 				return acc;

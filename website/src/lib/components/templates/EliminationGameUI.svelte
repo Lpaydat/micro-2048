@@ -33,18 +33,11 @@
 		if (unsubscribe) unsubscribe();
 	});
 
-	const [gameId, _, _username, playerChainId] = $derived($page.params.boardId.split('-'));
+	const [gameId, _, _username] = $derived($page.params.boardId.split('-'));
 	const r = $derived(parseInt($page.params.boardId.match(/\-(\d+)\-/)?.[1] || '0'));
 	const username = $derived($page.params.boardId.split('-')[2] || '');
-	let canMakeMove = $state(false);
+	const isBoardOwner = $derived(username === $userStore.username);
 	let initCanMakeMove = $state(false);
-
-	$effect(() => {
-		if (!initCanMakeMove) {
-			initCanMakeMove = true;
-			canMakeMove = username === $userStore.username;
-		}
-	});
 
 	const client = getContextClient();
 
@@ -104,7 +97,6 @@
 		if (countdown <= 0 && !isTriggered) {
 			triggerGameEventMutation();
 			isTriggered = true;
-			canMakeMove = false;
 		}
 	};
 
@@ -154,8 +146,7 @@
 
 	$effect(() => {
 		const player = $userStore.username || username;
-		const chainId = $userStore.chainId || playerChainId;
-		const target = `/game/${gameId}-${currentRound}-${player}-${chainId}`;
+		const target = `/game/${gameId}-${currentRound}-${player}`;
 		if (currentRound && target !== nextTarget && status === 'Active') {
 			nextTarget = target;
 			isTriggered = false;
@@ -164,7 +155,7 @@
 		}
 	});
 
-	const isEnded = $derived(
+	const isEliminated = $derived(
 		roundLeaderboard?.eliminatedPlayers.some((player: any) => player.username === username)
 	);
 
@@ -215,15 +206,15 @@
 				<RoundButton {isRoundEnded} {countdown} {status} onclick={nextRoundMutation} />
 			{/if}
 			<div class="flex items-center justify-center pt-2 lg:pt-6 xl:pt-8">
-				<div class="w-full max-w-2xl xl:pb-28">
+				<div class="my-auto w-full max-w-2xl">
 					<Game
 						{isMultiplayer}
-						{isEnded}
+						isEnded={isEliminated}
 						player={username}
 						{boardId}
 						canStartNewGame={!isMultiplayer}
 						showBestScore={!isMultiplayer}
-						canMakeMove={canMakeMove && !isEnded}
+						canMakeMove={isBoardOwner && !isEliminated}
 						bind:score={currentPlayerScore}
 						on:move={handleMoveCallback}
 					/>

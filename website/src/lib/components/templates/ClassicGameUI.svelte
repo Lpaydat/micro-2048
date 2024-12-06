@@ -91,7 +91,7 @@
 
 	{#snippet main()}
 		<div class="flex h-full items-center justify-center">
-			<div class="my-auto w-full max-w-2xl lg:pb-28">
+			<div class="my-auto w-full max-w-2xl">
 				<Game
 					bind:leaderboardId
 					bind:score={currentPlayerScore}

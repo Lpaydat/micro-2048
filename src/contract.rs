@@ -240,7 +240,7 @@ impl Contract for Game2048Contract {
                                 .unwrap();
                         }
                     } else {
-                        let (game_id, round, player, _player_chain_id) =
+                        let (game_id, round, player) =
                             self.parse_elimination_game_id(&board_id).await.unwrap();
 
                         if !game_id.is_empty() && round != 0 && !player.is_empty() {
@@ -366,14 +366,14 @@ impl Contract for Game2048Contract {
                                 .unwrap()
                                 .chain_id
                                 .get();
-                            let board_id =
-                                format!("{}-{}-{}-{}", game_id, 1, player, player_chain_id);
+                            let board_id = format!("{}-{}-{}", game_id, 1, player);
                             let game = self.state.boards.load_entry_mut(&board_id).await.unwrap();
                             let new_board = Game::new(&board_id, player, timestamp).board;
 
                             game.board_id.set(board_id);
                             game.board.set(new_board);
                             game.player.set(player.clone());
+                            game.chain_id.set(player_chain_id.clone());
                             round_leaderboard.players.insert(player, 0).unwrap();
                             elimination_game.game_leaderboard.insert(player, 0).unwrap();
                         }
@@ -532,10 +532,8 @@ impl Contract for Game2048Contract {
                                         .unwrap()
                                         .chain_id
                                         .get();
-                                    let board_id = format!(
-                                        "{}-{}-{}-{}",
-                                        game_id, current_round, player, player_chain_id
-                                    );
+                                    let board_id =
+                                        format!("{}-{}-{}", game_id, current_round, player);
                                     let game =
                                         self.state.boards.load_entry_mut(&board_id).await.unwrap();
                                     let new_board = Game::new(&board_id, &player, timestamp).board;
@@ -543,6 +541,7 @@ impl Contract for Game2048Contract {
                                     game.board_id.set(board_id);
                                     game.board.set(new_board);
                                     game.player.set(player.clone());
+                                    game.chain_id.set(player_chain_id.clone());
                                     new_round_leaderboard.players.insert(&player, 0).unwrap();
                                 }
                             } else {
@@ -614,19 +613,8 @@ impl Contract for Game2048Contract {
 
                             // End game for eliminated players
                             for player in eliminated_players {
-                                // End the player's board
-                                let player_chain_id = self
-                                    .state
-                                    .players
-                                    .load_entry_or_insert(&player.0)
-                                    .await
-                                    .unwrap()
-                                    .chain_id
-                                    .get();
-                                let board_id = format!(
-                                    "{}-{}-{}-{}",
-                                    game_id, current_round, player.0, player_chain_id
-                                );
+                                let board_id =
+                                    format!("{}-{}-{}", game_id, current_round, player.0);
                                 let board =
                                     self.state.boards.load_entry_mut(&board_id).await.unwrap();
                                 board.is_ended.set(true);
@@ -883,17 +871,13 @@ impl Game2048Contract {
         }
     }
 
-    async fn parse_elimination_game_id(
-        &self,
-        board_id: &str,
-    ) -> Option<(String, u8, String, String)> {
+    async fn parse_elimination_game_id(&self, board_id: &str) -> Option<(String, u8, String)> {
         let parts: Vec<&str> = board_id.split('-').collect();
-        if parts.len() == 4 {
+        if parts.len() == 3 {
             let game_id = parts[0].to_string();
             if let Ok(round_id) = parts[1].parse::<u8>() {
                 let player_id = parts[2].to_string();
-                let player_chain_id = parts[3].to_string();
-                return Some((game_id, round_id, player_id, player_chain_id));
+                return Some((game_id, round_id, player_id));
             }
         }
         None

@@ -73,7 +73,9 @@
 	});
 </script>
 
-<div class="flex h-[calc(100vh-136px)] w-full flex-col gap-6 overflow-y-auto pb-6 pt-6 md:h-[calc(100vh-84px)]">
+<div
+	class="flex h-[calc(100vh-136px)] w-full flex-col gap-6 overflow-y-auto pb-6 pt-6 md:h-[calc(100vh-84px)]"
+>
 	<div class="mx-auto flex w-full max-w-3xl flex-col gap-4">
 		{#if pinnedEvents?.length > 0}
 			<div class="border-s-8 border-red-600">

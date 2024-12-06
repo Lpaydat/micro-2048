@@ -30,9 +30,7 @@
 	const dispatch = createEventDispatcher();
 
 	// Board ID Management
-	let specBoardId = $page.url.searchParams.get('boardId');
 	let localBoardId: string | null = null;
-	let gameBoardId: string | undefined = (specBoardId ?? undefined) || boardId;
 
 	// GraphQL Definitions
 	const GET_BOARD_STATE = gql`
@@ -76,14 +74,14 @@
 	$: game = queryStore({
 		client,
 		query: GET_BOARD_STATE,
-		variables: { boardId: gameBoardId },
+		variables: { boardId: boardId },
 		requestPolicy: 'network-only'
 	});
 
 	let intervalId: NodeJS.Timeout;
 	onMount(() => {
 		intervalId = setInterval(() => {
-			if (gameBoardId && !$game.data?.board?.chainId) {
+			if (boardId && !$game.data?.board?.chainId) {
 				game.reexecute({ requestPolicy: 'network-only' });
 			}
 		}, 1000);
@@ -93,7 +91,7 @@
 
 	let playerMessages: any;
 	$: {
-		// if (playerChainId) {
+		console.log('boardId', boardId);
 		if ($game.data?.board?.chainId) {
 			playerMessages = subscriptionStore({
 				client,
@@ -117,8 +115,7 @@
 	$: boardEnded = isEnded || $game.data?.board?.isEnded;
 
 	$: {
-		if (boardId || specBoardId) {
-			gameBoardId = boardId ?? specBoardId ?? undefined;
+		if (boardId) {
 			setGameCreationStatus(true);
 		}
 	}
@@ -148,7 +145,7 @@
 
 	$: if (
 		$game.data?.board &&
-		gameBoardId &&
+		boardId &&
 		player &&
 		(!isInitialized || $isNewGameCreated || $game.data?.board?.isEnded || shouldSyncGame)
 	) {
@@ -207,8 +204,8 @@
 	};
 
 	const handleGameStateUpdate = () => {
-		if (!gameBoardId) return;
-		state = createState($game.data?.board?.board, 4, gameBoardId, player);
+		if (!boardId) return;
+		state = createState($game.data?.board?.board, 4, boardId, player);
 		isInitialized = true;
 		shouldSyncGame = false;
 		isSynced = true;
@@ -240,18 +237,18 @@
 	};
 
 	const handleMove = (direction: GameKeys, timestamp: string) => {
-		if (!gameBoardId) return;
-		move(gameBoardId, direction);
+		if (!boardId) return;
+		move(boardId, direction);
 		dispatch('move', { direction, timestamp });
 	};
 
 	// Lifecycle Hooks
 	onMount(() => {
 		localBoardId = getBoardId(leaderboardId);
-		if (!isMultiplayer && (localBoardId || specBoardId) && boardId === undefined) {
-			gameBoardId = (specBoardId || localBoardId) ?? undefined;
+		if (!isMultiplayer && localBoardId && boardId === undefined) {
+			boardId = localBoardId;
 
-			if (gameBoardId) {
+			if (boardId) {
 				game.reexecute({ requestPolicy: 'network-only' });
 				setTimeout(() => {
 					game.reexecute({ requestPolicy: 'network-only' });
@@ -281,7 +278,7 @@
 		>
 			{#snippet header(size)}
 				<BoardHeader
-					bind:boardId={gameBoardId}
+					bind:boardId
 					{canStartNewGame}
 					{showBestScore}
 					{player}
@@ -341,21 +338,5 @@
 	.game-board {
 		position: relative;
 		width: 100%;
-	}
-
-	.overlay {
-		position: absolute;
-		font-weight: bold;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		background-color: rgba(0, 0, 0, 0.6);
-		border-radius: 6px;
-		color: white;
-		display: flex;
-		justify-content: center;
-		align-items: center;
-		font-size: 1.5em;
 	}
 </style>

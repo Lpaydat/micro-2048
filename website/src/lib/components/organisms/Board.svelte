@@ -126,7 +126,7 @@
 	>
 		<GameTablet {tablet} {size} />
 		{#if isEnded}
-			<div class="overlay">
+			<div class="overlay {size}">
 				<p>{overlayMessage}</p>
 			</div>
 		{/if}
@@ -152,15 +152,16 @@
 		font-size: 1.5em;
 	}
 
-	.sm .overlay {
+	.sm.overlay {
 		font-size: 1.2em;
 	}
 
-	.md .overlay {
+	.md.overlay {
 		font-size: 1.35em;
+		width: 462.5px;
 	}
 
-	.lg .overlay {
+	.lg.overlay {
 		font-size: 1.5em;
 	}
 </style>

@@ -13,7 +13,7 @@
 	role="button"
 	class="card variant-filled-surface flex h-full w-full cursor-pointer flex-col rounded-lg p-4 transition-all duration-200 hover:scale-105 hover:shadow-xl"
 >
-	<header class="card-header pb-2 md:pb-4 text-center text-lg md:text-2xl font-bold">
+	<header class="card-header pb-2 text-center text-lg font-bold md:pb-4 md:text-2xl">
 		{@render title()}
 	</header>
 

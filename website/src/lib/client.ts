@@ -33,6 +33,11 @@ export const getClient = (chainId: string, applicationId: string, port: string) 
 
 	return new Client({
 		url: `${urls.http}/chains/${chainId}/applications/${applicationId}`,
+		fetchOptions: {
+			headers: {
+				'Content-Type': 'application/json'
+			}
+		},
 		exchanges: [
 			cacheExchange,
 			fetchExchange,

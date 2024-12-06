@@ -7,6 +7,7 @@
 	import { getPlayerInfo } from '$lib/graphql/queries/getPlayerInfo';
 	import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
 	import { preventDefault } from '$lib/utils/preventDefault';
+	import { onDestroy } from 'svelte';
 
 	interface Props {
 		isMobile?: boolean;
@@ -71,12 +72,16 @@
 		playerOnChain.reexecute({ requestPolicy: 'network-only' });
 	};
 
+	let intervalId: NodeJS.Timeout;
 	const handleRegisterPlayer = async () => {
 		registerPlayer();
-		await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API call
+		await new Promise((resolve) => setTimeout(resolve, 2000)); // Simulate API call
 		username = '';
 		password = '';
-		player.reexecute({ requestPolicy: 'network-only' });
+		intervalId = setInterval(() => {
+			console.log('reexecuting player');
+			player.reexecute({ requestPolicy: 'network-only' });
+		}, 200);
 	};
 
 	let errorMessage = $state('');
@@ -121,22 +126,24 @@
 	};
 
 	$effect(() => {
-		if (loading && username && !$playerOnChain.fetching) {
-			try {
-				const value = $playerOnChain.data?.checkPlayer;
-				if (value === true) {
-					canLogin = true;
-					player.reexecute({ requestPolicy: 'network-only' });
-				} else if (value === false) {
-					errorMessage = 'Invalid password';
-				} else if (value === null) {
-					canLogin = true;
-					handleRegisterPlayer();
+		(async () => {
+			if (loading && username && !$playerOnChain.fetching) {
+				try {
+					const value = $playerOnChain.data?.checkPlayer;
+					if (value === true) {
+						canLogin = true;
+						player.reexecute({ requestPolicy: 'network-only' });
+					} else if (value === false) {
+						errorMessage = 'Invalid password';
+					} else if (value === null) {
+						canLogin = true;
+						await handleRegisterPlayer();
+					}
+				} finally {
+					loading = false;
 				}
-			} finally {
-				loading = false;
 			}
-		}
+		})();
 	});
 
 	$effect(() => {
@@ -155,6 +162,10 @@
 			}));
 			canLogin = false;
 		}
+	});
+
+	onDestroy(() => {
+		clearInterval(intervalId);
 	});
 </script>
 
@@ -262,7 +273,7 @@
 						<Button variant="outline" size="sm" type="button" onclick={() => (showForm = false)}>
 							Cancel
 						</Button>
-						<Button type="submit" variant="primary" size="sm" {loading}>
+						<Button type="submit" variant="primary" size="sm" {loading} disabled={loading}>
 							{loading ? 'Loading...' : 'Connect'}
 						</Button>
 					</div>
