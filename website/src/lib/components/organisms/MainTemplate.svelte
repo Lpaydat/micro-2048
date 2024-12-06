@@ -4,6 +4,7 @@
 	import MobileHeader from '../molecules/MobileHeader.svelte';
 	import Sidebar from '../molecules/Sidebar.svelte';
 	import MobileUserDetails from '../molecules/MobileUserDetails.svelte';
+	import Credits from '../molecules/Credits.svelte';
 
 	interface Props {
 		windowWidth?: number;
@@ -72,6 +73,7 @@
 
 			<div class="flex-none">
 				{@render footer?.()}
+				<Credits />
 			</div>
 		</div>
 	</Main>
