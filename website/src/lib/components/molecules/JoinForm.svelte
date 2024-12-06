@@ -7,7 +7,7 @@
 	import { getPlayerInfo } from '$lib/graphql/queries/getPlayerInfo';
 	import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
 	import { preventDefault } from '$lib/utils/preventDefault';
-	import { onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 
 	interface Props {
 		isMobile?: boolean;
@@ -22,6 +22,7 @@
 	let loading = $state(false);
 	let canLogin = $state(false);
 	let showForm = $state(false);
+	let registered = $state(false);
 
 	const REGISTER_PLAYER = gql`
 		mutation RegisterPlayer($username: String!, $passwordHash: String!) {
@@ -75,12 +76,8 @@
 	let intervalId: NodeJS.Timeout;
 	const handleRegisterPlayer = async () => {
 		registerPlayer();
-		await new Promise((resolve) => setTimeout(resolve, 2000)); // Simulate API call
-		username = '';
-		password = '';
-		intervalId = setInterval(() => {
-			player.reexecute({ requestPolicy: 'network-only' });
-		}, 200);
+		// await new Promise((resolve) => setTimeout(resolve, 2000)); // Simulate API call
+		registered = true;
 	};
 
 	let errorMessage = $state('');
@@ -124,6 +121,21 @@
 		await checkPlayer();
 	};
 
+	onMount(() => {
+		intervalId = setInterval(() => {
+			if (registered && !$player.data?.player) {
+				player.reexecute({ requestPolicy: 'network-only' });
+			} else if ($player.data?.player) {
+				clearInterval(intervalId);
+				username = '';
+				password = '';
+				loading = false;
+			}
+		}, 1000);
+
+		return () => clearInterval(intervalId);
+	});
+
 	$effect(() => {
 		(async () => {
 			if (loading && username && !$playerOnChain.fetching) {
@@ -138,8 +150,8 @@
 						canLogin = true;
 						await handleRegisterPlayer();
 					}
-				} finally {
-					loading = false;
+				} catch (error) {
+					console.error(error);
 				}
 			}
 		})();
@@ -161,10 +173,6 @@
 			}));
 			canLogin = false;
 		}
-	});
-
-	onDestroy(() => {
-		clearInterval(intervalId);
 	});
 </script>
 
@@ -195,6 +203,7 @@
 					bind:value={username}
 					placeholder="Enter your username"
 					required
+					disabled={loading}
 				/>
 			</div>
 
@@ -208,11 +217,12 @@
 					placeholder="Enter your password"
 					required
 					showToggle
+					disabled={loading}
 				/>
 			</div>
 
 			<!-- Submit Button -->
-			<Button type="submit" variant="primary" {loading} class="w-full">
+			<Button type="submit" variant="primary" {loading} class="w-full" disabled={loading}>
 				{loading ? 'Joining...' : 'Join Now'}
 			</Button>
 

@@ -73,6 +73,7 @@
 				placeholder="Enter name (max 25 chars)"
 				required
 				maxlength={25}
+				disabled={loading}
 			/>
 		</div>
 
@@ -85,6 +86,7 @@
 				placeholder="Enter start time"
 				required
 				type="datetime-local"
+				disabled={loading}
 			/>
 		</div>
 
@@ -97,6 +99,7 @@
 				placeholder="Enter end time"
 				required
 				type="datetime-local"
+				disabled={loading}
 			/>
 		</div>
 
@@ -108,11 +111,12 @@
 				placeholder="Enter description (max 200 chars)"
 				class="w-full rounded-md border p-2"
 				maxlength="200"
+				disabled={loading}
 			></textarea>
 		</div>
 
 		<!-- Submit Button -->
-		<Button type="submit" variant="primary" {loading} class="w-full">
+		<Button type="submit" variant="primary" {loading} class="w-full" disabled={loading}>
 			{loading ? 'Submitting...' : 'Submit'}
 		</Button>
 	</div>

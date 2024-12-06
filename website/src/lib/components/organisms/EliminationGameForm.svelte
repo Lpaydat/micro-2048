@@ -90,6 +90,7 @@
 				type="number"
 				min="1"
 				max="100"
+				disabled={loading}
 			/>
 		</div>
 
@@ -104,6 +105,7 @@
 				type="number"
 				min="1"
 				max="100"
+				disabled={loading}
 			/>
 		</div>
 
@@ -118,6 +120,7 @@
 				type="number"
 				min="1"
 				max="600"
+				disabled={loading}
 			/>
 		</div>
 
@@ -132,11 +135,12 @@
 				type="number"
 				min="2"
 				max="100"
+				disabled={loading}
 			/>
 		</div>
 
 		<!-- Submit Button -->
-		<Button type="submit" variant="primary" {loading} class="w-full">
+		<Button type="submit" variant="primary" {loading} class="w-full" disabled={loading}>
 			{loading ? 'Creating...' : 'Create Game'}
 		</Button>
 	</div>

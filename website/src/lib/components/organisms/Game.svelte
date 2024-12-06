@@ -79,7 +79,7 @@
 
 	let playerMessages: any;
 	$: {
-		if ($game.data?.board?.chainId) {
+		if ($game.data?.board?.chainId && !playerMessages) {
 			playerMessages = subscriptionStore({
 				client,
 				query: PLAYER_PING_SUBSCRIPTION,
@@ -101,10 +101,8 @@
 
 	$: boardEnded = isEnded || $game.data?.board?.isEnded;
 
-	$: {
-		if (boardId) {
-			setGameCreationStatus(true);
-		}
+	$: if (boardId) {
+		setGameCreationStatus(true);
 	}
 
 	$: bh = $playerMessages?.data?.notifications?.reason?.NewBlock?.height;
@@ -244,7 +242,7 @@
 			} else if ($game.data?.board) {
 				clearInterval(intervalId);
 			}
-		}, 1000);
+		}, 500);
 
 		return () => clearInterval(intervalId);
 	});

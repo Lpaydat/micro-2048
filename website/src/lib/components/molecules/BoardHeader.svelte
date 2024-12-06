@@ -9,6 +9,7 @@
 	import { getBoardId, setBoardId } from '$lib/stores/boardId';
 	import { userStore } from '$lib/stores/userStore';
 	import UsernameBadge from '../atoms/UsernameBadge.svelte';
+	import { should } from 'vitest';
 
 	interface Props {
 		player: string;
@@ -61,7 +62,7 @@
 			if (!getBoardId(leaderboardId)) {
 				newSingleGame();
 			}
-		}, 50);
+		}, 100);
 	});
 
 	const shouldShowBestScore = $derived(showBestScore && canStartNewGame);
@@ -85,7 +86,7 @@
 		<UsernameBadge username={player} fontSize={currentSize.fontSize} />
 	{/if}
 	<div class="flex flex-row items-center transition-all">
-		{#if !(shouldShowBestScore && isOwner && canStartNewGame) && player}
+		{#if (player && canStartNewGame && !isOwner && !shouldShowBestScore)}
 			<UsernameBadge username={player} fontSize={currentSize.fontSize} />
 		{/if}
 		<div class="mb-2 ml-2 flex min-w-16 flex-col rounded-md bg-[#bbada0] p-2 font-bold text-white">
