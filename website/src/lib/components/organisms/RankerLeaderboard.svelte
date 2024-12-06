@@ -21,7 +21,7 @@
 	let { rankers = [], leaderboardId, hasSubHeader = false, ...rest }: Props = $props();
 
 	const height = $derived(
-		hasSubHeader ? 'h-[calc(100vh-152px)] md:h-[calc(100vh-120px)]' : 'h-[calc(100vh-120px)]'
+		hasSubHeader ? 'h-[calc(100vh-152px)] md:h-[calc(100vh-120px)]' : 'h-[calc(100vh-95px)] md:h-[calc(100vh-68px)]'
 	);
 </script>
 

@@ -8,6 +8,7 @@
 	import { boardSize, setGameCreationStatus } from '$lib/stores/gameStore';
 	import { getBoardId, setBoardId } from '$lib/stores/boardId';
 	import { userStore } from '$lib/stores/userStore';
+	import UsernameBadge from '../atoms/UsernameBadge.svelte';
 
 	interface Props {
 		player: string;
@@ -81,21 +82,11 @@
 			</button>
 		</div>
 	{:else}
-		<div
-			class="flex items-center justify-center truncate rounded-lg bg-black/50 px-3 py-2 font-bold text-[#f67c5f] {currentSize.fontSize}"
-			style="font-family: 'Clear Sans', 'Arial', sans-serif;"
-		>
-			{player}
-		</div>
+		<UsernameBadge username={player} fontSize={currentSize.fontSize} />
 	{/if}
 	<div class="flex flex-row items-center transition-all">
 		{#if !(shouldShowBestScore && isOwner && canStartNewGame) && player}
-			<div
-				class="flex items-center justify-center truncate rounded-lg bg-black/50 px-3 py-2 font-bold text-[#f67c5f] {currentSize.fontSize}"
-				style="font-family: 'Clear Sans', 'Arial', sans-serif;"
-			>
-				{player}
-			</div>
+			<UsernameBadge username={player} fontSize={currentSize.fontSize} />
 		{/if}
 		<div class="mb-2 ml-2 flex min-w-16 flex-col rounded-md bg-[#bbada0] p-2 font-bold text-white">
 			<div class="text-xs text-[#eee4da] text-{scoreLabelAlign}">Score</div>
