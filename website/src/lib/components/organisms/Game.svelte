@@ -26,6 +26,7 @@
 	export let canMakeMove: boolean = true;
 	export let showBestScore: boolean = true;
 	export let leaderboardId: string | undefined = undefined;
+	export let overlayMessage: string | undefined = undefined;
 
 	const dispatch = createEventDispatcher();
 
@@ -159,6 +160,7 @@
 	const hasWon = (board?: number[][]) => board?.some((row) => row?.some((cell) => cell >= 11));
 
 	const getOverlayMessage = (board?: number[][]) => {
+		if (overlayMessage) return overlayMessage;
 		if (!isMultiplayer) {
 			return hasWon(board) ? 'Congratulations! You Won!' : 'Game Over! You Lost!';
 		}

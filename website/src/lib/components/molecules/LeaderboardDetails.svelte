@@ -10,6 +10,7 @@
 		totalPlayers?: number;
 		startTime?: string;
 		endTime?: string;
+		endCallback?: () => void;
 	}
 
 	let {
@@ -20,7 +21,8 @@
 		endTime,
 		startTime,
 		showName = false,
-		leaderboardId
+		leaderboardId,
+		endCallback
 	}: Props = $props();
 
 	let remainingTime = $state('');
@@ -83,10 +85,16 @@
 		return [label, timeString];
 	};
 
+	let hasFiredCallback = false;
 	$effect(() => {
 		if (!isTimeSet && endTime) {
 			isTimeSet = true;
 			calculateRemainingTime();
+		}
+
+		if (endCallback && !remainingTime && !hasFiredCallback) {
+			hasFiredCallback = true;
+			endCallback();
 		}
 	});
 

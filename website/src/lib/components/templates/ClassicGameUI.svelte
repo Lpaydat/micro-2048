@@ -28,11 +28,18 @@
 		if (unsubscribe) unsubscribe();
 	});
 
-	const canMakeMove = $derived(!!$userStore.username);
-
 	let leaderboardId = $state<string | undefined>();
 	let currentPlayerScore = $state<number>(0);
 	let bestScore = $state<number>(0);
+	let isEnded = $state(false);
+
+	const overlayMessage = $derived(leaderboardId ? 'Game Over!' : undefined);
+	const canStartNewGame = $derived(!!$userStore.username && !isEnded);
+	const canMakeMove = $derived(!!$userStore.username && canStartNewGame);
+
+	const endCallback = () => {
+		isEnded = true;
+	};
 
 	const client = getContextClient();
 	const leaderboard = $derived(
@@ -70,7 +77,12 @@
 	{#snippet subHeader()}
 		{#if leaderboardId}
 			<div class="mx-4 mt-4 w-fit flex-none md:mt-6">
-				<LeaderboardDetails {...$leaderboard?.data?.leaderboard} showName {leaderboardId} />
+				<LeaderboardDetails
+					{...$leaderboard?.data?.leaderboard}
+					showName
+					{leaderboardId}
+					{endCallback}
+				/>
 			</div>
 		{/if}
 	{/snippet}
@@ -92,10 +104,12 @@
 					bind:score={currentPlayerScore}
 					player={$userStore.username ?? ''}
 					{boardId}
-					canStartNewGame={!!$userStore.username}
+					{canStartNewGame}
 					showBestScore
+					{isEnded}
 					{canMakeMove}
 					{bestScore}
+					{overlayMessage}
 				/>
 			</div>
 		</div>
