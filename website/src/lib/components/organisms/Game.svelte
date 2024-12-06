@@ -83,7 +83,7 @@
 	let intervalId: NodeJS.Timeout;
 	onMount(() => {
 		intervalId = setInterval(() => {
-			if (gameBoardId && !$game.data?.board?.chainId) {	
+			if (gameBoardId && !$game.data?.board?.chainId) {
 				game.reexecute({ requestPolicy: 'network-only' });
 			}
 		}, 1000);
@@ -117,10 +117,8 @@
 	$: boardEnded = isEnded || $game.data?.board?.isEnded;
 
 	$: {
-		console.log('specBoardId', specBoardId);
-		console.log('boardId', boardId);
-		if (boardId !== undefined || specBoardId) {
-			gameBoardId = specBoardId ?? boardId;
+		if (boardId || specBoardId) {
+			gameBoardId = boardId ?? specBoardId ?? undefined;
 			setGameCreationStatus(true);
 		}
 	}
@@ -128,6 +126,17 @@
 	$: bh = $playerMessages?.data?.notifications?.reason?.NewBlock?.height;
 	$: if (bh && bh !== blockHeight) {
 		handleNewBlock(bh);
+		shouldRefetch = true;
+	}
+
+	let shouldRefetch = false;
+	$: if (shouldRefetch) {
+		setTimeout(() => {
+			if ($userStore.username !== $game.data?.board?.player) {
+				shouldRefetch = false;
+				handleGameStateUpdate();
+			}
+		}, 1000);
 	}
 
 	$: if (
