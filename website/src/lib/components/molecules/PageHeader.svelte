@@ -44,6 +44,7 @@
 	const displayTitle = $derived(
 		size === 'sm' && title.length > smTitle ? `${title.slice(0, smTitle)}...` : title
 	);
+	const paddingStart = $derived(prevPage || icon ? 'ps-0' : 'ps-2');
 
 	const updateSize = () => {
 		if (window.innerWidth < 480) size = 'sm';
@@ -73,7 +74,9 @@
 				{:else}
 					{@render icon?.()}
 				{/if}
-				<span class="text-md tracking-wider lg:text-2xl" {title}>{displayTitle}</span>
+				<span class="text-md tracking-wider lg:text-2xl {paddingStart}" {title}>
+					{displayTitle}
+				</span>
 			</div>
 		</a>
 		{@render subActions?.()}
