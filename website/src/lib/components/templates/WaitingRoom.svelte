@@ -76,7 +76,7 @@
 
 	$effect(() => {
 		if (data?.status === 'Active' && isJoined) {
-			const playerBoardId = `${gameId}-${data.currentRound}-${username}-${$userStore.chainId}`;
+			const playerBoardId = `${gameId}-${data.currentRound}-${username}`;
 			goto(`/game/${playerBoardId}`);
 		}
 	});

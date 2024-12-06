@@ -77,17 +77,6 @@
 		requestPolicy: 'network-only'
 	});
 
-	let intervalId: NodeJS.Timeout;
-	onMount(() => {
-		intervalId = setInterval(() => {
-			if (boardId && !$game.data?.board?.chainId) {
-				game.reexecute({ requestPolicy: 'network-only' });
-			}
-		}, 1000);
-
-		return () => clearInterval(intervalId);
-	});
-
 	let playerMessages: any;
 	$: {
 		if ($game.data?.board?.chainId) {
@@ -241,18 +230,23 @@
 	};
 
 	// Lifecycle Hooks
+	let intervalId: NodeJS.Timeout;
 	onMount(() => {
 		localBoardId = getBoardId(leaderboardId);
 		if (!isMultiplayer && localBoardId && boardId === undefined) {
 			boardId = localBoardId;
-
-			if (boardId) {
-				game.reexecute({ requestPolicy: 'network-only' });
-				setTimeout(() => {
-					game.reexecute({ requestPolicy: 'network-only' });
-				}, 1000);
-			}
 		}
+
+		game.reexecute({ requestPolicy: 'network-only' });
+		intervalId = setInterval(() => {
+			if (boardId && !$game.data?.board) {
+				game.reexecute({ requestPolicy: 'network-only' });
+			} else if ($game.data?.board) {
+				clearInterval(intervalId);
+			}
+		}, 1000);
+
+		return () => clearInterval(intervalId);
 	});
 
 	onDestroy(() => {
