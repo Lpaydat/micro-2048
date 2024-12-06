@@ -86,7 +86,7 @@
 		<UsernameBadge username={player} fontSize={currentSize.fontSize} />
 	{/if}
 	<div class="flex flex-row items-center transition-all">
-		{#if (player && canStartNewGame && !isOwner && !shouldShowBestScore)}
+		{#if player && canStartNewGame && !isOwner && !shouldShowBestScore}
 			<UsernameBadge username={player} fontSize={currentSize.fontSize} />
 		{/if}
 		<div class="mb-2 ml-2 flex min-w-16 flex-col rounded-md bg-[#bbada0] p-2 font-bold text-white">

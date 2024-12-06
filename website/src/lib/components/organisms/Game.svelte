@@ -77,9 +77,11 @@
 		requestPolicy: 'network-only'
 	});
 
+	let chainId: string | undefined;
 	let playerMessages: any;
 	$: {
-		if ($game.data?.board?.chainId && !playerMessages) {
+		if ($game.data?.board?.chainId && chainId !== $game.data?.board?.chainId && !playerMessages) {
+			chainId = $game.data?.board?.chainId;
 			playerMessages = subscriptionStore({
 				client,
 				query: PLAYER_PING_SUBSCRIPTION,
