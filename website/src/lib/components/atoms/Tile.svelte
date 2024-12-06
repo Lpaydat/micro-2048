@@ -161,71 +161,41 @@
 	.tile-7 {
 		color: #f9f6f2;
 		background: #edcf72;
-		box-shadow:
-			0 0 30px 10px rgba(243, 215, 116, 0.2381),
-			inset 0 0 0 1px rgba(255, 255, 255, 0.14286);
 	}
 	.tile-8 {
 		color: #f9f6f2;
 		background: #edcc61;
-		box-shadow:
-			0 0 30px 10px rgba(243, 215, 116, 0.31746),
-			inset 0 0 0 1px rgba(255, 255, 255, 0.19048);
 	}
 	.tile-9 {
 		color: #f9f6f2;
 		background: #edc850;
-		box-shadow:
-			0 0 30px 10px rgba(243, 215, 116, 0.39683),
-			inset 0 0 0 1px rgba(255, 255, 255, 0.2381);
 	}
 	.tile-10 {
 		color: #f9f6f2;
 		background: #edc53f;
-		box-shadow:
-			0 0 30px 10px rgba(243, 215, 116, 0.47619),
-			inset 0 0 0 1px rgba(255, 255, 255, 0.28571);
 	}
 	.tile-11 {
 		color: #f9f6f2;
 		background: #f46573;
-		box-shadow:
-			0 0 30px 10px rgba(243, 215, 116, 0.55556),
-			inset 0 0 0 1px rgba(255, 255, 255, 0.33333);
 	}
 	.tile-12 {
 		color: #f9f6f2;
 		background: #f14b61;
-		box-shadow:
-			0 0 30px 10px rgba(243, 215, 116, 0.55556),
-			inset 0 0 0 1px rgba(255, 255, 255, 0.33333);
 	}
 	.tile-13 {
 		color: #f9f6f2;
 		background: #e9443d;
-		box-shadow:
-			0 0 30px 10px rgba(243, 215, 116, 0.55556),
-			inset 0 0 0 1px rgba(255, 255, 255, 0.33333);
 	}
 	.tile-14 {
 		color: #f9f6f2;
 		background: #72b3db;
-		box-shadow:
-			0 0 30px 10px rgba(243, 215, 116, 0.55556),
-			inset 0 0 0 1px rgba(255, 255, 255, 0.33333);
 	}
 	.tile-15 {
 		color: #f9f6f2;
 		background: #5da0e4;
-		box-shadow:
-			0 0 30px 10px rgba(243, 215, 116, 0.55556),
-			inset 0 0 0 1px rgba(255, 255, 255, 0.33333);
 	}
 	.tile-16 {
 		color: #f9f6f2;
 		background: #027dc0;
-		box-shadow:
-			0 0 30px 10px rgba(243, 215, 116, 0.55556),
-			inset 0 0 0 1px rgba(255, 255, 255, 0.33333);
 	}
 </style>

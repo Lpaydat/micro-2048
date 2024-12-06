@@ -1,17 +1,20 @@
 <script lang="ts">
+	import { page } from '$app/stores';
+
 	interface Props {
 		rank: number;
 		name: string;
 		score: number;
 		isEliminated?: boolean;
 		isCurrentPlayer?: boolean;
-		isSelectedPlayer?: boolean;
+		boardId: string;
 		boardUrl: string;
 	}
 
-	let { rank, name, score, isEliminated, isCurrentPlayer, isSelectedPlayer, boardUrl }: Props =
-		$props();
+	let { rank, name, score, isEliminated, isCurrentPlayer, boardId, boardUrl }: Props = $props();
 
+	const paramsBoardId = $derived($page.url.searchParams.get('boardId') ?? '');
+	const isActiveBoard = $derived(paramsBoardId === boardId);
 	const color = $derived(isEliminated ? 'bg-[#F3F3F3]' : 'bg-[#EEE4DA]');
 	const currentPlayerStyle = $derived(
 		isCurrentPlayer
@@ -20,21 +23,22 @@
 				: '!border-l-blue-500 font-bold bg-[#FFD700]'
 			: ''
 	);
-	const selectedPlayerStyle = $derived(isSelectedPlayer ? '!border-l-orange-500' : '');
+	const selectedPlayerStyle = $derived(isActiveBoard ? '!border-l-orange-500 bg-teal-500/20' : '');
+	const specStyle = $derived(currentPlayerStyle || selectedPlayerStyle);
 	const commonClasses = $derived(
-		`flex justify-between snap-start items-center p-3 pl-2 w-full ${color} rounded-sm shadow-md relative border-l-4 border-transparent ${currentPlayerStyle} ${selectedPlayerStyle}`
+		`flex justify-between snap-start items-center p-3 pl-2 w-full ${color} rounded-sm shadow-md relative border-l-4 border-transparent ${specStyle}`
 	);
 </script>
 
 {#if boardUrl}
 	<a href={boardUrl} class={commonClasses}>
-		<span class="w-12 text-left font-bold text-surface-700">#{rank}</span>
+		<span class="w-12 text-left font-bold text-surface-700">{rank}</span>
 		<span class="ml-4 flex-1 truncate text-left text-surface-800">{name}</span>
 		<span class="w-16 text-right text-surface-600">{score}</span>
 	</a>
 {:else}
 	<div class={commonClasses}>
-		<span class="w-12 text-left font-bold text-surface-700">#{rank}</span>
+		<span class="w-12 text-left font-bold text-surface-700">{rank}</span>
 		<span class="ml-4 flex-1 truncate text-left text-surface-800">{name}</span>
 		<span class="w-16 text-right text-surface-600">{score}</span>
 	</div>

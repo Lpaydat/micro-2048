@@ -1,4 +1,5 @@
 export type PlayerStats = {
+	boardId: string;
 	username: string;
 	score: number;
 	isEliminated: boolean;

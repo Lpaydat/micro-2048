@@ -2,6 +2,7 @@
 	import { userStore } from '$lib/stores/userStore';
 	import LeaderboardDetails from '../molecules/LeaderboardDetails.svelte';
 	import ListItem from '../molecules/LeaderboardItem.svelte';
+	import LeaderboardRankers from '../molecules/LeaderboardRankers.svelte';
 
 	interface Props {
 		isFullScreen?: boolean;
@@ -39,23 +40,18 @@
 			<h1 class="mb-2 text-2xl font-bold text-[#776E65]">Leaderboard</h1>
 		</header>
 
-		<div class="list-container h-[calc(100%-3rem)] overflow-y-auto overflow-x-hidden">
-			{#if rankers.length > 0}
-				<ul class="border-sm list-none p-0">
-					{#each rankers as { username, score, boardId }, index}
-						<ListItem
-							rank={index + 1}
-							name={username}
-							isCurrentPlayer={username === player}
-							{score}
-							boardUrl={getBoardUrl(boardId)}
-						/>
-					{/each}
-				</ul>
-			{:else}
-				<div class="text-center text-sm text-[#776E65]">No players yet</div>
-			{/if}
-		</div>
+		<LeaderboardRankers {rankers}>
+			{#snippet item(rank, username, score, boardId)}
+				<ListItem
+					{rank}
+					name={username}
+					isCurrentPlayer={username === player}
+					{score}
+					{boardId}
+					boardUrl={getBoardUrl(boardId)}
+				/>
+			{/snippet}
+		</LeaderboardRankers>
 	</div>
 </div>
 

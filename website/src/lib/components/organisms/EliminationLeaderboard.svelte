@@ -4,6 +4,7 @@
 	import ListItem from '../molecules/LeaderboardItem.svelte';
 	import type { PlayerStats, RoundResults } from '$lib/types/leaderboard';
 	import { getContextClient, gql, queryStore } from '@urql/svelte';
+	import LeaderboardRankers from '../molecules/LeaderboardRankers.svelte';
 
 	interface Props {
 		currentRound?: number;
@@ -51,7 +52,8 @@
 
 				const [_, gameId, round] = matches;
 				// Create new URL with player's username and chainId
-				const boardUrl = `/game/${gameId}-${round}-${p.username}`;
+				const boardId = `${gameId}-${round}-${p.username}`;
+				const boardUrl = `/game/${boardId}`;
 
 				acc[p.username] = boardUrl;
 				return acc;
@@ -74,7 +76,6 @@
 		gameLeaderboard
 			?.slice() // Create a shallow copy to avoid mutating the original array
 			.sort((a, b) => b.score - a.score) // Sort by score in descending order
-			.map((player, index) => ({ ...player, rank: index + 1 })) // Add rank based on sorted position
 	);
 
 	const combinedRoundLeaderboard = $derived(
@@ -85,8 +86,9 @@
 				score: p.username === player ? currentPlayerScore : p.score
 			}))
 			.sort((a, b) => b.score - a.score)
-			.map((player, index) => ({ ...player, rank: index + 1 }))
 	);
+
+	const rankers = $derived(activeTab === 0 ? sortedGameLeaderboard : combinedRoundLeaderboard);
 
 	const customClass = $derived(
 		isFullScreen ? 'w-full h-full mt-4' : 'p-6 w-80 mt-6 max-h-full max-w-md mx-auto'
@@ -107,34 +109,19 @@
     {/if} -->
 	</header>
 
-	<div class="list-container h-[calc(100%-3rem)] overflow-y-auto overflow-x-hidden">
-		{#if activeTab === 0}
-			<ul class="border-sm list-none p-0">
-				{#each sortedGameLeaderboard as { rank, username, score }}
-					<ListItem
-						{rank}
-						name={username}
-						isCurrentPlayer={username === player}
-						{score}
-						boardUrl={otherPlayersBoards[username]}
-					/>
-				{/each}
-			</ul>
-		{:else if activeTab === 1}
-			<ul class="border-sm list-none p-0">
-				{#each combinedRoundLeaderboard as { rank, username, score, isEliminated }}
-					<ListItem
-						{rank}
-						name={username}
-						isCurrentPlayer={username === player}
-						{score}
-						{isEliminated}
-						boardUrl={otherPlayersBoards[username]}
-					/>
-				{/each}
-			</ul>
-		{/if}
-	</div>
+	<LeaderboardRankers {rankers}>
+		{#snippet item(rank, username, score, boardId, isEliminated)}
+			<ListItem
+				{rank}
+				name={username}
+				isCurrentPlayer={username === player}
+				{score}
+				{isEliminated}
+				{boardId}
+				boardUrl={otherPlayersBoards[username]}
+			/>
+		{/snippet}
+	</LeaderboardRankers>
 </div>
 
 <style>

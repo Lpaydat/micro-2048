@@ -7,6 +7,7 @@
 	import { hashSeed } from '$lib/utils/random';
 	import { boardSize, setGameCreationStatus } from '$lib/stores/gameStore';
 	import { getBoardId, setBoardId } from '$lib/stores/boardId';
+	import { userStore } from '$lib/stores/userStore';
 
 	interface Props {
 		player: string;
@@ -28,6 +29,7 @@
 
 	const client = getContextClient();
 	const leaderboardId = $derived($page.url.searchParams.get('leaderboardId') ?? '');
+	const isOwner = $derived(player === $userStore.username);
 
 	// Size configurations
 	const sizeConfig = {
@@ -80,18 +82,26 @@
 		</div>
 	{:else}
 		<div
-			class="flex items-center justify-center truncate font-bold text-[#f67c5f] {currentSize.fontSize}"
+			class="py-2 px-3 bg-black/50 rounded-lg flex items-center justify-center truncate font-bold text-[#f67c5f] {currentSize.fontSize}"
 			style="font-family: 'Clear Sans', 'Arial', sans-serif;"
 		>
 			{player}
 		</div>
 	{/if}
 	<div class="flex flex-row items-center transition-all">
+		{#if !(shouldShowBestScore && isOwner && canStartNewGame) && player}
+			<div
+				class="py-2 px-3 bg-black/50 rounded-lg flex items-center justify-center truncate font-bold text-[#f67c5f] {currentSize.fontSize}"
+				style="font-family: 'Clear Sans', 'Arial', sans-serif;"
+			>
+				{player}
+			</div>
+		{/if}
 		<div class="mb-2 ml-2 flex min-w-16 flex-col rounded-md bg-[#bbada0] p-2 font-bold text-white">
 			<div class="text-xs text-[#eee4da] text-{scoreLabelAlign}">Score</div>
 			<div class="{currentSize.scoreSize} text-center">{score}</div>
 		</div>
-		{#if shouldShowBestScore}
+		{#if shouldShowBestScore && isOwner}
 			<div
 				class="mb-2 ml-2 flex min-w-16 flex-col rounded-md bg-[#bbada0] p-2 font-bold text-white"
 			>

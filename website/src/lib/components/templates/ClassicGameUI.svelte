@@ -40,14 +40,9 @@
 	);
 
 	const rankers = $derived(
-		$leaderboard?.data?.leaderboard.rankers
-			.map((ranker: { username: string; score: number }) => {
-				const isUser = ranker.username === $userStore.username;
-				const score =
-					isUser && currentPlayerScore > ranker.score ? currentPlayerScore : ranker.score;
-				return { ...ranker, score };
-			})
-			.sort((a: { score: number }, b: { score: number }) => b.score - a.score) ?? []
+		$leaderboard?.data?.leaderboard.rankers.sort(
+			(a: { score: number }, b: { score: number }) => b.score - a.score
+		) ?? []
 	);
 
 	$effect(() => {

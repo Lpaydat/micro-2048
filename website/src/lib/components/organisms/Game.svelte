@@ -256,6 +256,11 @@
 			setGameCreationStatus(false);
 		}
 	});
+
+	$: overlayMessage =
+		$game.data?.board?.player === $userStore.username
+			? getOverlayMessage($game.data?.board?.board)
+			: $game.data?.board?.player;
 </script>
 
 <div class="game-container {$boardSize}">
@@ -264,12 +269,19 @@
 			tablet={state?.tablet}
 			canMakeMove={canMakeMove && $game.data?.board?.player === $userStore.username}
 			isEnded={boardEnded}
-			overlayMessage={getOverlayMessage($game.data?.board?.board)}
+			{overlayMessage}
 			moveCallback={handleMove}
 		>
 			<!-- {#snippet header(size)} -->
 			{#snippet header()}
-				<BoardHeader bind:boardId {canStartNewGame} {showBestScore} {player} {score} {bestScore} />
+				<BoardHeader
+					bind:boardId
+					{canStartNewGame}
+					{showBestScore}
+					player={$game.data?.board?.player ?? $userStore.username}
+					{score}
+					{bestScore}
+				/>
 			{/snippet}
 		</Board>
 	</div>
