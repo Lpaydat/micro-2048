@@ -53,6 +53,7 @@
 			transform 0.3s ease;
 		position: relative;
 		cursor: pointer;
+		scroll-snap-align: start;
 	}
 	a:hover,
 	div:hover {

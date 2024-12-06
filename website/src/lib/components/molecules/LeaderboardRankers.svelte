@@ -9,7 +9,7 @@
 	let { rankers, item }: Props = $props();
 </script>
 
-<div class="list-container h-[calc(100%-3rem)] overflow-y-auto overflow-x-hidden">
+<div class="list-container h-[calc(100%-3rem)] snap-y overflow-y-auto overflow-x-hidden">
 	{#if rankers.length > 0}
 		<ul class="border-sm list-none p-0">
 			{#each rankers as { username, score, boardId, isEliminated }, index}

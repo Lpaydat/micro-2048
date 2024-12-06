@@ -82,7 +82,7 @@
 		</div>
 	{:else}
 		<div
-			class="py-2 px-3 bg-black/50 rounded-lg flex items-center justify-center truncate font-bold text-[#f67c5f] {currentSize.fontSize}"
+			class="flex items-center justify-center truncate rounded-lg bg-black/50 px-3 py-2 font-bold text-[#f67c5f] {currentSize.fontSize}"
 			style="font-family: 'Clear Sans', 'Arial', sans-serif;"
 		>
 			{player}
@@ -91,7 +91,7 @@
 	<div class="flex flex-row items-center transition-all">
 		{#if !(shouldShowBestScore && isOwner && canStartNewGame) && player}
 			<div
-				class="py-2 px-3 bg-black/50 rounded-lg flex items-center justify-center truncate font-bold text-[#f67c5f] {currentSize.fontSize}"
+				class="flex items-center justify-center truncate rounded-lg bg-black/50 px-3 py-2 font-bold text-[#f67c5f] {currentSize.fontSize}"
 				style="font-family: 'Clear Sans', 'Arial', sans-serif;"
 			>
 				{player}

@@ -14,7 +14,7 @@
 
 <a
 	href={`/game?boardId=${player.boardId}${extraParams}`}
-	class="ranker-card flex items-center justify-between rounded-lg border-4 border-white bg-white p-3 text-sm shadow-lg transition-colors duration-100 hover:border-cyan-600 hover:bg-gray-100 lg:text-lg"
+	class="ranker-card flex snap-start items-center justify-between rounded-lg border-4 border-white bg-white p-3 text-sm shadow-lg transition-colors duration-100 hover:border-cyan-600 hover:bg-gray-100 lg:text-lg"
 >
 	<span class="w-1/12 text-left font-bold text-gray-800">{rank}</span>
 	<span class="w-5/12 overflow-hidden text-ellipsis whitespace-nowrap font-bold text-orange-600"

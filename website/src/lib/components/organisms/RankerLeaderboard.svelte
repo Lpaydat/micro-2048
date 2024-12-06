@@ -47,7 +47,7 @@
 					<span class="w-3/12">Board ID</span>
 					<span class="w-3/12 text-right">Score</span>
 				</div>
-				<div class="flex-1 space-y-4 overflow-y-auto overflow-x-hidden pt-4">
+				<div class="flex-1 snap-y space-y-4 overflow-y-auto overflow-x-hidden pt-4">
 					{#each rankers as player, index}
 						<RankerCard {player} rank={index + 1} />
 					{/each}
