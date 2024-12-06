@@ -91,9 +91,9 @@
 	};
 
 	const updateBoardSize = () => {
-		if (window.innerWidth < 376) boardSize.set('xs');
-		else if (window.innerWidth < 480) boardSize.set('sm');
-		else if (window.innerWidth < 1440) boardSize.set('md');
+		if (window.innerWidth < 376 || window.innerHeight < 500) boardSize.set('xs');
+		else if (window.innerWidth < 480 || window.innerHeight < 630) boardSize.set('sm');
+		else if (window.innerWidth < 1440 || window.innerHeight < 800) boardSize.set('md');
 		else boardSize.set('lg');
 	};
 

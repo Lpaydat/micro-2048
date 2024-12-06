@@ -93,7 +93,7 @@
 	);
 </script>
 
-<div class="text-center {customClass} rounded-lg bg-[#FAF8EF] shadow-md">
+<div class="text-center {customClass} overflow-hidden rounded-lg bg-[#FAF8EF] shadow-md">
 	<header class="mb-4 flex flex-col items-center">
 		<h1 class="mb-2 text-3xl font-bold text-[#776E65]">Leaderboard</h1>
 		<TabGroup>
