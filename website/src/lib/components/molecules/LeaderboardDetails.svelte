@@ -29,6 +29,7 @@
 	let label = $state('');
 	let timer: NodeJS.Timeout;
 	let isTimeSet = $state(false);
+	let isSetRemainingTime = false;
 
 	const calculateRemainingTime = () => {
 		const start = Number(startTime);
@@ -47,6 +48,7 @@
 			// Event has ended
 			label = 'Event has ended';
 		}
+		isSetRemainingTime = true;
 	};
 
 	const formatTime = (diff: number, label: string): [string, string] => {
@@ -92,7 +94,8 @@
 			calculateRemainingTime();
 		}
 
-		if (endCallback && !remainingTime && !hasFiredCallback) {
+		const isEnded = !remainingTime || remainingTime === '0 sec';
+		if (endCallback && isEnded && !hasFiredCallback && isSetRemainingTime) {
 			hasFiredCallback = true;
 			endCallback();
 		}

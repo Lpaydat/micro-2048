@@ -162,7 +162,7 @@
 	const getOverlayMessage = (board?: number[][]) => {
 		if (overlayMessage) return overlayMessage;
 		if (!isMultiplayer) {
-			return hasWon(board) ? 'Congratulations! You Won!' : 'Game Over! You Lost!';
+			return hasWon(board) ? 'Congratulations! You Won!' : 'Game Over!';
 		}
 		return 'Game Over!';
 	};

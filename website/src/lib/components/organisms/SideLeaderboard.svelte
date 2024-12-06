@@ -14,9 +14,10 @@
 		totalBoards?: number;
 		totalPlayers?: number;
 		rankers?: { username: string; score: number; boardId: string }[];
+		endCallback?: () => void;
 	}
 
-	let { isFullScreen, leaderboardId, rankers = [], ...rest }: Props = $props();
+	let { isFullScreen, leaderboardId, rankers = [], endCallback, ...rest }: Props = $props();
 
 	const player = $derived($userStore.username);
 	const customClass = isFullScreen ? 'w-full h-full' : 'p-6 w-80 max-h-full max-w-md mx-auto';
@@ -32,7 +33,7 @@
 <div class="mx-auto flex max-w-sm flex-col gap-4 {containerClass} overflow-hidden">
 	{#if leaderboardId}
 		<div class="me-auto flex">
-			<LeaderboardDetails {leaderboardId} {...rest} />
+			<LeaderboardDetails {leaderboardId} {...rest} {endCallback} />
 		</div>
 	{/if}
 	<div class="text-center {customClass} rounded-lg bg-[#FAF8EF] shadow-md">

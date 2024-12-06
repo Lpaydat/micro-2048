@@ -9,7 +9,6 @@
 	import { getBoardId, setBoardId } from '$lib/stores/boardId';
 	import { userStore } from '$lib/stores/userStore';
 	import UsernameBadge from '../atoms/UsernameBadge.svelte';
-	import { should } from 'vitest';
 
 	interface Props {
 		player: string;
