@@ -28,17 +28,19 @@
 	const commonClasses = $derived(
 		`flex justify-between snap-start items-center p-3 pl-2 w-full ${color} rounded-sm shadow-md relative border-l-4 border-transparent ${specStyle}`
 	);
+
+	const displayRank = $derived(rank === 1 ? `${rank} 👑` : rank);
 </script>
 
 {#if boardUrl}
 	<a href={boardUrl} class={commonClasses}>
-		<span class="w-12 text-left font-bold text-surface-700">{rank}</span>
+		<span class="w-12 text-left font-bold text-surface-700">{displayRank}</span>
 		<span class="ml-4 flex-1 truncate text-left text-surface-800">{name}</span>
 		<span class="w-16 text-right text-surface-600">{score}</span>
 	</a>
 {:else}
 	<div class={commonClasses}>
-		<span class="w-12 text-left font-bold text-surface-700">{rank}</span>
+		<span class="w-12 text-left font-bold text-surface-700">{displayRank}</span>
 		<span class="ml-4 flex-1 truncate text-left text-surface-800">{name}</span>
 		<span class="w-16 text-right text-surface-600">{score}</span>
 	</div>
