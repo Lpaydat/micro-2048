@@ -131,7 +131,7 @@ impl Contract for Game2048Contract {
                     .unwrap();
 
                 if !leaderboard_id.is_empty() && leaderboard.end_time.get() < &timestamp {
-                    panic!("Leaderboard is ended");
+                    panic!("Leaderboard is not active");
                 }
 
                 let board_id = hash_seed(&seed, &player, timestamp).to_string();
@@ -208,7 +208,7 @@ impl Contract for Game2048Contract {
                         let end_time = leaderboard.end_time.get();
                         // TODO: need to implement the better check
                         if timestamp < *start_time || timestamp > *end_time {
-                            panic!("Tournament is not active");
+                            panic!("Leaderboard is not active");
                         }
                     }
 
