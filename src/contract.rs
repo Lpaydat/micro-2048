@@ -122,29 +122,32 @@ impl Contract for Game2048Contract {
                 self.check_player_registered(&player, RegistrationCheck::EnsureRegistered)
                     .await;
 
-                let board_id = hash_seed(&seed, &player, timestamp).to_string();
-                let new_board = Game::new(&board_id, &player, timestamp).board;
-                let game = self.state.boards.load_entry_mut(&board_id).await.unwrap();
                 let leaderboard_id = leaderboard_id.unwrap_or("".to_string());
-                let player_obj = self
-                    .state
-                    .players
-                    .load_entry_or_insert(&player)
-                    .await
-                    .unwrap();
-
-                game.board_id.set(board_id.clone());
-                game.board.set(new_board);
-                game.player.set(player.clone());
-                game.leaderboard_id.set(leaderboard_id.clone());
-                game.chain_id.set(player_obj.chain_id.get().clone());
-
                 let leaderboard = self
                     .state
                     .leaderboards
                     .load_entry_mut(&leaderboard_id.clone())
                     .await
                     .unwrap();
+
+                if !leaderboard_id.is_empty() && leaderboard.end_time.get() < &timestamp {
+                    panic!("Leaderboard is ended");
+                }
+
+                let board_id = hash_seed(&seed, &player, timestamp).to_string();
+                let new_board = Game::new(&board_id, &player, timestamp).board;
+                let game = self.state.boards.load_entry_mut(&board_id).await.unwrap();
+                let player_obj = self
+                    .state
+                    .players
+                    .load_entry_or_insert(&player)
+                    .await
+                    .unwrap();
+                game.board_id.set(board_id.clone());
+                game.board.set(new_board);
+                game.player.set(player.clone());
+                game.leaderboard_id.set(leaderboard_id.clone());
+                game.chain_id.set(player_obj.chain_id.get().clone());
 
                 let total_boards = leaderboard.total_boards.get_mut();
                 *total_boards += 1;
