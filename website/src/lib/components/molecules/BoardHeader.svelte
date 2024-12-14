@@ -9,6 +9,8 @@
 	import { getBoardId, setBoardId } from '$lib/stores/boardId';
 	import { userStore } from '$lib/stores/userStore';
 	import UsernameBadge from '../atoms/UsernameBadge.svelte';
+	import { getClient } from '$lib/client';
+	import { applicationId, port } from '$lib/constants';
 
 	interface Props {
 		player: string;
@@ -28,7 +30,9 @@
 		boardId = $bindable()
 	}: Props = $props();
 
-	const client = getContextClient();
+	// TODO: use player chainId
+	// const client = getContextClient();
+	const client = getClient($userStore.chainId, applicationId, port)
 	const leaderboardId = $derived($page.url.searchParams.get('leaderboardId') ?? '');
 	const isOwner = $derived(player === $userStore.username);
 
@@ -42,6 +46,7 @@
 
 	// Mutation functions
 	const newSingleGame = async () => {
+		console.log('newSingleGame', $userStore.chainId);
 		if (!canStartNewGame || !$userStore.username) return;
 		const seed = Math.floor(Math.random() * 10_000_000).toString();
 		const timestamp = Date.now().toString();

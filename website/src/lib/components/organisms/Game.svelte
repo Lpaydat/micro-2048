@@ -14,6 +14,8 @@
 	import Board from './Board.svelte';
 	import { userStore } from '$lib/stores/userStore';
 	import { getBoardId } from '$lib/stores/boardId';
+	import { applicationId, port } from '$lib/constants';
+	import { getClient } from '$lib/client';
 
 	// Props
 	export let isMultiplayer: boolean = false;
@@ -55,7 +57,8 @@
 	`;
 
 	// State Management
-	const client = getContextClient();
+	// TODO: use player chainId (playerId is player chainId)
+	const client = getClient($userStore.chainId, applicationId, port);
 	let state: GameState | undefined;
 	let isInitialized = false;
 	let rendered = false;
@@ -86,7 +89,8 @@
 			playerMessages = subscriptionStore({
 				client,
 				query: PLAYER_PING_SUBSCRIPTION,
-				variables: { chainId: $game.data?.board?.chainId }
+				variables: { chainId: $userStore.chainId }
+				// variables: { chainId: $game.data?.board?.chainId }
 			});
 		}
 	}

@@ -11,6 +11,7 @@
 	import { userStore } from '$lib/stores/userStore';
 	import { preventDefault } from '$lib/utils/preventDefault';
 
+	// TODO: use main chainId
 	const client = getContextClient();
 	const modalStore = getModalStore();
 

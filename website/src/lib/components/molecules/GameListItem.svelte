@@ -21,6 +21,7 @@
 		status
 	}: EliminationGameDetails = $props();
 
+	// TODO: use elimination chainId
 	const client = getContextClient();
 	let loading = $state(false);
 

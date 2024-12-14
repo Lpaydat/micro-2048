@@ -1,6 +1,7 @@
 use async_graphql::{scalar, SimpleObject};
 use linera_sdk::views::{
-    linera_views, CollectionView, MapView, RegisterView, RootView, View, ViewStorageContext,
+    linera_views, CollectionView, MapView, QueueView, RegisterView, RootView, View,
+    ViewStorageContext,
 };
 use serde::{Deserialize, Serialize};
 
@@ -97,10 +98,18 @@ pub struct EliminationGame {
 
 #[derive(RootView, SimpleObject)]
 #[view(context = "ViewStorageContext")]
+pub struct Chain {
+    pub chain_id: RegisterView<String>,
+}
+
+#[derive(RootView, SimpleObject)]
+#[view(context = "ViewStorageContext")]
 pub struct Game2048 {
     pub boards: CollectionView<String, BoardState>,
     pub elimination_games: CollectionView<String, EliminationGame>, // game_id
     pub waiting_rooms: MapView<String, bool>,
     pub players: CollectionView<String, Player>,
     pub leaderboards: CollectionView<String, ClassicLeaderboard>, // leaderboard_id
+    pub one_time_chain_ids: QueueView<String>,                    // chain_id
+    pub reusable_chain_ids: QueueView<String>, // chain_id (for elimination games and custom leaderboards)
 }

@@ -33,6 +33,7 @@
 		}
 	`;
 
+	// TODO: use elimination chainId
 	const client = getContextClient();
 
 	const players = $derived(

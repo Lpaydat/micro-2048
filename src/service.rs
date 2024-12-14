@@ -130,8 +130,18 @@ struct Ranker {
     board_id: String,
 }
 
+// #[derive(SimpleObject, serde::Serialize)]
+// struct ChainIds {
+//     count: u32,
+//     chain_ids: Vec<String>,
+// }
+
 #[Object]
 impl QueryRoot {
+    async fn one_time_chain_ids(&self) -> usize {
+        self.state.one_time_chain_ids.count()
+    }
+
     async fn player(&self, username: String) -> Option<Player> {
         if let Ok(Some(player)) = self.state.players.try_load_entry(&username).await {
             Some(Player {

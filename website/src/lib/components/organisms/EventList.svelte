@@ -6,6 +6,7 @@
 	import { getContextClient, gql, queryStore } from '@urql/svelte';
 	import EventListItem from '../molecules/EventListItem.svelte';
 
+	// TODO: use main chainId
 	const client = getContextClient();
 
 	const GET_LEADERBOARDS = gql`

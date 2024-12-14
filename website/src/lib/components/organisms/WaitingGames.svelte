@@ -6,6 +6,7 @@
 	import GameListItem from '../molecules/GameListItem.svelte';
 	import { userStore } from '$lib/stores/userStore';
 
+	// TODO: use main chainId
 	const client = getContextClient();
 
 	let games: Array<EliminationGameDetails> = $state([]);

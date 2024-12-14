@@ -39,6 +39,7 @@
 	const isBoardOwner = $derived(username === $userStore.username);
 	let initCanMakeMove = $state(false);
 
+	// TODO: use elimination chainId
 	const client = getContextClient();
 
 	// Determine if the game is multiplayer based on the URL pattern

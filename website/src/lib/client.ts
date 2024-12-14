@@ -3,7 +3,7 @@ import { createClient as createWSClient } from 'graphql-ws';
 
 import { cacheExchange, Client, fetchExchange, subscriptionExchange } from '@urql/svelte';
 
-import { website } from './constants';
+import { website, chainId as mainChainId } from './constants';
 
 const getBaseUrl = (website: string, port: string) => {
 	const protocol = website === 'localhost' ? 'ws' : 'wss';
@@ -15,8 +15,13 @@ const getBaseUrl = (website: string, port: string) => {
 	};
 };
 
-export const getClient = (chainId: string, applicationId: string, port: string) => {
+export const getClient = (
+	chainId: string | undefined | null,
+	applicationId: string,
+	port: string
+) => {
 	const urls = getBaseUrl(website, port);
+	chainId = chainId || mainChainId;
 
 	// Create basic HTTP client for server-side rendering
 	if (!browser) {

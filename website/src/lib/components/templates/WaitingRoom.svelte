@@ -18,6 +18,7 @@
 	import { getModalStore, type ModalSettings, type ModalStore } from '@skeletonlabs/skeleton';
 
 	const modalStore: ModalStore = getModalStore();
+	// TODO: use elimination chainId
 	const client = getContextClient();
 	const gameId = $derived($page.params.gameId);
 	const minimumPlayers = 1;

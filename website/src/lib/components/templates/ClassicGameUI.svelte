@@ -13,6 +13,8 @@
 	import { onDestroy, onMount } from 'svelte';
 	import LeaderboardDetails from '../molecules/LeaderboardDetails.svelte';
 	import { page } from '$app/stores';
+	import { getClient } from '$lib/client';
+	import { applicationId, port } from '$lib/constants';
 
 	let boardId = $state<string>($page.url.searchParams.get('boardId') ?? '');
 
@@ -41,20 +43,26 @@
 		isEnded = true;
 	};
 
-	const client = getContextClient();
+	// TODO: use leaderboard chainId
+	$effect(() => {
+		console.log('leaderboardId', leaderboardId);
+	});
+	const client = $derived(getClient(leaderboardId, applicationId, port));
 	const leaderboard = $derived(
-		leaderboardId !== undefined ? getLeaderboardDetails(client, leaderboardId) : undefined
+		leaderboardId !== undefined && client !== undefined
+			? getLeaderboardDetails(client, leaderboardId)
+			: undefined
 	);
 
 	const rankers = $derived(
-		$leaderboard?.data?.leaderboard.rankers.sort(
+		$leaderboard?.data?.leaderboard?.rankers?.sort(
 			(a: { score: number }, b: { score: number }) => b.score - a.score
 		) ?? []
 	);
 
 	$effect(() => {
 		bestScore =
-			rankers.find(
+			rankers?.find(
 				(ranker: { username: string; score: number }) => ranker.username === $userStore.username
 			)?.score ?? 0;
 	});

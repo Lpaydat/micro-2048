@@ -46,6 +46,7 @@
 		}
 	`;
 
+	// TODO: use leaderboard chainId
 	const client = getContextClient();
 
 	const leaderboard = $derived(

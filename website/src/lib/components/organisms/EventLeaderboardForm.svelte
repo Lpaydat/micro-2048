@@ -7,6 +7,7 @@
 	import { getContextClient } from '@urql/svelte';
 	import { getModalStore } from '@skeletonlabs/skeleton';
 
+	// TODO: use main chainId
 	const client = getContextClient();
 	const modalStore = getModalStore();
 

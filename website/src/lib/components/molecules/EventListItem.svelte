@@ -47,6 +47,7 @@
 		}
 	};
 
+	// TODO: use main chainId
 	const client = getContextClient();
 
 	const deleteEventLeaderboard = () => {
