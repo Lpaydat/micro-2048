@@ -3,7 +3,9 @@
 </script>
 
 <h1
-	class="mb-1 text-[32px] {!$isMobile ? 'lg:text-[80px]' : ''} font-bold leading-tight tracking-tight text-[#776e65] lg:mb-2"
+	class="mb-1 text-[32px] {!$isMobile
+		? 'lg:text-[80px]'
+		: ''} font-bold leading-tight tracking-tight text-[#776e65] lg:mb-2"
 >
 	2048
 </h1>

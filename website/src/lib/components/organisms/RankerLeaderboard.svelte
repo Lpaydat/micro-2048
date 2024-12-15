@@ -31,9 +31,7 @@
 				: 'h-[calc(100vh-95px)] md:h-[calc(100vh-68px)]'
 	);
 
-	const sortedRankers = $derived(
-		rankers.slice().sort((a: any, b: any) => b.score - a.score)
-	);
+	const sortedRankers = $derived(rankers.slice().sort((a: any, b: any) => b.score - a.score));
 </script>
 
 <div class="mx-auto mt-4 flex {height} w-full max-w-4xl flex-col overflow-hidden">

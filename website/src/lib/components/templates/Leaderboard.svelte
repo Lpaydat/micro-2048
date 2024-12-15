@@ -174,7 +174,11 @@
 					{/if}
 				{/snippet}
 			</PageHeader>
-			<RankerLeaderboard rankers={$leaderboard?.data?.leaderboard?.rankers} hasSubHeader {...$leaderboard.data?.leaderboard} />
+			<RankerLeaderboard
+				rankers={$leaderboard?.data?.leaderboard?.rankers}
+				hasSubHeader
+				{...$leaderboard.data?.leaderboard}
+			/>
 		{/if}
 	{/snippet}
 </MainTemplate>
