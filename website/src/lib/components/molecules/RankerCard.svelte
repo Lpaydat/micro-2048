@@ -10,6 +10,7 @@
 
 	const leaderboardId = $derived($page.params.leaderboardId);
 	const extraParams = $derived(leaderboardId ? `&leaderboardId=${leaderboardId}` : '');
+	const boardId = player.boardId.split('.')[1];
 </script>
 
 <a
@@ -20,6 +21,6 @@
 	<span class="w-5/12 overflow-hidden text-ellipsis whitespace-nowrap font-bold text-orange-600"
 		>{player.username}</span
 	>
-	<span class="w-3/12 font-mono text-gray-500">{player.boardId}</span>
+	<span class="w-3/12 font-mono text-gray-500">{boardId}</span>
 	<span class="w-3/12 text-right font-mono font-bold text-green-500">{player.score}</span>
 </a>
