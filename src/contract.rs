@@ -368,7 +368,7 @@ impl Contract for Game2048Contract {
                         // Remove the game from the waiting_rooms list
                         self.state.waiting_rooms.remove(&game_id).unwrap();
 
-                        self.close_chain(&game_id).await;
+                        self.close_elimination_chain(&game_id).await;
                     }
                     MultiplayerGameAction::Join => {
                         // Check if game hasn't started yet
@@ -608,7 +608,7 @@ impl Contract for Game2048Contract {
                             if is_round_ended {
                                 if current_round == elimination_game.total_rounds.get() {
                                     elimination_game.status.set(EliminationGameStatus::Ended);
-                                    self.close_chain(&game_id).await;
+                                    self.close_elimination_chain(&game_id).await;
                                 } else {
                                     panic!("No player to eliminate");
                                 }
@@ -728,7 +728,7 @@ impl Contract for Game2048Contract {
                             .leaderboards
                             .remove_entry(&leaderboard_id)
                             .unwrap();
-                        self.close_chain(&leaderboard_id).await;
+                        self.close_chain(leaderboard_id).await;
                     }
                     EventLeaderboardAction::TogglePin => {
                         let is_mod = self
@@ -765,7 +765,11 @@ impl Contract for Game2048Contract {
 
     async fn execute_message(&mut self, message: Self::Message) {
         match message {
-            Message::CloseChain => self.runtime.close_chain().unwrap(),
+            Message::CloseChain => {
+                self.runtime
+                    .close_chain()
+                    .expect("The application does not have permission to close the chain");
+            }
             Message::Ping => {
                 log::info!("Ping received");
             }
@@ -1016,7 +1020,7 @@ impl Game2048Contract {
             .send_to(chain_id);
     }
 
-    async fn close_chain(&mut self, game_id: &str) {
+    async fn close_elimination_chain(&mut self, game_id: &str) {
         let chain_id = self
             .state
             .elimination_games
@@ -1026,6 +1030,10 @@ impl Game2048Contract {
             .chain_id
             .get()
             .clone();
+        self.close_chain(chain_id).await;
+    }
+
+    async fn close_chain(&mut self, chain_id: String) {
         let chain_id = ChainId::from_str(&chain_id).unwrap();
         self.runtime
             .prepare_message(Message::CloseChain)
