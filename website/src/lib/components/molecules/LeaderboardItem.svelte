@@ -30,16 +30,17 @@
 	);
 
 	const displayRank = $derived(rank === 1 ? `👑` : rank);
+	const extraClasses = $derived(rank === 1 ? 'ps-1.5' : '');
 </script>
 
 {#if boardUrl}
-	<a href={boardUrl} class={commonClasses}>
+	<a href={boardUrl} class={`${commonClasses} ${extraClasses}`}>
 		<span class="w-12 text-left font-bold text-surface-700">{displayRank}</span>
 		<span class="ml-4 flex-1 truncate text-left text-surface-800">{name}</span>
 		<span class="w-16 text-right text-surface-600">{score}</span>
 	</a>
 {:else}
-	<div class={commonClasses}>
+	<div class={`${commonClasses} ${extraClasses}`}>
 		<span class="w-12 text-left font-bold text-surface-700">{displayRank}</span>
 		<span class="ml-4 flex-1 truncate text-left text-surface-800">{name}</span>
 		<span class="w-16 text-right text-surface-600">{score}</span>
