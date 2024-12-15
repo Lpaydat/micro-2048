@@ -13,7 +13,6 @@
 	import LeaderboardDetails from '../molecules/LeaderboardDetails.svelte';
 	import { page } from '$app/stores';
 	import { getClient } from '$lib/client';
-	import { applicationId, port } from '$lib/constants';
 
 	let boardId = $state<string>($page.url.searchParams.get('boardId') ?? '');
 	let chainId = $derived(boardId.split('.')[0] ?? $userStore.chainId);
@@ -43,12 +42,8 @@
 		isEnded = true;
 	};
 
-	const client = $derived(getClient(leaderboardId, applicationId, port, true));
-	const leaderboard = $derived(
-		leaderboardId !== undefined && client !== undefined
-			? getLeaderboardDetails(client, leaderboardId)
-			: undefined
-	);
+	const client = $derived(getClient(leaderboardId, true));
+	const leaderboard = $derived(getLeaderboardDetails(client));
 
 	const rankers = $derived(
 		$leaderboard?.data?.leaderboard?.rankers?.sort(

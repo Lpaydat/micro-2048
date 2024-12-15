@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import BrandLogo from '../atoms/BrandLogo.svelte';
 </script>
 

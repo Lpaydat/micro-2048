@@ -1,10 +1,8 @@
 <script lang="ts">
+	import { isMobile } from '$lib/stores/isMobile';
 	import NavLink from '../atoms/NavLink.svelte';
 	import { popup } from '@skeletonlabs/skeleton';
 	import type { PopupSettings } from '@skeletonlabs/skeleton';
-	import { onMount } from 'svelte';
-
-	let isMobile = $state(false);
 
 	const popupSettings: PopupSettings = {
 		event: 'click',
@@ -14,20 +12,10 @@
 			offset: 8
 		}
 	};
-
-	onMount(() => {
-		checkMobile();
-		window.addEventListener('resize', checkMobile);
-		return () => window.removeEventListener('resize', checkMobile);
-	});
-
-	const checkMobile = () => {
-		isMobile = window.innerWidth < 768;
-	};
 </script>
 
 <div class="nav-container z-10 mx-4 mt-3 lg:me-5 lg:mt-5">
-	{#if isMobile}
+	{#if $isMobile}
 		<!-- Mobile Menu Button with Popup -->
 		<div class="float-right">
 			<button aria-label="Menu" class="p-2 text-red-500" use:popup={popupSettings}>

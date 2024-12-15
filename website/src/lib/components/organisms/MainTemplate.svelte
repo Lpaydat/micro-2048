@@ -5,6 +5,7 @@
 	import Sidebar from '../molecules/Sidebar.svelte';
 	import MobileUserDetails from '../molecules/MobileUserDetails.svelte';
 	import Credits from '../molecules/Credits.svelte';
+	import { isMobile as isMobileStore } from '$lib/stores/isMobile';
 
 	interface Props {
 		windowWidth?: number;
@@ -42,9 +43,13 @@
 		return () => window.removeEventListener('resize', updateDimensions);
 	});
 
-	const isMobile = $derived(windowWidth <= 820);
+	const isMobile = $derived(windowWidth <= 820 || windowWidth <= windowHeight);
 	const mainClass = $derived(mainCenter ? 'justify-center' : 'justify-start');
 	const overflowClass = $derived(overflowHidden ? 'overflow-hidden' : '');
+
+	$effect(() => {
+		isMobileStore.set(windowWidth <= 820 || windowWidth <= windowHeight);
+	});
 </script>
 
 <div class="flex h-screen {overflowClass} bg-[#23232b] bg-[url('/micro-carbon.png')] bg-repeat">

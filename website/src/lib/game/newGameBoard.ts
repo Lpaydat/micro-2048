@@ -1,5 +1,4 @@
 import { getClient } from '$lib/client';
-import { applicationId, port } from '$lib/constants';
 import { newGame } from '$lib/graphql/mutations';
 import { setBoardId } from '$lib/stores/boardId';
 import { setGameCreationStatus } from '$lib/stores/gameStore';
@@ -14,7 +13,7 @@ import { get } from 'svelte/store';
  */
 export const newGameBoard = async (leaderboardId: string = ''): Promise<string> => {
 	const userInfo = get(userStore);
-	const client = getClient(userInfo.chainId, applicationId, port);
+	const client = getClient(userInfo.chainId);
 
 	const seed = Math.floor(Math.random() * 10_000_000).toString();
 	const timestamp = Date.now().toString();

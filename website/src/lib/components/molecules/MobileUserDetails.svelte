@@ -26,6 +26,6 @@
 			<LogOut size={16} />
 		</button>
 	{:else}
-		<JoinForm isMobile />
+		<JoinForm mobileForm />
 	{/if}
 </div>

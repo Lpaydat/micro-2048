@@ -14,7 +14,6 @@
 	import Board from './Board.svelte';
 	import { userStore } from '$lib/stores/userStore';
 	import { getBoardId } from '$lib/stores/boardId';
-	import { applicationId, port } from '$lib/constants';
 	import { getClient } from '$lib/client';
 
 	// Props
@@ -58,7 +57,7 @@
 	`;
 
 	// State Management
-	$: client = getClient(chainId ?? $userStore.chainId, applicationId, port);
+	$: client = getClient(chainId ?? $userStore.chainId);
 	let state: GameState | undefined;
 	let isInitialized = false;
 	let rendered = false;

@@ -2,8 +2,8 @@ import type { Client } from '@urql/svelte';
 import { gql, queryStore } from '@urql/svelte';
 
 export const GET_LEADERBOARD_DETAILS = gql`
-	query GetLeaderboardDetails($leaderboardId: String!) {
-		leaderboard(leaderboardId: $leaderboardId) {
+	query GetLeaderboardDetails {
+		leaderboard {
 			leaderboardId
 			name
 			host
@@ -20,6 +20,6 @@ export const GET_LEADERBOARD_DETAILS = gql`
 	}
 `;
 
-export const getLeaderboardDetails = (client: Client, leaderboardId: string) => {
-	return queryStore({ client, query: GET_LEADERBOARD_DETAILS, variables: { leaderboardId } });
+export const getLeaderboardDetails = (client: Client) => {
+	return queryStore({ client, query: GET_LEADERBOARD_DETAILS });
 };

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { Client, getContextClient, gql, queryStore } from '@urql/svelte';
+	import { gql, queryStore } from '@urql/svelte';
 	import Trash from 'lucide-svelte/icons/trash-2';
 	import Star from 'lucide-svelte/icons/star';
 	import ContinueIcon from 'lucide-svelte/icons/step-forward';
@@ -17,6 +17,8 @@
 	import { getBoardId, setBoardId } from '$lib/stores/boardId';
 	import { deleteEvent, togglePinEvent } from '$lib/graphql/mutations/leaderboardAction.ts';
 	import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
+	import { getClient } from '$lib/client';
+	import { newGameBoard } from '$lib/game/newGameBoard';
 
 	interface Props {
 		leaderboardId?: string;
@@ -26,8 +28,8 @@
 	let { leaderboardId = '', prevPage }: Props = $props();
 
 	const LEADERBOARD = gql`
-		query Leaderboard($leaderboardId: String!) {
-			leaderboard(leaderboardId: $leaderboardId) {
+		query Leaderboard {
+			leaderboard {
 				leaderboardId
 				name
 				description
@@ -47,13 +49,12 @@
 	`;
 
 	// TODO: use leaderboard chainId
-	const client = getContextClient();
+	const client = getClient(leaderboardId, true);
 
 	const leaderboard = $derived(
 		queryStore({
 			client,
-			query: LEADERBOARD,
-			variables: { leaderboardId }
+			query: LEADERBOARD
 		})
 	);
 
@@ -77,15 +78,8 @@
 	const isPinned = $derived($leaderboard?.data?.leaderboard?.isPinned);
 
 	const newEventGame = async () => {
-		if (!leaderboardId) return;
-		if (!$userStore.username) return;
-
-		const seed = Math.floor(Math.random() * 10_000_000).toString();
-		const timestamp = Date.now().toString();
-		const boardId = (await hashSeed(seed, $userStore.username, timestamp)).toString();
-		setBoardId(boardId, leaderboardId);
-		setGameCreationStatus(true);
-		newGame(client, seed, timestamp, leaderboardId);
+		if (!leaderboardId || !$userStore.username) return;
+		const boardId = await newGameBoard(leaderboardId);
 
 		const url = new URL('/game', window.location.origin);
 		url.searchParams.set('boardId', boardId);

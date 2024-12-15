@@ -12,7 +12,7 @@
 	import EliminationLeaderboard from '$lib/components/organisms/EliminationLeaderboard.svelte';
 	import HowToPlayElimination from '$lib/components/organisms/HowToPlayElimination.svelte';
 	import HowToPlay2048 from '$lib/components/organisms/HowToPlay2048.svelte';
-	import { applicationId, chainId, port } from '$lib/constants';
+	import { chainId } from '$lib/constants';
 	import SideLeaderboard from '$lib/components/organisms/SideLeaderboard.svelte';
 	import { getPlayerInfo } from '$lib/graphql/queries/getPlayerInfo';
 	import { logout } from '$lib/utils/logout';
@@ -25,7 +25,7 @@
 
 	initializeStores();
 
-	const client = getClient(chainId, applicationId, port);
+	const client = getClient(chainId);
 	setContextClient(client);
 
 	let playerUsername: string | null = $state(null);

@@ -8,12 +8,13 @@
 	import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
 	import { preventDefault } from '$lib/utils/preventDefault';
 	import { onMount } from 'svelte';
+	import { isMobile } from '$lib/stores/isMobile';
 
 	interface Props {
-		isMobile?: boolean;
+		mobileForm?: boolean;
 	}
 
-	const { isMobile = false }: Props = $props();
+	let { mobileForm = false }: Props = $props();
 
 	let username = $state('');
 	let submittedUsername = $state('');
@@ -176,7 +177,7 @@
 	});
 </script>
 
-{#if !isMobile}
+{#if !($isMobile || mobileForm)}
 	<form
 		onsubmit={preventDefault(handleSubmit)}
 		class="pc mx-auto w-full max-w-md rounded-md bg-[#FAF8EF] p-6 shadow-md"
