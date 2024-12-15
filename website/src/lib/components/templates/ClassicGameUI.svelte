@@ -8,7 +8,6 @@
 	import Brand from '../molecules/Brand.svelte';
 	import SideLeaderboard from '../organisms/SideLeaderboard.svelte';
 	import MobileRankerStats from '../organisms/MobileRankerStats.svelte';
-	import { getContextClient } from '@urql/svelte';
 	import { getLeaderboardDetails } from '$lib/graphql/queries/getLeaderboardDetails';
 	import { onDestroy, onMount } from 'svelte';
 	import LeaderboardDetails from '../molecules/LeaderboardDetails.svelte';
@@ -17,6 +16,7 @@
 	import { applicationId, port } from '$lib/constants';
 
 	let boardId = $state<string>($page.url.searchParams.get('boardId') ?? '');
+	let chainId = $derived(boardId.split('.')[0] ?? $userStore.chainId);
 
 	let unsubscribe: any;
 
@@ -43,11 +43,7 @@
 		isEnded = true;
 	};
 
-	// TODO: use leaderboard chainId
-	$effect(() => {
-		console.log('leaderboardId', leaderboardId);
-	});
-	const client = $derived(getClient(leaderboardId, applicationId, port));
+	const client = $derived(getClient(leaderboardId, applicationId, port, true));
 	const leaderboard = $derived(
 		leaderboardId !== undefined && client !== undefined
 			? getLeaderboardDetails(client, leaderboardId)
@@ -118,6 +114,7 @@
 					bind:score={currentPlayerScore}
 					player={$userStore.username ?? ''}
 					{boardId}
+					{chainId}
 					{canStartNewGame}
 					showBestScore
 					{isEnded}

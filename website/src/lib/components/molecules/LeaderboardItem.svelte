@@ -29,7 +29,7 @@
 		`flex justify-between snap-start items-center p-3 pl-2 w-full ${color} rounded-sm shadow-md relative border-l-4 border-transparent ${specStyle}`
 	);
 
-	const displayRank = $derived(rank === 1 ? `${rank} 👑` : rank);
+	const displayRank = $derived(rank === 1 ? `👑` : rank);
 </script>
 
 {#if boardUrl}

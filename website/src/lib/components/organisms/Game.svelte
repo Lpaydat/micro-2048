@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { queryStore, subscriptionStore, gql, getContextClient } from '@urql/svelte';
+	import { queryStore, subscriptionStore, gql } from '@urql/svelte';
 
 	import BoardHeader from '../molecules/BoardHeader.svelte';
 	import { makeMove } from '$lib/graphql/mutations/makeMove';
@@ -24,6 +24,7 @@
 	export let score: number = 0;
 	export let bestScore: number = 0;
 	export let boardId: string | undefined = undefined;
+	export let chainId: string | undefined = undefined;
 	export let canStartNewGame: boolean = true;
 	export let canMakeMove: boolean = true;
 	export let showBestScore: boolean = true;
@@ -57,8 +58,7 @@
 	`;
 
 	// State Management
-	// TODO: use player chainId (playerId is player chainId)
-	const client = getClient($userStore.chainId, applicationId, port);
+	$: client = getClient(chainId ?? $userStore.chainId, applicationId, port);
 	let state: GameState | undefined;
 	let isInitialized = false;
 	let rendered = false;
@@ -77,23 +77,15 @@
 	$: game = queryStore({
 		client,
 		query: GET_BOARD_STATE,
-		variables: { boardId: boardId },
+		variables: { boardId },
 		requestPolicy: 'network-only'
 	});
 
-	let chainId: string | undefined;
-	let playerMessages: any;
-	$: {
-		if ($game.data?.board?.chainId && chainId !== $game.data?.board?.chainId && !playerMessages) {
-			chainId = $game.data?.board?.chainId;
-			playerMessages = subscriptionStore({
-				client,
-				query: PLAYER_PING_SUBSCRIPTION,
-				variables: { chainId: $userStore.chainId }
-				// variables: { chainId: $game.data?.board?.chainId }
-			});
-		}
-	}
+	$: playerMessages = subscriptionStore({
+		client,
+		query: PLAYER_PING_SUBSCRIPTION,
+		variables: { chainId }
+	});
 
 	// Reactive Statements
 	$: score = $game.data?.board?.score || 0;

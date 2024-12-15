@@ -48,8 +48,8 @@ const indexes: Record<number, { top: number; left: number }> = {
 };
 
 export const generateTabletFromMatrix = (matrix: number[][]): Tablet => {
-	return matrix.map((row, rowIndex) =>
-		row.map((value, colIndex) => {
+	return matrix?.map((row, rowIndex) =>
+		row?.map((value, colIndex) => {
 			const index = rowIndex * matrix.length + colIndex;
 			return {
 				value,

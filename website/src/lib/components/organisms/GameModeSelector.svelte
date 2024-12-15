@@ -1,5 +1,7 @@
 <script lang="ts">
+	import { newGameBoard } from '$lib/game/newGameBoard';
 	import { getBoardId } from '$lib/stores/boardId';
+	import { userStore } from '$lib/stores/userStore';
 	import GameModeCard from '../molecules/GameModeCard.svelte';
 	// import GameModeDescription from "../molecules/GameModeDescription.svelte";
 	// import classicImage from "$lib/assets/classic.webp";
@@ -20,7 +22,18 @@
 	// }
 
 	const lastBoardId = $derived(getBoardId());
-	const lastBoardIdUrl = $derived(lastBoardId ? `/game?boardId=${lastBoardId}` : '/game');
+	let boardId = $state('');
+
+	$effect(() => {
+		// Create a new board if not already created
+		if (!lastBoardId && $userStore.username) {
+			(async () => {
+				boardId = await newGameBoard('');
+			})();
+		}
+	});
+
+	const lastBoardIdUrl = $derived(`/game?boardId=${lastBoardId || boardId}`);
 </script>
 
 <div class="mx-auto flex h-full max-w-4xl flex-col gap-4 p-4">

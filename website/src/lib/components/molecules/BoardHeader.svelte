@@ -1,16 +1,12 @@
 <script lang="ts">
-	import { getContextClient } from '@urql/svelte';
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { newGame } from '$lib/graphql/mutations/newBoard';
-	import { hashSeed } from '$lib/utils/random';
-	import { boardSize, setGameCreationStatus } from '$lib/stores/gameStore';
-	import { getBoardId, setBoardId } from '$lib/stores/boardId';
+	import { boardSize } from '$lib/stores/gameStore';
+	import { getBoardId } from '$lib/stores/boardId';
 	import { userStore } from '$lib/stores/userStore';
 	import UsernameBadge from '../atoms/UsernameBadge.svelte';
-	import { getClient } from '$lib/client';
-	import { applicationId, port } from '$lib/constants';
+	import { newGameBoard } from '$lib/game/newGameBoard';
 
 	interface Props {
 		player: string;
@@ -30,9 +26,6 @@
 		boardId = $bindable()
 	}: Props = $props();
 
-	// TODO: use player chainId
-	// const client = getContextClient();
-	const client = getClient($userStore.chainId, applicationId, port)
 	const leaderboardId = $derived($page.url.searchParams.get('leaderboardId') ?? '');
 	const isOwner = $derived(player === $userStore.username);
 
@@ -46,15 +39,8 @@
 
 	// Mutation functions
 	const newSingleGame = async () => {
-		console.log('newSingleGame', $userStore.chainId);
 		if (!canStartNewGame || !$userStore.username) return;
-		const seed = Math.floor(Math.random() * 10_000_000).toString();
-		const timestamp = Date.now().toString();
-
-		boardId = (await hashSeed(seed, $userStore.username, timestamp)).toString();
-		setBoardId(boardId, leaderboardId);
-		setGameCreationStatus(true);
-		newGame(client, seed, timestamp, leaderboardId);
+		boardId = await newGameBoard(leaderboardId);
 
 		const url = new URL($page.url);
 		url.searchParams.set('boardId', boardId);

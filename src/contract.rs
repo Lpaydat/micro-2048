@@ -143,15 +143,18 @@ impl Contract for Game2048Contract {
                     panic!("Leaderboard is not active");
                 }
 
-                let board_id = hash_seed(&seed, &player, timestamp).to_string();
-                let new_board = Game::new(&board_id, &player, timestamp).board;
-                let game = self.state.boards.load_entry_mut(&board_id).await.unwrap();
                 let player_obj = self
                     .state
                     .players
                     .load_entry_or_insert(&player)
                     .await
                     .unwrap();
+
+                let mut board_id = hash_seed(&seed, &player, timestamp).to_string();
+                board_id = format!("{}.{}", player_obj.chain_id.get(), board_id);
+
+                let new_board = Game::new(&board_id, &player, timestamp).board;
+                let game = self.state.boards.load_entry_mut(&board_id).await.unwrap();
                 game.board_id.set(board_id.clone());
                 game.board.set(new_board);
                 game.player.set(player.clone());

@@ -4,6 +4,7 @@ import { createClient as createWSClient } from 'graphql-ws';
 import { cacheExchange, Client, fetchExchange, subscriptionExchange } from '@urql/svelte';
 
 import { website, chainId as mainChainId } from './constants';
+import { userStore } from './stores/userStore';
 
 const getBaseUrl = (website: string, port: string) => {
 	const protocol = website === 'localhost' ? 'ws' : 'wss';
@@ -18,10 +19,19 @@ const getBaseUrl = (website: string, port: string) => {
 export const getClient = (
 	chainId: string | undefined | null,
 	applicationId: string,
-	port: string
+	port: string,
+	allowDefaultChainId: boolean = false
 ) => {
 	const urls = getBaseUrl(website, port);
-	chainId = chainId || mainChainId;
+	let userChainId;
+	userStore.subscribe((value) => {
+		userChainId = value.chainId;
+	})();
+	chainId = chainId || (allowDefaultChainId ? mainChainId : userChainId);
+
+	if (!chainId) {
+		throw new Error(`Chain ID is required. Got chainId: ${chainId}`);
+	}
 
 	// Create basic HTTP client for server-side rendering
 	if (!browser) {
