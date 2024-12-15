@@ -98,6 +98,7 @@ pub enum Message {
     LeaderboardNewGame {
         player: String,
         board_id: String,
+        timestamp: u64,
     },
     UpdateScore {
         player: String,

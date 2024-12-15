@@ -9,7 +9,7 @@ use linera_sdk::{
     views::{RootView, View},
     Contract, ContractRuntime,
 };
-use state::EliminationGameStatus;
+use state::{ClassicLeaderboard, EliminationGameStatus};
 
 use self::state::Game2048;
 use game2048::{
@@ -144,19 +144,6 @@ impl Contract for Game2048Contract {
                 self.check_player_registered(&player, RegistrationCheck::EnsureRegistered)
                     .await;
 
-                // TODO: fix this one, it will be true on every chain
-                let leaderboard_id = leaderboard_id.unwrap_or_default();
-                let leaderboard = self
-                    .state
-                    .leaderboards
-                    .load_entry_mut(&leaderboard_id)
-                    .await
-                    .unwrap();
-
-                if !leaderboard_id.is_empty() && leaderboard.end_time.get() < &timestamp {
-                    panic!("Leaderboard is not active");
-                }
-
                 let player_obj = self
                     .state
                     .players
@@ -172,13 +159,14 @@ impl Contract for Game2048Contract {
                 let mut board_id = hash_seed(&seed, &player, timestamp).to_string();
                 board_id = format!("{}.{}", player_obj.chain_id.get(), board_id);
 
+                let leaderboard_id = leaderboard_id.unwrap_or_default();
                 let new_board = Game::new(&board_id, &player, timestamp).board;
                 let game = self.state.boards.load_entry_mut(&board_id).await.unwrap();
                 game.board_id.set(board_id.clone());
                 game.board.set(new_board);
                 game.player.set(player.clone());
                 game.leaderboard_id.set(leaderboard_id.clone());
-                game.chain_id.set(player_obj.chain_id.get().clone());
+                game.chain_id.set(player_obj.chain_id.get().to_string());
 
                 let leaderboard_chain_id = if !leaderboard_id.is_empty() {
                     ChainId::from_str(&leaderboard_id).unwrap()
@@ -189,6 +177,7 @@ impl Contract for Game2048Contract {
                     .prepare_message(Message::LeaderboardNewGame {
                         player: player.clone(),
                         board_id: board_id.clone(),
+                        timestamp,
                     })
                     .send_to(leaderboard_chain_id);
             }
@@ -855,9 +844,12 @@ impl Contract for Game2048Contract {
                     leaderboard.end_time.set(end_time);
                 }
             }
-            Message::LeaderboardNewGame { player, board_id } => {
-                let leaderboard = self.state.leaderboards.load_entry_mut("").await.unwrap();
-
+            Message::LeaderboardNewGame {
+                player,
+                board_id,
+                timestamp,
+            } => {
+                let leaderboard = self.is_leaderboard_active(timestamp).await;
                 let total_boards = leaderboard.total_boards.get_mut();
                 *total_boards += 1;
 
@@ -895,6 +887,19 @@ impl Game2048Contract {
             == self.runtime.application_creator_chain_id().to_string()
     }
 
+    async fn is_leaderboard_active(&mut self, timestamp: u64) -> &mut ClassicLeaderboard {
+        let is_main_chain = self.is_main_chain().await;
+        let leaderboard = self.state.leaderboards.load_entry_mut("").await.unwrap();
+        let start_time = leaderboard.start_time.get();
+        let end_time = leaderboard.end_time.get();
+
+        if !is_main_chain && (timestamp < *start_time || timestamp > *end_time) {
+            panic!("Leaderboard is not active");
+        }
+
+        leaderboard
+    }
+
     // Update the leaderboard score, it will always update the chain's main leaderboard
     async fn update_leaderboard_score(
         &mut self,
@@ -905,15 +910,7 @@ impl Game2048Contract {
     ) {
         if !board_id.contains("-") {
             // Classic leaderboard
-            let is_main_chain = self.is_main_chain().await;
-            let leaderboard = self.state.leaderboards.load_entry_mut("").await.unwrap();
-            let start_time = leaderboard.start_time.get();
-            let end_time = leaderboard.end_time.get();
-            // TODO: need to implement the better check
-            if !is_main_chain && (timestamp < *start_time || timestamp > *end_time) {
-                panic!("Leaderboard is not active");
-            }
-
+            let leaderboard = self.is_leaderboard_active(timestamp).await;
             let player_leaderboard_score = leaderboard.score.get(player).await.unwrap();
 
             if player_leaderboard_score.is_none() || player_leaderboard_score < Some(score) {
