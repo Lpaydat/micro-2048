@@ -42,7 +42,7 @@
 		return () => window.removeEventListener('resize', updateDimensions);
 	});
 
-	const isMobile = $derived(windowWidth <= 768);
+	const isMobile = $derived(windowWidth <= 820);
 	const mainClass = $derived(mainCenter ? 'justify-center' : 'justify-start');
 	const overflowClass = $derived(overflowHidden ? 'overflow-hidden' : '');
 </script>
