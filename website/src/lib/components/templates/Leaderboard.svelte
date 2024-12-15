@@ -60,10 +60,6 @@
 
 	const currentBoardId = $derived(getBoardId(leaderboardId));
 
-	// Sort the rankers by score in descending order
-	const sortedRankers = $derived(
-		$leaderboard?.data?.leaderboard?.rankers.slice().sort((a: any, b: any) => b.score - a.score)
-	);
 	const isEnded = $derived(
 		Number($leaderboard?.data?.leaderboard?.endTime ?? '0') - Date.now() < 0
 	);
@@ -146,7 +142,7 @@
 
 	{#snippet main()}
 		{#if !leaderboardId}
-			<RankerLeaderboard rankers={sortedRankers} />
+			<RankerLeaderboard rankers={$leaderboard?.data?.leaderboard?.rankers} />
 		{:else}
 			<PageHeader title={$leaderboard?.data?.leaderboard?.name} {prevPage}>
 				{#snippet subActions()}
@@ -178,7 +174,7 @@
 					{/if}
 				{/snippet}
 			</PageHeader>
-			<RankerLeaderboard rankers={sortedRankers} hasSubHeader {...$leaderboard.data?.leaderboard} />
+			<RankerLeaderboard rankers={$leaderboard?.data?.leaderboard?.rankers} hasSubHeader {...$leaderboard.data?.leaderboard} />
 		{/if}
 	{/snippet}
 </MainTemplate>

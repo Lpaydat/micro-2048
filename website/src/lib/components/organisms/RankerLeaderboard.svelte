@@ -30,6 +30,10 @@
 				? 'h-[calc(100vh-152px)] md:h-[calc(100vh-120px)]'
 				: 'h-[calc(100vh-95px)] md:h-[calc(100vh-68px)]'
 	);
+
+	const sortedRankers = $derived(
+		rankers.slice().sort((a: any, b: any) => b.score - a.score)
+	);
 </script>
 
 <div class="mx-auto mt-4 flex {height} w-full max-w-4xl flex-col overflow-hidden">
@@ -44,7 +48,7 @@
 		{/if}
 	</div>
 	<div class="flex-1 overflow-hidden bg-black/40 px-2 py-6 shadow-xl lg:rounded-lg lg:p-6">
-		{#if (rankers?.length ?? 0) > 0}
+		{#if (sortedRankers?.length ?? 0) > 0}
 			<div class="flex h-full flex-col overflow-visible">
 				<div
 					class="flex items-center justify-between border-b border-gray-700 px-4 pb-2 text-xs font-semibold text-gray-400 lg:text-base"
@@ -55,7 +59,7 @@
 					<span class="w-3/12 text-right">Score</span>
 				</div>
 				<div class="flex-1 snap-y space-y-4 overflow-y-auto overflow-x-hidden pt-4">
-					{#each rankers as player, index}
+					{#each sortedRankers as player, index}
 						<RankerCard {player} rank={index + 1} />
 					{/each}
 				</div>
