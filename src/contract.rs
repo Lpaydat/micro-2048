@@ -43,6 +43,19 @@ impl Contract for Game2048Contract {
     async fn instantiate(&mut self, _seed: Self::InstantiationArgument) {
         self.runtime.application_parameters();
 
+        let leaderboard = self.state.leaderboards.load_entry_mut("").await.unwrap();
+        leaderboard.leaderboard_id.set("".to_string());
+        leaderboard
+            .chain_id
+            .set(self.runtime.chain_id().to_string());
+        leaderboard.host.set("".to_string());
+        leaderboard.start_time.set(0);
+        leaderboard.end_time.set(0);
+        leaderboard.name.set("".to_string());
+        leaderboard.description.set("".to_string());
+        leaderboard.total_boards.set(0);
+        leaderboard.total_players.set(0);
+
         // let boards = include_str!("../db/boards.txt");
         // for line in boards.lines() {
         //     let parts: Vec<&str> = line.split_whitespace().collect();
@@ -97,6 +110,11 @@ impl Contract for Game2048Contract {
                 if username.trim().is_empty() {
                     panic!("Username cannot be empty");
                 }
+                let is_main_chain = self.is_main_chain().await;
+                if !is_main_chain {
+                    panic!("Only main chain can register player");
+                }
+
                 self.check_player_registered(&username, RegistrationCheck::EnsureNotRegistered)
                     .await;
 
@@ -114,13 +132,8 @@ impl Contract for Game2048Contract {
                 player.chain_id.set(chain_id.to_string());
 
                 self.request_application(chain_id).await;
-
-                self.runtime
-                    .prepare_message(Message::RegisterPlayer {
-                        username,
-                        password_hash,
-                    })
-                    .send_to(chain_id);
+                self.register_player(chain_id, &username, &password_hash)
+                    .await;
             }
             Operation::NewBoard {
                 seed,
@@ -131,6 +144,7 @@ impl Contract for Game2048Contract {
                 self.check_player_registered(&player, RegistrationCheck::EnsureRegistered)
                     .await;
 
+                // TODO: fix this one, it will be true on every chain
                 let leaderboard_id = leaderboard_id.unwrap_or_default();
                 let leaderboard = self
                     .state
@@ -150,6 +164,11 @@ impl Contract for Game2048Contract {
                     .await
                     .unwrap();
 
+                let current_chain_id = self.runtime.chain_id().to_string();
+                if current_chain_id != *player_obj.chain_id.get() {
+                    panic!("You can only create board on your own chain");
+                }
+
                 let mut board_id = hash_seed(&seed, &player, timestamp).to_string();
                 board_id = format!("{}.{}", player_obj.chain_id.get(), board_id);
 
@@ -161,22 +180,17 @@ impl Contract for Game2048Contract {
                 game.leaderboard_id.set(leaderboard_id.clone());
                 game.chain_id.set(player_obj.chain_id.get().clone());
 
-                let total_boards = leaderboard.total_boards.get_mut();
-                *total_boards += 1;
-
-                let participant = leaderboard.score.get(&player).await.unwrap();
-                match participant {
-                    Some(_) => (),
-                    None => {
-                        let total_players = leaderboard.total_players.get_mut();
-                        *total_players += 1;
-                        leaderboard.score.insert(&player, 0).unwrap();
-                        leaderboard
-                            .board_ids
-                            .insert(&player, board_id.clone())
-                            .unwrap();
-                    }
-                }
+                let leaderboard_chain_id = if !leaderboard_id.is_empty() {
+                    ChainId::from_str(&leaderboard_id).unwrap()
+                } else {
+                    self.runtime.application_creator_chain_id()
+                };
+                self.runtime
+                    .prepare_message(Message::LeaderboardNewGame {
+                        player: player.clone(),
+                        board_id: board_id.clone(),
+                    })
+                    .send_to(leaderboard_chain_id);
             }
             Operation::EndBoard { board_id } => {
                 let board = self.state.boards.load_entry_mut(&board_id).await.unwrap();
@@ -219,14 +233,23 @@ impl Contract for Game2048Contract {
                         leaderboard_id = game_id;
                     }
 
-                    // TODO: make sure it not update on every move
-                    self.update_score(&player, &board_id, &leaderboard_id, score, timestamp)
+                    let chain_id = if !leaderboard_id.is_empty() {
+                        ChainId::from_str(&leaderboard_id).unwrap()
+                    } else {
+                        self.runtime.application_creator_chain_id()
+                    };
+                    self.update_score(chain_id, &player, &board_id, score, timestamp)
                         .await;
                 } else {
                     panic!("Game is ended");
                 }
             }
             Operation::CreateEliminationGame { player, settings } => {
+                let is_main_chain = self.is_main_chain().await;
+                if !is_main_chain {
+                    panic!("Only main chain can create elimination game");
+                }
+
                 self.check_player_registered(&player, RegistrationCheck::EnsureRegistered)
                     .await;
 
@@ -287,6 +310,11 @@ impl Contract for Game2048Contract {
                 player,
                 timestamp,
             } => {
+                let is_main_chain = self.is_main_chain().await;
+                if !is_main_chain {
+                    panic!("Only main chain can perform elimination game action");
+                }
+
                 self.check_player_registered(&player, RegistrationCheck::EnsureRegistered)
                     .await;
 
@@ -609,23 +637,44 @@ impl Contract for Game2048Contract {
                 player,
                 timestamp,
             } => {
+                let is_main_chain = self.is_main_chain().await;
+                if !is_main_chain {
+                    panic!("Only main chain can perform event leaderboard action");
+                }
+
                 self.check_player_registered(&player, RegistrationCheck::EnsureRegistered)
                     .await;
+
+                let chain_id = if action == EventLeaderboardAction::Create {
+                    let chain_ownership = self.runtime.chain_ownership();
+                    let app_id = self.runtime.application_id().forget_abi();
+                    let application_permissions = ApplicationPermissions::new_single(app_id);
+                    let amount = Amount::from_tokens(10000);
+                    let (_, chain_id) =
+                        self.runtime
+                            .open_chain(chain_ownership, application_permissions, amount);
+
+                    chain_id
+                } else if !leaderboard_id.is_empty() {
+                    ChainId::from_str(&leaderboard_id).unwrap()
+                } else {
+                    panic!("Leaderboard ID is required");
+                };
 
                 let leaderboard = self
                     .state
                     .leaderboards
-                    .load_entry_mut(&leaderboard_id)
+                    .load_entry_mut(&chain_id.to_string())
                     .await
                     .unwrap();
 
-                let host = leaderboard.host.get();
-                if !host.is_empty() && host != &player {
+                let host = leaderboard.host.get().clone();
+                if !host.is_empty() && host != player {
                     panic!("Only host can perform this action");
                 }
 
                 match action {
-                    EventLeaderboardAction::Create => {
+                    EventLeaderboardAction::Create | EventLeaderboardAction::Update => {
                         let start_time = settings.start_time.parse::<u64>().unwrap();
                         let end_time = settings.end_time.parse::<u64>().unwrap();
 
@@ -635,61 +684,39 @@ impl Contract for Game2048Contract {
                             panic!("Timestamp cannot be after planned end time");
                         };
 
-                        let chain_ownership = self.runtime.chain_ownership();
-                        let app_id = self.runtime.application_id().forget_abi();
-                        let application_permissions = ApplicationPermissions::new_single(app_id);
-                        let amount = Amount::from_tokens(0);
-                        let (_, chain_id) = self.runtime.open_chain(
-                            chain_ownership,
-                            application_permissions,
-                            amount,
-                        );
-                        let leaderboard_id = chain_id.to_string();
-
-                        let leaderboard = self
-                            .state
-                            .leaderboards
-                            .load_entry_mut(&leaderboard_id)
-                            .await
-                            .unwrap();
-
-                        leaderboard.name.set(settings.name);
-                        leaderboard
-                            .description
-                            .set(settings.description.unwrap_or("".to_string()));
-                        leaderboard.chain_id.set(chain_id.to_string());
-                        leaderboard.leaderboard_id.set(leaderboard_id);
-                        leaderboard.host.set(player);
-                        leaderboard.start_time.set(start_time);
-                        leaderboard.end_time.set(end_time);
-                    }
-                    EventLeaderboardAction::Update => {
-                        let name = settings.name;
-                        let description = settings.description.unwrap_or("".to_string());
-                        let start_time = settings.start_time.parse::<u64>().unwrap();
-                        let end_time = settings.end_time.parse::<u64>().unwrap();
-
-                        if start_time >= end_time {
-                            panic!("Start time cannot be after end time");
-                        }
-                        if timestamp >= end_time {
-                            panic!("Timestamp cannot be after planned end time");
+                        if !settings.name.is_empty() {
+                            leaderboard.name.set(settings.name.clone());
                         }
 
-                        if !name.is_empty() {
-                            leaderboard.name.set(name);
+                        if let Some(desc) = settings.description.clone() {
+                            leaderboard.description.set(desc);
                         }
 
-                        if !description.is_empty() {
-                            leaderboard.description.set(description);
-                        }
-
-                        if *leaderboard.start_time.get() != 0 {
+                        if start_time != 0 {
                             leaderboard.start_time.set(start_time);
                         }
-                        if *leaderboard.end_time.get() != 0 {
+
+                        if end_time != 0 {
                             leaderboard.end_time.set(end_time);
                         }
+
+                        if action == EventLeaderboardAction::Create {
+                            let chain_id_str = chain_id.to_string();
+                            leaderboard.leaderboard_id.set(chain_id_str.clone());
+                            leaderboard.chain_id.set(chain_id_str);
+                            leaderboard.host.set(player.clone());
+
+                            self.request_application(chain_id).await;
+                        }
+                        self.upsert_leaderboard(
+                            chain_id,
+                            &settings.name,
+                            &settings.description.unwrap_or_default(),
+                            &player,
+                            start_time,
+                            end_time,
+                        )
+                        .await;
                     }
                     EventLeaderboardAction::Delete => {
                         let is_mod = self
@@ -712,8 +739,7 @@ impl Contract for Game2048Contract {
                             .leaderboards
                             .remove_entry(&leaderboard_id)
                             .unwrap();
-                        // TODO: this cause error when trying to close empty chain
-                        // self.close_chain(&leaderboard_id).await;
+                        self.close_chain(&leaderboard_id).await;
                     }
                     EventLeaderboardAction::TogglePin => {
                         let is_mod = self
@@ -734,6 +760,11 @@ impl Contract for Game2048Contract {
                 }
             }
             Operation::ToggleAdmin { username } => {
+                let is_main_chain = self.is_main_chain().await;
+                if !is_main_chain {
+                    panic!("Only main chain can toggle admin");
+                }
+
                 self.check_player_registered(&username, RegistrationCheck::EnsureRegistered)
                     .await;
 
@@ -784,61 +815,71 @@ impl Contract for Game2048Contract {
                 player.chain_id.set(chain_id);
                 player.is_mod.set(false);
             }
-            Message::UpdateClassicLeaderboard {
+            Message::EventLeaderboard {
+                leaderboard_id,
+                name,
+                description,
+                chain_id,
+                host,
+                start_time,
+                end_time,
+            } => {
+                // Use default leaderboard id for every chain
+                let leaderboard = self.state.leaderboards.load_entry_mut("").await.unwrap();
+
+                if !name.is_empty() {
+                    leaderboard.name.set(name);
+                }
+
+                if let Some(desc) = description {
+                    leaderboard.description.set(desc);
+                }
+
+                if !chain_id.is_empty() {
+                    leaderboard.chain_id.set(chain_id.to_string());
+                }
+
+                if !leaderboard_id.is_empty() {
+                    leaderboard.leaderboard_id.set(leaderboard_id);
+                }
+
+                if !host.is_empty() {
+                    leaderboard.host.set(host);
+                }
+
+                if start_time != 0 {
+                    leaderboard.start_time.set(start_time);
+                }
+
+                if end_time != 0 {
+                    leaderboard.end_time.set(end_time);
+                }
+            }
+            Message::LeaderboardNewGame { player, board_id } => {
+                let leaderboard = self.state.leaderboards.load_entry_mut("").await.unwrap();
+
+                let total_boards = leaderboard.total_boards.get_mut();
+                *total_boards += 1;
+
+                let participant = leaderboard.score.get(&player).await.unwrap();
+                match participant {
+                    Some(_) => (),
+                    None => {
+                        let total_players = leaderboard.total_players.get_mut();
+                        *total_players += 1;
+                        leaderboard.score.insert(&player, 0).unwrap();
+                        leaderboard.board_ids.insert(&player, board_id).unwrap();
+                    }
+                }
+            }
+            Message::UpdateScore {
                 player,
                 board_id,
-                leaderboard_id,
                 score,
                 timestamp,
             } => {
-                if !board_id.contains("-") {
-                    // Classic leaderboard
-                    let leaderboard_id = leaderboard_id.unwrap_or_default();
-                    let leaderboard = self
-                        .state
-                        .leaderboards
-                        .load_entry_mut(&leaderboard_id)
-                        .await
-                        .unwrap();
-
-                    if !leaderboard_id.is_empty() {
-                        let start_time = leaderboard.start_time.get();
-                        let end_time = leaderboard.end_time.get();
-                        // TODO: need to implement the better check
-                        if timestamp < *start_time || timestamp > *end_time {
-                            panic!("Leaderboard is not active");
-                        }
-                    }
-
-                    let player_leaderboard_score =
-                        leaderboard.score.get(player.as_str()).await.unwrap();
-
-                    if player_leaderboard_score.is_none() || player_leaderboard_score < Some(score)
-                    {
-                        leaderboard.score.insert(&player, score).unwrap();
-                        leaderboard.board_ids.insert(&player, board_id).unwrap();
-                    }
-                } else {
-                    // Elimination leaderboard
-                    let (game_id, round, player) =
-                        self.parse_elimination_game_id(&board_id).await.unwrap();
-
-                    if !game_id.is_empty() && round != 0 && !player.is_empty() {
-                        let elimination_game = self
-                            .state
-                            .elimination_games
-                            .load_entry_mut(&game_id)
-                            .await
-                            .unwrap();
-
-                        let leaderboard = elimination_game
-                            .round_leaderboard
-                            .load_entry_mut(&round)
-                            .await
-                            .unwrap();
-                        leaderboard.players.insert(&player, score).unwrap();
-                    }
-                }
+                self.update_leaderboard_score(&player, board_id, score, timestamp)
+                    .await;
             }
         }
     }
@@ -849,10 +890,71 @@ impl Contract for Game2048Contract {
 }
 
 impl Game2048Contract {
+    async fn is_main_chain(&mut self) -> bool {
+        self.runtime.chain_id().to_string()
+            == self.runtime.application_creator_chain_id().to_string()
+    }
+
+    // Update the leaderboard score, it will always update the chain's main leaderboard
+    async fn update_leaderboard_score(
+        &mut self,
+        player: &str,
+        board_id: String,
+        score: u64,
+        timestamp: u64,
+    ) {
+        if !board_id.contains("-") {
+            // Classic leaderboard
+            let is_main_chain = self.is_main_chain().await;
+            let leaderboard = self.state.leaderboards.load_entry_mut("").await.unwrap();
+            let start_time = leaderboard.start_time.get();
+            let end_time = leaderboard.end_time.get();
+            // TODO: need to implement the better check
+            if !is_main_chain && (timestamp < *start_time || timestamp > *end_time) {
+                panic!("Leaderboard is not active");
+            }
+
+            let player_leaderboard_score = leaderboard.score.get(player).await.unwrap();
+
+            if player_leaderboard_score.is_none() || player_leaderboard_score < Some(score) {
+                leaderboard.score.insert(player, score).unwrap();
+                leaderboard.board_ids.insert(player, board_id).unwrap();
+            }
+        } else {
+            // Elimination leaderboard
+            let (game_id, round, player) = self.parse_elimination_game_id(&board_id).await.unwrap();
+
+            if !game_id.is_empty() && round != 0 && !player.is_empty() {
+                let elimination_game = self
+                    .state
+                    .elimination_games
+                    .load_entry_mut(&game_id)
+                    .await
+                    .unwrap();
+
+                let leaderboard = elimination_game
+                    .round_leaderboard
+                    .load_entry_mut(&round)
+                    .await
+                    .unwrap();
+                leaderboard.players.insert(&player, score).unwrap();
+            }
+        }
+    }
+
     async fn request_application(&mut self, chain_id: ChainId) {
         self.runtime
             .prepare_message(Message::RequestApplication {
                 chain_id: chain_id.to_string(),
+            })
+            .send_to(chain_id);
+    }
+
+    async fn register_player(&mut self, chain_id: ChainId, player: &str, password_hash: &str) {
+        self.runtime
+            .prepare_message(Message::RegisterPlayer {
+                username: player.to_string(),
+                password_hash: password_hash.to_string(),
             })
             .send_to(chain_id);
     }
@@ -877,25 +979,40 @@ impl Game2048Contract {
             .send_to(chain_id);
     }
 
+    async fn upsert_leaderboard(
+        &mut self,
+        chain_id: ChainId,
+        name: &str,
+        description: &str,
+        host: &str,
+        start_time: u64,
+        end_time: u64,
+    ) {
+        self.runtime
+            .prepare_message(Message::EventLeaderboard {
+                leaderboard_id: chain_id.to_string(),
+                name: name.to_string(),
+                description: Some(description.to_string()),
+                chain_id: chain_id.to_string(),
+                host: host.to_string(),
+                start_time,
+                end_time,
+            })
+            .send_to(chain_id);
+    }
+
     async fn update_score(
         &mut self,
+        chain_id: ChainId,
         player: &str,
         board_id: &str,
-        leaderboard_id: &str,
         score: u64,
         timestamp: u64,
     ) {
-        let chain_id_str = "e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65";
-        let chain_id = if leaderboard_id.is_empty() {
-            ChainId::from_str(chain_id_str).unwrap()
-        } else {
-            ChainId::from_str(leaderboard_id).unwrap()
-        };
         self.runtime
-            .prepare_message(Message::UpdateClassicLeaderboard {
+            .prepare_message(Message::UpdateScore {
                 player: player.to_string(),
                 board_id: board_id.to_string(),
-                leaderboard_id: Some(leaderboard_id.to_string()),
                 score,
                 timestamp,
             })

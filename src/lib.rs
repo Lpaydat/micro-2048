@@ -79,11 +79,6 @@ pub enum Operation {
 pub enum Message {
     Ping,
     CloseChain,
-    // the idea is to make the main chain send a message to the newly created chain
-    // this message should contain the new chainId and the applicationId
-    // when this message displays on "linera net up" panel, it will be catched by the script
-    // the script then execute the command to request the application for the new chainId
-    // see https://chatgpt.com/c/675ca60a-27ac-8011-89d5-0a51f4839fcf
     RequestApplication {
         chain_id: String,
     },
@@ -91,10 +86,22 @@ pub enum Message {
         username: String,
         password_hash: String,
     },
-    UpdateClassicLeaderboard {
+    EventLeaderboard {
+        leaderboard_id: String,
+        name: String,
+        description: Option<String>,
+        chain_id: String,
+        host: String,
+        start_time: u64,
+        end_time: u64,
+    },
+    LeaderboardNewGame {
         player: String,
         board_id: String,
-        leaderboard_id: Option<String>,
+    },
+    UpdateScore {
+        player: String,
+        board_id: String,
         score: u64,
         timestamp: u64,
     },
