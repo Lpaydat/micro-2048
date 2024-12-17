@@ -58,9 +58,9 @@ pub enum Operation {
         settings: EliminationGameSettings,
     },
     EliminationGameAction {
-        game_id: String,
         action: MultiplayerGameAction,
         player: String,
+        requester_chain_id: String,
         timestamp: u64,
     },
     EventLeaderboardAction {
@@ -105,6 +105,26 @@ pub enum Message {
         board_id: String,
         score: u64,
         timestamp: u64,
+    },
+    CreateEliminationGame {
+        player: String,
+        host_chain_id: String,
+        settings: EliminationGameSettings,
+    },
+    UpdateEliminationStatus {
+        game_id: String,
+        status: String,
+    },
+    CreateEliminationBoard {
+        player: String,
+        game_id: String,
+        round: u8,
+        timestamp: u64,
+    },
+    EndEliminationBoard {
+        player: String,
+        game_id: String,
+        round: u8,
     },
 }
 

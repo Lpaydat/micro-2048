@@ -5,6 +5,7 @@
 	import type { PlayerStats, RoundResults } from '$lib/types/leaderboard';
 	import { getContextClient, gql, queryStore } from '@urql/svelte';
 	import LeaderboardRankers from '../molecules/LeaderboardRankers.svelte';
+	import { userStore } from '$lib/stores/userStore';
 
 	interface Props {
 		currentRound?: number;
@@ -33,7 +34,6 @@
 		}
 	`;
 
-	// TODO: use elimination chainId
 	const client = getContextClient();
 
 	const players = $derived(
@@ -43,20 +43,19 @@
 			variables: { usernames: gameLeaderboard?.map((p) => p.username) ?? [] }
 		})
 	);
-	const currentUrl = $derived($page.url.pathname);
+	const matches = $derived($page.url.pathname.match(/\/game\/([a-f0-9]+)-([a-f0-9]+)-([^-]+)-(\d+)$/));
 	const otherPlayersBoards = $derived(
 		$players.data?.players.reduce(
-			(acc: Record<string, string>, p: { username: string }) => {
+			(acc: Record<string, string>, p: { username: string, chainId: string }) => {
 				// Extract game ID and round from current URL
-				const matches = currentUrl.match(/\/game\/(.+)-(\d+)-[^-]+$/);
 				if (!matches) return acc;
 
-				const [_, gameId, round] = matches;
+				const [_, gameId, _chainId, _username, round] = matches;
 				// Create new URL with player's username and chainId
-				const boardId = `${gameId}-${round}-${p.username}`;
-				const boardUrl = `/game/${boardId}`;
+				const boardId = `${gameId}-${p.chainId}-${p.username}-${round}`;
+				// const boardUrl = `/game/${boardId}`;
 
-				acc[p.username] = boardUrl;
+				acc[p.username] = boardId;
 				return acc;
 			},
 			{} as Record<string, string>
@@ -115,11 +114,11 @@
 			<ListItem
 				{rank}
 				name={username}
-				isCurrentPlayer={username === player}
+				isCurrentPlayer={username === $userStore.username}
 				{score}
 				{isEliminated}
-				{boardId}
-				boardUrl={otherPlayersBoards[username]}
+				boardId={otherPlayersBoards[username]}
+				boardUrl={`/game/${otherPlayersBoards[username]}`}
 			/>
 		{/snippet}
 	</LeaderboardRankers>

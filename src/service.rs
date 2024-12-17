@@ -350,10 +350,10 @@ impl QueryRoot {
 
     async fn elimination_game(
         &self,
-        game_id: String,
+        game_id: Option<String>,
         round: Option<u8>,
     ) -> Option<EliminationGameState> {
-        // let round = round.unwrap_or(0);
+        let game_id = game_id.unwrap_or("".to_string());
         if let Ok(Some(game)) = self.state.elimination_games.try_load_entry(&game_id).await {
             let mut game_leaderboard: Vec<LeaderboardEntry> = Vec::new();
             game.game_leaderboard
@@ -497,22 +497,22 @@ impl MutationRoot {
 
     async fn elimination_game_action(
         &self,
-        game_id: String,
         action: MultiplayerGameAction,
         player: String,
         password_hash: String,
+        requester_chain_id: String,
         timestamp: String,
     ) -> Vec<u8> {
-        if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
-            if *player.password_hash.get() != password_hash {
-                panic!("Invalid password");
-            }
-        }
+        // if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
+        //     if *player.password_hash.get() != password_hash {
+        //         panic!("Invalid password");
+        //     }
+        // }
 
         let operation = Operation::EliminationGameAction {
-            game_id,
             action,
             player,
+            requester_chain_id,
             timestamp: timestamp.parse::<u64>().unwrap(),
         };
         bcs::to_bytes(&operation).unwrap()

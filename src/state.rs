@@ -82,7 +82,7 @@ pub struct EliminationGame {
     pub chain_id: RegisterView<String>,
     pub game_name: RegisterView<String>,
     pub host: RegisterView<String>,
-    pub players: RegisterView<Vec<String>>, // board_id = game_id:round:username
+    pub players: RegisterView<Vec<String>>, // board_id = game_id-player_chain_id-username-round
     pub status: RegisterView<EliminationGameStatus>,
     pub total_rounds: RegisterView<u8>,
     pub current_round: RegisterView<u8>,

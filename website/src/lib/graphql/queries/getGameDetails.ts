@@ -2,8 +2,8 @@ import type { Client } from '@urql/svelte';
 import { gql, queryStore } from '@urql/svelte';
 
 export const GET_GAME_DETAILS = gql`
-	query GetEliminationGameDetails($gameId: String!, $round: Int!) {
-		eliminationGame(gameId: $gameId, round: $round) {
+	query GetEliminationGameDetails($round: Int!) {
+		eliminationGame(round: $round) {
 			gameId
 			chainId
 			gameName
@@ -36,6 +36,6 @@ export const GET_GAME_DETAILS = gql`
 	}
 `;
 
-export const getGameDetails = (client: Client, gameId: string, round: number = 0) => {
-	return queryStore({ client, query: GET_GAME_DETAILS, variables: { gameId, round } });
+export const getGameDetails = (client: Client, round: number = 0) => {
+	return queryStore({ client, query: GET_GAME_DETAILS, variables: { round } });
 };

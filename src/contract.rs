@@ -118,8 +118,6 @@ impl Contract for Game2048Contract {
                 self.check_player_registered(&username, RegistrationCheck::EnsureNotRegistered)
                     .await;
 
-                let player = self.state.players.load_entry_mut(&username).await.unwrap();
-
                 let chain_ownership = self.runtime.chain_ownership();
                 let application_permissions = ApplicationPermissions::default();
                 let amount = Amount::from_tokens(10000);
@@ -127,6 +125,7 @@ impl Contract for Game2048Contract {
                     self.runtime
                         .open_chain(chain_ownership, application_permissions, amount);
 
+                let player = self.state.players.load_entry_mut(&username).await.unwrap();
                 player.username.set(username.clone());
                 player.password_hash.set(password_hash.clone());
                 player.chain_id.set(chain_id.to_string());
@@ -205,7 +204,7 @@ impl Contract for Game2048Contract {
                         timestamp,
                     };
 
-                    let mut leaderboard_id = board.leaderboard_id.get().clone();
+                    let chain_id = board.leaderboard_id.get().clone();
                     let new_board = Game::execute(&mut game, direction);
                     let score = Game::score(new_board);
 
@@ -216,14 +215,8 @@ impl Contract for Game2048Contract {
                     board.board.set(new_board);
                     board.score.set(score);
 
-                    if board_id.contains("-") {
-                        let (game_id, _, _) =
-                            self.parse_elimination_game_id(&board_id).await.unwrap();
-                        leaderboard_id = game_id;
-                    }
-
-                    let chain_id = if !leaderboard_id.is_empty() {
-                        ChainId::from_str(&leaderboard_id).unwrap()
+                    let chain_id = if !chain_id.is_empty() {
+                        ChainId::from_str(&chain_id).unwrap()
                     } else {
                         self.runtime.application_creator_chain_id()
                     };
@@ -238,9 +231,6 @@ impl Contract for Game2048Contract {
                 if !is_main_chain {
                     panic!("Only main chain can create elimination game");
                 }
-
-                self.check_player_registered(&player, RegistrationCheck::EnsureRegistered)
-                    .await;
 
                 if settings.total_round < 1 {
                     panic!("Total round must be greater than 0");
@@ -258,7 +248,7 @@ impl Contract for Game2048Contract {
                 let chain_ownership = self.runtime.chain_ownership();
                 let app_id = self.runtime.application_id().forget_abi();
                 let application_permissions = ApplicationPermissions::new_single(app_id);
-                let amount = Amount::from_tokens(0);
+                let amount = Amount::from_tokens(10000);
                 let (_, chain_id) =
                     self.runtime
                         .open_chain(chain_ownership, application_permissions, amount);
@@ -275,7 +265,7 @@ impl Contract for Game2048Contract {
 
                 elimination_game.game_id.set(game_id);
                 elimination_game.chain_id.set(chain_id.to_string());
-                elimination_game.game_name.set(settings.game_name);
+                elimination_game.game_name.set(settings.game_name.clone());
                 elimination_game.players.set(vec![player.clone()]);
                 elimination_game.host.set(player.clone());
                 elimination_game.status.set(EliminationGameStatus::Waiting);
@@ -291,85 +281,39 @@ impl Contract for Game2048Contract {
                 elimination_game.created_time.set(created_time);
                 elimination_game.last_updated_time.set(created_time);
 
+                let p = self.state.players.load_entry_mut(&player).await.unwrap();
+                let host_chain_id = p.chain_id.get().clone();
+
                 self.ping_player(&player).await;
+                self.request_application(chain_id).await;
+                self.runtime
+                    .prepare_message(Message::CreateEliminationGame {
+                        player: player.clone(),
+                        host_chain_id,
+                        settings: settings.clone(),
+                    })
+                    .send_to(chain_id);
             }
             Operation::EliminationGameAction {
-                game_id,
                 action,
                 player,
+                requester_chain_id,
                 timestamp,
             } => {
-                let is_main_chain = self.is_main_chain().await;
-                if !is_main_chain {
-                    panic!("Only main chain can perform elimination game action");
-                }
-
-                self.check_player_registered(&player, RegistrationCheck::EnsureRegistered)
-                    .await;
-
+                // Every action done to elimination game must be done on game chain
                 let elimination_game = self
                     .state
                     .elimination_games
-                    .load_entry_mut(&game_id)
+                    .load_entry_mut("")
                     .await
                     .unwrap();
+                let game_id = elimination_game.chain_id.get().clone();
+                let game_chain_id = self.runtime.chain_id().to_string();
+                if game_chain_id != *elimination_game.chain_id.get() {
+                    panic!("Action allowed only on game chain");
+                }
 
                 match action {
-                    MultiplayerGameAction::Start => {
-                        if elimination_game.status.get() != &EliminationGameStatus::Waiting {
-                            panic!("Game is not in waiting state");
-                        }
-                        if elimination_game.host.get() != &player {
-                            panic!("Only host can start the game");
-                        }
-                        self.state.waiting_rooms.remove(&game_id).unwrap();
-                        elimination_game.status.set(EliminationGameStatus::Active);
-                        elimination_game.current_round.set(1);
-                        elimination_game.last_updated_time.set(timestamp);
-
-                        let players = elimination_game.players.get();
-                        let round_leaderboard = elimination_game
-                            .round_leaderboard
-                            .load_entry_mut(&1)
-                            .await
-                            .unwrap();
-                        for player in players {
-                            let player_chain_id = self
-                                .state
-                                .players
-                                .load_entry_or_insert(player)
-                                .await
-                                .unwrap()
-                                .chain_id
-                                .get();
-                            let board_id = format!("{}-{}-{}", game_id, 1, player);
-                            let game = self.state.boards.load_entry_mut(&board_id).await.unwrap();
-                            let new_board = Game::new(&board_id, player, timestamp).board;
-
-                            game.board_id.set(board_id);
-                            game.board.set(new_board);
-                            game.player.set(player.clone());
-                            game.chain_id.set(player_chain_id.clone());
-                            game.leaderboard_id.set(game_id.clone());
-                            round_leaderboard.players.insert(player, 0).unwrap();
-                            elimination_game.game_leaderboard.insert(player, 0).unwrap();
-                        }
-                    }
-                    MultiplayerGameAction::End => {
-                        if elimination_game.status.get() == &EliminationGameStatus::Ended {
-                            panic!("Game is already ended");
-                        }
-                        if elimination_game.host.get() != &player {
-                            panic!("Only host can end the game");
-                        }
-                        elimination_game.status.set(EliminationGameStatus::Ended);
-                        elimination_game.last_updated_time.set(timestamp);
-
-                        // Remove the game from the waiting_rooms list
-                        self.state.waiting_rooms.remove(&game_id).unwrap();
-
-                        self.close_elimination_chain(&game_id).await;
-                    }
                     MultiplayerGameAction::Join => {
                         // Check if game hasn't started yet
                         if elimination_game.status.get() != &EliminationGameStatus::Waiting {
@@ -383,23 +327,15 @@ impl Contract for Game2048Contract {
                             panic!("Player is already in the game");
                         }
 
-                        if self
-                            .state
-                            .players
-                            .load_entry_or_insert(&player)
-                            .await
-                            .unwrap()
-                            .username
-                            .get()
-                            == ""
-                        {
-                            panic!("Player is not registered");
-                        }
-
                         // Check if game is not full
                         if players.len() >= *elimination_game.max_players.get() as usize {
                             panic!("Game is full");
                         }
+
+                        // register player to chain
+                        let p = self.state.players.load_entry_mut(&player).await.unwrap();
+                        p.username.set(player.clone());
+                        p.chain_id.set(requester_chain_id.to_string());
 
                         players.append(&mut vec![player.clone()]);
                         elimination_game.last_updated_time.set(timestamp);
@@ -423,6 +359,74 @@ impl Contract for Game2048Contract {
 
                         players.retain(|p| p != &player);
                         elimination_game.last_updated_time.set(timestamp);
+
+                        self.state.players.remove_entry(&player).unwrap();
+                    }
+                    MultiplayerGameAction::Start => {
+                        if elimination_game.status.get() != &EliminationGameStatus::Waiting {
+                            panic!("Game is not in waiting state");
+                        }
+                        if elimination_game.host.get() != &player {
+                            panic!("Only host can start the game");
+                        }
+                        elimination_game.status.set(EliminationGameStatus::Active);
+                        elimination_game.current_round.set(1);
+                        elimination_game.last_updated_time.set(timestamp);
+
+                        let players = elimination_game.players.get();
+                        let round_leaderboard = elimination_game
+                            .round_leaderboard
+                            .load_entry_mut(&1)
+                            .await
+                            .unwrap();
+                        for player in players {
+                            round_leaderboard.players.insert(player, 0).unwrap();
+                            elimination_game.game_leaderboard.insert(player, 0).unwrap();
+                        }
+
+                        for player in players.clone() {
+                            let p = self
+                                .state
+                                .players
+                                .load_entry_or_insert(&player)
+                                .await
+                                .expect("Player not exists");
+                            let player_chain_id = p.chain_id.get().clone();
+                            self.create_elimination_board(
+                                &game_id,
+                                &player_chain_id,
+                                1,
+                                &player,
+                                timestamp,
+                            )
+                            .await;
+                        }
+
+                        self.runtime
+                            .prepare_message(Message::UpdateEliminationStatus {
+                                game_id: game_id.clone(),
+                                status: "Active".to_string(),
+                            })
+                            .send_to(self.runtime.application_creator_chain_id());
+                    }
+                    MultiplayerGameAction::End => {
+                        if elimination_game.status.get() == &EliminationGameStatus::Ended {
+                            panic!("Game is already ended");
+                        }
+                        if elimination_game.host.get() != &player {
+                            panic!("Only host can end the game");
+                        }
+                        elimination_game.status.set(EliminationGameStatus::Ended);
+                        elimination_game.last_updated_time.set(timestamp);
+
+                        // Remove the game from the waiting_rooms list
+                        self.close_elimination_chain(&game_id).await;
+                        self.runtime
+                            .prepare_message(Message::UpdateEliminationStatus {
+                                game_id: game_id.clone(),
+                                status: "Ended".to_string(),
+                            })
+                            .send_to(self.runtime.application_creator_chain_id());
                     }
                     MultiplayerGameAction::NextRound => {
                         if elimination_game.status.get() != &EliminationGameStatus::Active {
@@ -490,37 +494,37 @@ impl Contract for Game2048Contract {
 
                             if *current_round < *total_round {
                                 *current_round += 1;
+                                let new_round = *current_round;
                                 elimination_game.last_updated_time.set(timestamp);
 
                                 // Initialize new round leaderboard
                                 let new_round_leaderboard = elimination_game
                                     .round_leaderboard
-                                    .load_entry_mut(current_round)
+                                    .load_entry_mut(&new_round)
                                     .await
                                     .unwrap();
 
                                 // Create boards for next round
+                                for player in players.clone() {
+                                    new_round_leaderboard.players.insert(&player, 0).unwrap();
+                                }
+
                                 for player in players {
-                                    let player_chain_id = self
+                                    let p = self
                                         .state
                                         .players
                                         .load_entry_or_insert(&player)
                                         .await
-                                        .unwrap()
-                                        .chain_id
-                                        .get();
-                                    let board_id =
-                                        format!("{}-{}-{}", game_id, current_round, player);
-                                    let game =
-                                        self.state.boards.load_entry_mut(&board_id).await.unwrap();
-                                    let new_board = Game::new(&board_id, &player, timestamp).board;
-
-                                    game.board_id.set(board_id);
-                                    game.board.set(new_board);
-                                    game.player.set(player.clone());
-                                    game.chain_id.set(player_chain_id.clone());
-                                    game.leaderboard_id.set(game_id.clone());
-                                    new_round_leaderboard.players.insert(&player, 0).unwrap();
+                                        .expect("Player not exists");
+                                    let player_chain_id = p.chain_id.get().clone();
+                                    self.create_elimination_board(
+                                        &game_id,
+                                        &player_chain_id,
+                                        new_round,
+                                        &player,
+                                        timestamp,
+                                    )
+                                    .await;
                                 }
                             } else {
                                 elimination_game.status.set(EliminationGameStatus::Ended);
@@ -529,22 +533,19 @@ impl Contract for Game2048Contract {
                         } else {
                             panic!("Round is not ended");
                         }
-
-                        // Update timestamp
-                        elimination_game.last_updated_time.set(timestamp);
                     }
                     MultiplayerGameAction::Trigger => {
-                        let last_updated = elimination_game.last_updated_time.get();
-                        let trigger_interval = elimination_game.trigger_interval_seconds.get();
+                        let last_updated = *elimination_game.last_updated_time.get();
+                        let trigger_interval = *elimination_game.trigger_interval_seconds.get();
 
-                        if timestamp >= last_updated + (*trigger_interval as u64) * 1000 {
+                        if timestamp >= last_updated + (trigger_interval as u64) * 1000 {
                             elimination_game.last_updated_time.set(timestamp);
 
                             // Get current leaderboard
-                            let current_round = elimination_game.current_round.get();
+                            let current_round = *elimination_game.current_round.get();
                             let leaderboard = elimination_game
                                 .round_leaderboard
-                                .load_entry_mut(current_round)
+                                .load_entry_mut(&current_round)
                                 .await
                                 .unwrap();
 
@@ -590,13 +591,7 @@ impl Contract for Game2048Contract {
                             let is_round_ended = eliminated_players.is_empty();
 
                             // End game for eliminated players
-                            for player in eliminated_players {
-                                let board_id =
-                                    format!("{}-{}-{}", game_id, current_round, player.0);
-                                let board =
-                                    self.state.boards.load_entry_mut(&board_id).await.unwrap();
-                                board.is_ended.set(true);
-
+                            for player in eliminated_players.clone() {
                                 // Move player to eliminated players
                                 leaderboard.players.remove(&player.0).unwrap();
                                 leaderboard
@@ -606,12 +601,29 @@ impl Contract for Game2048Contract {
                             }
 
                             if is_round_ended {
-                                if current_round == elimination_game.total_rounds.get() {
+                                if current_round == *elimination_game.total_rounds.get() {
                                     elimination_game.status.set(EliminationGameStatus::Ended);
                                     self.close_elimination_chain(&game_id).await;
                                 } else {
                                     panic!("No player to eliminate");
                                 }
+                            }
+
+                            for player in eliminated_players {
+                                let p = self
+                                    .state
+                                    .players
+                                    .load_entry_or_insert(&player.0)
+                                    .await
+                                    .expect("Player not exists");
+                                let player_chain_id = p.chain_id.get().clone();
+                                self.end_elimination_board(
+                                    &game_id,
+                                    &player_chain_id,
+                                    current_round,
+                                    &player.0,
+                                )
+                                .await;
                             }
                         } else {
                             panic!("Trigger too early");
@@ -806,7 +818,6 @@ impl Contract for Game2048Contract {
                 player.username.set(username);
                 player.password_hash.set(password_hash);
                 player.chain_id.set(chain_id);
-                player.is_mod.set(false);
             }
             Message::EventLeaderboard {
                 leaderboard_id,
@@ -877,6 +888,95 @@ impl Contract for Game2048Contract {
                 self.update_leaderboard_score(&player, board_id, score, timestamp)
                     .await;
             }
+            Message::CreateEliminationGame {
+                player,
+                host_chain_id,
+                settings,
+            } => {
+                let elimination_game = self
+                    .state
+                    .elimination_games
+                    .load_entry_mut("")
+                    .await
+                    .unwrap();
+                let created_time = settings.created_time.parse::<u64>().unwrap();
+                let chain_id = self.runtime.chain_id().to_string();
+
+                elimination_game.chain_id.set(chain_id);
+                elimination_game.game_name.set(settings.game_name);
+                elimination_game.players.set(vec![player.clone()]);
+                elimination_game.host.set(player.clone());
+                elimination_game.status.set(EliminationGameStatus::Waiting);
+                elimination_game.total_rounds.set(settings.total_round);
+                elimination_game.current_round.set(0);
+                elimination_game.max_players.set(settings.max_players);
+                elimination_game
+                    .eliminated_per_trigger
+                    .set(settings.eliminated_per_trigger);
+                elimination_game
+                    .trigger_interval_seconds
+                    .set(settings.trigger_interval_seconds);
+                elimination_game.created_time.set(created_time);
+                elimination_game.last_updated_time.set(created_time);
+
+                let p = self.state.players.load_entry_mut(&player).await.unwrap();
+                p.username.set(player.clone());
+                p.chain_id.set(host_chain_id);
+            }
+            Message::UpdateEliminationStatus { game_id, status } => {
+                let elimination_game = self
+                    .state
+                    .elimination_games
+                    .load_entry_mut("")
+                    .await
+                    .unwrap();
+                let s = match status.as_str() {
+                    "Active" => EliminationGameStatus::Active,
+                    "Ended" => EliminationGameStatus::Ended,
+                    _ => panic!("Invalid elimination game status"),
+                };
+                elimination_game.status.set(s);
+                self.state.waiting_rooms.remove(&game_id).unwrap();
+            }
+            Message::CreateEliminationBoard {
+                game_id,
+                round,
+                player,
+                timestamp,
+            } => {
+                let p = self
+                    .state
+                    .players
+                    .load_entry_or_insert(&player)
+                    .await
+                    .expect("Invalid message");
+                let player_chain_id = p.chain_id.get().clone();
+                let board_id = format!("{}-{}-{}-{}", game_id, player_chain_id, player, round);
+                let game = self.state.boards.load_entry_mut(&board_id).await.unwrap();
+                let new_board = Game::new(&board_id, &player, timestamp).board;
+
+                game.board_id.set(board_id);
+                game.board.set(new_board);
+                game.player.set(player.clone());
+                game.chain_id.set(player_chain_id.clone());
+                game.leaderboard_id.set(game_id.clone());
+            }
+            Message::EndEliminationBoard {
+                game_id,
+                round,
+                player,
+            } => {
+                let p = self
+                    .state
+                    .players
+                    .load_entry_or_insert(&player)
+                    .await
+                    .expect("Invalid message");
+                let player_chain_id = p.chain_id.get().clone();
+                let board_id = format!("{}-{}-{}-{}", game_id, player_chain_id, player, round);
+                let board = self.state.boards.load_entry_mut(&board_id).await.unwrap();
+                board.is_ended.set(true);
+            }
         }
     }
 
@@ -923,13 +1023,14 @@ impl Game2048Contract {
             }
         } else {
             // Elimination leaderboard
-            let (game_id, round, player) = self.parse_elimination_game_id(&board_id).await.unwrap();
+            let (game_id, _, player, round) =
+                self.parse_elimination_game_id(&board_id).await.unwrap();
 
             if !game_id.is_empty() && round != 0 && !player.is_empty() {
                 let elimination_game = self
                     .state
                     .elimination_games
-                    .load_entry_mut(&game_id)
+                    .load_entry_mut("")
                     .await
                     .unwrap();
 
@@ -1040,15 +1141,18 @@ impl Game2048Contract {
             .send_to(chain_id);
     }
 
-    async fn check_player_registered(&mut self, player: &str, check: RegistrationCheck) {
-        let username = self
+    async fn check_player_registered(
+        &mut self,
+        player_username: &str,
+        check: RegistrationCheck,
+    ) -> String {
+        let player = self
             .state
             .players
-            .load_entry_or_insert(player)
+            .load_entry_or_insert(player_username)
             .await
-            .unwrap()
-            .username
-            .get();
+            .unwrap();
+        let username = player.username.get();
 
         let is_registered = !username.trim().is_empty();
 
@@ -1061,17 +1165,59 @@ impl Game2048Contract {
             }
             _ => {}
         }
+
+        player.password_hash.get().to_string()
     }
 
-    async fn parse_elimination_game_id(&self, board_id: &str) -> Option<(String, u8, String)> {
+    async fn parse_elimination_game_id(
+        &self,
+        board_id: &str,
+    ) -> Option<(String, String, String, u8)> {
         let parts: Vec<&str> = board_id.split('-').collect();
-        if parts.len() == 3 {
+        if parts.len() == 4 {
             let game_id = parts[0].to_string();
-            if let Ok(round_id) = parts[1].parse::<u8>() {
-                let player_id = parts[2].to_string();
-                return Some((game_id, round_id, player_id));
+            let player_chain_id = parts[1].to_string();
+            let player = parts[2].to_string();
+            if let Ok(round_id) = parts[3].parse::<u8>() {
+                return Some((game_id, player_chain_id, player, round_id));
             }
         }
         None
+    }
+
+    async fn create_elimination_board(
+        &mut self,
+        game_id: &str,
+        player_chain_id: &str,
+        round: u8,
+        player: &str,
+        timestamp: u64,
+    ) {
+        let chain_id = ChainId::from_str(player_chain_id).unwrap();
+        self.runtime
+            .prepare_message(Message::CreateEliminationBoard {
+                game_id: game_id.to_string(),
+                round,
+                player: player.to_string(),
+                timestamp,
+            })
+            .send_to(chain_id);
+    }
+
+    async fn end_elimination_board(
+        &mut self,
+        game_id: &str,
+        player_chain_id: &str,
+        round: u8,
+        player: &str,
+    ) {
+        let chain_id = ChainId::from_str(player_chain_id).unwrap();
+        self.runtime
+            .prepare_message(Message::EndEliminationBoard {
+                game_id: game_id.to_string(),
+                round,
+                player: player.to_string(),
+            })
+            .send_to(chain_id);
     }
 }

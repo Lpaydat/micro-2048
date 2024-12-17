@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { subscriptionStore, getContextClient } from '@urql/svelte';
+	import { subscriptionStore } from '@urql/svelte';
 	import BlockHashes from '../molecules/BlockHashes.svelte';
 	import Game from '../organisms/Game.svelte';
 	import MainTemplate from '../organisms/MainTemplate.svelte';
@@ -18,6 +18,7 @@
 	import { isHashesListVisible } from '$lib/stores/hashesStore';
 	import RoundButton from '../molecules/RoundButton.svelte';
 	import MobileUserStats from '../organisms/MobileEliminationStats.svelte';
+	import { getClient } from '$lib/client';
 
 	let boardId = $state<string>($page.params.boardId);
 
@@ -33,14 +34,12 @@
 		if (unsubscribe) unsubscribe();
 	});
 
-	const [gameId, _, _username] = $derived($page.params.boardId.split('-'));
-	const r = $derived(parseInt($page.params.boardId.match(/\-(\d+)\-/)?.[1] || '0'));
+	const [gameId, playerChainId, _username, round] = $derived($page.params.boardId.split('-'));
+	const r = $derived(parseInt(round || '0'));
 	const username = $derived($page.params.boardId.split('-')[2] || '');
 	const isBoardOwner = $derived(username === $userStore.username);
-	let initCanMakeMove = $state(false);
 
-	// TODO: use elimination chainId
-	const client = getContextClient();
+	const client = $derived(getClient(gameId));
 
 	// Determine if the game is multiplayer based on the URL pattern
 	const isMultiplayer = $derived(boardId.includes('-'));
@@ -60,16 +59,16 @@
 		})
 	);
 
-	const triggerGameEventMutation = () => triggerGame(client, gameId);
-	const nextRoundMutation = () => nextRound(client, gameId);
+	const triggerGameEventMutation = () => triggerGame(client);
+	const nextRoundMutation = () => nextRound(client);
 
 	// Reactive declarations
-	const game = $derived(getGameDetails(client, gameId, r));
+	const game = $derived(getGameDetails(client, r));
 	const data = $derived(
 		$game.data?.eliminationGame && !$game.fetching
 			? {
 					...$game.data.eliminationGame,
-					playerCount: $game.data.eliminationGame.players.length
+					playerCount: $game.data.eliminationGame.players?.length || 0
 				}
 			: {}
 	);
@@ -147,11 +146,10 @@
 
 	$effect(() => {
 		const player = $userStore.username || username;
-		const target = `/game/${gameId}-${currentRound}-${player}`;
+		const target = `/game/${gameId}-${$userStore.chainId}-${player}-${currentRound}`;
 		if (currentRound && target !== nextTarget && status === 'Active') {
 			nextTarget = target;
 			isTriggered = false;
-			initCanMakeMove = false;
 			goto(nextTarget);
 		}
 	});
@@ -213,6 +211,7 @@
 						isEnded={isEliminated}
 						player={username}
 						{boardId}
+						chainId={playerChainId}
 						canStartNewGame={!isMultiplayer}
 						showBestScore={!isMultiplayer}
 						canMakeMove={isBoardOwner && !isEliminated}

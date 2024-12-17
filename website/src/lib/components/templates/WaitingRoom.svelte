@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContextClient, gql, subscriptionStore } from '@urql/svelte';
+	import { gql, subscriptionStore } from '@urql/svelte';
 	import { onDestroy } from 'svelte';
 	import { page } from '$app/stores';
 	import HelpCircle from 'lucide-svelte/icons/circle-help';
@@ -16,11 +16,11 @@
 	import { getGameDetails } from '$lib/graphql/queries/getGameDetails';
 	import { userStore } from '$lib/stores/userStore';
 	import { getModalStore, type ModalSettings, type ModalStore } from '@skeletonlabs/skeleton';
+	import { getClient } from '$lib/client';
 
 	const modalStore: ModalStore = getModalStore();
-	// TODO: use elimination chainId
-	const client = getContextClient();
 	const gameId = $derived($page.params.gameId);
+	const client = $derived(getClient(gameId));
 	const minimumPlayers = 1;
 
 	const GAME_PING_SUBSCRIPTION = gql`
@@ -38,7 +38,7 @@
 		})
 	);
 
-	const game = $derived(getGameDetails(client, gameId));
+	const game = $derived(getGameDetails(client));
 	const data = $derived(
 		$game.data?.eliminationGame && !$game.fetching
 			? {
@@ -67,7 +67,7 @@
 	let blockHeight = $state(0);
 	let initialFetch = $state(true);
 	$effect(() => {
-		const bh = $gameMessages.data?.notifications?.reason?.NewIncomingBundle?.height;
+		const bh = $gameMessages.data?.notifications?.reason?.NewBlock?.height;
 		if ((bh && bh !== blockHeight) || initialFetch) {
 			blockHeight = bh;
 			initialFetch = false;
@@ -88,22 +88,22 @@
 
 	const handleJoinGame = () => {
 		if (!username) return;
-		joinGame(client, gameId);
+		joinGame(client);
 	};
 
 	const handleLeaveGame = () => {
 		if (!username) return;
-		leaveGame(client, gameId);
+		leaveGame(client);
 	};
 
 	const handleStartGame = () => {
 		if (data?.playerCount < minimumPlayers || !username) return;
-		startGame(client, gameId);
+		startGame(client);
 	};
 
 	const handleEndGame = () => {
 		if (!username) return;
-		endGame(client, gameId);
+		endGame(client);
 	};
 
 	const howToPlayModal: ModalSettings = {
@@ -132,7 +132,7 @@
 						<ActionButton
 							label="START"
 							onclick={handleStartGame}
-							disabled={data.playerCount < minimumPlayers}
+							disabled={data?.playerCount < minimumPlayers}
 						/>
 						<ActionButton label="CANCEL" hoverColor="danger" onclick={handleEndGame} />
 					{:else if canJoinGame}

@@ -1,5 +1,7 @@
+import { userStore } from '$lib/stores/userStore';
 import type { Client } from '@urql/svelte';
 import { gql, mutationStore } from '@urql/svelte';
+import { get } from 'svelte/store';
 
 // Define the MultiplayerGameAction enum
 enum MultiplayerGameAction {
@@ -13,23 +15,23 @@ enum MultiplayerGameAction {
 
 const ELIMINATION_GAME_ACTION = gql`
 	mutation EliminationGameAction(
-		$gameId: String!
 		$action: MultiplayerGameAction!
 		$player: String!
 		$passwordHash: String!
+		$requesterChainId: String!
 		$timestamp: String!
 	) {
 		eliminationGameAction(
-			gameId: $gameId
 			action: $action
 			player: $player
 			passwordHash: $passwordHash
+			requesterChainId: $requesterChainId
 			timestamp: $timestamp
 		)
 	}
 `;
 
-const mutation = (client: Client, gameId: string, action: MultiplayerGameAction) => {
+const mutation = (client: Client, action: MultiplayerGameAction) => {
 	const player = localStorage.getItem('username');
 	const passwordHash = localStorage.getItem('passwordHash');
 
@@ -42,35 +44,35 @@ const mutation = (client: Client, gameId: string, action: MultiplayerGameAction)
 		client,
 		query: ELIMINATION_GAME_ACTION,
 		variables: {
-			gameId,
 			action,
 			player,
 			passwordHash,
-			timestamp: Date.now().toString()
+			timestamp: Date.now().toString(),
+			requesterChainId: get(userStore).chainId
 		}
 	});
 };
 
-export const joinGame = (client: Client, gameId: string) => {
-	mutation(client, gameId, MultiplayerGameAction.Join);
+export const joinGame = (client: Client) => {
+	mutation(client, MultiplayerGameAction.Join);
 };
 
-export const leaveGame = (client: Client, gameId: string) => {
-	mutation(client, gameId, MultiplayerGameAction.Leave);
+export const leaveGame = (client: Client) => {
+	mutation(client, MultiplayerGameAction.Leave);
 };
 
-export const endGame = (client: Client, gameId: string) => {
-	mutation(client, gameId, MultiplayerGameAction.End);
+export const endGame = (client: Client) => {
+	mutation(client, MultiplayerGameAction.End);
 };
 
-export const triggerGame = (client: Client, gameId: string) => {
-	mutation(client, gameId, MultiplayerGameAction.Trigger);
+export const triggerGame = (client: Client) => {
+	mutation(client, MultiplayerGameAction.Trigger);
 };
 
-export const nextRound = (client: Client, gameId: string) => {
-	mutation(client, gameId, MultiplayerGameAction.NextRound);
+export const nextRound = (client: Client) => {
+	mutation(client, MultiplayerGameAction.NextRound);
 };
 
-export const startGame = (client: Client, gameId: string) => {
-	mutation(client, gameId, MultiplayerGameAction.Start);
+export const startGame = (client: Client) => {
+	mutation(client, MultiplayerGameAction.Start);
 };

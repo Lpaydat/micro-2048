@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { page } from '$app/stores';
 	import Smile from 'lucide-svelte/icons/smile';
 	import BaseListItem from './BaseListItem.svelte';
 
@@ -64,8 +65,21 @@
 		'The legend has arrived'
 	];
 
+	function hashCode(str: string): number {
+		let hash = 0;
+		for (let i = 0; i < str.length; i++) {
+			const char = str.charCodeAt(i);
+			hash = (hash << 5) - hash + char;
+			hash |= 0; // Convert to 32bit integer
+		}
+		return hash;
+	}
+
+	const gameId = $derived($page.params.gameId);
+	const combinedString = $derived(`${gameId}-${playerName}`);
+	const hashValue = $derived(hashCode(combinedString));
 	const statusPhrase = $derived(
-		competitivePhrases[Math.floor(Math.random() * competitivePhrases.length)]
+		competitivePhrases[Math.abs(hashValue) % competitivePhrases.length]
 	);
 </script>
 
