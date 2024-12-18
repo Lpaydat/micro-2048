@@ -62,7 +62,6 @@
 	);
 
 	const registerPlayer = async () => {
-		console.log('registerPlayer', username, passwordHash);
 		mutationStore({
 			client,
 			query: REGISTER_PLAYER,
