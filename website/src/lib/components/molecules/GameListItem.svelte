@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { getContextClient } from '@urql/svelte';
+	// import { getContextClient } from '@urql/svelte';
 	import BaseListItem from './BaseListItem.svelte';
 	import ActionButton from '../atoms/ActionButton.svelte';
 	import TimeAgo from '../atoms/TimeAgo.svelte';
-	import { joinGame } from '$lib/graphql/mutations';
+	// import { joinGame } from '$lib/graphql/mutations';
 	import type { EliminationGameDetails } from '$lib/types/eliminationGame';
 	import { userStore } from '$lib/stores/userStore';
 
@@ -21,19 +21,7 @@
 		status
 	}: EliminationGameDetails = $props();
 
-	// TODO: use elimination chainId
-	const client = getContextClient();
 	let loading = $state(false);
-
-	const handleJoinGame = (gameId: string) => {
-		if (!$userStore.username) return;
-		loading = true;
-		joinGame(client, gameId);
-
-		setTimeout(() => {
-			goto(`/elimination/${gameId}`);
-		}, 2000);
-	};
 
 	const enterGame = (gameId: string) => {
 		if (status === 'Waiting') {
@@ -73,12 +61,13 @@
 		{:else if playerCount >= maxPlayers}
 			<ActionButton label="Full" disabled={true} color="disabled" />
 		{:else}
-			<ActionButton
-				label="Join Game"
-				color="warning"
-				{loading}
-				onclick={() => handleJoinGame(gameId)}
-			/>
+			<a href="/elimination/{gameId}?autoJoin=true">
+				<ActionButton
+					label="Join Game"
+					color="warning"
+					{loading}
+				/>
+			</a>
 		{/if}
 	{/snippet}
 </BaseListItem>

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { gql, subscriptionStore } from '@urql/svelte';
-	import { onDestroy } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import HelpCircle from 'lucide-svelte/icons/circle-help';
 
@@ -20,6 +20,7 @@
 
 	const modalStore: ModalStore = getModalStore();
 	const gameId = $derived($page.params.gameId);
+	const autoJoin = $page.url.searchParams.get('autoJoin') === 'true';
 	const client = $derived(getClient(gameId));
 	const minimumPlayers = 1;
 
@@ -66,12 +67,17 @@
 	// Reactive statements for block height and game query reexecution
 	let blockHeight = $state(0);
 	let initialFetch = $state(true);
+	let showActionButtons = $state(!autoJoin);
 	$effect(() => {
 		const bh = $gameMessages.data?.notifications?.reason?.NewBlock?.height;
 		if ((bh && bh !== blockHeight) || initialFetch) {
 			blockHeight = bh;
 			initialFetch = false;
 			game.reexecute({ requestPolicy: 'network-only' });
+
+			if (autoJoin && !showActionButtons) {
+				showActionButtons = true;
+			}
 		}
 	});
 
@@ -79,6 +85,12 @@
 		if (data?.status === 'Active' && isJoined) {
 			const playerBoardId = `${gameId}-${data.currentRound}-${username}`;
 			goto(`/game/${playerBoardId}`);
+		}
+	});
+
+	onMount(() => {
+		if (autoJoin && !isJoined) {
+			handleJoinGame();
 		}
 	});
 
@@ -124,7 +136,7 @@
 	{#snippet main()}
 		<PageHeader color="green" title={gameName} {prevPage}>
 			{#snippet actions()}
-				{#if isLoaded && $userStore.username && data?.status === 'Waiting'}
+				{#if isLoaded && $userStore.username && data?.status === 'Waiting' && showActionButtons}
 					<HelpButton ariaLabel="How to Play" onclick={howToPlay}>
 						<HelpCircle size={20} />
 					</HelpButton>
