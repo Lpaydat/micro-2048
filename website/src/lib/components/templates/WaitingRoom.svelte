@@ -44,7 +44,7 @@
 		$game.data?.eliminationGame && !$game.fetching
 			? {
 					...$game.data.eliminationGame,
-					playerCount: $game.data.eliminationGame.players.length
+					playerCount: $game.data?.eliminationGame?.players?.length ?? 1
 				}
 			: undefined
 	);
