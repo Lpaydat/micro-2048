@@ -1,9 +1,9 @@
 import http from 'k6/http';
 import { sha256 } from 'k6/crypto';
 import { sleep } from 'k6';
+import { chainId, applicationId } from '../src/lib/constants';
 
-const API_URL =
-	'https://u2048.hopto.org/chains/e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65/applications/446ade26b25bb55a0a75aa02b9242ae803969f9ae275c6b787f2b547bf81205f18329514a596fe3921987e9b08e371545085eadb3fd3dcc021d2a1c1b02db5b7e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a650b3000000000000000000000';
+const API_URL = `https://u2048.hopto.org/chains/${chainId}/applications/${applicationId}`;
 
 const generateRandomString = (length) => {
 	const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';

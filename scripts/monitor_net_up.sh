@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Program to monitor
-program_to_run="linera net up"
+program_to_run="linera net up --initial-amount 18446744073709551615"
 
 # Pattern to match (using grep regex syntax)
 pattern="REQUEST_APPLICATION - application_id: ([^,]+), requester_chain_id: ([^,]+), target_chain_id: ([^,]+)"
