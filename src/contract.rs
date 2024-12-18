@@ -212,6 +212,10 @@ impl Contract for Game2048Contract {
                         panic!("No move");
                     }
 
+                    // Get highest tile values for both old and new boards
+                    let old_highest = Game::highest_tile(*board.board.get());
+                    let new_highest = Game::highest_tile(new_board);
+
                     board.board.set(new_board);
                     board.score.set(score);
 
@@ -220,13 +224,16 @@ impl Contract for Game2048Contract {
                         board.is_ended.set(true);
                     }
 
-                    let chain_id = if !chain_id.is_empty() {
-                        ChainId::from_str(&chain_id).unwrap()
-                    } else {
-                        self.runtime.application_creator_chain_id()
-                    };
-                    self.update_score(chain_id, &player, &board_id, score, timestamp)
-                        .await;
+                    // Update score only if highest tile increased or game ended
+                    if new_highest > old_highest || is_ended {
+                        let chain_id = if !chain_id.is_empty() {
+                            ChainId::from_str(&chain_id).unwrap()
+                        } else {
+                            self.runtime.application_creator_chain_id()
+                        };
+                        self.update_score(chain_id, &player, &board_id, score, timestamp)
+                            .await;
+                    }
                 } else {
                     panic!("Game is ended");
                 }

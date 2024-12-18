@@ -422,4 +422,19 @@ impl Game {
 
         t
     }
+
+    pub fn highest_tile(board: u64) -> u64 {
+        let mut highest = 0;
+        for i in 0..16 {
+            let tile = (board >> (i * 4)) & 0xF;
+            if tile > highest {
+                highest = tile;
+            }
+        }
+        if highest > 0 {
+            1 << highest // Convert from power of 2 to actual value
+        } else {
+            0
+        }
+    }
 }
