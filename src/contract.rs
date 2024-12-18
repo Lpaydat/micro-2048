@@ -120,7 +120,7 @@ impl Contract for Game2048Contract {
 
                 let chain_ownership = self.runtime.chain_ownership();
                 let application_permissions = ApplicationPermissions::default();
-                let amount = Amount::from_tokens(10000);
+                let amount = Amount::from_tokens(100000000);
                 let (_, chain_id) =
                     self.runtime
                         .open_chain(chain_ownership, application_permissions, amount);
@@ -215,6 +215,11 @@ impl Contract for Game2048Contract {
                     board.board.set(new_board);
                     board.score.set(score);
 
+                    let is_ended = Game::is_ended(new_board);
+                    if is_ended {
+                        board.is_ended.set(true);
+                    }
+
                     let chain_id = if !chain_id.is_empty() {
                         ChainId::from_str(&chain_id).unwrap()
                     } else {
@@ -248,7 +253,7 @@ impl Contract for Game2048Contract {
                 let chain_ownership = self.runtime.chain_ownership();
                 let app_id = self.runtime.application_id().forget_abi();
                 let application_permissions = ApplicationPermissions::new_single(app_id);
-                let amount = Amount::from_tokens(10000);
+                let amount = Amount::from_tokens(100000);
                 let (_, chain_id) =
                     self.runtime
                         .open_chain(chain_ownership, application_permissions, amount);
@@ -650,7 +655,7 @@ impl Contract for Game2048Contract {
                     let chain_ownership = self.runtime.chain_ownership();
                     let app_id = self.runtime.application_id().forget_abi();
                     let application_permissions = ApplicationPermissions::new_single(app_id);
-                    let amount = Amount::from_tokens(10000);
+                    let amount = Amount::from_tokens(1000000);
                     let (_, chain_id) =
                         self.runtime
                             .open_chain(chain_ownership, application_permissions, amount);
