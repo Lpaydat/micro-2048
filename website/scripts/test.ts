@@ -4,7 +4,7 @@ import { sleep } from 'k6';
 
 const chainId = 'e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65';
 const applicationId =
-	'95ba53ef3806f843862ee125d79104f25f963ad5fb82aa8d4807a751384a666cc1b7d489a86a8d28ca4c9738052c58f1ebd97acd392f9b5164e189ba5fdb9ee3e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65010000000000000000000000';
+	'd29f2f32b1f62a9bd57e4a9c0e707a4b8b6e306deac2b4d19f9990df3c8943a179189af31237bb9aa79f94dfba84ab7be1c13f31cafd8d4f4dcd7b94ef0143bbe476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65010000000000000000000000';
 
 const API_URL = `https://u2048.hopto.org/chains/${chainId}/applications/${applicationId}`;
 
@@ -21,12 +21,11 @@ export const options = {
 	scenarios: {
 		load_test: {
 			executor: 'ramping-vus',
-			startVUs: 20, // This should be outside the stages array
+			startVUs: 40, // This should be outside the stages array
 			stages: [
-				{ duration: '5m', target: 20 },
+				{ duration: '5m', target: 40 },
 				{ duration: '5m', target: 50 },
-				{ duration: '120m', target: 50 },
-				// { duration: '10m', target: 100 },
+				{ duration: '30m', target: 50 },
 				{ duration: '10m', target: 20 }
 			]
 		}
@@ -163,7 +162,7 @@ export default async function () {
 				params
 			);
 
-			sleep(0.5); // delay between moves
+			sleep(2.5); // delay between moves
 		}
 
 		sleep(4); // Sleep between games

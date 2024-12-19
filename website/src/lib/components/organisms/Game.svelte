@@ -70,6 +70,24 @@
 	let moveTimeout: NodeJS.Timeout | null = null;
 	let syncTimeout: NodeJS.Timeout | null = null;
 	let pingTime: number | null = null;
+	let moveLimitMs = 350;
+
+	const getMoveLimitMs = () => {
+		if (pingTime && pingTime < 250) {
+			return 350;
+		} else if (pingTime && pingTime < 700) {
+			return 500;
+		} else if (pingTime && pingTime < 1000) {
+			return 1000;
+		} else if (pingTime && pingTime < 1500) {
+			return 1500;
+		} else if (pingTime && pingTime < 2000) {
+			return 2000;
+		} else {
+			return 2500;
+		}
+	};
+
 	$: shouldSyncGame = false;
 
 	// GraphQL Queries and Subscriptions
@@ -204,10 +222,11 @@
 		shouldSyncGame = false;
 		isSynced = false;
 		moveStartTimes[direction] = Date.now();
+		moveLimitMs = getMoveLimitMs();
 
 		moveTimeout = setTimeout(() => {
 			canMakeMove = true;
-		}, 250);
+		}, moveLimitMs);
 
 		if (syncTimeout) clearTimeout(syncTimeout);
 		syncTimeout = setTimeout(() => {
@@ -287,6 +306,12 @@
 			class="flex items-center gap-2 rounded-lg bg-surface-800/50 px-3 py-1.5 transition-colors hover:bg-black/50"
 			on:click={() => isHashesListVisible.update((current) => !current)}
 		>
+			<div
+				class="h-2 w-2 rounded-full transition-colors duration-300 {
+					!canMakeMove ? 'bg-red-500' : 'bg-emerald-500'
+				}"
+				title={`Move limit: ${moveLimitMs}ms`}
+			></div>
 			<span
 				class="cursor-pointer font-mono text-emerald-400"
 				title={lastHash || 'No hash available'}
