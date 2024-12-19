@@ -77,6 +77,12 @@ pub struct ClassicLeaderboard {
 
 #[derive(View, SimpleObject)]
 #[view(context = "ViewStorageContext")]
+pub struct PlayerRecord {
+    pub best_score: MapView<String, u64>, // leaderboard_id, score
+}
+
+#[derive(View, SimpleObject)]
+#[view(context = "ViewStorageContext")]
 pub struct EliminationGame {
     pub game_id: RegisterView<String>,
     pub chain_id: RegisterView<String>,
@@ -109,4 +115,5 @@ pub struct Game2048 {
     pub waiting_rooms: MapView<String, bool>,
     pub players: CollectionView<String, Player>,
     pub leaderboards: CollectionView<String, ClassicLeaderboard>, // leaderboard_id
+    pub player_records: CollectionView<String, PlayerRecord>,     // player_chain_id
 }

@@ -207,7 +207,7 @@
 
 		moveTimeout = setTimeout(() => {
 			canMakeMove = true;
-		}, 100);
+		}, 250);
 
 		if (syncTimeout) clearTimeout(syncTimeout);
 		syncTimeout = setTimeout(() => {

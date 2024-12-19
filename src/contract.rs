@@ -224,8 +224,25 @@ impl Contract for Game2048Contract {
                         board.is_ended.set(true);
                     }
 
+                    // Update leaderboard only if score is higher than previous best score
+                    let player_record = self
+                        .state
+                        .player_records
+                        .load_entry_mut(&player)
+                        .await
+                        .unwrap();
+                    let prev_score = player_record
+                        .best_score
+                        .get(&chain_id)
+                        .await
+                        .unwrap()
+                        .unwrap_or(0);
+                    if score > prev_score {
+                        player_record.best_score.insert(&chain_id, score).unwrap();
+                    }
+
                     // Update score only if highest tile increased or game ended
-                    if new_highest > old_highest || is_ended {
+                    if (new_highest > old_highest && score > prev_score) || is_ended {
                         let chain_id = if !chain_id.is_empty() {
                             ChainId::from_str(&chain_id).unwrap()
                         } else {
