@@ -83,8 +83,10 @@
 			return 1500;
 		} else if (pingTime && pingTime < 2000) {
 			return 2000;
+		} else if (pingTime && pingTime < 3000) {
+			return 3000;
 		} else {
-			return 2500;
+			return 5000;
 		}
 	};
 
