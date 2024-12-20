@@ -37,15 +37,15 @@
 
 {#if boardUrl}
 	<a href={boardUrl} class="{commonClasses}" onclick={() => drawerStore.close()}>
-		<span class="w-12 text-left font-bold text-surface-700">{displayRank}</span>
+		<span class="w-8 text-left font-bold text-surface-700">{displayRank}</span>
 		<span class="ml-4 flex-1 truncate text-left text-surface-800">{name}</span>
-		<span class="w-16 text-right font-mono text-surface-600">{score}</span>
+		<span class="w-20 text-right font-mono text-surface-600">{score}</span>
 	</a>
 {:else}
 	<div class="{commonClasses}">
-		<span class="w-12 text-left font-bold text-surface-700">{displayRank}</span>
+		<span class="w-8 text-left font-bold text-surface-700">{displayRank}</span>
 		<span class="ml-4 flex-1 truncate text-left text-surface-800">{name}</span>
-		<span class="w-16 text-right font-mono text-surface-600">{score}</span>
+		<span class="w-20 text-right font-mono text-surface-600">{score}</span>
 	</div>
 {/if}
 
