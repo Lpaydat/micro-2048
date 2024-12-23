@@ -4,7 +4,7 @@ import { sleep } from 'k6';
 
 const chainId = 'e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65';
 const applicationId =
-	'd29f2f32b1f62a9bd57e4a9c0e707a4b8b6e306deac2b4d19f9990df3c8943a179189af31237bb9aa79f94dfba84ab7be1c13f31cafd8d4f4dcd7b94ef0143bbe476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65010000000000000000000000';
+	'99822b3483b38c12bb71d00db3a0e1185afb4fbc8d06452d47c771a1bb39a11b79189af31237bb9aa79f94dfba84ab7be1c13f31cafd8d4f4dcd7b94ef0143bbe476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65040000000000000000000000';
 
 const API_URL = `https://u2048.hopto.org/chains/${chainId}/applications/${applicationId}`;
 
@@ -21,16 +21,48 @@ export const options = {
 	scenarios: {
 		load_test: {
 			executor: 'ramping-vus',
-			startVUs: 40, // This should be outside the stages array
+			startVUs: 30, // This should be outside the stages array
 			stages: [
-				{ duration: '5m', target: 40 },
-				{ duration: '5m', target: 50 },
-				{ duration: '30m', target: 50 },
+				{ duration: '15m', target: 30 },
+				{ duration: '5m', target: 30 },
+				{ duration: '15m', target: 30 },
+				// { duration: '5m', target: 40 },
+				// { duration: '15m', target: 40 },
+				// { duration: '5m', target: 50 },
+				// { duration: '15m', target: 50 },
+				// { duration: '5m', target: 60 },
+				// { duration: '15m', target: 60 },
 				{ duration: '10m', target: 20 }
 			]
 		}
 	}
 };
+
+// Determine sleep duration based on the target VUs in the current stage
+// const stageSleepDurations = {
+// 	25: 0.25, // target below 25
+// 	30: 0.5, // target 25-30
+// 	35: 1, // target 30-35
+// 	40: 1.5, // target 35-40
+// 	45: 2, // target 40-45
+// 	50: 3, // target 45-50
+// 	55: 5 // target 50-55
+// };
+
+// // Function to get the current stage target based on VUs
+// function getCurrentStageTarget() {
+// 	const loadTestScenario = options.scenarios.load_test;
+// 	if (!loadTestScenario || !loadTestScenario.stages) {
+// 		throw new Error('Load test scenario or stages are not defined');
+// 	}
+
+// 	for (let i = 0; i < loadTestScenario.stages.length; i++) {
+// 		if (__VU <= loadTestScenario.stages[i].target) {
+// 			return loadTestScenario.stages[i].target;
+// 		}
+// 	}
+// 	return loadTestScenario.stages[loadTestScenario.stages.length - 1].target;
+// }
 
 export default async function () {
 	const username = generateRandomString(16);
@@ -162,7 +194,7 @@ export default async function () {
 				params
 			);
 
-			sleep(2.5); // delay between moves
+			sleep(1); // delay between moves
 		}
 
 		sleep(4); // Sleep between games

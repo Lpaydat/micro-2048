@@ -73,21 +73,26 @@
 	let moveLimitMs = 350;
 
 	const getMoveLimitMs = () => {
-		if (pingTime && pingTime < 250) {
-			return 250;
-		} else if (pingTime && pingTime < 700) {
-			return 500;
-		} else if (pingTime && pingTime < 1000) {
-			return 1000;
-		} else if (pingTime && pingTime < 1500) {
-			return 1500;
-		} else if (pingTime && pingTime < 2000) {
-			return 2000;
-		} else if (pingTime && pingTime < 3000) {
-			return 3000;
-		} else {
+		if (!pingTime) {
 			return 5000;
 		}
+
+		const limits = [
+			{ maxPing: 250, limitMs: 250 },
+			{ maxPing: 700, limitMs: 500 },
+			{ maxPing: 1000, limitMs: 1000 },
+			{ maxPing: 1500, limitMs: 1500 },
+			{ maxPing: 2000, limitMs: 2000 },
+			{ maxPing: 3000, limitMs: 3000 }
+		];
+
+		for (const { maxPing, limitMs } of limits) {
+			if (pingTime < maxPing) {
+				return limitMs;
+			}
+		}
+
+		return 5000;
 	};
 
 	$: shouldSyncGame = false;
