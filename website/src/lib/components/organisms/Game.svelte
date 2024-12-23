@@ -74,7 +74,7 @@
 
 	const getMoveLimitMs = () => {
 		if (pingTime && pingTime < 250) {
-			return 350;
+			return 250;
 		} else if (pingTime && pingTime < 700) {
 			return 500;
 		} else if (pingTime && pingTime < 1000) {

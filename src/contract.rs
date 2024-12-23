@@ -212,10 +212,6 @@ impl Contract for Game2048Contract {
                         panic!("No move");
                     }
 
-                    // Get highest tile values for both old and new boards
-                    let old_highest = Game::highest_tile(*board.board.get());
-                    let new_highest = Game::highest_tile(new_board);
-
                     board.board.set(new_board);
                     board.score.set(score);
 
@@ -242,7 +238,7 @@ impl Contract for Game2048Contract {
                     }
 
                     // Update score only if highest tile increased or game ended
-                    if (new_highest > old_highest && score > prev_score) || is_ended {
+                    if (score > prev_score) || is_ended {
                         let chain_id = if !chain_id.is_empty() {
                             ChainId::from_str(&chain_id).unwrap()
                         } else {

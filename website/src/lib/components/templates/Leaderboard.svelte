@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { gql, queryStore } from '@urql/svelte';
+	import { getContextClient, gql, queryStore } from '@urql/svelte';
 	import Trash from 'lucide-svelte/icons/trash-2';
 	import Star from 'lucide-svelte/icons/star';
 	import ContinueIcon from 'lucide-svelte/icons/step-forward';
@@ -10,10 +10,7 @@
 	import PageHeader from '../molecules/PageHeader.svelte';
 	import ActionButton from '../atoms/ActionButton.svelte';
 	import { userStore } from '$lib/stores/userStore';
-	import { hashSeed } from '$lib/utils/random';
 	import { goto } from '$app/navigation';
-	import { newGame } from '$lib/graphql/mutations/newBoard';
-	import { setGameCreationStatus } from '$lib/stores/gameStore';
 	import { getBoardId, setBoardId } from '$lib/stores/boardId';
 	import { deleteEvent, togglePinEvent } from '$lib/graphql/mutations/leaderboardAction.ts';
 	import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
@@ -48,12 +45,12 @@
 		}
 	`;
 
-	// TODO: use leaderboard chainId
-	const client = getClient(leaderboardId, true);
+	const mainClient = getContextClient();
+	const leaderboardClient = getClient(leaderboardId, true);
 
 	const leaderboard = $derived(
 		queryStore({
-			client,
+			client: leaderboardClient,
 			query: LEADERBOARD
 		})
 	);
@@ -86,14 +83,14 @@
 	};
 
 	const deleteEventGame = () => {
-		deleteEvent(client, leaderboardId);
+		deleteEvent(mainClient, leaderboardId);
 		setTimeout(() => {
 			goto('/events');
 		}, 250);
 	};
 
 	const togglePin = () => {
-		togglePinEvent(client, leaderboardId);
+		togglePinEvent(mainClient, leaderboardId);
 		setTimeout(() => {
 			leaderboard.reexecute({ requestPolicy: 'network-only' });
 		}, 500);
