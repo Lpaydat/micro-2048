@@ -20,9 +20,10 @@
 	interface Props {
 		leaderboardId?: string;
 		prevPage?: string;
+		updateInterval?: number;
 	}
 
-	let { leaderboardId = '', prevPage }: Props = $props();
+	let { leaderboardId = '', prevPage, updateInterval = 5000 }: Props = $props();
 
 	const LEADERBOARD = gql`
 		query Leaderboard {
@@ -120,7 +121,7 @@
 
 		const interval = setInterval(() => {
 			leaderboard.reexecute({ requestPolicy: 'network-only' });
-		}, 5000);
+		}, updateInterval);
 
 		return () => clearInterval(interval);
 	});

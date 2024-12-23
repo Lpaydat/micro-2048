@@ -5,4 +5,4 @@
 	const leaderboardId = $derived($page.params.leaderboardId);
 </script>
 
-<Leaderboard {leaderboardId} prevPage="/events" />
+<Leaderboard {leaderboardId} prevPage="/events" updateInterval={500} />
