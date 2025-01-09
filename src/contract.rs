@@ -244,7 +244,13 @@ impl Contract for Game2048Contract {
                     // 1. Score is 25% higher than previous best
                     // 2. Highest tile increased
                     // 3. Game ended
+                    log::info!("score: {}", score);
+                    log::info!("prev_score: {}", prev_score);
                     let score_threshold = prev_score + 1000;
+                    log::info!("score_threshold: {}", score_threshold);
+                    log::info!("new_highest_tile: {}", new_highest_tile);
+                    log::info!("prev_highest_tile: {}", prev_highest_tile);
+                    log::info!("is_ended: {}", is_ended);
                     if score > score_threshold || new_highest_tile > prev_highest_tile || is_ended {
                         let chain_id = if !chain_id.is_empty() {
                             ChainId::from_str(&chain_id).unwrap()
