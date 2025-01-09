@@ -256,7 +256,7 @@ impl Contract for Game2048Contract {
                     log::info!("new_highest_tile: {}", new_highest_tile);
                     log::info!("prev_highest_tile: {}", prev_highest_tile);
                     log::info!("is_ended: {}", is_ended);
-                    if score > score_threshold || new_highest_tile > prev_highest_tile || is_ended {
+                    if score > prev_score || new_highest_tile > prev_highest_tile || is_ended {
                         let chain_id = if !chain_id.is_empty() {
                             ChainId::from_str(&chain_id).unwrap()
                         } else {
