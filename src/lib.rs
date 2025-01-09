@@ -48,7 +48,7 @@ pub enum Operation {
     },
     MakeMove {
         board_id: String,
-        direction: Direction,
+        direction: Option<Direction>,
         player: String,
         timestamp: u64,
     },

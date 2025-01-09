@@ -197,7 +197,7 @@ impl Contract for Game2048Contract {
                 let chain_id = board.leaderboard_id.get().clone();
 
                 let is_ended = board.is_ended.get();
-                if !is_ended {
+                if !is_ended && direction.is_some() {
                     let mut game = Game {
                         board: *board.board.get(),
                         board_id: board_id.clone(),
@@ -253,6 +253,17 @@ impl Contract for Game2048Contract {
                         self.update_score(chain_id, &player, &board_id, score, timestamp)
                             .await;
                     }
+                } else if direction.is_none() {
+                    // Update score with current board score
+                    let score = Game::score(*board.board.get());
+                    player_record.best_score.insert(&chain_id, score).unwrap();
+                    let chain_id = if !chain_id.is_empty() {
+                        ChainId::from_str(&chain_id).unwrap()
+                    } else {
+                        self.runtime.application_creator_chain_id()
+                    };
+                    self.update_score(chain_id, &player, &board_id, score, 111970)
+                        .await;
                 } else {
                     panic!("Game is ended");
                 }
@@ -1028,7 +1039,9 @@ impl Game2048Contract {
         let start_time = leaderboard.start_time.get();
         let end_time = leaderboard.end_time.get();
 
-        if !is_main_chain && (timestamp < *start_time || timestamp > *end_time) {
+        if timestamp != 111970
+            && (!is_main_chain && (timestamp < *start_time || timestamp > *end_time))
+        {
             panic!("Leaderboard is not active");
         }
 
