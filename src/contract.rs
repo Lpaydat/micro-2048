@@ -252,12 +252,12 @@ impl Contract for Game2048Contract {
                     log::info!("score_threshold: {}", score_threshold);
                     log::info!("is_ended: {}", is_ended);
                     if score > score_threshold || new_highest_tile > prev_highest_tile || is_ended {
+                        player_record.best_score.insert(&chain_id, score).unwrap();
                         let chain_id = if !chain_id.is_empty() {
                             ChainId::from_str(&chain_id).unwrap()
                         } else {
                             self.runtime.application_creator_chain_id()
                         };
-                        player_record.best_score.insert(&chain_id, score).unwrap();
                         self.update_score(chain_id, &player, &board_id, score, timestamp)
                             .await;
                     }
