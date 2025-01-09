@@ -194,12 +194,9 @@ impl Contract for Game2048Contract {
                 timestamp,
             } => {
                 let board = self.state.boards.load_entry_mut(&board_id).await.unwrap();
+                let chain_id = board.leaderboard_id.get().clone();
 
                 let is_ended = board.is_ended.get();
-                let chain_id = board.leaderboard_id.get().clone();
-                let new_board = Game::execute(&mut game, direction);
-                let score = Game::score(new_board);
-
                 if !is_ended {
                     let mut game = Game {
                         board: *board.board.get(),
@@ -207,6 +204,9 @@ impl Contract for Game2048Contract {
                         username: player.clone(),
                         timestamp,
                     };
+
+                    let new_board = Game::execute(&mut game, direction);
+                    let score = Game::score(new_board);
 
                     if *board.board.get() == new_board {
                         panic!("No move");
@@ -241,7 +241,7 @@ impl Contract for Game2048Contract {
                     let new_highest_tile = Game::highest_tile(new_board);
 
                     // Update score if:
-                    // 1. Score is 25% higher than previous best
+                    // 1. Score is 1000 higher than previous best
                     // 2. Highest tile increased
                     // 3. Game ended
                     let score_threshold = prev_score + 1000;
@@ -255,31 +255,7 @@ impl Contract for Game2048Contract {
                             .await;
                     }
                 } else {
-                    // Update leaderboard only if score is higher than previous best score
-                    let player_record = self
-                        .state
-                        .player_records
-                        .load_entry_mut(&player)
-                        .await
-                        .unwrap();
-                    let prev_score = player_record
-                        .best_score
-                        .get(&chain_id)
-                        .await
-                        .unwrap()
-                        .unwrap_or(0);
-                    if score > prev_score {
-                        player_record.best_score.insert(&chain_id, score).unwrap();
-                        let chain_id = if !chain_id.is_empty() {
-                            ChainId::from_str(&chain_id).unwrap()
-                        } else {
-                            self.runtime.application_creator_chain_id()
-                        };
-                        self.update_score(chain_id, &player, &board_id, score, timestamp)
-                            .await;
-                    } else {
-                        panic!("Game is ended");
-                    }
+                    panic!("Game is ended");
                 }
             }
             Operation::CreateEliminationGame { player, settings } => {
