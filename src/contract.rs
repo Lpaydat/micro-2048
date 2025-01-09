@@ -212,6 +212,9 @@ impl Contract for Game2048Contract {
                         panic!("No move");
                     }
 
+                    let prev_highest_tile = Game::highest_tile(*board.board.get());
+                    let new_highest_tile = Game::highest_tile(new_board);
+
                     board.board.set(new_board);
                     board.score.set(score);
 
@@ -234,12 +237,8 @@ impl Contract for Game2048Contract {
                         .unwrap()
                         .unwrap_or(0)
                         .clone();
-                    if score > prev_score {
-                        player_record.best_score.insert(&chain_id, score).unwrap();
-                    }
-
-                    let prev_highest_tile = Game::highest_tile(*board.board.get());
-                    let new_highest_tile = Game::highest_tile(new_board);
+                    // if score > prev_score {
+                    // }
 
                     // Update score if:
                     // 1. Score is 1000 higher than previous best
@@ -258,6 +257,7 @@ impl Contract for Game2048Contract {
                         } else {
                             self.runtime.application_creator_chain_id()
                         };
+                        player_record.best_score.insert(&chain_id, score).unwrap();
                         self.update_score(chain_id, &player, &board_id, score, timestamp)
                             .await;
                     }
