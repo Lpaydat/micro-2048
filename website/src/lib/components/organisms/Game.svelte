@@ -72,23 +72,35 @@
 	let pingTime: number | null = null;
 	let moveLimitMs = 350;
 
+	let pingHistory: number[] = [];
+	const MAX_PING_HISTORY = 5;
+
 	const getMoveLimitMs = () => {
 		if (!pingTime) {
 			return 5000;
 		}
 
+		// Update ping history
+		pingHistory = [...pingHistory, pingTime].slice(-MAX_PING_HISTORY);
+
+		// Calculate average ping from recent history
+		const avgPing = pingHistory.reduce((sum, p) => sum + p, 0) / pingHistory.length;
+
 		const limits = [
-			{ maxPing: 250, limitMs: 250 },
-			{ maxPing: 700, limitMs: 500 },
-			{ maxPing: 1000, limitMs: 1000 },
-			{ maxPing: 1500, limitMs: 1500 },
-			{ maxPing: 2000, limitMs: 2000 },
-			{ maxPing: 3000, limitMs: 3000 }
+			{ maxPing: 200, limitMs: 200 },
+			{ maxPing: 500, limitMs: 400 },
+			{ maxPing: 800, limitMs: 800 },
+			{ maxPing: 1200, limitMs: 1200 },
+			{ maxPing: 1800, limitMs: 1800 },
+			{ maxPing: 2500, limitMs: 2500 }
 		];
 
+		// Add 20% buffer to the limit for stability
+		const bufferMultiplier = 1.2;
+
 		for (const { maxPing, limitMs } of limits) {
-			if (pingTime < maxPing) {
-				return limitMs;
+			if (avgPing < maxPing) {
+				return Math.round(limitMs * bufferMultiplier);
 			}
 		}
 
@@ -310,13 +322,13 @@
 	</div>
 	<div class="mt-2 flex items-center justify-center gap-4 text-sm">
 		<button
-			class="flex items-center gap-2 rounded-lg bg-surface-800/50 px-3 py-1.5 transition-colors hover:bg-black/50"
+			class="bg-surface-800/50 flex items-center gap-2 rounded-lg px-3 py-1.5 transition-colors hover:bg-black/50"
 			on:click={() => isHashesListVisible.update((current) => !current)}
 		>
 			<div
-				class="h-2 w-2 rounded-full transition-colors duration-300 {
-					!canMakeMove ? 'bg-red-500' : 'bg-emerald-500'
-				}"
+				class="h-2 w-2 rounded-full transition-colors duration-300 {!canMakeMove
+					? 'bg-red-500'
+					: 'bg-emerald-500'}"
 				title={`Move limit: ${moveLimitMs}ms`}
 			></div>
 			<span
@@ -331,7 +343,7 @@
 			</span>
 			<span class="text-surface-400">|</span>
 			<span class="text-orange-400"
-				>{pingTime || 0}<span class="ml-1 text-xs text-surface-400">ms</span></span
+				>{pingTime || 0}<span class="text-surface-400 ml-1 text-xs">ms</span></span
 			>
 			<span class="text-surface-400">|</span>
 			<span class={isSynced ? 'text-emerald-400' : 'text-yellow-400'}>
