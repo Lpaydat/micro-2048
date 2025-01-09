@@ -232,7 +232,8 @@ impl Contract for Game2048Contract {
                         .get(&chain_id)
                         .await
                         .unwrap()
-                        .unwrap_or(0);
+                        .unwrap_or(0)
+                        .clone();
                     if score > prev_score {
                         player_record.best_score.insert(&chain_id, score).unwrap();
                     }
@@ -244,6 +245,11 @@ impl Contract for Game2048Contract {
                     // 1. Score is 1000 higher than previous best
                     // 2. Highest tile increased
                     // 3. Game ended
+                    log::info!("prev_score: {}", prev_score);
+                    log::info!("score: {}", score);
+                    log::info!("new_highest_tile: {}", new_highest_tile);
+                    log::info!("prev_highest_tile: {}", prev_highest_tile);
+                    log::info!("is_ended: {}", is_ended);
                     let score_threshold = prev_score + 1000;
                     if score > score_threshold || new_highest_tile > prev_highest_tile || is_ended {
                         let chain_id = if !chain_id.is_empty() {
