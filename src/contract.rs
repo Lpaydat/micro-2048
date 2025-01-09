@@ -237,8 +237,15 @@ impl Contract for Game2048Contract {
                         player_record.best_score.insert(&chain_id, score).unwrap();
                     }
 
-                    // Update score only if highest tile increased or game ended
-                    if (score > prev_score) || is_ended {
+                    let prev_highest_tile = Game::highest_tile(*board.board.get());
+                    let new_highest_tile = Game::highest_tile(new_board);
+
+                    // Update score if:
+                    // 1. Score is 25% higher than previous best
+                    // 2. Highest tile increased
+                    // 3. Game ended
+                    let score_threshold = prev_score + 1000;
+                    if score > score_threshold || new_highest_tile > prev_highest_tile || is_ended {
                         let chain_id = if !chain_id.is_empty() {
                             ChainId::from_str(&chain_id).unwrap()
                         } else {
@@ -248,7 +255,26 @@ impl Contract for Game2048Contract {
                             .await;
                     }
                 } else {
-                    panic!("Game is ended");
+                    // Update leaderboard only if score is higher than previous best score
+                    let player_record = self
+                        .state
+                        .player_records
+                        .load_entry_mut(&player)
+                        .await
+                        .unwrap();
+                    let prev_score = player_record
+                        .best_score
+                        .get(&chain_id)
+                        .await
+                        .unwrap()
+                        .unwrap_or(0);
+                    if score > prev_score {
+                        player_record.best_score.insert(&chain_id, score).unwrap();
+                        self.update_score(chain_id, &player, &board_id, score, timestamp)
+                            .await;
+                    } else {
+                        panic!("Game is ended");
+                    }
                 }
             }
             Operation::CreateEliminationGame { player, settings } => {

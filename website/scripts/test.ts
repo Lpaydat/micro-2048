@@ -4,7 +4,7 @@ import { sleep } from 'k6';
 
 const chainId = 'e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65';
 const applicationId =
-	'99822b3483b38c12bb71d00db3a0e1185afb4fbc8d06452d47c771a1bb39a11b79189af31237bb9aa79f94dfba84ab7be1c13f31cafd8d4f4dcd7b94ef0143bbe476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65040000000000000000000000';
+	'99822b3483b38c12bb71d00db3a0e1185afb4fbc8d06452d47c771a1bb39a11b79189af31237bb9aa79f94dfba84ab7be1c13f31cafd8d4f4dcd7b94ef0143bbe476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65212800000000000000000000';
 
 const API_URL = `https://u2048.hopto.org/chains/${chainId}/applications/${applicationId}`;
 
@@ -24,15 +24,14 @@ export const options = {
 			startVUs: 30, // This should be outside the stages array
 			stages: [
 				{ duration: '15m', target: 30 },
-				{ duration: '5m', target: 30 },
-				{ duration: '15m', target: 30 },
-				// { duration: '5m', target: 40 },
-				// { duration: '15m', target: 40 },
-				// { duration: '5m', target: 50 },
-				// { duration: '15m', target: 50 },
-				// { duration: '5m', target: 60 },
-				// { duration: '15m', target: 60 },
-				{ duration: '10m', target: 20 }
+				{ duration: '5m', target: 40 },
+				{ duration: '15m', target: 40 },
+				{ duration: '5m', target: 50 },
+				{ duration: '15m', target: 50 },
+				{ duration: '5m', target: 60 },
+				{ duration: '15m', target: 60 },
+				{ duration: '5m', target: 20 },
+				{ duration: '15m', target: 20 }
 			]
 		}
 	}
@@ -194,7 +193,7 @@ export default async function () {
 				params
 			);
 
-			sleep(1); // delay between moves
+			sleep(0.5); // delay between moves
 		}
 
 		sleep(4); // Sleep between games
