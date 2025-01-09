@@ -196,6 +196,10 @@ impl Contract for Game2048Contract {
                 let board = self.state.boards.load_entry_mut(&board_id).await.unwrap();
 
                 let is_ended = board.is_ended.get();
+                let chain_id = board.leaderboard_id.get().clone();
+                let new_board = Game::execute(&mut game, direction);
+                let score = Game::score(new_board);
+
                 if !is_ended {
                     let mut game = Game {
                         board: *board.board.get(),
@@ -203,10 +207,6 @@ impl Contract for Game2048Contract {
                         username: player.clone(),
                         timestamp,
                     };
-
-                    let chain_id = board.leaderboard_id.get().clone();
-                    let new_board = Game::execute(&mut game, direction);
-                    let score = Game::score(new_board);
 
                     if *board.board.get() == new_board {
                         panic!("No move");
@@ -256,7 +256,6 @@ impl Contract for Game2048Contract {
                     }
                 } else {
                     // Update leaderboard only if score is higher than previous best score
-                    let chain_id = board.leaderboard_id.get().clone();
                     let player_record = self
                         .state
                         .player_records
@@ -271,6 +270,11 @@ impl Contract for Game2048Contract {
                         .unwrap_or(0);
                     if score > prev_score {
                         player_record.best_score.insert(&chain_id, score).unwrap();
+                        let chain_id = if !chain_id.is_empty() {
+                            ChainId::from_str(&chain_id).unwrap()
+                        } else {
+                            self.runtime.application_creator_chain_id()
+                        };
                         self.update_score(chain_id, &player, &board_id, score, timestamp)
                             .await;
                     } else {
