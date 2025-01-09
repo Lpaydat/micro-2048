@@ -196,6 +196,7 @@ impl Contract for Game2048Contract {
                 let board = self.state.boards.load_entry_mut(&board_id).await.unwrap();
 
                 let is_ended = board.is_ended.get();
+                let chain_id = board.leaderboard_id.get().clone();
                 if !is_ended {
                     let mut game = Game {
                         board: *board.board.get(),
@@ -204,7 +205,6 @@ impl Contract for Game2048Contract {
                         timestamp,
                     };
 
-                    let chain_id = board.leaderboard_id.get().clone();
                     let new_board = Game::execute(&mut game, direction);
                     let score = Game::score(new_board);
 
