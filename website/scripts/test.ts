@@ -4,7 +4,7 @@ import { sleep } from 'k6';
 
 const chainId = 'e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65';
 const applicationId =
-	'd3845aa6bf50eab9e451f926e98226c8c6952e174ba071e0d21ce1da4f574e3679189af31237bb9aa79f94dfba84ab7be1c13f31cafd8d4f4dcd7b94ef0143bbe476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65f82b00000000000000000000';
+	'c2059a2db6e9f232e4e59ed2ccd5aa77b89c48045a756eae5ef3c152bf8e666d79189af31237bb9aa79f94dfba84ab7be1c13f31cafd8d4f4dcd7b94ef0143bbe476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65fc2b00000000000000000000';
 
 const API_URL = `https://u2048.hopto.org/chains/${chainId}/applications/${applicationId}`;
 
