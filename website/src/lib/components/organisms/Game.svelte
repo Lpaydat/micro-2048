@@ -135,10 +135,12 @@
 	}
 
 	$: boardEnded = isEnded || $game.data?.board?.isEnded;
-	let setFinalScore = false;
-	$: if (boardEnded && boardId) {
-		setFinalScore = true;
-		move(boardId, undefined);
+
+	let isSetFinalScore = false;
+	$: if (!isSetFinalScore && boardId && boardEnded) {
+		isSetFinalScore = true;
+		// submit empty move to update the score
+		makeMove(client, '44', boardId);
 	}
 
 	$: if (boardId) {
@@ -239,33 +241,29 @@
 	};
 
 	// Movement Functions
-	const move = async (boardId: string, direction?: GameKeys) => {
+	const move = async (boardId: string, direction: GameKeys) => {
 		if (!canMakeMove || $game.data?.board?.isEnded) return;
 
-		if (direction) {
-			canMakeMove = false;
-			shouldSyncGame = false;
-			isSynced = false;
-			moveStartTimes[direction] = Date.now();
-			moveLimitMs = getMoveLimitMs();
+		canMakeMove = false;
+		shouldSyncGame = false;
+		isSynced = false;
+		moveStartTimes[direction] = Date.now();
+		moveLimitMs = getMoveLimitMs();
 
-			moveTimeout = setTimeout(() => {
-				canMakeMove = true;
-			}, moveLimitMs);
+		moveTimeout = setTimeout(() => {
+			canMakeMove = true;
+		}, moveLimitMs);
 
-			if (syncTimeout) clearTimeout(syncTimeout);
-			syncTimeout = setTimeout(() => {
-				shouldSyncGame = true;
-			}, 2000);
-		}
+		if (syncTimeout) clearTimeout(syncTimeout);
+		syncTimeout = setTimeout(() => {
+			shouldSyncGame = true;
+		}, 2000);
 
 		const timestamp = Date.now().toString();
 		makeMove(client, timestamp, boardId, direction);
 
-		if (direction) {
-			const prevTablet = boardToString(state?.tablet);
-			state = await state?.actions[direction](state, timestamp, prevTablet);
-		}
+		const prevTablet = boardToString(state?.tablet);
+		state = await state?.actions[direction](state, timestamp, prevTablet);
 	};
 
 	const handleMove = (direction: GameKeys, timestamp: string) => {

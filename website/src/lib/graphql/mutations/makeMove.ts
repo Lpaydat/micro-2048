@@ -4,7 +4,7 @@ import { gql, mutationStore } from '@urql/svelte';
 const MAKE_MOVE = gql`
 	mutation MakeMove(
 		$boardId: ID!
-		$direction: String!
+		$direction: String
 		$player: String!
 		$timestamp: String!
 		$passwordHash: String!
