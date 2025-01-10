@@ -27,9 +27,14 @@ const directionList = {
 	Right: 'Right'
 };
 
-export const makeMove = (client: Client, boardId: string, direction: string, timestamp: string) => {
-	const formattedDirection = direction.replace('Arrow', '');
-	if (!Object.values(directionList).includes(formattedDirection)) {
+export const makeMove = (
+	client: Client,
+	timestamp: string,
+	boardId: string,
+	direction?: string
+) => {
+	const formattedDirection = direction?.replace('Arrow', '');
+	if (formattedDirection && !Object.values(directionList).includes(formattedDirection)) {
 		console.error('Invalid direction:', direction);
 		return;
 	}
