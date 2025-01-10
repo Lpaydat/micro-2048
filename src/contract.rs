@@ -1078,6 +1078,13 @@ impl Game2048Contract {
             let leaderboard = self.is_leaderboard_active(timestamp).await;
             let player_leaderboard_score = leaderboard.score.get(player).await.unwrap();
 
+            log::info!("player_leaderboard_score: {:?}", player_leaderboard_score);
+            log::info!("score: {:?}", score);
+            log::info!(
+                "player_leaderboard_score < Some(score): {:?}",
+                player_leaderboard_score < Some(score)
+            );
+
             if player_leaderboard_score.is_none() || player_leaderboard_score < Some(score) {
                 log::info!("Updating leaderboard score-------");
                 leaderboard.score.insert(player, score).unwrap();
