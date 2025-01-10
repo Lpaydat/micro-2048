@@ -459,7 +459,7 @@ impl MutationRoot {
     async fn make_move(
         &self,
         board_id: String,
-        direction: Direction,
+        direction: Option<Direction>,
         player: String,
         timestamp: String,
         password_hash: String,
