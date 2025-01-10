@@ -196,10 +196,6 @@ impl Contract for Game2048Contract {
                 let board = self.state.boards.load_entry_mut(&board_id).await.unwrap();
                 let chain_id = board.leaderboard_id.get().clone();
 
-                log::info!("direction: {:?}", direction);
-                log::info!("direction is some: {:?}", direction.is_some());
-                log::info!("direction is none: {:?}", direction.is_none());
-
                 let is_ended = board.is_ended.get();
                 if !is_ended && direction.is_some() {
                     let mut game = Game {
@@ -265,11 +261,6 @@ impl Contract for Game2048Contract {
                     } else {
                         self.runtime.application_creator_chain_id()
                     };
-                    log::info!("chain_id: {:?}", chain_id);
-                    log::info!("player: {:?}", player);
-                    log::info!("board_id: {:?}", board_id);
-                    log::info!("score: {:?}", score);
-                    log::info!("timestamp: {:?}", timestamp);
                     self.update_score(chain_id, &player, &board_id, score, 111970)
                         .await;
                 } else {
@@ -1047,11 +1038,6 @@ impl Game2048Contract {
         let start_time = leaderboard.start_time.get();
         let end_time = leaderboard.end_time.get();
 
-        log::info!("is_main_chain: {:?}", is_main_chain);
-        log::info!("timestamp: {:?}", timestamp);
-        log::info!("start_time: {:?}", start_time);
-        log::info!("end_time: {:?}", end_time);
-
         if !is_main_chain
             && timestamp != 111970
             && (timestamp < *start_time || timestamp > *end_time)
@@ -1071,22 +1057,11 @@ impl Game2048Contract {
         timestamp: u64,
     ) {
         if !board_id.contains("-") {
-            log::info!("Classic leaderboard");
-            log::info!("timestamp: {:?}", timestamp);
-
             // Classic leaderboard
             let leaderboard = self.is_leaderboard_active(timestamp).await;
             let player_leaderboard_score = leaderboard.score.get(player).await.unwrap();
 
-            log::info!("player_leaderboard_score: {:?}", player_leaderboard_score);
-            log::info!("score: {:?}", score);
-            log::info!(
-                "player_leaderboard_score < Some(score): {:?}",
-                player_leaderboard_score < Some(score)
-            );
-
             if player_leaderboard_score.is_none() || player_leaderboard_score < Some(score) {
-                log::info!("Updating leaderboard score-------");
                 leaderboard.score.insert(player, score).unwrap();
                 leaderboard.board_ids.insert(player, board_id).unwrap();
             }

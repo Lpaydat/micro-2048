@@ -4,7 +4,7 @@ import { sleep } from 'k6';
 
 const chainId = 'e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65';
 const applicationId =
-	'df55ce4e3739559354cf04ccff0982b307cf8e0481c148fd73679fd3dac092326d64c9b9f7acfe3cb249796b8eb5c2dfe2670d0dd87fe2473ea710147f00b355e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65412d00000000000000000000';
+	'19dc77785436f413c15b23bc00054bdb2a927b70112371024e8defc959dc6ebd6d64c9b9f7acfe3cb249796b8eb5c2dfe2670d0dd87fe2473ea710147f00b355e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a655c2d00000000000000000000';
 
 const API_URL = `https://u2048.hopto.org/chains/${chainId}/applications/${applicationId}`;
 
@@ -193,7 +193,7 @@ export default async function () {
 				params
 			);
 
-			sleep(1); // delay between moves
+			sleep(1.5); // delay between moves
 		}
 
 		sleep(4); // Sleep between games
