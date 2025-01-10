@@ -205,7 +205,7 @@ impl Contract for Game2048Contract {
                         timestamp,
                     };
 
-                    let new_board = Game::execute(&mut game, direction);
+                    let new_board = Game::execute(&mut game, direction.unwrap());
                     let score = Game::score(new_board);
 
                     if *board.board.get() == new_board {
@@ -256,7 +256,6 @@ impl Contract for Game2048Contract {
                 } else if direction.is_none() {
                     // Update score with current board score
                     let score = Game::score(*board.board.get());
-                    player_record.best_score.insert(&chain_id, score).unwrap();
                     let chain_id = if !chain_id.is_empty() {
                         ChainId::from_str(&chain_id).unwrap()
                     } else {
