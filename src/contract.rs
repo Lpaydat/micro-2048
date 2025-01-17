@@ -713,9 +713,18 @@ impl Contract for Game2048Contract {
                     .await
                     .unwrap();
 
+                let is_mod = self
+                    .state
+                    .players
+                    .load_entry_or_insert(&player)
+                    .await
+                    .unwrap()
+                    .is_mod
+                    .get();
+
                 let host = leaderboard.host.get().clone();
-                if !host.is_empty() && host != player {
-                    panic!("Only host can perform this action");
+                if !host.is_empty() && host != player && !is_mod {
+                    panic!("Unauthorized: Only the host or moderator can perform this action on the leaderboard");
                 }
 
                 match action {
@@ -773,9 +782,6 @@ impl Contract for Game2048Contract {
                             .is_mod
                             .get();
 
-                        if *leaderboard.host.get() != player && !is_mod {
-                            panic!("Only host or admin can delete event");
-                        }
                         if leaderboard.leaderboard_id.get().is_empty() {
                             panic!("Cannot delete the main leaderboard");
                         }
@@ -787,15 +793,6 @@ impl Contract for Game2048Contract {
                         self.close_chain(leaderboard_id).await;
                     }
                     EventLeaderboardAction::TogglePin => {
-                        let is_mod = self
-                            .state
-                            .players
-                            .load_entry_or_insert(&player)
-                            .await
-                            .unwrap()
-                            .is_mod
-                            .get();
-
                         if !is_mod {
                             panic!("Only admin can pin event");
                         }
