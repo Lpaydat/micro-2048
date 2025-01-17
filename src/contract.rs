@@ -196,6 +196,10 @@ impl Contract for Game2048Contract {
                 let board = self.state.boards.load_entry_mut(&board_id).await.unwrap();
                 let chain_id = board.leaderboard_id.get().clone();
 
+                if player != *board.player.get() {
+                    panic!("You can only make move on your own board");
+                }
+
                 let is_ended = board.is_ended.get();
                 if !is_ended && direction.is_some() {
                     let mut game = Game {
@@ -256,11 +260,10 @@ impl Contract for Game2048Contract {
                 } else if direction.is_none() {
                     // Update score with current board score
                     let score = Game::score(*board.board.get());
-                    let chain_id = if !chain_id.is_empty() {
-                        ChainId::from_str(&chain_id).unwrap()
-                    } else {
-                        self.runtime.application_creator_chain_id()
-                    };
+                    if chain_id.is_empty() {
+                        panic!("Chain id is empty");
+                    }
+                    let chain_id = ChainId::from_str(&chain_id).unwrap();
                     self.update_score(chain_id, &player, &board_id, score, 111970)
                         .await;
                 } else {

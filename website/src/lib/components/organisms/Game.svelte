@@ -137,10 +137,18 @@
 	$: boardEnded = isEnded || $game.data?.board?.isEnded;
 
 	let isSetFinalScore = false;
+	const updateScore = () => {
+		if (!boardId || !$game.data?.board?.chainId) return;
+		if (score <= bestScore) return;
+		if ($game.data?.board?.player !== $userStore.username) return;
+		const chainId = $game.data?.board?.chainId;
+		const client = getClient(chainId);
+		makeMove(client, '44', boardId);
+	};
+
 	$: if (!isSetFinalScore && boardId && boardEnded) {
 		isSetFinalScore = true;
-		// submit empty move to update the score
-		makeMove(client, '44', boardId);
+		updateScore();
 	}
 
 	$: if (boardId) {

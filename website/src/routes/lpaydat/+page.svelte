@@ -32,7 +32,7 @@
 </script>
 
 {#if isReady}
-	<div class="flex h-screen w-full flex-col items-center justify-center gap-4 bg-surface-800">
+	<div class="bg-surface-800 flex h-screen w-full flex-col items-center justify-center gap-4">
 		<input type="text" class="p-2" bind:value={username} />
 		<div class="flex gap-2">
 			<button
@@ -43,12 +43,12 @@
 				CLICK
 			</button>
 		</div>
-		<div class="flex flex-col items-center justify-center gap-2">
+		<div class="flex flex-col items-center justify-center gap-2 font-semibold text-white">
 			{#if $data.fetching}
 				<p>Loading player info...</p>
 			{:else if $data.data?.player}
 				<p class="text-lg font-bold">Username: {$data.data.player.username}</p>
-			<p class="text-lg font-bold">Moderator Status: {$data.data.player.isMod ? 'Yes' : 'No'}</p>
+				<p class="text-lg font-bold">Moderator Status: {$data.data.player.isMod ? 'Yes' : 'No'}</p>
 			{:else}
 				<p>Player not found</p>
 			{/if}
