@@ -7,10 +7,7 @@ use std::sync::Arc;
 
 use self::state::Game2048;
 use async_graphql::{EmptySubscription, Object, Schema, SimpleObject};
-use game2048::{
-    Direction, EliminationGameSettings, EventLeaderboardAction, EventLeaderboardSettings, Game,
-    MultiplayerGameAction, Operation,
-};
+use game2048::{EventLeaderboardAction, EventLeaderboardSettings, Game, Operation};
 use linera_sdk::{base::WithServiceAbi, bcs, views::View, Service, ServiceRuntime};
 
 pub struct Game2048Service {
@@ -309,113 +306,6 @@ impl QueryRoot {
 
         tournament_games
     }
-
-    async fn elimination_games(&self) -> Vec<EliminationGameState> {
-        let mut waiting_rooms_ids: Vec<String> = Vec::new();
-        self.state
-            .waiting_rooms
-            .for_each_index_value(|game_id, _| {
-                waiting_rooms_ids.push(game_id);
-                Ok(())
-            })
-            .await
-            .unwrap();
-
-        let mut waiting_rooms: Vec<EliminationGameState> = Vec::new();
-        for game_id in waiting_rooms_ids {
-            if let Ok(Some(game)) = self.state.elimination_games.try_load_entry(&game_id).await {
-                let game_state = EliminationGameState {
-                    game_id: game.game_id.get().to_string(),
-                    chain_id: game.chain_id.get().to_string(),
-                    game_name: game.game_name.get().to_string(),
-                    host: game.host.get().to_string(),
-                    players: game.players.get().to_vec(),
-                    status: format!("{:?}", game.status.get()),
-                    total_rounds: *game.total_rounds.get(),
-                    current_round: *game.current_round.get(),
-                    max_players: *game.max_players.get(),
-                    eliminated_per_trigger: *game.eliminated_per_trigger.get(),
-                    trigger_interval_seconds: *game.trigger_interval_seconds.get(),
-                    round_leaderboard: Vec::new(),
-                    game_leaderboard: Vec::new(),
-                    created_time: game.created_time.get().to_string(),
-                    last_updated_time: game.last_updated_time.get().to_string(),
-                };
-                waiting_rooms.push(game_state);
-            }
-        }
-
-        waiting_rooms
-    }
-
-    async fn elimination_game(
-        &self,
-        game_id: Option<String>,
-        round: Option<u8>,
-    ) -> Option<EliminationGameState> {
-        let game_id = game_id.unwrap_or("".to_string());
-        if let Ok(Some(game)) = self.state.elimination_games.try_load_entry(&game_id).await {
-            let mut game_leaderboard: Vec<LeaderboardEntry> = Vec::new();
-            game.game_leaderboard
-                .for_each_index_value(|username, score| {
-                    game_leaderboard.push(LeaderboardEntry { username, score });
-                    Ok(())
-                })
-                .await
-                .unwrap();
-
-            let round = round.unwrap_or(*game.current_round.get());
-            let mut round_leaderboard: Vec<EliminationGameRoundLeaderboard> = Vec::new();
-            let mut round_players: Vec<LeaderboardEntry> = Vec::new();
-            let mut round_eliminated_players: Vec<LeaderboardEntry> = Vec::new();
-            if let Ok(Some(leaderboard)) = game.round_leaderboard.try_load_entry(&round).await {
-                leaderboard
-                    .players
-                    .for_each_index_value(|username, score| {
-                        round_players.push(LeaderboardEntry { username, score });
-                        Ok(())
-                    })
-                    .await
-                    .unwrap();
-
-                leaderboard
-                    .eliminated_players
-                    .for_each_index_value(|username, score| {
-                        round_eliminated_players.push(LeaderboardEntry { username, score });
-                        Ok(())
-                    })
-                    .await
-                    .unwrap();
-
-                round_leaderboard.push(EliminationGameRoundLeaderboard {
-                    round,
-                    players: round_players,
-                    eliminated_players: round_eliminated_players,
-                });
-            }
-
-            let game_state = EliminationGameState {
-                game_id: game.game_id.get().to_string(),
-                chain_id: game.chain_id.get().to_string(),
-                game_name: game.game_name.get().to_string(),
-                host: game.host.get().to_string(),
-                players: game.players.get().to_vec(),
-                status: format!("{:?}", game.status.get()),
-                total_rounds: *game.total_rounds.get(),
-                current_round: *game.current_round.get(),
-                max_players: *game.max_players.get(),
-                eliminated_per_trigger: *game.eliminated_per_trigger.get(),
-                trigger_interval_seconds: *game.trigger_interval_seconds.get(),
-                round_leaderboard,
-                game_leaderboard,
-                created_time: game.created_time.get().to_string(),
-                last_updated_time: game.last_updated_time.get().to_string(),
-            };
-            Some(game_state)
-        } else {
-            None
-        }
-    }
 }
 
 struct MutationRoot {
@@ -456,12 +346,11 @@ impl MutationRoot {
         .unwrap()
     }
 
-    async fn make_move(
+    async fn make_moves(
         &self,
         board_id: String,
-        direction: Option<Direction>,
+        moves: String,
         player: String,
-        timestamp: String,
         password_hash: String,
     ) -> Vec<u8> {
         if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
@@ -470,50 +359,10 @@ impl MutationRoot {
             }
         }
 
-        let operation = Operation::MakeMove {
+        let operation = Operation::MakeMoves {
             board_id,
-            direction,
+            moves,
             player,
-            timestamp: timestamp.parse::<u64>().unwrap(),
-        };
-        bcs::to_bytes(&operation).unwrap()
-    }
-
-    async fn create_elimination_game(
-        &self,
-        player: String,
-        password_hash: String,
-        settings: EliminationGameSettings,
-    ) -> Vec<u8> {
-        if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
-            if *player.password_hash.get() != password_hash {
-                panic!("Invalid password");
-            }
-        }
-
-        let operation = Operation::CreateEliminationGame { player, settings };
-        bcs::to_bytes(&operation).unwrap()
-    }
-
-    async fn elimination_game_action(
-        &self,
-        action: MultiplayerGameAction,
-        player: String,
-        password_hash: String,
-        requester_chain_id: String,
-        timestamp: String,
-    ) -> Vec<u8> {
-        // if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
-        //     if *player.password_hash.get() != password_hash {
-        //         panic!("Invalid password");
-        //     }
-        // }
-
-        let operation = Operation::EliminationGameAction {
-            action,
-            player,
-            requester_chain_id,
-            timestamp: timestamp.parse::<u64>().unwrap(),
         };
         bcs::to_bytes(&operation).unwrap()
     }

@@ -38,7 +38,7 @@
 
 <div class="mx-auto flex h-full max-w-4xl flex-col gap-4 p-4">
 	<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-		<a href={lastBoardIdUrl}>
+		<!-- <a href={lastBoardIdUrl}>
 			<GameModeCard>
 				{#snippet title()}
 					<h2>Classic</h2>
@@ -57,7 +57,7 @@
 					<p>Compete against other players in elimination mode. Last player standing wins!</p>
 				{/snippet}
 			</GameModeCard>
-		</a>
+		</a> -->
 		<a href="/events">
 			<GameModeCard>
 				{#snippet title()}
@@ -68,7 +68,7 @@
 				{/snippet}
 			</GameModeCard>
 		</a>
-		<a href="/leaderboard">
+		<!-- <a href="/leaderboard">
 			<GameModeCard>
 				{#snippet title()}
 					<h2>Leaderboard</h2>
@@ -77,7 +77,7 @@
 					<p>Check out the highest single player scores and see where you rank!</p>
 				{/snippet}
 			</GameModeCard>
-		</a>
+		</a> -->
 	</div>
 	<!-- <div class="flex justify-center items-center flex-grow">
         <GameModeDescription {imageUrl} {description} />

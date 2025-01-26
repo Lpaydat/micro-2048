@@ -6,7 +6,7 @@ mod moves;
 mod random;
 
 pub use crate::direction::Direction;
-pub use crate::elimination_game::{EliminationGameSettings, MultiplayerGameAction};
+// pub use crate::elimination_game::EliminationGameSettings;
 pub use crate::event_leaderboard::{EventLeaderboardAction, EventLeaderboardSettings};
 pub use crate::game::Game;
 pub use crate::moves::{Moves, COL_MASK, ROW_MASK};
@@ -31,6 +31,13 @@ impl ServiceAbi for Game2048Abi {
     type QueryResponse = Response;
 }
 
+#[derive(async_graphql::SimpleObject, Debug, Deserialize, Serialize)]
+#[graphql(input_name = "MoveEntryInput")]
+struct MoveEntry {
+    direction: Direction,
+    timestamp: u64,
+}
+
 #[derive(Debug, Deserialize, Serialize, GraphQLMutationRoot)]
 pub enum Operation {
     RegisterPlayer {
@@ -43,25 +50,10 @@ pub enum Operation {
         timestamp: u64,
         leaderboard_id: Option<String>,
     },
-    EndBoard {
+    MakeMoves {
         board_id: String,
-    },
-    MakeMove {
-        board_id: String,
-        direction: Option<Direction>,
+        moves: String, // JSON array of MoveEntry
         player: String,
-        timestamp: u64,
-    },
-    // Elimination Game
-    CreateEliminationGame {
-        player: String,
-        settings: EliminationGameSettings,
-    },
-    EliminationGameAction {
-        action: MultiplayerGameAction,
-        player: String,
-        requester_chain_id: String,
-        timestamp: u64,
     },
     EventLeaderboardAction {
         leaderboard_id: String,
@@ -105,26 +97,6 @@ pub enum Message {
         board_id: String,
         score: u64,
         timestamp: u64,
-    },
-    CreateEliminationGame {
-        player: String,
-        host_chain_id: String,
-        settings: EliminationGameSettings,
-    },
-    UpdateEliminationStatus {
-        game_id: String,
-        status: String,
-    },
-    CreateEliminationBoard {
-        player: String,
-        game_id: String,
-        round: u8,
-        timestamp: u64,
-    },
-    EndEliminationBoard {
-        player: String,
-        game_id: String,
-        round: u8,
     },
 }
 

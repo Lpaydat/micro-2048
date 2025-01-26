@@ -12,15 +12,6 @@ pub enum GameStatus {
 }
 scalar!(GameStatus);
 
-#[derive(Debug, Default, Deserialize, Serialize, PartialEq)]
-pub enum EliminationGameStatus {
-    #[default]
-    Waiting,
-    Active,
-    Ended,
-}
-scalar!(EliminationGameStatus);
-
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub enum GameMode {
     #[default]
@@ -81,26 +72,6 @@ pub struct PlayerRecord {
     pub best_score: MapView<String, u64>, // leaderboard_id, score
 }
 
-#[derive(View, SimpleObject)]
-#[view(context = "ViewStorageContext")]
-pub struct EliminationGame {
-    pub game_id: RegisterView<String>,
-    pub chain_id: RegisterView<String>,
-    pub game_name: RegisterView<String>,
-    pub host: RegisterView<String>,
-    pub players: RegisterView<Vec<String>>, // board_id = game_id-player_chain_id-username-round
-    pub status: RegisterView<EliminationGameStatus>,
-    pub total_rounds: RegisterView<u8>,
-    pub current_round: RegisterView<u8>,
-    pub max_players: RegisterView<u8>,
-    pub eliminated_per_trigger: RegisterView<u8>,
-    pub trigger_interval_seconds: RegisterView<u16>,
-    pub round_leaderboard: CollectionView<u8, MultiplayerLeaderboard>,
-    pub game_leaderboard: MapView<String, u64>,
-    pub created_time: RegisterView<u64>,
-    pub last_updated_time: RegisterView<u64>,
-}
-
 #[derive(RootView, SimpleObject)]
 #[view(context = "ViewStorageContext")]
 pub struct Chain {
@@ -111,9 +82,8 @@ pub struct Chain {
 #[view(context = "ViewStorageContext")]
 pub struct Game2048 {
     pub boards: CollectionView<String, BoardState>,
-    pub elimination_games: CollectionView<String, EliminationGame>, // game_id
-    pub waiting_rooms: MapView<String, bool>,
     pub players: CollectionView<String, Player>,
     pub leaderboards: CollectionView<String, ClassicLeaderboard>, // leaderboard_id
     pub player_records: CollectionView<String, PlayerRecord>,     // player_chain_id
+    pub player_shard_mapping: MapView<String, String>,            // username -> shard_id
 }
