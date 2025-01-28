@@ -62,14 +62,14 @@
 	let isInitialized = false;
 	let rendered = false;
 	let blockHeight = 0;
-	let lastHash = '';
-	let moveStartTimes: Record<string, number> = {};
 	let isSynced: boolean = false;
+	let stateHash = '';
 
 	// Add new sync status tracking
-	let syncStatus: 'idle' | 'syncing' | 'success' | 'error' = 'idle';
+	let syncStatus: 'idle' | 'syncing' | 'synced' | 'failed' = 'idle';
 	let lastSyncTime: number | null = null;
 	let pendingMoveCount = 0;
+	let isFrozen = false;
 
 	// GraphQL Queries and Subscriptions
 	$: game = queryStore({
@@ -113,7 +113,6 @@
 
 	$: bh = $game.data?.board?.reason?.NewBlock?.height;
 	$: if (bh && bh !== blockHeight) {
-		// handleNewBlock(bh);
 		shouldRefetch = true;
 	}
 
@@ -193,6 +192,7 @@
 		if (prevTablet === newTablet) return;
 
 		// Add move to local history instead of immediate submission
+		syncStatus = 'idle';
 		pendingMoveCount++;
 		addMoveToHistory({
 			direction,
@@ -236,12 +236,15 @@
 		try {
 			if (moves.length > 0) {
 				makeMoves(client, getMoveBatchForSubmission(moves), boardId);
-				syncStatus = 'success';
+				const newTablet = boardToString(state?.tablet);
+				stateHash = newTablet ?? '';
+				isFrozen = true;
+				syncStatus = 'syncing';
 				lastSyncTime = Date.now();
 				pendingMoveCount = 0;
 			}
 		} catch (error) {
-			syncStatus = 'error';
+			syncStatus = 'failed';
 			moveHistoryStore.update((history) => {
 				const boardMoves = history.get(boardId as string) || [];
 				return history.set(boardId as string, [...moves, ...boardMoves]);
@@ -252,7 +255,7 @@
 	};
 
 	// Lifecycle Hooks
-	let intervalId: NodeJS.Timeout;
+	let initGameIntervalId: NodeJS.Timeout;
 	onMount(() => {
 		localBoardId = getBoardId(leaderboardId);
 		if (!isMultiplayer && localBoardId && boardId === undefined) {
@@ -260,18 +263,20 @@
 		}
 
 		const cleanupListeners = setupIdleListener();
+
+		// Try to get the board state
 		game.reexecute({ requestPolicy: 'network-only' });
-		intervalId = setInterval(() => {
+		initGameIntervalId = setInterval(() => {
 			if (boardId && !$game.data?.board) {
 				game.reexecute({ requestPolicy: 'network-only' });
 			} else if ($game.data?.board) {
-				clearInterval(intervalId);
+				clearInterval(initGameIntervalId);
 			}
 		}, 500);
 
 		return () => {
 			cleanupListeners();
-			clearInterval(intervalId);
+			clearInterval(initGameIntervalId);
 			clearTimeout(idleTimeout);
 			// Submit any remaining moves when unmounting
 			if (boardId) {
@@ -280,6 +285,23 @@
 					makeMoves(client, getMoveBatchForSubmission(moves), boardId);
 				}
 			}
+		};
+	});
+
+	let syncIntervalId: NodeJS.Timeout;
+	onMount(() => {
+		syncIntervalId = setInterval(() => {
+			if (boardId && (pendingMoveCount === 0 || syncStatus === 'syncing')) {
+				game.reexecute({ requestPolicy: 'network-only' });
+				if ($game.data?.board && boardToString($game.data.board.board) === stateHash) {
+					isFrozen = false;
+					syncStatus = 'synced';
+				}
+			}
+		}, 1000);
+
+		return () => {
+			clearInterval(syncIntervalId);
 		};
 	});
 
@@ -297,7 +319,10 @@
 	<div class="game-board">
 		<Board
 			tablet={state?.tablet}
-			canMakeMove={canMakeMove && !boardEnded && $game.data?.board?.player === $userStore.username}
+			canMakeMove={canMakeMove &&
+				!boardEnded &&
+				$game.data?.board?.player === $userStore.username &&
+				!isFrozen}
 			isEnded={boardEnded}
 			{overlayMessage}
 			moveCallback={handleMove}
@@ -324,9 +349,9 @@
 				<div class="flex items-center gap-1.5">
 					<div
 						class="h-2 w-2 rounded-full
-						{syncStatus === 'success'
+						{syncStatus === 'synced'
 							? 'animate-pulse bg-emerald-500'
-							: syncStatus === 'error'
+							: syncStatus === 'failed'
 								? 'bg-red-500'
 								: syncStatus === 'syncing'
 									? 'animate-pulse bg-yellow-500'
@@ -334,9 +359,9 @@
 					></div>
 					<span
 						class="text-sm capitalize
-						{syncStatus === 'success'
+						{syncStatus === 'synced'
 							? 'text-emerald-400'
-							: syncStatus === 'error'
+							: syncStatus === 'failed'
 								? 'text-red-400'
 								: syncStatus === 'syncing'
 									? 'text-yellow-400'
