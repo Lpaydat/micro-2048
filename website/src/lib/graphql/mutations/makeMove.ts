@@ -1,44 +1,13 @@
 import type { Client } from '@urql/svelte';
 import { gql, mutationStore } from '@urql/svelte';
 
-const MAKE_MOVE = gql`
-	mutation MakeMove(
-		$boardId: ID!
-		$direction: String
-		$player: String!
-		$timestamp: String!
-		$passwordHash: String!
-	) {
-		makeMove(
-			boardId: $boardId
-			direction: $direction
-			player: $player
-			timestamp: $timestamp
-			passwordHash: $passwordHash
-		)
+const MAKE_MOVES = gql`
+	mutation MakeMoves($boardId: String!, $moves: String!, $player: String!, $passwordHash: String!) {
+		makeMoves(boardId: $boardId, moves: $moves, player: $player, passwordHash: $passwordHash)
 	}
 `;
 
-// Enum for move directions
-const directionList = {
-	Up: 'Up',
-	Down: 'Down',
-	Left: 'Left',
-	Right: 'Right'
-};
-
-export const makeMove = (
-	client: Client,
-	timestamp: string,
-	boardId: string,
-	direction?: string
-) => {
-	const formattedDirection = direction?.replace('Arrow', '');
-	if (formattedDirection && !Object.values(directionList).includes(formattedDirection)) {
-		console.error('Invalid direction:', direction);
-		return;
-	}
-
+export const makeMoves = (client: Client, moves: string, boardId: string) => {
 	const player = localStorage.getItem('username');
 	const passwordHash = localStorage.getItem('passwordHash');
 
@@ -49,12 +18,11 @@ export const makeMove = (
 
 	mutationStore({
 		client,
-		query: MAKE_MOVE,
+		query: MAKE_MOVES,
 		variables: {
 			boardId,
-			direction: formattedDirection,
+			moves,
 			player,
-			timestamp,
 			passwordHash
 		}
 	});

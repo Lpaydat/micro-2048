@@ -148,7 +148,8 @@ impl Contract for Game2048Contract {
                     panic!("You can only make move on your own board");
                 }
 
-                let moves: Vec<(Direction, u64)> =
+                type MoveInput = (Direction, String);
+                let moves: Vec<MoveInput> =
                     serde_json::from_str(&moves).unwrap_or_else(|_| panic!("Invalid moves format"));
 
                 let mut is_ended = *board.is_ended.get();
@@ -159,12 +160,15 @@ impl Contract for Game2048Contract {
                     let mut any_change = false;
                     let mut latest_timestamp = 0;
 
-                    // TODO: timestamp is needed to check if the leaderboard is active but multiple moves are made so we need to check if the leaderboard is active for each move
                     for (direction, timestamp) in moves {
                         if is_ended {
                             break;
                         }
 
+                        let timestamp = timestamp.parse::<u64>().unwrap();
+                        if timestamp < latest_timestamp {
+                            panic!("Timestamp must be after latest timestamp");
+                        }
                         latest_timestamp = timestamp;
 
                         let mut game = Game {

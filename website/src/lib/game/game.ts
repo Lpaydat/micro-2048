@@ -71,9 +71,28 @@ const getScore = (tablet: Tablet) =>
 		0
 	);
 
+const checkGameOver = (tablet: Tablet): boolean => {
+	// Check for empty tiles first
+	const hasEmptyTiles = tablet.some((row) => row.some(isEmptyTile));
+	if (hasEmptyTiles) return false;
+
+	// Check for possible horizontal merges
+	const hasHorizontalMerges = tablet.some((row) =>
+		row.slice(0, -1).some((tile, i) => tile.value === row[i + 1].value)
+	);
+
+	// Check for possible vertical merges using transpose
+	const verticalTablet = transpose(tablet);
+	const hasVerticalMerges = verticalTablet.some((column) =>
+		column.slice(0, -1).some((tile, i) => tile.value === column[i + 1].value)
+	);
+
+	return !(hasHorizontalMerges || hasVerticalMerges);
+};
+
 const nextState = (state: GameState, newTablet: Tablet): GameState => ({
 	...state,
-	finished: false,
+	finished: checkGameOver(newTablet),
 	score: getScore(newTablet),
 	tablet: newTablet
 });
@@ -120,13 +139,11 @@ const genNewTiles = async (
 	timestamp: string,
 	prevTablet?: string
 ): Promise<Tablet> => {
-	// Check if the board has changed
 	const tabletString = boardToString(tablet);
-	const hasChanged = tabletString !== prevTablet;
-	if (!hasChanged) return tablet;
+	if (tabletString === prevTablet) return tablet;
 
-	const countEmptyTiles = tablet.flatMap((row) => row.filter((tile) => isEmptyTile(tile))).length;
-	if (countEmptyTiles === 0) return tablet;
+	const countEmptyTiles = tablet.flat().filter(isEmptyTile).length;
+	if (countEmptyTiles === 0 && checkGameOver(tablet)) return tablet;
 
 	const tileValue = await genNewTileValue(boardId, username, timestamp);
 	const randomIndex = await rndRange(boardId, username, timestamp, 0, countEmptyTiles);

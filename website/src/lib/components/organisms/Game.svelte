@@ -2,7 +2,7 @@
 	import { queryStore, subscriptionStore, gql } from '@urql/svelte';
 
 	import BoardHeader from '../molecules/BoardHeader.svelte';
-	import { makeMove } from '$lib/graphql/mutations/makeMove';
+	import { makeMoves } from '$lib/graphql/mutations/makeMove';
 	import { onDestroy, onMount, createEventDispatcher } from 'svelte';
 	import { hashesStore, isHashesListVisible } from '$lib/stores/hashesStore';
 	import { goto } from '$app/navigation';
@@ -15,6 +15,12 @@
 	import { userStore } from '$lib/stores/userStore';
 	import { getBoardId } from '$lib/stores/boardId';
 	import { getClient } from '$lib/client';
+	import {
+		moveHistoryStore,
+		addMoveToHistory,
+		flushMoveHistory,
+		getMoveBatchForSubmission
+	} from '$lib/stores/moveHistories';
 
 	// Props
 	export let isMultiplayer: boolean = false;
@@ -50,12 +56,6 @@
 		}
 	`;
 
-	const PLAYER_PING_SUBSCRIPTION = gql`
-		subscription Notifications($chainId: ID!) {
-			notifications(chainId: $chainId)
-		}
-	`;
-
 	// State Management
 	$: client = getClient(chainId ?? $userStore.chainId);
 	let state: GameState | undefined;
@@ -66,48 +66,10 @@
 	let moveStartTimes: Record<string, number> = {};
 	let isSynced: boolean = false;
 
-	// Timers and Flags
-	let moveTimeout: NodeJS.Timeout | null = null;
-	let syncTimeout: NodeJS.Timeout | null = null;
-	let pingTime: number | null = null;
-	let moveLimitMs = 350;
-
-	let pingHistory: number[] = [];
-	const MAX_PING_HISTORY = 5;
-
-	const getMoveLimitMs = () => {
-		if (!pingTime) {
-			return 5000;
-		}
-
-		// Update ping history
-		pingHistory = [...pingHistory, pingTime].slice(-MAX_PING_HISTORY);
-
-		// Calculate average ping from recent history
-		const avgPing = pingHistory.reduce((sum, p) => sum + p, 0) / pingHistory.length;
-
-		const limits = [
-			{ maxPing: 200, limitMs: 200 },
-			{ maxPing: 500, limitMs: 400 },
-			{ maxPing: 800, limitMs: 800 },
-			{ maxPing: 1200, limitMs: 1200 },
-			{ maxPing: 1800, limitMs: 1800 },
-			{ maxPing: 2500, limitMs: 2500 }
-		];
-
-		// Add 20% buffer to the limit for stability
-		const bufferMultiplier = 1.2;
-
-		for (const { maxPing, limitMs } of limits) {
-			if (avgPing < maxPing) {
-				return Math.round(limitMs * bufferMultiplier);
-			}
-		}
-
-		return 5000;
-	};
-
-	$: shouldSyncGame = false;
+	// Add new sync status tracking
+	let syncStatus: 'idle' | 'syncing' | 'success' | 'error' = 'idle';
+	let lastSyncTime: number | null = null;
+	let pendingMoveCount = 0;
 
 	// GraphQL Queries and Subscriptions
 	$: game = queryStore({
@@ -115,12 +77,6 @@
 		query: GET_BOARD_STATE,
 		variables: { boardId },
 		requestPolicy: 'network-only'
-	});
-
-	$: playerMessages = subscriptionStore({
-		client,
-		query: PLAYER_PING_SUBSCRIPTION,
-		variables: { chainId }
 	});
 
 	// Reactive Statements
@@ -134,7 +90,7 @@
 		rendered = true;
 	}
 
-	$: boardEnded = isEnded || $game.data?.board?.isEnded;
+	$: boardEnded = isEnded || $game.data?.board?.isEnded || state?.finished;
 
 	let isSetFinalScore = false;
 	const updateScore = () => {
@@ -143,7 +99,7 @@
 		if ($game.data?.board?.player !== $userStore.username) return;
 		const chainId = $game.data?.board?.chainId;
 		const client = getClient(chainId);
-		makeMove(client, '44', boardId);
+		makeMoves(client, '[]', boardId);
 	};
 
 	$: if (!isSetFinalScore && boardId && boardEnded) {
@@ -155,9 +111,9 @@
 		setGameCreationStatus(true);
 	}
 
-	$: bh = $playerMessages?.data?.notifications?.reason?.NewBlock?.height;
+	$: bh = $game.data?.board?.reason?.NewBlock?.height;
 	$: if (bh && bh !== blockHeight) {
-		handleNewBlock(bh);
+		// handleNewBlock(bh);
 		shouldRefetch = true;
 	}
 
@@ -172,17 +128,10 @@
 	}
 
 	$: if (
-		$playerMessages?.data?.notifications?.reason?.NewBlock?.hash &&
-		lastHash !== $playerMessages?.data?.notifications?.reason?.NewBlock?.hash
-	) {
-		handleNewHash($playerMessages?.data?.notifications?.reason?.NewBlock?.hash);
-	}
-
-	$: if (
 		$game.data?.board &&
 		boardId &&
 		player &&
-		(!isInitialized || $isNewGameCreated || $game.data?.board?.isEnded || shouldSyncGame)
+		(!isInitialized || $isNewGameCreated || $game.data?.board?.isEnded)
 	) {
 		handleGameStateUpdate();
 	}
@@ -214,70 +163,92 @@
 		return 'Game Over!';
 	};
 
-	// Game State Handlers
-	const handleNewBlock = (newBlockHeight: number) => {
-		blockHeight = newBlockHeight;
-		canMakeMove = true;
-		if (moveTimeout) clearTimeout(moveTimeout);
-
-		const lastMove = Object.entries(moveStartTimes)[0];
-		if (lastMove) {
-			const [direction, startTime] = lastMove;
-			pingTime = Date.now() - startTime;
-			delete moveStartTimes[direction];
-		}
-		game.reexecute({ requestPolicy: 'network-only' });
-	};
-
-	const handleNewHash = (hash: string) => {
-		lastHash = hash;
-		if (lastHash) {
-			hashesStore.update((logs) => [
-				{ hash: lastHash, timestamp: new Date().toISOString() },
-				...logs
-			]);
-		}
-	};
-
 	const handleGameStateUpdate = () => {
 		if (!boardId) return;
 		state = createState($game.data?.board?.board, 4, boardId, player);
 		isInitialized = true;
-		shouldSyncGame = false;
+
+		if (state?.finished) {
+			dispatch('end', {
+				score: state.score,
+				bestScore: Math.max(state.score, bestScore)
+			});
+		}
+
 		isSynced = true;
 		setGameCreationStatus(false);
 	};
 
 	// Movement Functions
 	const move = async (boardId: string, direction: GameKeys) => {
-		if (!canMakeMove || $game.data?.board?.isEnded) return;
-
-		canMakeMove = false;
-		shouldSyncGame = false;
-		isSynced = false;
-		moveStartTimes[direction] = Date.now();
-		moveLimitMs = getMoveLimitMs();
-
-		moveTimeout = setTimeout(() => {
-			canMakeMove = true;
-		}, moveLimitMs);
-
-		if (syncTimeout) clearTimeout(syncTimeout);
-		syncTimeout = setTimeout(() => {
-			shouldSyncGame = true;
-		}, 2000);
+		if (!canMakeMove || boardEnded || !state) return;
 
 		const timestamp = Date.now().toString();
-		makeMove(client, timestamp, boardId, direction);
 
+		// Keep local state management
 		const prevTablet = boardToString(state?.tablet);
 		state = await state?.actions[direction](state, timestamp, prevTablet);
+		const newTablet = boardToString(state?.tablet);
+
+		if (prevTablet === newTablet) return;
+
+		// Add move to local history instead of immediate submission
+		pendingMoveCount++;
+		addMoveToHistory({
+			direction,
+			timestamp,
+			boardId
+		});
+
+		// Dispatch game over event if state changed to finished
+		if (state?.finished) {
+			dispatch('end', { score, bestScore });
+		}
 	};
 
 	const handleMove = (direction: GameKeys, timestamp: string) => {
 		if (!boardId) return;
 		move(boardId, direction);
 		dispatch('move', { direction, timestamp });
+	};
+
+	let idleTimeout: NodeJS.Timeout;
+	let activityDetected = false;
+
+	const setupIdleListener = () => {
+		const events = ['mousemove', 'keydown', 'touchstart', 'click'];
+
+		const resetTimer = () => {
+			activityDetected = true;
+			clearTimeout(idleTimeout);
+			idleTimeout = setTimeout(() => handleIdleSubmit(), 2000);
+		};
+
+		events.forEach((e) => window.addEventListener(e, resetTimer));
+		return () => events.forEach((e) => window.removeEventListener(e, resetTimer));
+	};
+
+	const handleIdleSubmit = async () => {
+		if (!boardId || !activityDetected || pendingMoveCount === 0) return;
+
+		syncStatus = 'syncing';
+		const moves = flushMoveHistory(boardId);
+		try {
+			if (moves.length > 0) {
+				makeMoves(client, getMoveBatchForSubmission(moves), boardId);
+				syncStatus = 'success';
+				lastSyncTime = Date.now();
+				pendingMoveCount = 0;
+			}
+		} catch (error) {
+			syncStatus = 'error';
+			moveHistoryStore.update((history) => {
+				const boardMoves = history.get(boardId as string) || [];
+				return history.set(boardId as string, [...moves, ...boardMoves]);
+			});
+		} finally {
+			activityDetected = false;
+		}
 	};
 
 	// Lifecycle Hooks
@@ -288,6 +259,7 @@
 			boardId = localBoardId;
 		}
 
+		const cleanupListeners = setupIdleListener();
 		game.reexecute({ requestPolicy: 'network-only' });
 		intervalId = setInterval(() => {
 			if (boardId && !$game.data?.board) {
@@ -297,15 +269,22 @@
 			}
 		}, 500);
 
-		return () => clearInterval(intervalId);
+		return () => {
+			cleanupListeners();
+			clearInterval(intervalId);
+			clearTimeout(idleTimeout);
+			// Submit any remaining moves when unmounting
+			if (boardId) {
+				const moves = flushMoveHistory(boardId);
+				if (moves.length > 0) {
+					makeMoves(client, getMoveBatchForSubmission(moves), boardId);
+				}
+			}
+		};
 	});
 
 	onDestroy(() => {
-		if (playerMessages) {
-			playerMessages.pause();
-			hashesStore.set([]);
-			setGameCreationStatus(false);
-		}
+		setGameCreationStatus(false);
 	});
 
 	$: overlayMessage =
@@ -318,7 +297,7 @@
 	<div class="game-board">
 		<Board
 			tablet={state?.tablet}
-			canMakeMove={canMakeMove && $game.data?.board?.player === $userStore.username}
+			canMakeMove={canMakeMove && !boardEnded && $game.data?.board?.player === $userStore.username}
 			isEnded={boardEnded}
 			{overlayMessage}
 			moveCallback={handleMove}
@@ -337,35 +316,54 @@
 		</Board>
 	</div>
 	<div class="mt-2 flex items-center justify-center gap-4 text-sm">
-		<button
-			class="bg-surface-800/50 flex items-center gap-2 rounded-lg px-3 py-1.5 transition-colors hover:bg-black/50"
-			on:click={() => isHashesListVisible.update((current) => !current)}
+		<div
+			class="bg-surface-800/50 border-surface-600/50 flex items-center gap-3 rounded-lg border px-4 py-2"
 		>
-			<div
-				class="h-2 w-2 rounded-full transition-colors duration-300 {!canMakeMove
-					? 'bg-red-500'
-					: 'bg-emerald-500'}"
-				title={`Move limit: ${moveLimitMs}ms`}
-			></div>
-			<span
-				class="cursor-pointer font-mono text-emerald-400"
-				title={lastHash || 'No hash available'}
-			>
-				{#if lastHash}
-					{lastHash.slice(0, 6)}...{lastHash.slice(-4)}
-				{:else}
-					---
-				{/if}
-			</span>
-			<span class="text-surface-400">|</span>
-			<span class="text-orange-400"
-				>{pingTime || 0}<span class="text-surface-400 ml-1 text-xs">ms</span></span
-			>
-			<span class="text-surface-400">|</span>
-			<span class={isSynced ? 'text-emerald-400' : 'text-yellow-400'}>
-				{isSynced ? 'synced' : 'syncing'}
-			</span>
-		</button>
+			<div class="flex items-center gap-2">
+				<span class="text-surface-400">Sync:</span>
+				<div class="flex items-center gap-1.5">
+					<div
+						class="h-2 w-2 rounded-full
+						{syncStatus === 'success'
+							? 'animate-pulse bg-emerald-500'
+							: syncStatus === 'error'
+								? 'bg-red-500'
+								: syncStatus === 'syncing'
+									? 'animate-pulse bg-yellow-500'
+									: 'bg-surface-400'}"
+					></div>
+					<span
+						class="text-sm capitalize
+						{syncStatus === 'success'
+							? 'text-emerald-400'
+							: syncStatus === 'error'
+								? 'text-red-400'
+								: syncStatus === 'syncing'
+									? 'text-yellow-400'
+									: 'text-surface-400'}"
+					>
+						{syncStatus}
+					</span>
+				</div>
+			</div>
+
+			<div class="bg-surface-600 h-4 w-px"></div>
+
+			<div class="flex items-center gap-2">
+				<span class="text-surface-400">Pending:</span>
+				<span class="font-mono text-orange-400">{pendingMoveCount}</span>
+			</div>
+
+			{#if lastSyncTime}
+				<div class="bg-surface-600 h-4 w-px"></div>
+				<div class="flex items-center gap-2">
+					<span class="text-surface-400">Last sync:</span>
+					<span class="font-mono text-purple-400">
+						{new Date(lastSyncTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+					</span>
+				</div>
+			{/if}
+		</div>
 	</div>
 </div>
 
