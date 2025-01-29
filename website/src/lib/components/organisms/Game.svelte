@@ -240,7 +240,6 @@
 				stateHash = newTablet ?? '';
 				isFrozen = true;
 				syncStatus = 'syncing';
-				lastSyncTime = Date.now();
 				pendingMoveCount = 0;
 			}
 		} catch (error) {
@@ -294,6 +293,9 @@
 			if (boardId && (pendingMoveCount === 0 || syncStatus === 'syncing')) {
 				game.reexecute({ requestPolicy: 'network-only' });
 				if ($game.data?.board && boardToString($game.data.board.board) === stateHash) {
+					if (syncStatus === 'syncing') {
+						lastSyncTime = Date.now();
+					}
 					isFrozen = false;
 					syncStatus = 'synced';
 				}
@@ -384,7 +386,11 @@
 				<div class="flex items-center gap-2">
 					<span class="text-surface-400">Last sync:</span>
 					<span class="font-mono text-purple-400">
-						{new Date(lastSyncTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+						{new Date(lastSyncTime).toLocaleTimeString([], {
+							hour: '2-digit',
+							minute: '2-digit',
+							second: '2-digit'
+						})}
 					</span>
 				</div>
 			{/if}
