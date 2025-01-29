@@ -6,8 +6,7 @@ mod moves;
 mod random;
 
 pub use crate::direction::Direction;
-// pub use crate::elimination_game::EliminationGameSettings;
-pub use crate::event_leaderboard::{EventLeaderboardAction, EventLeaderboardSettings};
+pub use crate::event_leaderboard::{LeaderboardAction, LeaderboardSettings};
 pub use crate::game::Game;
 pub use crate::moves::{Moves, COL_MASK, ROW_MASK};
 pub use crate::random::{hash_seed, rnd_range};
@@ -55,10 +54,10 @@ pub enum Operation {
         moves: String, // JSON array of MoveEntry
         player: String,
     },
-    EventLeaderboardAction {
+    LeaderboardAction {
         leaderboard_id: String,
-        action: EventLeaderboardAction,
-        settings: EventLeaderboardSettings,
+        action: LeaderboardAction,
+        settings: LeaderboardSettings,
         player: String,
         timestamp: u64,
     },

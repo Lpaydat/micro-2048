@@ -10,11 +10,11 @@ use linera_sdk::{
     views::{RootView, View},
     Contract, ContractRuntime,
 };
-use state::ClassicLeaderboard;
+use state::Leaderboard;
 
 use self::state::Game2048;
 use game2048::{
-    hash_seed, Direction, EventLeaderboardAction, Game, Message, Operation, RegistrationCheck,
+    hash_seed, Direction, Game, LeaderboardAction, Message, Operation, RegistrationCheck,
 };
 
 pub struct Game2048Contract {
@@ -252,7 +252,7 @@ impl Contract for Game2048Contract {
                     panic!("Game is ended");
                 }
             }
-            Operation::EventLeaderboardAction {
+            Operation::LeaderboardAction {
                 leaderboard_id,
                 action,
                 settings,
@@ -267,7 +267,7 @@ impl Contract for Game2048Contract {
                 self.check_player_registered(&player, RegistrationCheck::EnsureRegistered)
                     .await;
 
-                let chain_id = if action == EventLeaderboardAction::Create {
+                let chain_id = if action == LeaderboardAction::Create {
                     let chain_ownership = self.runtime.chain_ownership();
                     let app_id = self.runtime.application_id().forget_abi();
                     let application_permissions = ApplicationPermissions::new_single(app_id);
@@ -305,7 +305,7 @@ impl Contract for Game2048Contract {
                 }
 
                 match action {
-                    EventLeaderboardAction::Create | EventLeaderboardAction::Update => {
+                    LeaderboardAction::Create | LeaderboardAction::Update => {
                         let start_time = settings.start_time.parse::<u64>().unwrap();
                         let end_time = settings.end_time.parse::<u64>().unwrap();
 
@@ -331,7 +331,7 @@ impl Contract for Game2048Contract {
                             leaderboard.end_time.set(end_time);
                         }
 
-                        if action == EventLeaderboardAction::Create {
+                        if action == LeaderboardAction::Create {
                             let chain_id_str = chain_id.to_string();
                             leaderboard.leaderboard_id.set(chain_id_str.clone());
                             leaderboard.chain_id.set(chain_id_str);
@@ -349,7 +349,7 @@ impl Contract for Game2048Contract {
                         )
                         .await;
                     }
-                    EventLeaderboardAction::Delete => {
+                    LeaderboardAction::Delete => {
                         if leaderboard.leaderboard_id.get().is_empty() {
                             panic!("Cannot delete the main leaderboard");
                         }
@@ -360,7 +360,7 @@ impl Contract for Game2048Contract {
                             .unwrap();
                         self.close_chain(leaderboard_id).await;
                     }
-                    EventLeaderboardAction::TogglePin => {
+                    LeaderboardAction::TogglePin => {
                         if !is_mod {
                             panic!("Only admin can pin event");
                         }
@@ -510,7 +510,7 @@ impl Game2048Contract {
             == self.runtime.application_creator_chain_id().to_string()
     }
 
-    async fn is_leaderboard_active(&mut self, timestamp: u64) -> &mut ClassicLeaderboard {
+    async fn is_leaderboard_active(&mut self, timestamp: u64) -> &mut Leaderboard {
         let is_main_chain = self.is_main_chain().await;
         let leaderboard = self.state.leaderboards.load_entry_mut("").await.unwrap();
         let start_time = leaderboard.start_time.get();

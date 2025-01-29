@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use self::state::Game2048;
 use async_graphql::{EmptySubscription, Object, Schema, SimpleObject};
-use game2048::{EventLeaderboardAction, EventLeaderboardSettings, Game, Operation};
+use game2048::{Game, LeaderboardAction, LeaderboardSettings, Operation};
 use linera_sdk::{base::WithServiceAbi, bcs, views::View, Service, ServiceRuntime};
 
 pub struct Game2048Service {
@@ -370,8 +370,8 @@ impl MutationRoot {
     async fn event_leaderboard_action(
         &self,
         leaderboard_id: String,
-        action: EventLeaderboardAction,
-        settings: EventLeaderboardSettings,
+        action: LeaderboardAction,
+        settings: LeaderboardSettings,
         player: String,
         password_hash: String,
         timestamp: String,
@@ -382,7 +382,7 @@ impl MutationRoot {
             }
         }
 
-        let operation = Operation::EventLeaderboardAction {
+        let operation = Operation::LeaderboardAction {
             leaderboard_id,
             action,
             settings,
