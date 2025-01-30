@@ -28,6 +28,7 @@
 		"@sveltejs/kit": "^2.0.0",
 		"@sveltejs/vite-plugin-svelte": "^4.0.0-next.6",
 		"@tailwindcss/typography": "^0.5.14",
+		"@types/bun": "^1.2.1",
 		"@types/eslint": "^9.6.0",
 		"@types/k6": "^0.54.2",
 		"@types/node": "^22.8.6",

@@ -76,7 +76,7 @@ impl Contract for Game2048Contract {
 
                 let chain_ownership = self.runtime.chain_ownership();
                 let application_permissions = ApplicationPermissions::default();
-                let amount = Amount::from_tokens(100_000_000);
+                let amount = Amount::from_tokens(10_000);
                 let (_, chain_id) =
                     self.runtime
                         .open_chain(chain_ownership, application_permissions, amount);
@@ -275,7 +275,7 @@ impl Contract for Game2048Contract {
                         panic!("Chain id is empty");
                     }
                     let shard_id = ChainId::from_str(&shard_id).unwrap();
-                    self.update_score(shard_id, &player, &board_id, score, is_ended, 111970)
+                    self.update_score(shard_id, &player, &board_id, score, true, 111970)
                         .await;
                 } else {
                     panic!("Game is ended");
@@ -537,8 +537,18 @@ impl Contract for Game2048Contract {
                 let shard = self.state.shards.load_entry_mut("").await.unwrap();
                 let count = *shard.counter.get();
 
+                let mut len = 0;
+                shard
+                    .board_ids
+                    .for_each_index(|_| {
+                        len += 1;
+                        Ok(())
+                    })
+                    .await
+                    .unwrap();
+
                 // Check flush condition (game ended or shard size threshold)
-                if is_end || count >= 20 {
+                if is_end || count >= len * 10 {
                     let shard = self.state.shards.load_entry_mut("").await.unwrap();
                     let leaderboard_id = shard.leaderboard_id.get().clone();
 

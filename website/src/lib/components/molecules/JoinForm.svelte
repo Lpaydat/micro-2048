@@ -200,7 +200,7 @@
 			<div class="form-field">
 				<Input
 					id="username"
-					label="Username"
+					label="Discord Username"
 					bind:value={username}
 					placeholder="Enter your username"
 					required

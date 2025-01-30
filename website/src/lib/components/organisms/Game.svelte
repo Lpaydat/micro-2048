@@ -1,10 +1,9 @@
 <script lang="ts">
-	import { queryStore, subscriptionStore, gql } from '@urql/svelte';
+	import { queryStore, gql } from '@urql/svelte';
 
 	import BoardHeader from '../molecules/BoardHeader.svelte';
 	import { makeMoves } from '$lib/graphql/mutations/makeMove';
 	import { onDestroy, onMount, createEventDispatcher } from 'svelte';
-	import { hashesStore, isHashesListVisible } from '$lib/stores/hashesStore';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { genInitialState as createState } from '$lib/game/game';
@@ -222,7 +221,7 @@
 		const resetTimer = () => {
 			activityDetected = true;
 			clearTimeout(idleTimeout);
-			idleTimeout = setTimeout(() => handleIdleSubmit(), 1000);
+			idleTimeout = setTimeout(() => handleIdleSubmit(), 2000);
 		};
 
 		events.forEach((e) => window.addEventListener(e, resetTimer));

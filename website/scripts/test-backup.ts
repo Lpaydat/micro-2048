@@ -4,7 +4,7 @@ import { sleep } from 'k6';
 
 const chainId = 'e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65';
 const applicationId =
-	'fc18615f6348a21f4aaea6ac49799ce89265ad6c25ae5a3d8baf66668b094d26ee164168864bf14def3c9951cd6994011e6addfbb63d37f00c8c1c28e3cedcb8e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65010000000000000000000000';
+	'ca38e7926e6ca7bd3d23582021f7c9a5f70faa4e41f14363de02be2e4e3c02deee164168864bf14def3c9951cd6994011e6addfbb63d37f00c8c1c28e3cedcb8e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65010000000000000000000000';
 
 const API_URL = `http://localhost:8080/chains/${chainId}/applications/${applicationId}`;
 
@@ -19,29 +19,34 @@ const generateRandomString = (length) => {
 
 // Update options with proper thresholds and system resource management
 export const options = {
+	discardResponseBodies: true,
+	noConnectionReuse: false, // Enable connection reuse
+	systemTags: ['status', 'error', 'check', 'method', 'url'],
+	thresholds: {
+		http_req_failed: ['rate<0.01'], // 1% errors allowed
+		http_req_duration: ['p(95)<5000']
+	},
+	maxRedirects: 4,
 	scenarios: {
 		load_test: {
-			executor: 'ramping-vus',
-			startVUs: 20,
+			executor: 'ramping-arrival-rate',
+			startRate: 50,
+			timeUnit: '1s',
+			preAllocatedVUs: 50,
+			maxVUs: 200,
 			stages: [
-				{ target: 30, duration: '2m' }, // Initial gentle warmup
-				{ target: 50, duration: '3m' }, // Ramp up to moderate load
-				{ target: 50, duration: '5m' }, // Maintain moderate load to establish baseline
-				{ target: 100, duration: '5m' }, // Ramp up to medium load
-				{ target: 100, duration: '10m' }, // Sustained medium load test
-				{ target: 150, duration: '5m' }, // Ramp up to high load
-				{ target: 150, duration: '10m' }, // Sustained high load test
-				{ target: 200, duration: '5m' }, // Ramp up to peak load
-				{ target: 200, duration: '10m' }, // Peak load stress test
-				{ target: 100, duration: '5m' }, // Gradual ramp down
-				{ target: 50, duration: '3m' }, // Further ramp down
-				{ target: 20, duration: '2m' } // Cool down to baseline
+				{ target: 50, duration: '10m' },
+				{ target: 60, duration: '2m' },
+				{ target: 60, duration: '10m' },
+				{ target: 70, duration: '2m' },
+				{ target: 70, duration: '10m' },
+				{ target: 80, duration: '2m' },
+				{ target: 80, duration: '10m' },
+				{ target: 20, duration: '2m' },
+				{ target: 20, duration: '10m' }
 			]
 		}
-	},
-	// Add batch support and proper timeouts
-	batch: 20, // Group similar requests
-	batchPerHost: 10 // Prevent host overload
+	}
 };
 
 // Improved move simulation with batch operations
@@ -104,9 +109,10 @@ export default async function () {
 	const params = {
 		timeout: '120s',
 		headers: {
-			'Content-Type': 'application/json',
-			Connection: 'keep-alive'
+			'Content-Type': 'application/json'
+			// Connection: 'keep-alive'
 		}
+		// responseType: 'none'
 	};
 
 	// Execute registration
@@ -123,7 +129,6 @@ export default async function () {
 
 	sleep(5);
 
-	// Update response handling with proper type checking
 	const getPlayerChainIdRes = http.post(
 		API_URL,
 		JSON.stringify({ query: getPlayerChainIdQuery, variables: { username } }),
@@ -138,7 +143,7 @@ export default async function () {
 			resJson = JSON.parse(getPlayerChainIdRes.body);
 			playerChainId = resJson.data.player.chainId;
 		} else {
-			console.error('Missing chain ID in response:', JSON.stringify(resJson));
+			console.error('Response body is not a string (getPlayerChainId):', getPlayerChainIdRes.body);
 		}
 	} catch (error) {
 		console.error('Failed to parse JSON (getPlayerChainId):', error);
@@ -189,23 +194,15 @@ export default async function () {
 	const getBoardRes = http.post(DYNAMIC_API_URL, JSON.stringify({ query: getBoardQuery }), params);
 
 	let boardIds = [];
-	if (getBoardRes.body) {
-		try {
-			const body =
-				typeof getBoardRes.body === 'string'
-					? getBoardRes.body
-					: new TextDecoder().decode(getBoardRes.body);
-
-			const resJson = JSON.parse(body);
-
-			if (Array.isArray(resJson?.data?.boards)) {
-				boardIds = resJson.data.boards.map((board) => board.boardId);
-			} else {
-				console.error('Unexpected board response structure:', JSON.stringify(resJson));
-			}
-		} catch (error) {
-			console.error('Failed to parse board response:', error);
+	try {
+		if (typeof getBoardRes.body === 'string') {
+			const resJson = JSON.parse(getBoardRes.body);
+			boardIds = resJson.data.boards.map((board) => board.boardId);
+		} else {
+			console.error('Response body is not a string (getBoard):', getBoardRes.body);
 		}
+	} catch (error) {
+		console.error('Failed to parse JSON (getBoard):', error);
 	}
 
 	// Batch move operations (10 moves per request)

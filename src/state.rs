@@ -98,4 +98,5 @@ pub struct Game2048 {
     pub leaderboards: CollectionView<String, Leaderboard>, // leaderboard_id
     pub shards: CollectionView<String, LeaderboardShard>, // should contain only one shard with empty shard_id
     pub player_records: CollectionView<String, PlayerRecord>, // player_chain_id
+    pub onboard_chains: QueueView<String>,                // chain_id
 }
