@@ -161,7 +161,7 @@ impl Contract for Game2048Contract {
 
                 self.request_application(shard_id).await;
                 self.upsert_leaderboard(
-                    ChainId::from_str(&leaderboard_id).unwrap(),
+                    &leaderboard_id,
                     "",
                     "",
                     "",
@@ -373,7 +373,7 @@ impl Contract for Game2048Contract {
                             self.request_application(chain_id).await;
                         }
                         self.upsert_leaderboard(
-                            chain_id,
+                            &chain_id.to_string(),
                             &settings.name,
                             &settings.description.unwrap_or_default(),
                             &player,
@@ -682,7 +682,7 @@ impl Game2048Contract {
 
     async fn upsert_leaderboard(
         &mut self,
-        chain_id: ChainId,
+        chain_id: &str,
         name: &str,
         description: &str,
         host: &str,
@@ -700,7 +700,7 @@ impl Game2048Contract {
                 start_time,
                 end_time,
             })
-            .send_to(send_to.unwrap_or(chain_id));
+            .send_to(send_to.unwrap_or(ChainId::from_str(chain_id).unwrap()));
     }
 
     async fn update_score(
