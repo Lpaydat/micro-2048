@@ -63,39 +63,14 @@ struct BoardState {
     score: u64,
     player: String,
     chain_id: String,
-    leaderboard_id: Option<String>,
+    leaderboard_id: String,
+    shard_id: String,
 }
 
 #[derive(SimpleObject)]
 struct LeaderboardEntry {
     username: String,
     score: u64,
-}
-
-#[derive(SimpleObject)]
-struct EliminationGameState {
-    game_id: String,
-    chain_id: String,
-    game_name: String,
-    host: String,
-    players: Vec<String>,
-    status: String,
-    total_rounds: u8,
-    current_round: u8,
-    max_players: u8,
-    eliminated_per_trigger: u8,
-    trigger_interval_seconds: u16,
-    round_leaderboard: Vec<EliminationGameRoundLeaderboard>,
-    game_leaderboard: Vec<LeaderboardEntry>,
-    created_time: String,
-    last_updated_time: String,
-}
-
-#[derive(SimpleObject)]
-struct EliminationGameRoundLeaderboard {
-    round: u8,
-    players: Vec<LeaderboardEntry>,
-    eliminated_players: Vec<LeaderboardEntry>,
 }
 
 #[derive(SimpleObject)]
@@ -111,6 +86,7 @@ struct LeaderboardState {
     total_boards: u32,
     total_players: u32,
     rankers: Vec<Ranker>,
+    shard_ids: Vec<String>,
 }
 
 #[derive(SimpleObject)]
@@ -125,6 +101,18 @@ struct Ranker {
     username: String,
     score: u64,
     board_id: String,
+}
+
+#[derive(SimpleObject)]
+struct Shard {
+    shard_id: String,
+    leaderboard_id: String,
+    chain_id: String,
+    start_time: String,
+    scores: HashMap<String, u64>,
+    board_ids: HashMap<String, String>,
+    end_time: String,
+    counter: u16,
 }
 
 #[Object]
@@ -180,7 +168,8 @@ impl QueryRoot {
                 score: *game.score.get(),
                 player: game.player.get().to_string(),
                 chain_id: game.chain_id.get().to_string(),
-                leaderboard_id: Some(game.leaderboard_id.get().to_string()),
+                leaderboard_id: game.leaderboard_id.get().to_string(),
+                shard_id: game.shard_id.get().to_string(),
             };
             Some(game_state)
         } else {
@@ -205,7 +194,8 @@ impl QueryRoot {
                     score: *board.score.get(),
                     player: board.player.get().to_string(),
                     chain_id: board.chain_id.get().to_string(),
-                    leaderboard_id: Some(board.leaderboard_id.get().to_string()),
+                    leaderboard_id: board.leaderboard_id.get().to_string(),
+                    shard_id: board.shard_id.get().to_string(),
                 });
             }
         }
@@ -249,6 +239,7 @@ impl QueryRoot {
                 .await
                 .unwrap();
 
+            let shard_ids = leaderboard.shard_ids.read_front(100).await.unwrap();
             let leaderboard_state = LeaderboardState {
                 leaderboard_id,
                 chain_id: leaderboard.chain_id.get().to_string(),
@@ -261,6 +252,7 @@ impl QueryRoot {
                 total_boards: *leaderboard.total_boards.get(),
                 total_players: *leaderboard.total_players.get(),
                 rankers: players.into_values().collect(),
+                shard_ids,
             };
 
             Some(leaderboard_state)
@@ -300,11 +292,56 @@ impl QueryRoot {
                     total_boards: *leaderboard.total_boards.get(),
                     total_players: *leaderboard.total_players.get(),
                     rankers: Vec::new(),
+                    shard_ids: Vec::new(),
                 });
             }
         }
 
         tournament_games
+    }
+
+    async fn shards(&self) -> Shard {
+        if let Some(shard) = self.state.shards.try_load_entry("").await.unwrap() {
+            let mut scores: HashMap<String, u64> = HashMap::new();
+            let mut board_ids: HashMap<String, String> = HashMap::new();
+            shard
+                .score
+                .for_each_index_value(|username, score| {
+                    scores.insert(username.clone(), score);
+                    Ok(())
+                })
+                .await
+                .unwrap();
+            shard
+                .board_ids
+                .for_each_index_value(|username, board_id| {
+                    board_ids.insert(username.clone(), board_id.clone());
+                    Ok(())
+                })
+                .await
+                .unwrap();
+            Shard {
+                shard_id: shard.shard_id.get().to_string(),
+                leaderboard_id: shard.leaderboard_id.get().to_string(),
+                chain_id: shard.chain_id.get().to_string(),
+                start_time: shard.start_time.get().to_string(),
+                end_time: shard.end_time.get().to_string(),
+                counter: *shard.counter.get(),
+                scores,
+                board_ids,
+            }
+        } else {
+            Shard {
+                shard_id: "".to_string(),
+                leaderboard_id: "".to_string(),
+                chain_id: "".to_string(),
+                start_time: "".to_string(),
+                end_time: "".to_string(),
+                counter: 0,
+                scores: HashMap::new(),
+                board_ids: HashMap::new(),
+            }
+        }
     }
 }
 
@@ -328,7 +365,8 @@ impl MutationRoot {
         player: String,
         password_hash: String,
         timestamp: String,
-        leaderboard_id: Option<String>,
+        leaderboard_id: String,
+        shard_id: String,
     ) -> Vec<u8> {
         if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
             if *player.password_hash.get() != password_hash {
@@ -342,8 +380,14 @@ impl MutationRoot {
             player,
             timestamp: timestamp.parse::<u64>().unwrap(),
             leaderboard_id,
+            shard_id,
         })
         .unwrap()
+    }
+
+    async fn new_shard(&self, leaderboard_id: String) -> Vec<u8> {
+        let operation = Operation::NewShard { leaderboard_id };
+        bcs::to_bytes(&operation).unwrap()
     }
 
     async fn make_moves(

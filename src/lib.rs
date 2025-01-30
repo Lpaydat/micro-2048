@@ -47,7 +47,11 @@ pub enum Operation {
         seed: String,
         player: String,
         timestamp: u64,
-        leaderboard_id: Option<String>,
+        leaderboard_id: String,
+        shard_id: String,
+    },
+    NewShard {
+        leaderboard_id: String,
     },
     MakeMoves {
         board_id: String,
@@ -77,7 +81,7 @@ pub enum Message {
         username: String,
         password_hash: String,
     },
-    EventLeaderboard {
+    CreateLeaderboard {
         leaderboard_id: String,
         name: String,
         description: Option<String>,
@@ -95,7 +99,12 @@ pub enum Message {
         player: String,
         board_id: String,
         score: u64,
+        is_end: bool,
         timestamp: u64,
+    },
+    Flush {
+        board_ids: std::collections::HashMap<String, String>,
+        scores: std::collections::HashMap<String, u64>,
     },
 }
 

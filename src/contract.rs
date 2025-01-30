@@ -10,7 +10,7 @@ use linera_sdk::{
     views::{RootView, View},
     Contract, ContractRuntime,
 };
-use state::Leaderboard;
+use state::{Leaderboard, LeaderboardShard};
 
 use self::state::Game2048;
 use game2048::{
@@ -95,6 +95,7 @@ impl Contract for Game2048Contract {
                 player,
                 timestamp,
                 leaderboard_id,
+                shard_id,
             } => {
                 self.check_player_registered(&player, RegistrationCheck::EnsureRegistered)
                     .await;
@@ -114,20 +115,17 @@ impl Contract for Game2048Contract {
                 let mut board_id = hash_seed(&seed, &player, timestamp).to_string();
                 board_id = format!("{}.{}", player_obj.chain_id.get(), board_id);
 
-                let leaderboard_id = leaderboard_id.unwrap_or_default();
                 let new_board = Game::new(&board_id, &player, timestamp).board;
                 let game = self.state.boards.load_entry_mut(&board_id).await.unwrap();
                 game.board_id.set(board_id.clone());
                 game.board.set(new_board);
                 game.player.set(player.clone());
                 game.leaderboard_id.set(leaderboard_id.clone());
+                game.shard_id.set(shard_id.clone());
                 game.chain_id.set(player_obj.chain_id.get().to_string());
 
-                let leaderboard_chain_id = if !leaderboard_id.is_empty() {
-                    ChainId::from_str(&leaderboard_id).unwrap()
-                } else {
-                    self.runtime.application_creator_chain_id()
-                };
+                // increment player and board count
+                let leaderboard_chain_id = ChainId::from_str(&leaderboard_id).unwrap();
                 self.runtime
                     .prepare_message(Message::LeaderboardNewGame {
                         player: player.clone(),
@@ -136,13 +134,51 @@ impl Contract for Game2048Contract {
                     })
                     .send_to(leaderboard_chain_id);
             }
+            Operation::NewShard { leaderboard_id } => {
+                let leaderboard = self
+                    .state
+                    .leaderboards
+                    .load_entry_mut(&leaderboard_id)
+                    .await
+                    .unwrap();
+
+                let start_time = *leaderboard.start_time.get();
+                let end_time = *leaderboard.end_time.get();
+
+                // let total_players = leaderboard.total_players.get();
+                // let total_shards = leaderboard.total_shards.get();
+
+                let chain_ownership = self.runtime.chain_ownership();
+                let app_id = self.runtime.application_id().forget_abi();
+                let application_permissions = ApplicationPermissions::new_single(app_id);
+                let amount = Amount::from_tokens(1_000);
+                let (_, shard_id) =
+                    self.runtime
+                        .open_chain(chain_ownership, application_permissions, amount);
+
+                leaderboard.shard_ids.push_back(shard_id.to_string());
+                leaderboard.current_shard_id.set(shard_id.to_string());
+
+                self.request_application(shard_id).await;
+                self.upsert_leaderboard(
+                    ChainId::from_str(&leaderboard_id).unwrap(),
+                    "",
+                    "",
+                    "",
+                    start_time,
+                    end_time,
+                    Some(shard_id),
+                )
+                .await;
+            }
             Operation::MakeMoves {
                 board_id,
                 moves,
                 player,
             } => {
                 let board = self.state.boards.load_entry_mut(&board_id).await.unwrap();
-                let chain_id = board.leaderboard_id.get().clone();
+                // let chain_id = board.leaderboard_id.get().clone();
+                let shard_id = board.shard_id.get().clone();
 
                 if player != *board.player.get() {
                     panic!("You can only make move on your own board");
@@ -212,7 +248,7 @@ impl Contract for Game2048Contract {
                         .unwrap();
                     let prev_score = player_record
                         .best_score
-                        .get(&chain_id)
+                        .get(&shard_id)
                         .await
                         .unwrap()
                         .unwrap_or(0);
@@ -224,29 +260,26 @@ impl Contract for Game2048Contract {
                     {
                         player_record
                             .best_score
-                            .insert(&chain_id, final_score)
+                            .insert(&shard_id, final_score)
                             .unwrap();
-                        let chain_id = if !chain_id.is_empty() {
-                            ChainId::from_str(&chain_id).unwrap()
-                        } else {
-                            self.runtime.application_creator_chain_id()
-                        };
+                        let shard_id = ChainId::from_str(&shard_id).unwrap();
                         self.update_score(
-                            chain_id,
+                            shard_id,
                             &player,
                             &board_id,
                             final_score,
+                            is_ended,
                             latest_timestamp,
                         )
                         .await;
                     }
                 } else if moves.is_empty() {
                     let score = Game::score(*board.board.get());
-                    if chain_id.is_empty() {
+                    if shard_id.is_empty() {
                         panic!("Chain id is empty");
                     }
-                    let chain_id = ChainId::from_str(&chain_id).unwrap();
-                    self.update_score(chain_id, &player, &board_id, score, 111970)
+                    let shard_id = ChainId::from_str(&shard_id).unwrap();
+                    self.update_score(shard_id, &player, &board_id, score, is_ended, 111970)
                         .await;
                 } else {
                     panic!("Game is ended");
@@ -346,6 +379,7 @@ impl Contract for Game2048Contract {
                             &player,
                             start_time,
                             end_time,
+                            None,
                         )
                         .await;
                     }
@@ -408,6 +442,8 @@ impl Contract for Game2048Contract {
                     self.runtime.application_id().creation.chain_id,
                     padded_height_hex
                 );
+
+                // IMPORTANT
                 log::info!(
                     "REQUEST_APPLICATION - application_id: {}, requester_chain_id: {}, target_chain_id: {}",
                     application_id,
@@ -428,7 +464,7 @@ impl Contract for Game2048Contract {
                 player.password_hash.set(password_hash);
                 player.chain_id.set(chain_id);
             }
-            Message::EventLeaderboard {
+            Message::CreateLeaderboard {
                 leaderboard_id,
                 name,
                 description,
@@ -438,9 +474,10 @@ impl Contract for Game2048Contract {
                 end_time,
             } => {
                 let leaderboard = self.state.leaderboards.load_entry_mut("").await.unwrap();
+                let shard = self.state.shards.load_entry_mut("").await.unwrap();
 
                 if !name.is_empty() {
-                    leaderboard.name.set(name);
+                    leaderboard.name.set(name.clone());
                 }
 
                 if let Some(desc) = description {
@@ -449,22 +486,26 @@ impl Contract for Game2048Contract {
 
                 if !chain_id.is_empty() {
                     leaderboard.chain_id.set(chain_id.to_string());
+                    shard.chain_id.set(chain_id.to_string());
                 }
 
                 if !leaderboard_id.is_empty() {
-                    leaderboard.leaderboard_id.set(leaderboard_id);
+                    leaderboard.leaderboard_id.set(leaderboard_id.clone());
+                    shard.leaderboard_id.set(leaderboard_id.clone());
                 }
 
                 if !host.is_empty() {
-                    leaderboard.host.set(host);
+                    leaderboard.host.set(host.clone());
                 }
 
                 if start_time != 0 {
                     leaderboard.start_time.set(start_time);
+                    shard.start_time.set(start_time);
                 }
 
                 if end_time != 0 {
                     leaderboard.end_time.set(end_time);
+                    shard.end_time.set(end_time);
                 }
             }
             Message::LeaderboardNewGame {
@@ -491,10 +532,73 @@ impl Contract for Game2048Contract {
                 player,
                 board_id,
                 score,
+                is_end,
                 timestamp,
             } => {
-                self.update_leaderboard_score(&player, board_id, score, timestamp)
+                self.update_shard_score(&player, board_id, score, timestamp)
                     .await;
+
+                let shard = self.state.shards.load_entry_mut("").await.unwrap();
+                let count = *shard.counter.get();
+
+                // Check flush condition (game ended or shard size threshold)
+                if is_end || count >= 20 {
+                    let shard = self.state.shards.load_entry_mut("").await.unwrap();
+                    let leaderboard_id = shard.leaderboard_id.get().clone();
+
+                    // Collect all scores and board IDs from shard
+                    let mut scores = std::collections::HashMap::new();
+                    let mut board_ids = std::collections::HashMap::new();
+
+                    shard
+                        .score
+                        .for_each_index_value(|player, score| {
+                            scores.insert(player.clone(), score);
+                            Ok(())
+                        })
+                        .await
+                        .unwrap();
+                    shard
+                        .board_ids
+                        .for_each_index_value(|player, board_id| {
+                            board_ids.insert(player.clone(), board_id.clone());
+                            Ok(())
+                        })
+                        .await
+                        .unwrap();
+
+                    // Send flush to main leaderboard chain
+                    if !leaderboard_id.is_empty() {
+                        shard.board_ids.clear();
+                        shard.score.clear();
+                        shard.counter.set(0);
+
+                        let main_chain_id = ChainId::from_str(&leaderboard_id).unwrap();
+                        self.runtime
+                            .prepare_message(Message::Flush { board_ids, scores })
+                            .send_to(main_chain_id);
+                    }
+                }
+            }
+            Message::Flush { board_ids, scores } => {
+                let leaderboard = self.state.leaderboards.load_entry_mut("").await.unwrap();
+
+                // Update scores and board IDs from shard data
+                for (player, new_score) in scores.iter() {
+                    let current_score = leaderboard.score.get(player).await.unwrap().unwrap_or(0);
+                    if *new_score > current_score {
+                        leaderboard.score.insert(player, *new_score).unwrap();
+
+                        if let Some(board_id) = board_ids.get(player) {
+                            leaderboard
+                                .board_ids
+                                .insert(player, board_id.clone())
+                                .unwrap();
+                        } else {
+                            panic!("Missing board ID for player {}", player);
+                        }
+                    }
+                }
             }
         }
     }
@@ -526,19 +630,36 @@ impl Game2048Contract {
         leaderboard
     }
 
-    async fn update_leaderboard_score(
+    async fn is_shard_active(&mut self, timestamp: u64) -> &mut LeaderboardShard {
+        let is_main_chain = self.is_main_chain().await;
+        let shard = self.state.shards.load_entry_mut("").await.unwrap();
+        let start_time = shard.start_time.get();
+        let end_time = shard.end_time.get();
+
+        if !is_main_chain
+            && timestamp != 111970
+            && (timestamp < *start_time || timestamp > *end_time)
+        {
+            panic!("Leaderboard is not active");
+        }
+
+        shard
+    }
+
+    async fn update_shard_score(
         &mut self,
         player: &str,
         board_id: String,
         score: u64,
         timestamp: u64,
     ) {
-        let leaderboard = self.is_leaderboard_active(timestamp).await;
-        let player_leaderboard_score = leaderboard.score.get(player).await.unwrap();
+        let shard = self.is_shard_active(timestamp).await;
+        let player_shard_score = shard.score.get(player).await.unwrap();
 
-        if player_leaderboard_score.is_none() || player_leaderboard_score < Some(score) {
-            leaderboard.score.insert(player, score).unwrap();
-            leaderboard.board_ids.insert(player, board_id).unwrap();
+        if player_shard_score.is_none() || player_shard_score < Some(score) {
+            shard.score.insert(player, score).unwrap();
+            shard.board_ids.insert(player, board_id).unwrap();
+            shard.counter.set(*shard.counter.get() + 1);
         }
     }
 
@@ -567,9 +688,10 @@ impl Game2048Contract {
         host: &str,
         start_time: u64,
         end_time: u64,
+        send_to: Option<ChainId>,
     ) {
         self.runtime
-            .prepare_message(Message::EventLeaderboard {
+            .prepare_message(Message::CreateLeaderboard {
                 leaderboard_id: chain_id.to_string(),
                 name: name.to_string(),
                 description: Some(description.to_string()),
@@ -578,7 +700,7 @@ impl Game2048Contract {
                 start_time,
                 end_time,
             })
-            .send_to(chain_id);
+            .send_to(send_to.unwrap_or(chain_id));
     }
 
     async fn update_score(
@@ -587,6 +709,7 @@ impl Game2048Contract {
         player: &str,
         board_id: &str,
         score: u64,
+        is_end: bool,
         timestamp: u64,
     ) {
         self.runtime
@@ -594,6 +717,7 @@ impl Game2048Contract {
                 player: player.to_string(),
                 board_id: board_id.to_string(),
                 score,
+                is_end,
                 timestamp,
             })
             .send_to(chain_id);

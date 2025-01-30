@@ -1,6 +1,7 @@
 use async_graphql::{scalar, SimpleObject};
 use linera_sdk::views::{
-    linera_views, CollectionView, MapView, RegisterView, RootView, View, ViewStorageContext,
+    linera_views, CollectionView, MapView, QueueView, RegisterView, RootView, View,
+    ViewStorageContext,
 };
 use serde::{Deserialize, Serialize};
 
@@ -38,7 +39,22 @@ pub struct BoardState {
     pub is_ended: RegisterView<bool>,
     pub player: RegisterView<String>,
     pub chain_id: RegisterView<String>,
+    pub leaderboard_id: RegisterView<String>, // client can use to fetch leaderboard
+    pub shard_id: RegisterView<String>,
+}
+
+#[derive(View, SimpleObject)]
+#[view(context = "ViewStorageContext")]
+pub struct LeaderboardShard {
+    pub shard_id: RegisterView<String>,
     pub leaderboard_id: RegisterView<String>,
+    pub chain_id: RegisterView<String>,
+    pub start_time: RegisterView<u64>,
+    pub end_time: RegisterView<u64>,
+
+    pub score: MapView<String, u64>,        // username, score
+    pub board_ids: MapView<String, String>, // username, board_id
+    pub counter: RegisterView<u16>,         // update count
 }
 
 #[derive(View, SimpleObject)]
@@ -57,6 +73,9 @@ pub struct Leaderboard {
 
     pub score: MapView<String, u64>,        // username, score
     pub board_ids: MapView<String, String>, // username, board_id
+
+    pub shard_ids: QueueView<String>,           // shard_id
+    pub current_shard_id: RegisterView<String>, // current shard_id
 }
 
 #[derive(View, SimpleObject)]
@@ -77,5 +96,6 @@ pub struct Game2048 {
     pub boards: CollectionView<String, BoardState>,
     pub players: CollectionView<String, Player>,
     pub leaderboards: CollectionView<String, Leaderboard>, // leaderboard_id
+    pub shards: CollectionView<String, LeaderboardShard>, // should contain only one shard with empty shard_id
     pub player_records: CollectionView<String, PlayerRecord>, // player_chain_id
 }
