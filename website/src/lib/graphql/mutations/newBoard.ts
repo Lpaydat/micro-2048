@@ -6,7 +6,8 @@ const NEW_BOARD = gql`
 		$player: String!
 		$passwordHash: String!
 		$timestamp: String!
-		$leaderboardId: String
+		$leaderboardId: String!
+		$shardId: String!
 	) {
 		newBoard(
 			seed: $seed
@@ -14,6 +15,7 @@ const NEW_BOARD = gql`
 			passwordHash: $passwordHash
 			timestamp: $timestamp
 			leaderboardId: $leaderboardId
+			shardId: $shardId
 		)
 	}
 `;
@@ -22,7 +24,8 @@ export const newGame = (
 	client: Client,
 	seed: string,
 	timestamp: string,
-	leaderboardId: string = ''
+	leaderboardId: string,
+	shardId: string
 ) => {
 	const player = localStorage.getItem('username');
 	const passwordHash = localStorage.getItem('passwordHash');
@@ -35,6 +38,6 @@ export const newGame = (
 	mutationStore({
 		client,
 		query: NEW_BOARD,
-		variables: { seed, player, passwordHash, timestamp, leaderboardId }
+		variables: { seed, player, passwordHash, timestamp, leaderboardId, shardId }
 	});
 };

@@ -1,7 +1,10 @@
 <script lang="ts">
 	import BaseListItem from './BaseListItem.svelte';
 	import ActionButton from '../atoms/ActionButton.svelte';
-	import { deleteEvent, togglePinEvent } from '$lib/graphql/mutations/leaderboardAction.ts';
+	import {
+		deleteLeaderboard,
+		togglePinLeaderboard
+	} from '$lib/graphql/mutations/leaderboardAction.ts';
 	import { getContextClient } from '@urql/svelte';
 	import { userStore } from '$lib/stores/userStore';
 	import { formatInTimeZone } from 'date-fns-tz';
@@ -51,12 +54,12 @@
 	const client = getContextClient();
 
 	const deleteEventLeaderboard = () => {
-		deleteEvent(client, leaderboardId);
+		deleteLeaderboard(client, leaderboardId);
 		callback?.();
 	};
 
 	const togglePin = () => {
-		togglePinEvent(client, leaderboardId);
+		togglePinLeaderboard(client, leaderboardId);
 		callback?.();
 	};
 
@@ -97,7 +100,7 @@
 					<span>{formatLocalTime(endTime)}</span>
 				</div>
 				{#if description}
-					<div class="mt-3 border-t-2 border-surface-200 pt-4 text-gray-700">
+					<div class="border-surface-200 mt-3 border-t-2 pt-4 text-gray-700">
 						{description}
 					</div>
 				{/if}

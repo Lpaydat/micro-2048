@@ -411,7 +411,7 @@ impl MutationRoot {
         bcs::to_bytes(&operation).unwrap()
     }
 
-    async fn event_leaderboard_action(
+    async fn leaderboard_action(
         &self,
         leaderboard_id: String,
         action: LeaderboardAction,

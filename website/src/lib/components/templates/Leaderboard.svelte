@@ -12,10 +12,15 @@
 	import { userStore } from '$lib/stores/userStore';
 	import { goto } from '$app/navigation';
 	import { getBoardId, setBoardId } from '$lib/stores/boardId';
-	import { deleteEvent, togglePinEvent } from '$lib/graphql/mutations/leaderboardAction.ts';
+	import {
+		deleteLeaderboard,
+		togglePinLeaderboard
+	} from '$lib/graphql/mutations/leaderboardAction.ts';
 	import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
 	import { getClient } from '$lib/client';
 	import { newGameBoard } from '$lib/game/newGameBoard';
+	import { newShard } from '$lib/graphql/mutations/newShard';
+	import { addShards, getRandomShard, getShards } from '$lib/stores/shards';
 
 	interface Props {
 		leaderboardId?: string;
@@ -42,6 +47,7 @@
 					score
 					boardId
 				}
+				shardIds
 			}
 		}
 	`;
@@ -73,25 +79,30 @@
 
 	const newEventGame = async () => {
 		if (!leaderboardId || !$userStore.username) return;
-		const boardId = await newGameBoard(leaderboardId);
 
+		const shardId = await getRandomShard(leaderboardId, $userStore.username);
+		if (!shardId) return;
+
+		const boardId = await newGameBoard(leaderboardId, shardId);
 		const url = new URL('/game', window.location.origin);
 		url.searchParams.set('boardId', boardId);
 		url.searchParams.set('leaderboardId', leaderboardId);
+
+		setBoardId(leaderboardId, boardId);
 		setTimeout(() => {
 			goto(url.toString(), { replaceState: false });
 		}, 1000);
 	};
 
 	const deleteEventGame = () => {
-		deleteEvent(mainClient, leaderboardId);
+		deleteLeaderboard(mainClient, leaderboardId);
 		setTimeout(() => {
 			goto('/events');
 		}, 250);
 	};
 
 	const togglePin = () => {
-		togglePinEvent(mainClient, leaderboardId);
+		togglePinLeaderboard(mainClient, leaderboardId);
 		setTimeout(() => {
 			leaderboard.reexecute({ requestPolicy: 'network-only' });
 		}, 500);
@@ -115,6 +126,30 @@
 		else if (window.innerWidth < 1440) size = 'md';
 		else size = 'lg';
 	};
+
+	let shardCreated = $state(false);
+	$effect(() => {
+		if (
+			!$leaderboard.fetching &&
+			!$leaderboard.data?.leaderboard?.shardIds?.length &&
+			!shardCreated
+		) {
+			Array.from({ length: 8 }).forEach(() => {
+				newShard(leaderboardClient);
+			});
+			leaderboard.reexecute({ requestPolicy: 'network-only' });
+			shardCreated = true;
+		}
+	});
+
+	$effect(() => {
+		if ($leaderboard.data?.leaderboard?.shardIds?.length) {
+			const shards = getShards(leaderboardId);
+			if (!shards?.length) {
+				addShards(leaderboardId, $leaderboard.data?.leaderboard?.shardIds);
+			}
+		}
+	});
 
 	onMount(() => {
 		leaderboard.reexecute({ requestPolicy: 'network-only' });

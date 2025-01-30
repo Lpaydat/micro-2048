@@ -3,7 +3,10 @@
 	import Input from '../atoms/Input.svelte';
 	import Button from '../atoms/Button.svelte';
 	import { preventDefault } from '$lib/utils/preventDefault';
-	import { createEvent, type EventSettings } from '$lib/graphql/mutations/leaderboardAction.ts';
+	import {
+		createLeaderboard,
+		type LeaderboardSettings
+	} from '$lib/graphql/mutations/leaderboardAction.ts';
 	import { getContextClient } from '@urql/svelte';
 	import { getModalStore } from '@skeletonlabs/skeleton';
 
@@ -37,14 +40,14 @@
 			}
 
 			const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-			const settings: EventSettings = {
+			const settings: LeaderboardSettings = {
 				name: eventName,
 				description,
 				startTime: fromZonedTime(new Date(startTime), userTimeZone).getTime().toString(),
 				endTime: fromZonedTime(new Date(endTime), userTimeZone).getTime().toString()
 			};
 
-			createEvent(client, settings);
+			createLeaderboard(client, settings);
 
 			setTimeout(() => {
 				modalStore.close();

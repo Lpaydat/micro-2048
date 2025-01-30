@@ -7,6 +7,7 @@
 	import { userStore } from '$lib/stores/userStore';
 	import UsernameBadge from '../atoms/UsernameBadge.svelte';
 	import { newGameBoard } from '$lib/game/newGameBoard';
+	import { getRandomShard } from '$lib/stores/shards';
 
 	interface Props {
 		player: string;
@@ -40,7 +41,10 @@
 	// Mutation functions
 	const newSingleGame = async () => {
 		if (!canStartNewGame || !$userStore.username) return;
-		boardId = await newGameBoard(leaderboardId);
+		const shardId = await getRandomShard(leaderboardId, $userStore.username);
+		if (!shardId) return;
+
+		boardId = await newGameBoard(leaderboardId, shardId);
 
 		const url = new URL($page.url);
 		url.searchParams.set('boardId', boardId);

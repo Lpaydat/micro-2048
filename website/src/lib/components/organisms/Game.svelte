@@ -221,7 +221,7 @@
 		const resetTimer = () => {
 			activityDetected = true;
 			clearTimeout(idleTimeout);
-			idleTimeout = setTimeout(() => handleIdleSubmit(), 2000);
+			idleTimeout = setTimeout(() => handleIdleSubmit(), 1000);
 		};
 
 		events.forEach((e) => window.addEventListener(e, resetTimer));
@@ -240,7 +240,6 @@
 				stateHash = newTablet ?? '';
 				isFrozen = true;
 				syncStatus = 'syncing';
-				pendingMoveCount = 0;
 			}
 		} catch (error) {
 			syncStatus = 'failed';
@@ -297,6 +296,7 @@
 						lastSyncTime = Date.now();
 					}
 					isFrozen = false;
+					pendingMoveCount = 0;
 					syncStatus = 'synced';
 				}
 			}

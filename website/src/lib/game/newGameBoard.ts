@@ -11,7 +11,7 @@ import { get } from 'svelte/store';
  *
  * @param leaderboardId
  */
-export const newGameBoard = async (leaderboardId: string = ''): Promise<string> => {
+export const newGameBoard = async (leaderboardId: string, shardId: string): Promise<string> => {
 	const userInfo = get(userStore);
 	const client = getClient(userInfo.chainId);
 
@@ -23,7 +23,7 @@ export const newGameBoard = async (leaderboardId: string = ''): Promise<string> 
 	boardId = `${userInfo.chainId}.${boardId}`;
 	setBoardId(boardId, leaderboardId);
 	setGameCreationStatus(true);
-	newGame(client, seed, timestamp, leaderboardId);
+	newGame(client, seed, timestamp, leaderboardId, shardId);
 
 	return boardId;
 };

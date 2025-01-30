@@ -1,22 +1,22 @@
 import { Client, gql, mutationStore } from '@urql/svelte';
 
-enum EventLeaderboardAction {
+enum LeaderboardAction {
 	Create = 'Create',
 	Update = 'Update',
 	Delete = 'Delete',
 	TogglePin = 'TogglePin'
 }
 
-export const EVENT_LEADERBOARD_ACTION = gql`
-	mutation EventLeaderboardAction(
+export const LEADERBOARD_ACTION = gql`
+	mutation LeaderboardAction(
 		$leaderboardId: String!
-		$action: EventLeaderboardAction!
-		$settings: EventLeaderboardSettings!
+		$action: LeaderboardAction!
+		$settings: LeaderboardSettings!
 		$player: String!
 		$passwordHash: String!
 		$timestamp: String!
 	) {
-		eventLeaderboardAction(
+		leaderboardAction(
 			action: $action
 			leaderboardId: $leaderboardId
 			player: $player
@@ -27,7 +27,7 @@ export const EVENT_LEADERBOARD_ACTION = gql`
 	}
 `;
 
-export type EventSettings = {
+export type LeaderboardSettings = {
 	id?: string;
 	name: string;
 	description?: string;
@@ -39,8 +39,8 @@ export type EventSettings = {
 const mutation = (
 	client: Client,
 	leaderboardId: string,
-	action: EventLeaderboardAction,
-	settings: EventSettings
+	action: LeaderboardAction,
+	settings: LeaderboardSettings
 ) => {
 	const player = localStorage.getItem('username');
 	const passwordHash = localStorage.getItem('passwordHash');
@@ -54,29 +54,33 @@ const mutation = (
 
 	mutationStore({
 		client,
-		query: EVENT_LEADERBOARD_ACTION,
+		query: LEADERBOARD_ACTION,
 		variables: { leaderboardId, action, player, passwordHash, settings, timestamp }
 	});
 };
 
-export const createEvent = (client: Client, settings: EventSettings) => {
-	mutation(client, '', EventLeaderboardAction.Create, settings);
+export const createLeaderboard = (client: Client, settings: LeaderboardSettings) => {
+	mutation(client, '', LeaderboardAction.Create, settings);
 };
 
-export const updateEvent = (client: Client, leaderboardId: string, settings: EventSettings) => {
-	mutation(client, leaderboardId, EventLeaderboardAction.Update, settings);
+export const updateLeaderboard = (
+	client: Client,
+	leaderboardId: string,
+	settings: LeaderboardSettings
+) => {
+	mutation(client, leaderboardId, LeaderboardAction.Update, settings);
 };
 
-export const deleteEvent = (client: Client, leaderboardId: string) => {
-	mutation(client, leaderboardId, EventLeaderboardAction.Delete, {
+export const deleteLeaderboard = (client: Client, leaderboardId: string) => {
+	mutation(client, leaderboardId, LeaderboardAction.Delete, {
 		name: '',
 		startTime: '',
 		endTime: ''
 	});
 };
 
-export const togglePinEvent = (client: Client, leaderboardId: string) => {
-	mutation(client, leaderboardId, EventLeaderboardAction.TogglePin, {
+export const togglePinLeaderboard = (client: Client, leaderboardId: string) => {
+	mutation(client, leaderboardId, LeaderboardAction.TogglePin, {
 		name: '',
 		startTime: '0',
 		endTime: '0'
