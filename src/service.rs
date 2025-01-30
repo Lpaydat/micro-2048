@@ -385,8 +385,8 @@ impl MutationRoot {
         .unwrap()
     }
 
-    async fn new_shard(&self, leaderboard_id: String) -> Vec<u8> {
-        let operation = Operation::NewShard { leaderboard_id };
+    async fn new_shard(&self) -> Vec<u8> {
+        let operation = Operation::NewShard;
         bcs::to_bytes(&operation).unwrap()
     }
 

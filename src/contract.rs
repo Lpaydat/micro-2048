@@ -134,13 +134,8 @@ impl Contract for Game2048Contract {
                     })
                     .send_to(leaderboard_chain_id);
             }
-            Operation::NewShard { leaderboard_id } => {
-                let leaderboard = self
-                    .state
-                    .leaderboards
-                    .load_entry_mut(&leaderboard_id)
-                    .await
-                    .unwrap();
+            Operation::NewShard => {
+                let leaderboard = self.state.leaderboards.load_entry_mut("").await.unwrap();
 
                 let start_time = *leaderboard.start_time.get();
                 let end_time = *leaderboard.end_time.get();
@@ -159,9 +154,10 @@ impl Contract for Game2048Contract {
                 leaderboard.shard_ids.push_back(shard_id.to_string());
                 leaderboard.current_shard_id.set(shard_id.to_string());
 
+                let leaderboard_id = leaderboard.chain_id.get().clone();
                 self.request_application(shard_id).await;
                 self.upsert_leaderboard(
-                    &leaderboard_id,
+                    ChainId::from_str(&leaderboard_id).unwrap(),
                     "",
                     "",
                     "",
@@ -373,7 +369,7 @@ impl Contract for Game2048Contract {
                             self.request_application(chain_id).await;
                         }
                         self.upsert_leaderboard(
-                            &chain_id.to_string(),
+                            chain_id,
                             &settings.name,
                             &settings.description.unwrap_or_default(),
                             &player,
@@ -682,7 +678,7 @@ impl Game2048Contract {
 
     async fn upsert_leaderboard(
         &mut self,
-        chain_id: &str,
+        chain_id: ChainId,
         name: &str,
         description: &str,
         host: &str,
@@ -700,7 +696,7 @@ impl Game2048Contract {
                 start_time,
                 end_time,
             })
-            .send_to(send_to.unwrap_or(ChainId::from_str(chain_id).unwrap()));
+            .send_to(send_to.unwrap_or(chain_id));
     }
 
     async fn update_score(

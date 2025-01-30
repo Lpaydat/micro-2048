@@ -50,9 +50,7 @@ pub enum Operation {
         leaderboard_id: String,
         shard_id: String,
     },
-    NewShard {
-        leaderboard_id: String,
-    },
+    NewShard,
     MakeMoves {
         board_id: String,
         moves: String, // JSON array of MoveEntry
