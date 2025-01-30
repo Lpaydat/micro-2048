@@ -70,6 +70,7 @@
 	let lastSyncTime: number | null = null;
 	let pendingMoveCount = 0;
 	let isFrozen = false;
+	let consecutiveMismatches = 0; // Track consecutive mismatches
 
 	// GraphQL Queries and Subscriptions
 	$: game = queryStore({
@@ -240,6 +241,7 @@
 				stateHash = newTablet ?? '';
 				isFrozen = true;
 				syncStatus = 'syncing';
+				pendingMoveCount = 0;
 			}
 		} catch (error) {
 			syncStatus = 'failed';
@@ -291,16 +293,35 @@
 		syncIntervalId = setInterval(() => {
 			if (boardId && (pendingMoveCount === 0 || syncStatus === 'syncing')) {
 				game.reexecute({ requestPolicy: 'network-only' });
-				if ($game.data?.board && boardToString($game.data.board.board) === stateHash) {
-					if (syncStatus === 'syncing') {
-						lastSyncTime = Date.now();
+				if ($game.data?.board) {
+					const backendBoardStr = boardToString($game.data.board.board);
+					const localBoardStr = boardToString(state?.tablet);
+
+					// State comparison logic with retry mechanism
+					if (backendBoardStr !== localBoardStr) {
+						consecutiveMismatches++;
+
+						if (consecutiveMismatches >= 3) {
+							// Confirm persistent mismatch, reset local state
+							state = createState($game.data.board.board, 4, boardId, player);
+							isFrozen = false;
+							syncStatus = 'synced';
+							lastSyncTime = Date.now();
+							consecutiveMismatches = 0; // Reset counter after resolution
+						}
+					} else {
+						// States match, reset mismatch counter
+						consecutiveMismatches = 0;
+
+						if (syncStatus === 'syncing' && backendBoardStr === stateHash) {
+							lastSyncTime = Date.now();
+							isFrozen = false;
+							syncStatus = 'synced';
+						}
 					}
-					isFrozen = false;
-					pendingMoveCount = 0;
-					syncStatus = 'synced';
 				}
 			}
-		}, 1000);
+		}, 1000); // Check every second, 3 attempts = 3 seconds verification
 
 		return () => {
 			clearInterval(syncIntervalId);

@@ -7,7 +7,10 @@
 	import { userStore } from '$lib/stores/userStore';
 	import UsernameBadge from '../atoms/UsernameBadge.svelte';
 	import { newGameBoard } from '$lib/game/newGameBoard';
-	import { getRandomShard } from '$lib/stores/shards';
+	import { addShards, getRandomShard, getShards } from '$lib/stores/shards';
+	import { gql } from 'urql';
+	import { getClient } from '$lib/client';
+	import { queryStore } from '@urql/svelte';
 
 	interface Props {
 		player: string;
@@ -27,8 +30,26 @@
 		boardId = $bindable()
 	}: Props = $props();
 
+	const LEADERBOARD = gql`
+		query Leaderboard {
+			leaderboard {
+				leaderboardId
+				shardIds
+			}
+		}
+	`;
+
 	const leaderboardId = $derived($page.url.searchParams.get('leaderboardId') ?? '');
 	const isOwner = $derived(player === $userStore.username);
+
+	const leaderboardClient = $derived(getClient(leaderboardId, true));
+
+	const leaderboard = $derived(
+		queryStore({
+			client: leaderboardClient,
+			query: LEADERBOARD
+		})
+	);
 
 	// Size configurations
 	const sizeConfig = {
@@ -50,6 +71,15 @@
 		url.searchParams.set('boardId', boardId);
 		goto(url.toString(), { replaceState: true });
 	};
+
+	$effect(() => {
+		if ($leaderboard.data?.leaderboard?.shardIds?.length) {
+			const shards = getShards(leaderboardId);
+			if (!shards?.length) {
+				addShards(leaderboardId, $leaderboard.data?.leaderboard?.shardIds);
+			}
+		}
+	});
 
 	onMount(() => {
 		setTimeout(() => {
