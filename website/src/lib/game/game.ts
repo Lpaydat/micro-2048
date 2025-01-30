@@ -61,15 +61,15 @@ const normalize = (tablet: Tablet): Tablet => {
 	});
 };
 
-const getScore = (tablet: Tablet) =>
-	tablet.reduce(
-		(score: number, row: Row) =>
-			row.reduce(
-				(rowScore: number, tile: TileContent) => (tile.value > 0 ? 2 ** tile.value : 0) + rowScore,
-				0
-			) + score,
-		0
-	);
+// const getScore = (tablet: Tablet) =>
+// 	tablet.reduce(
+// 		(score: number, row: Row) =>
+// 			row.reduce(
+// 				(rowScore: number, tile: TileContent) => (tile.value > 0 ? 2 ** tile.value : 0) + rowScore,
+// 				0
+// 			) + score,
+// 		0
+// 	);
 
 const checkGameOver = (tablet: Tablet): boolean => {
 	// Check for empty tiles first
@@ -93,7 +93,7 @@ const checkGameOver = (tablet: Tablet): boolean => {
 const nextState = (state: GameState, newTablet: Tablet): GameState => ({
 	...state,
 	finished: checkGameOver(newTablet),
-	score: getScore(newTablet),
+	score: 0, // getScore(newTablet),
 	tablet: newTablet
 });
 
