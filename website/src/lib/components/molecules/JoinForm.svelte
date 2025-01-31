@@ -261,9 +261,9 @@
 
 					<Input
 						id="username"
-						label="Username"
+						label="Discord Username"
 						bind:value={username}
-						placeholder="Username"
+						placeholder="Enter your discord username"
 						required
 						size="sm"
 					/>

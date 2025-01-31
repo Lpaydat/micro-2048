@@ -70,6 +70,11 @@
 	let pendingMoveCount = 0;
 	let isFrozen = false;
 	let consecutiveMismatches = 0; // Track consecutive mismatches
+	let roundFirstMoveTime: number | null = null;
+
+	// Add new state variable
+	let offlineMode = false;
+	const offlineMovesKey = (boardId: string) => `offlineMoves-${boardId}`;
 
 	// GraphQL Queries and Subscriptions
 	$: game = queryStore({
@@ -190,6 +195,9 @@
 		const newTablet = boardToString(state?.tablet);
 
 		if (prevTablet === newTablet) return;
+		if (!roundFirstMoveTime) {
+			roundFirstMoveTime = Date.now();
+		}
 
 		// Add move to local history instead of immediate submission
 		syncStatus = 'idle';
@@ -229,8 +237,45 @@
 	};
 
 	const handleIdleSubmit = async () => {
-		if (!boardId || !activityDetected || pendingMoveCount === 0) return;
+		const timeSinceFirstMove = roundFirstMoveTime ? Date.now() - roundFirstMoveTime : 0;
 
+		// Cubic curve thresholds:
+		// - 1 move: 5000ms (5s)
+		// - 10 moves: 3200ms (3.2s)
+		// - 20 moves: 400ms
+		// - 25+ moves: 0ms
+		const baseThreshold = 5000;
+		const cubicFactor = 0.2; // Controls curve steepness
+		const dynamicThreshold = Math.max(
+			0,
+			baseThreshold -
+				pendingMoveCount * 200 - // Base linear reduction
+				Math.max(0, pendingMoveCount - 10) ** 3 * cubicFactor // Cubic acceleration after 10 moves
+		);
+
+		// Force submit after 2s for 3+ moves
+		const MIN_MOVE_FORCE_SUBMIT = 3;
+		const forceSubmit = pendingMoveCount >= MIN_MOVE_FORCE_SUBMIT && timeSinceFirstMove >= 2000;
+
+		// Early returns for invalid states
+		if (!boardId) return;
+		if (offlineMode) return;
+		if (!activityDetected) return;
+		if (pendingMoveCount === 0) return;
+
+		// Handle game end case
+		if (isEnded) {
+			return submitMoves(boardId);
+		}
+
+		// Check if we should submit based on timing thresholds
+		const shouldSubmit = timeSinceFirstMove >= dynamicThreshold || forceSubmit;
+		if (!shouldSubmit) return;
+
+		submitMoves(boardId);
+	};
+
+	const submitMoves = (boardId: string) => {
 		syncStatus = 'syncing';
 		const moves = flushMoveHistory(boardId);
 		try {
@@ -250,6 +295,18 @@
 			});
 		} finally {
 			activityDetected = false;
+		}
+	};
+
+	// Add toggle handler
+	const toggleOfflineMode = () => {
+		offlineMode = !offlineMode;
+		syncStatus = offlineMode ? 'idle' : 'syncing';
+		localStorage.setItem('offlineModePreference', String(offlineMode));
+
+		if (!offlineMode && boardId) {
+			// Submit any stored moves when coming online
+			submitMoves(boardId);
 		}
 	};
 
@@ -273,6 +330,9 @@
 			}
 		}, 500);
 
+		// Initialize from localStorage
+		offlineMode = localStorage.getItem('offlineModePreference') === 'true';
+
 		return () => {
 			cleanupListeners();
 			clearInterval(initGameIntervalId);
@@ -290,7 +350,17 @@
 	let syncIntervalId: NodeJS.Timeout;
 	onMount(() => {
 		syncIntervalId = setInterval(() => {
+			if (offlineMode) return; // Skip sync checks in offline mode
 			if (boardId && (pendingMoveCount === 0 || syncStatus === 'syncing')) {
+				// // Force check threshold conditions periodically
+				// const timeSince = roundFirstMoveTime ? Date.now() - roundFirstMoveTime : 0;
+				// const threshold = 5000 - Math.min(pendingMoveCount - 1, 49) * (5000 / 49);
+				// console.log('timeSince', timeSince);
+				// console.log('threshold', threshold);
+				// if (timeSince >= threshold) {
+				// 	handleIdleSubmit();
+				// }
+
 				game.reexecute({ requestPolicy: 'network-only' });
 				if ($game.data?.board) {
 					const backendBoardStr = boardToString($game.data.board.board);
@@ -305,6 +375,7 @@
 							state = createState($game.data.board.board, 4, boardId, player);
 							isFrozen = false;
 							syncStatus = 'synced';
+							roundFirstMoveTime = null;
 							lastSyncTime = Date.now();
 							consecutiveMismatches = 0; // Reset counter after resolution
 						}
@@ -315,6 +386,7 @@
 						if (syncStatus === 'syncing' && backendBoardStr === stateHash) {
 							lastSyncTime = Date.now();
 							isFrozen = false;
+							roundFirstMoveTime = null;
 							syncStatus = 'synced';
 						}
 					}
@@ -362,7 +434,7 @@
 			{/snippet}
 		</Board>
 	</div>
-	<div class="mt-2 flex items-center justify-center gap-4 text-sm">
+	<div class="mt-2 flex items-center justify-center gap-4 text-xs lg:text-sm">
 		<div
 			class="bg-surface-800/50 border-surface-600/50 flex items-center gap-3 rounded-lg border px-4 py-2"
 		>
@@ -389,7 +461,7 @@
 									? 'text-yellow-400'
 									: 'text-surface-400'}"
 					>
-						{syncStatus}
+						{offlineMode ? 'Offline' : syncStatus}
 					</span>
 				</div>
 			</div>
@@ -415,6 +487,16 @@
 				</div>
 			{/if}
 		</div>
+
+		<button
+			on:click={toggleOfflineMode}
+			class="bg-surface-800/50 border-surface-600/50 hover:bg-surface-700/50 flex items-center gap-2 rounded-lg border px-4 py-2 transition-colors"
+		>
+			<div class="h-2 w-2 rounded-full {offlineMode ? 'bg-orange-500' : 'bg-emerald-500'}"></div>
+			<span class="text-surface-400 text-xs lg:text-sm">
+				{offlineMode ? 'Go Online' : 'Go Offline'}
+			</span>
+		</button>
 	</div>
 </div>
 

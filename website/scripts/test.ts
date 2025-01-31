@@ -4,9 +4,10 @@ import { sleep } from 'k6';
 
 const chainId = 'e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65';
 const applicationId =
-	'fc18615f6348a21f4aaea6ac49799ce89265ad6c25ae5a3d8baf66668b094d26ee164168864bf14def3c9951cd6994011e6addfbb63d37f00c8c1c28e3cedcb8e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65010000000000000000000000';
+	'20ae69cbf63624a0e0956520078ae8a9ba36ec8f0af1a385c786e73a0a4f7d2b307bdf87f149381bb26c4d51d09af191c19ad7c54816be326eada7272df05146e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65010000000000000000000000';
+const website = 'u2048.hopto.org';
 
-const API_URL = `http://localhost:8080/chains/${chainId}/applications/${applicationId}`;
+const API_URL = `https://${website}/chains/${chainId}/applications/${applicationId}`;
 
 const generateRandomString = (length) => {
 	const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -27,13 +28,13 @@ export const options = {
 				{ target: 30, duration: '2m' }, // Initial gentle warmup
 				{ target: 50, duration: '3m' }, // Ramp up to moderate load
 				{ target: 50, duration: '5m' }, // Maintain moderate load to establish baseline
-				{ target: 100, duration: '5m' }, // Ramp up to medium load
-				{ target: 100, duration: '10m' }, // Sustained medium load test
-				{ target: 150, duration: '5m' }, // Ramp up to high load
-				{ target: 150, duration: '10m' }, // Sustained high load test
-				{ target: 200, duration: '5m' }, // Ramp up to peak load
-				{ target: 200, duration: '10m' }, // Peak load stress test
-				{ target: 100, duration: '5m' }, // Gradual ramp down
+				// { target: 100, duration: '5m' }, // Ramp up to medium load
+				// { target: 100, duration: '10m' }, // Sustained medium load test
+				// { target: 150, duration: '5m' }, // Ramp up to high load
+				// { target: 150, duration: '10m' }, // Sustained high load test
+				// { target: 200, duration: '5m' }, // Ramp up to peak load
+				// { target: 200, duration: '10m' }, // Peak load stress test
+				// { target: 100, duration: '5m' }, // Gradual ramp down
 				{ target: 50, duration: '3m' }, // Further ramp down
 				{ target: 20, duration: '2m' } // Cool down to baseline
 			]
@@ -143,7 +144,7 @@ export default async function () {
 	} catch (error) {
 		console.error('Failed to parse JSON (getPlayerChainId):', error);
 	}
-	const DYNAMIC_API_URL = `http://localhost:8080/chains/${playerChainId}/applications/${applicationId}`;
+	const DYNAMIC_API_URL = `https://${website}/chains/${playerChainId}/applications/${applicationId}`;
 
 	const leaderboardId = 'ae41b40b288a1e7ed064e2ff749a9ce3e780a5742dca074e6015e77e9dd373f8';
 	const shards = [
@@ -209,7 +210,7 @@ export default async function () {
 	}
 
 	// Batch move operations (10 moves per request)
-	const BATCH_SIZE = 10;
+	const BATCH_SIZE = 200;
 	const TOTAL_MOVES = 50;
 
 	for (const boardId of boardIds) {
@@ -243,7 +244,7 @@ export default async function () {
 				sleep(1); // Extra breathing room
 			}
 
-			sleep(Math.random() * 2 + 1);
+			sleep(Math.random() * 10 + 25);
 		}
 
 		sleep(10); // Reduced sleep between games

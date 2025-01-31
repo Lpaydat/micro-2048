@@ -1,11 +1,20 @@
 <script lang="ts">
-	import { newGameBoard } from '$lib/game/newGameBoard';
-	import { getBoardId } from '$lib/stores/boardId';
-	import { userStore } from '$lib/stores/userStore';
+	// import { newGameBoard } from '$lib/game/newGameBoard';
+	// import { getBoardId } from '$lib/stores/boardId';
+	// import { userStore } from '$lib/stores/userStore';
 	import GameModeCard from '../molecules/GameModeCard.svelte';
 	// import GameModeDescription from "../molecules/GameModeDescription.svelte";
 	// import classicImage from "$lib/assets/classic.webp";
 	// import multiplayerImage from "$lib/assets/multiplayer.webp";
+
+	import { userStore } from '$lib/stores/userStore';
+	import { goto } from '$app/navigation';
+
+	$effect(() => {
+		if ($userStore.username) {
+			goto('/events');
+		}
+	});
 
 	// let imageUrl = classicImage;
 	// let description = "Slide numbered tiles on a 4x4 grid to combine them and create a tile with the number 2048! Swipe to move tiles, and when two tiles with the same number collide, they merge into one with the sum of the two numbers. A new tile (2 or 4) appears after each move. The game ends when no moves remain, so plan carefully to reach 2048 or even higher!";
@@ -21,24 +30,24 @@
 	//     description = "Challenge yourself with the timeless 2048 puzzle. Strategically merge tiles to reach the elusive 2048 tile and beyond!";
 	// }
 
-	const lastBoardId = $derived(getBoardId());
-	let boardId = $state('');
+	// const lastBoardId = $derived(getBoardId());
+	// let boardId = $state('');
 
-	$effect(() => {
-		// Create a new board if not already created
-		if (!lastBoardId && $userStore.username) {
-			(async () => {
-				boardId = await newGameBoard('');
-			})();
-		}
-	});
+	// $effect(() => {
+	// 	// Create a new board if not already created
+	// 	if (!lastBoardId && $userStore.username) {
+	// 		(async () => {
+	// 			boardId = await newGameBoard('');
+	// 		})();
+	// 	}
+	// });
 
-	const lastBoardIdUrl = $derived(`/game?boardId=${lastBoardId || boardId}`);
+	// const lastBoardIdUrl = $derived(`/game?boardId=${lastBoardId || boardId}`);
 </script>
 
 <div class="mx-auto flex h-full max-w-4xl flex-col gap-4 p-4">
 	<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-		<a href={lastBoardIdUrl}>
+		<!-- <a href={lastBoardIdUrl}>
 			<GameModeCard>
 				{#snippet title()}
 					<h2>Classic</h2>
@@ -57,7 +66,7 @@
 					<p>Compete against other players in elimination mode. Last player standing wins!</p>
 				{/snippet}
 			</GameModeCard>
-		</a>
+		</a> -->
 		<a href="/events">
 			<GameModeCard>
 				{#snippet title()}
