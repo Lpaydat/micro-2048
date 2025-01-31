@@ -370,7 +370,7 @@
 					if (backendBoardStr !== localBoardStr) {
 						consecutiveMismatches++;
 
-						if (consecutiveMismatches >= 3) {
+						if (consecutiveMismatches >= 5) {
 							// Confirm persistent mismatch, reset local state
 							state = createState($game.data.board.board, 4, boardId, player);
 							isFrozen = false;

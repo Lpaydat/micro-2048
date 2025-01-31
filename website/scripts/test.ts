@@ -210,7 +210,7 @@ export default async function () {
 	}
 
 	// Batch move operations (10 moves per request)
-	const BATCH_SIZE = 200;
+	const BATCH_SIZE = 800;
 	const TOTAL_MOVES = 50;
 
 	for (const boardId of boardIds) {
