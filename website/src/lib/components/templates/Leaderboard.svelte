@@ -134,7 +134,7 @@
 			!$leaderboard.data?.leaderboard?.shardIds?.length &&
 			!shardCreated
 		) {
-			Array.from({ length: 8 }).forEach(() => {
+			Array.from({ length: 16 }).forEach(() => {
 				newShard(leaderboardClient);
 			});
 			leaderboard.reexecute({ requestPolicy: 'network-only' });
