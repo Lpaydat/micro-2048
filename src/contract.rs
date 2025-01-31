@@ -589,21 +589,33 @@ impl Contract for Game2048Contract {
             Message::Flush { board_ids, scores } => {
                 let leaderboard = self.state.leaderboards.load_entry_mut("").await.unwrap();
 
-                // Update scores and board IDs from shard data
-                for (player, new_score) in scores.iter() {
-                    let current_score = leaderboard.score.get(player).await.unwrap().unwrap_or(0);
-                    if *new_score > current_score {
-                        leaderboard.score.insert(player, *new_score).unwrap();
+                // 1. Combine scores with their corresponding board IDs
+                let mut entries: Vec<_> = scores
+                    .iter()
+                    .filter_map(|(player, score)| {
+                        board_ids
+                            .get(player)
+                            .map(|board_id| (player.clone(), *score, board_id.clone()))
+                    })
+                    .collect();
 
-                        if let Some(board_id) = board_ids.get(player) {
-                            leaderboard
-                                .board_ids
-                                .insert(player, board_id.clone())
-                                .unwrap();
-                        } else {
-                            panic!("Missing board ID for player {}", player);
-                        }
-                    }
+                // 2. Validate sorting logic (descending score, ascending name for ties)
+                entries.sort_unstable_by(|a, b| {
+                    b.1.cmp(&a.1) // Primary sort: highest score first
+                        .then_with(|| a.0.cmp(&b.0)) // Secondary sort: alphabetical for ties
+                });
+
+                // 3. Strict truncation to top 200
+                entries.truncate(200);
+
+                // 4. Atomic update of leaderboard state
+                leaderboard.score.clear();
+                leaderboard.board_ids.clear();
+
+                // 5. Bulk insert of validated top entries
+                for (player, score, board_id) in entries {
+                    leaderboard.score.insert(&player, score).unwrap();
+                    leaderboard.board_ids.insert(&player, board_id).unwrap();
                 }
             }
         }

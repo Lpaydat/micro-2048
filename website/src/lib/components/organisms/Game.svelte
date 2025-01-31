@@ -177,6 +177,8 @@
 				score: state.score,
 				bestScore: Math.max(state.score, bestScore)
 			});
+			// Force submit moves when game ends
+			submitMoves(boardId, true);
 		}
 
 		isSynced = true;
@@ -257,16 +259,17 @@
 		const MIN_MOVE_FORCE_SUBMIT = 3;
 		const forceSubmit = pendingMoveCount >= MIN_MOVE_FORCE_SUBMIT && timeSinceFirstMove >= 2000;
 
-		// Early returns for invalid states
 		if (!boardId) return;
+
+		// Handle game end case
+		if (boardEnded) {
+			return submitMoves(boardId, true);
+		}
+
+		// Early returns for invalid states
 		if (offlineMode) return;
 		if (!activityDetected) return;
 		if (pendingMoveCount === 0) return;
-
-		// Handle game end case
-		if (isEnded) {
-			return submitMoves(boardId);
-		}
 
 		// Check if we should submit based on timing thresholds
 		const shouldSubmit = timeSinceFirstMove >= dynamicThreshold || forceSubmit;
@@ -275,11 +278,17 @@
 		submitMoves(boardId);
 	};
 
-	const submitMoves = (boardId: string) => {
+	const submitMoves = (boardId: string, force = false) => {
+		// Force online mode if game has ended
+		if (force && offlineMode) {
+			offlineMode = false;
+			localStorage.setItem('offlineModePreference', 'false');
+		}
+
 		syncStatus = 'syncing';
 		const moves = flushMoveHistory(boardId);
 		try {
-			if (moves.length > 0) {
+			if ((moves.length > 0 || force) && !offlineMode) {
 				makeMoves(client, getMoveBatchForSubmission(moves), boardId);
 				const newTablet = boardToString(state?.tablet);
 				stateHash = newTablet ?? '';
@@ -434,48 +443,52 @@
 			{/snippet}
 		</Board>
 	</div>
-	<div class="mt-2 flex items-center justify-center gap-4 text-xs lg:text-sm">
+	<div
+		class="mt-2 flex flex-col items-center justify-center gap-y-2 text-xs lg:flex-row lg:gap-4 lg:text-sm"
+	>
 		<div
-			class="bg-surface-800/50 border-surface-600/50 flex items-center gap-3 rounded-lg border px-4 py-2"
+			class="bg-surface-800/50 border-surface-600/50 flex w-full flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border px-4 py-2 lg:w-auto"
 		>
-			<div class="flex items-center gap-2">
-				<span class="text-surface-400">Sync:</span>
-				<div class="flex items-center gap-1.5">
-					<div
-						class="h-2 w-2 rounded-full
-						{syncStatus === 'synced'
-							? 'animate-pulse bg-emerald-500'
-							: syncStatus === 'failed'
-								? 'bg-red-500'
-								: syncStatus === 'syncing'
-									? 'animate-pulse bg-yellow-500'
-									: 'bg-surface-400'}"
-					></div>
-					<span
-						class="text-sm capitalize
-						{syncStatus === 'synced'
-							? 'text-emerald-400'
-							: syncStatus === 'failed'
-								? 'text-red-400'
-								: syncStatus === 'syncing'
-									? 'text-yellow-400'
-									: 'text-surface-400'}"
-					>
-						{offlineMode ? 'Offline' : syncStatus}
-					</span>
+			<div class="flex items-center gap-3">
+				<div class="flex items-center gap-2">
+					<span class="text-surface-400">Sync:</span>
+					<div class="flex items-center gap-1.5">
+						<div
+							class="h-2 w-2 rounded-full
+							{syncStatus === 'synced'
+								? 'animate-pulse bg-emerald-500'
+								: syncStatus === 'failed'
+									? 'bg-red-500'
+									: syncStatus === 'syncing'
+										? 'animate-pulse bg-yellow-500'
+										: 'bg-surface-400'}"
+						></div>
+						<span
+							class="text-xs capitalize lg:text-sm
+							{syncStatus === 'synced'
+								? 'text-emerald-400'
+								: syncStatus === 'failed'
+									? 'text-red-400'
+									: syncStatus === 'syncing'
+										? 'text-yellow-400'
+										: 'text-surface-400'}"
+						>
+							{offlineMode ? 'Offline' : syncStatus}
+						</span>
+					</div>
+				</div>
+
+				<div class="bg-surface-600 h-4 w-px"></div>
+
+				<div class="flex items-center gap-2">
+					<span class="text-surface-400">Pending:</span>
+					<span class="font-mono text-orange-400">{pendingMoveCount}</span>
 				</div>
 			</div>
 
-			<div class="bg-surface-600 h-4 w-px"></div>
-
-			<div class="flex items-center gap-2">
-				<span class="text-surface-400">Pending:</span>
-				<span class="font-mono text-orange-400">{pendingMoveCount}</span>
-			</div>
-
 			{#if lastSyncTime}
-				<div class="bg-surface-600 h-4 w-px"></div>
-				<div class="flex items-center gap-2">
+				<div class="bg-surface-600 h-px w-full lg:h-4 lg:w-px"></div>
+				<div class="flex w-full items-center gap-2 lg:w-auto">
 					<span class="text-surface-400">Last sync:</span>
 					<span class="font-mono text-purple-400">
 						{new Date(lastSyncTime).toLocaleTimeString([], {
@@ -490,12 +503,12 @@
 
 		<button
 			on:click={toggleOfflineMode}
-			class="bg-surface-800/50 border-surface-600/50 hover:bg-surface-700/50 flex items-center gap-2 rounded-lg border px-4 py-2 transition-colors"
+			class="bg-surface-800/50 border-surface-600/50 hover:bg-surface-700/50 flex w-full items-center gap-2 rounded-lg border px-4 py-2 transition-colors lg:w-auto"
 		>
 			<div class="h-2 w-2 rounded-full {offlineMode ? 'bg-orange-500' : 'bg-emerald-500'}"></div>
-			<span class="text-surface-400 text-xs lg:text-sm">
-				{offlineMode ? 'Go Online' : 'Go Offline'}
-			</span>
+			<span class="text-surface-400 whitespace-nowrap text-xs lg:text-sm"
+				>{offlineMode ? 'Go Online' : 'Go Offline'}</span
+			>
 		</button>
 	</div>
 </div>
