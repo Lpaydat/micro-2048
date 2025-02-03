@@ -33,6 +33,9 @@ export const getRandomShard = async (
 		const hashArray = new Uint8Array(hashBuffer);
 		const hashInt = new DataView(hashArray.buffer).getUint32(0);
 		selectedShard = shards[Math.abs(hashInt) % shards.length];
+	} else {
+		// if no shard, use leaderboardId as shardId
+		selectedShard = leaderboardId;
 	}
 
 	return selectedShard;

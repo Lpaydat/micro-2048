@@ -239,6 +239,19 @@
 	};
 
 	const handleIdleSubmit = async () => {
+		if (!boardId) return;
+
+		// Handle game end case
+		if (boardEnded && pendingMoveCount > 0) {
+			return submitMoves(boardId, true);
+		}
+
+		// Early returns for invalid states
+		if (offlineMode) return;
+		if (!activityDetected) return;
+		if (pendingMoveCount === 0) return;
+
+		// Check if we should submit based on timing thresholds
 		const timeSinceFirstMove = roundFirstMoveTime ? Date.now() - roundFirstMoveTime : 0;
 
 		// Cubic curve thresholds:
@@ -258,20 +271,6 @@
 		// Force submit after 2s for 3+ moves
 		const MIN_MOVE_FORCE_SUBMIT = 3;
 		const forceSubmit = pendingMoveCount >= MIN_MOVE_FORCE_SUBMIT && timeSinceFirstMove >= 2000;
-
-		if (!boardId) return;
-
-		// Handle game end case
-		if (boardEnded) {
-			return submitMoves(boardId, true);
-		}
-
-		// Early returns for invalid states
-		if (offlineMode) return;
-		if (!activityDetected) return;
-		if (pendingMoveCount === 0) return;
-
-		// Check if we should submit based on timing thresholds
 		const shouldSubmit = timeSinceFirstMove >= dynamicThreshold || forceSubmit;
 		if (!shouldSubmit) return;
 
@@ -339,8 +338,8 @@
 			}
 		}, 500);
 
-		// Initialize from localStorage
-		offlineMode = localStorage.getItem('offlineModePreference') === 'true';
+		// Initialize from localStorage, default to offline mode
+		offlineMode = localStorage.getItem('offlineModePreference') !== 'false';
 
 		return () => {
 			cleanupListeners();
@@ -444,7 +443,7 @@
 		</Board>
 	</div>
 	<div
-		class="mt-2 flex flex-col items-center justify-center gap-y-2 text-xs lg:flex-row lg:gap-4 lg:text-sm"
+		class="mt-2 flex flex-col items-center justify-center gap-y-2 text-xs lg:flex-row lg:gap-3 lg:text-sm"
 	>
 		<div
 			class="bg-surface-800/50 border-surface-600/50 flex w-full flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border px-4 py-2 lg:w-auto"

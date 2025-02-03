@@ -6,9 +6,11 @@
 		size?: 'sm' | 'md' | 'lg';
 		loading?: boolean;
 		disabled?: boolean;
+		id?: string;
 	}
 
 	let {
+		id,
 		variant = 'default',
 		size = 'md',
 		loading = false,
@@ -55,6 +57,7 @@
 </script>
 
 <button
+	{id}
 	{...restProps}
 	{disabled}
 	class={classes}

@@ -223,7 +223,14 @@
 			</div>
 
 			<!-- Submit Button -->
-			<Button type="submit" variant="primary" {loading} class="w-full" disabled={loading}>
+			<Button
+				id="join-now"
+				type="submit"
+				variant="primary"
+				{loading}
+				class="w-full"
+				disabled={loading}
+			>
 				{loading ? 'Joining...' : 'Join Now'}
 			</Button>
 

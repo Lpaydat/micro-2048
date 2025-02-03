@@ -3,6 +3,7 @@
 	import { getContextClient, gql, queryStore } from '@urql/svelte';
 	import Trash from 'lucide-svelte/icons/trash-2';
 	import Star from 'lucide-svelte/icons/star';
+	import Plus from 'lucide-svelte/icons/plus';
 	import ContinueIcon from 'lucide-svelte/icons/step-forward';
 	import MainTemplate from '../organisms/MainTemplate.svelte';
 	import RankerLeaderboard from '../organisms/RankerLeaderboard.svelte';
@@ -108,6 +109,18 @@
 		}, 500);
 	};
 
+	const createShards = () => {
+		if (
+			leaderboardId &&
+			!$leaderboard.fetching &&
+			!$leaderboard.data?.leaderboard?.shardIds?.length
+		) {
+			Array.from({ length: 16 }).forEach(() => {
+				newShard(leaderboardClient);
+			});
+		}
+	};
+
 	const modalStore = getModalStore();
 	const modal: ModalSettings = {
 		type: 'confirm',
@@ -127,20 +140,20 @@
 		else size = 'lg';
 	};
 
-	let shardCreated = $state(false);
-	$effect(() => {
-		if (
-			!$leaderboard.fetching &&
-			!$leaderboard.data?.leaderboard?.shardIds?.length &&
-			!shardCreated
-		) {
-			Array.from({ length: 16 }).forEach(() => {
-				newShard(leaderboardClient);
-			});
-			leaderboard.reexecute({ requestPolicy: 'network-only' });
-			shardCreated = true;
-		}
-	});
+	// let shardCreated = $state(false);
+	// $effect(() => {
+	// 	if (
+	// 		!$leaderboard.fetching &&
+	// 		!$leaderboard.data?.leaderboard?.shardIds?.length &&
+	// 		!shardCreated
+	// 	) {
+	// 		Array.from({ length: 16 }).forEach(() => {
+	// 			newShard(leaderboardClient);
+	// 		});
+	// 		leaderboard.reexecute({ requestPolicy: 'network-only' });
+	// 		shardCreated = true;
+	// 	}
+	// });
 
 	$effect(() => {
 		if ($leaderboard.data?.leaderboard?.shardIds?.length) {
@@ -187,6 +200,11 @@
 					{#if canDeleteEvent}
 						<button type="button" class="btn-icon" onclick={() => modalStore.trigger(modal)}>
 							<Trash size={20} />
+						</button>
+					{/if}
+					{#if $userStore.isMod}
+						<button type="button" class="btn-icon" onclick={createShards}>
+							<Plus size={20} />
 						</button>
 					{/if}
 				{/snippet}
