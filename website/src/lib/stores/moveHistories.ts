@@ -48,12 +48,18 @@ export const flushMoveHistory = (boardId: string) => {
 };
 
 export const getMoveBatchForSubmission = (moves: MoveHistory[]): string => {
-	// Pre-allocate array for better performance
-	const batch = new Array(moves.length);
+	const validMoves = moves.filter((m) =>
+		Object.values(directionList).includes(m.direction.replace('Arrow', ''))
+	);
 
-	for (let i = 0; i < moves.length; i++) {
-		batch[i] = [getDirection(moves[i].direction), moves[i].timestamp];
+	// Pre-allocate array using valid moves length
+	const batch = new Array(validMoves.length);
+
+	for (let i = 0; i < validMoves.length; i++) {
+		const dir = getDirection(validMoves[i].direction);
+		if (!dir) continue;
+		batch[i] = [dir, validMoves[i].timestamp];
 	}
 
-	return JSON.stringify(batch);
+	return JSON.stringify(batch.filter(Boolean));
 };

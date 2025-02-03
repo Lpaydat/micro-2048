@@ -76,6 +76,9 @@
 	let offlineMode = false;
 	const offlineMovesKey = (boardId: string) => `offlineMoves-${boardId}`;
 
+	// Add new move processing flag
+	let isProcessingMove = false;
+
 	// GraphQL Queries and Subscriptions
 	$: game = queryStore({
 		client,
@@ -187,36 +190,48 @@
 
 	// Movement Functions
 	const move = async (boardId: string, direction: GameKeys) => {
-		if (!canMakeMove || boardEnded || !state) return;
+		if (!canMakeMove || boardEnded || !state || isProcessingMove) return;
+		isProcessingMove = true;
 
-		const timestamp = Date.now().toString();
+		try {
+			const timestamp = Date.now().toString();
 
-		// Keep local state management
-		const prevTablet = boardToString(state?.tablet);
-		state = await state?.actions[direction](state, timestamp, prevTablet);
-		const newTablet = boardToString(state?.tablet);
+			// Keep local state management
+			const prevTablet = boardToString(state?.tablet);
+			state = await state?.actions[direction](state, timestamp, prevTablet);
+			const newTablet = boardToString(state?.tablet);
 
-		if (prevTablet === newTablet) return;
-		if (!roundFirstMoveTime) {
-			roundFirstMoveTime = Date.now();
-		}
+			if (prevTablet === newTablet) return;
+			if (!roundFirstMoveTime) {
+				roundFirstMoveTime = Date.now();
+			}
 
-		// Add move to local history instead of immediate submission
-		syncStatus = 'idle';
-		pendingMoveCount++;
-		addMoveToHistory({
-			direction,
-			timestamp,
-			boardId
-		});
+			// Add move to local history instead of immediate submission
+			syncStatus = 'idle';
+			pendingMoveCount++;
+			addMoveToHistory({
+				direction,
+				timestamp,
+				boardId
+			});
 
-		// Dispatch game over event if state changed to finished
-		if (state?.finished) {
-			dispatch('end', { score, bestScore });
+			// Dispatch game over event if state changed to finished
+			if (state?.finished) {
+				dispatch('end', { score, bestScore });
+			}
+		} finally {
+			isProcessingMove = false;
 		}
 	};
 
+	let lastMoveTime = 0;
+	const MOVE_COOLDOWN = 50; // 50ms minimum between moves
+
 	const handleMove = (direction: GameKeys, timestamp: string) => {
+		const now = Date.now();
+		if (now - lastMoveTime < MOVE_COOLDOWN) return;
+		lastMoveTime = now;
+
 		if (!boardId) return;
 		move(boardId, direction);
 		dispatch('move', { direction, timestamp });
