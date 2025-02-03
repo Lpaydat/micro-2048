@@ -31,27 +31,34 @@
 	};
 
 	const leaderboards = $derived(queryStore({ client, query: GET_LEADERBOARDS }));
+	const sortedEvents = $derived(
+		$leaderboards?.data?.leaderboards.sort((a: LeaderboardSettings, b: LeaderboardSettings) => {
+			// First sort by start time
+			const startDiff = Number(a.startTime) - Number(b.startTime);
+			// If start times are equal, sort by end time
+			return startDiff !== 0 ? startDiff : Number(a.endTime) - Number(b.endTime);
+		})
+	);
 
 	const pinnedEvents = $derived(
-		$leaderboards?.data?.leaderboards.filter(
+		sortedEvents?.filter(
 			(event: LeaderboardSettings) => event.isPinned && Number(event.endTime) >= Date.now()
 		)
 	);
+
 	const activeEvents = $derived(
-		$leaderboards?.data?.leaderboards.filter((event: LeaderboardSettings) => {
+		sortedEvents?.filter((event: LeaderboardSettings) => {
 			const now = Date.now();
 			return now >= Number(event.startTime) && now < Number(event.endTime);
 		})
 	);
+
 	const upcomingEvents = $derived(
-		$leaderboards?.data?.leaderboards.filter(
-			(event: LeaderboardSettings) => Number(event.startTime) >= Date.now()
-		)
+		sortedEvents?.filter((event: LeaderboardSettings) => Number(event.startTime) >= Date.now())
 	);
+
 	const pastEvents = $derived(
-		$leaderboards?.data?.leaderboards.filter(
-			(event: LeaderboardSettings) => Number(event.endTime) < Date.now()
-		)
+		sortedEvents?.filter((event: LeaderboardSettings) => Number(event.endTime) < Date.now())
 	);
 
 	const callback = () => {
@@ -89,7 +96,7 @@
 			</div>
 			{#each pinnedEvents as event}
 				{#if event && event.leaderboardId}
-					<EventListItem {...event} {callback} />
+					<EventListItem {...event} {callback} isPinned />
 				{/if}
 			{/each}
 		{/if}
@@ -110,19 +117,34 @@
 		{#if eventGroup === 'active' && activeEvents?.length > 0}
 			{#each activeEvents as event}
 				{#if event && event.leaderboardId}
-					<EventListItem isActive {...event} {callback} />
+					<EventListItem
+						isActive
+						{...event}
+						{callback}
+						className={pinnedEvents?.length ? 'opacity-50 transition-opacity duration-300' : ''}
+					/>
 				{/if}
 			{/each}
 		{:else if eventGroup === 'upcoming' && upcomingEvents?.length > 0}
 			{#each upcomingEvents as event}
 				{#if event && event.leaderboardId}
-					<EventListItem {...event} {callback} />
+					<EventListItem
+						{...event}
+						{callback}
+						className={pinnedEvents?.length ? 'opacity-50 transition-opacity duration-300' : ''}
+					/>
 				{/if}
 			{/each}
 		{:else if eventGroup === 'past' && pastEvents?.length > 0}
 			{#each pastEvents as event}
 				{#if event && event.leaderboardId}
-					<EventListItem canDeleteEvent={false} canPinEvent={false} {...event} {callback} />
+					<EventListItem
+						canDeleteEvent={false}
+						canPinEvent={false}
+						{...event}
+						{callback}
+						className={pinnedEvents?.length ? 'opacity-50 transition-opacity duration-300' : ''}
+					/>
 				{/if}
 			{/each}
 		{:else}

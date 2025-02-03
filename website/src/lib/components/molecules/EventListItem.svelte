@@ -9,10 +9,12 @@
 	import { userStore } from '$lib/stores/userStore';
 	import { formatInTimeZone } from 'date-fns-tz';
 	import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
+	import { onDestroy } from 'svelte';
 
 	interface Props {
 		leaderboardId: string;
 		name: string;
+		className?: string;
 		host: string;
 		startTime: string;
 		endTime: string;
@@ -27,6 +29,7 @@
 	let {
 		leaderboardId,
 		name,
+		className,
 		host,
 		startTime,
 		endTime,
@@ -37,6 +40,20 @@
 		canPinEvent = true,
 		callback
 	}: Props = $props();
+
+	// Add reactive timestamp and interval for active state updates
+	let now = $state(Date.now());
+	const intervalId = setInterval(() => (now = Date.now()), 1000);
+	onDestroy(() => clearInterval(intervalId));
+
+	const isCurrentlyActive = $derived(now > Number(startTime) && now < Number(endTime));
+	const isPinnedAndActive = $derived(isPinned && isCurrentlyActive);
+	const activeClass = $derived(
+		isPinned && isCurrentlyActive
+			? '!bg-orange-200 !border-2 !border-orange-800 !ring-1 !ring-orange-800 shadow-[0_0_15px_rgba(234,88,12,0.5)]'
+			: ''
+	);
+	const itemClass = $derived(`${className} ${activeClass}`);
 
 	const modalStore = getModalStore();
 	const modal: ModalSettings = {
@@ -81,11 +98,16 @@
 	};
 </script>
 
-<BaseListItem>
+<BaseListItem className={itemClass}>
 	{#snippet leftContent()}
 		<a href={`/events/${leaderboardId}`}>
 			<div class="flex w-full items-center justify-between pb-3">
-				<h3 class="text-xl font-bold text-gray-800">{name}</h3>
+				<div class="flex items-center gap-2">
+					<h3 class="text-xl font-bold text-gray-800">{name}</h3>
+					{#if isPinnedAndActive}
+						<span class="badge badge-primary gap-2 px-2 py-1 text-sm"> 📌 Pinned & Active </span>
+					{/if}
+				</div>
 			</div>
 			<div class="text-sm text-gray-600">
 				<div class="pb-1">

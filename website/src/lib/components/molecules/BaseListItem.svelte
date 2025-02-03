@@ -4,13 +4,14 @@
 	interface Props {
 		leftContent?: Snippet;
 		rightContent?: Snippet;
+		className?: string;
 	}
 
-	let { leftContent, rightContent }: Props = $props();
+	let { leftContent, rightContent, className }: Props = $props();
 </script>
 
 <div
-	class="bg-surface-50-900-token container w-full max-w-4xl justify-between rounded-none border-4 p-4 mx-auto transition-all hover:bg-surface-100-800-token hover:border-warning-900 md:rounded-lg"
+	class="bg-surface-50-900-token hover:bg-surface-100-800-token hover:border-warning-900 container mx-auto w-full max-w-4xl justify-between rounded-none border-4 p-4 transition-all md:rounded-lg {className}"
 >
 	<div class="flex-1">
 		{@render leftContent?.()}
