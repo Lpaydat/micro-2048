@@ -111,7 +111,7 @@
 			</div>
 			<div class="text-sm text-gray-600">
 				<div class="pb-1">
-					<span class="me-1 font-semibold">Host:</span><span>{host}</span>
+					<span class="me-1 font-semibold">Creator:</span><span>{host}</span>
 				</div>
 				<div class="pb-1">
 					<span class="me-1 font-semibold">Start:</span>

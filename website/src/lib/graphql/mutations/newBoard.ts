@@ -2,33 +2,24 @@ import { Client, gql, mutationStore } from '@urql/svelte';
 
 const NEW_BOARD = gql`
 	mutation NewBoard(
-		$seed: String!
 		$player: String!
 		$passwordHash: String!
+		$playerChainId: String!
 		$timestamp: String!
-		$leaderboardId: String!
-		$shardId: String!
 	) {
 		newBoard(
-			seed: $seed
 			player: $player
 			passwordHash: $passwordHash
+			playerChainId: $playerChainId
 			timestamp: $timestamp
-			leaderboardId: $leaderboardId
-			shardId: $shardId
 		)
 	}
 `;
 
-export const newGame = (
-	client: Client,
-	seed: string,
-	timestamp: string,
-	leaderboardId: string,
-	shardId: string
-) => {
+export const newGame = (client: Client, timestamp: string) => {
 	const player = localStorage.getItem('username');
 	const passwordHash = localStorage.getItem('passwordHash');
+	const playerChainId = localStorage.getItem('chainId');
 
 	if (!player || !passwordHash) {
 		console.error('Player or password hash not found');
@@ -38,6 +29,6 @@ export const newGame = (
 	mutationStore({
 		client,
 		query: NEW_BOARD,
-		variables: { seed, player, passwordHash, timestamp, leaderboardId, shardId }
+		variables: { player, passwordHash, playerChainId, timestamp }
 	});
 };

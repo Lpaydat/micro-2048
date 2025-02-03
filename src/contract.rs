@@ -103,7 +103,6 @@ impl Contract for Game2048Contract {
                     panic!("No leaderboard found");
                 }
 
-                let shard_id = leaderboard.current_shard_id.get();
                 let start_time = *leaderboard.start_time.get();
                 let end_time = *leaderboard.end_time.get();
 
@@ -120,11 +119,7 @@ impl Contract for Game2048Contract {
                     player: player.clone(),
                     timestamp,
                     leaderboard_id: leaderboard_id.clone(),
-                    shard_id: if shard_id.is_empty() {
-                        leaderboard_id.clone()
-                    } else {
-                        shard_id.clone()
-                    },
+                    shard_id: self.runtime.chain_id().to_string(), // this will be leaderboard chain_id or shard chain_id
                     end_time,
                 };
                 self.state.nonce.set(nonce + 1);
@@ -531,7 +526,6 @@ impl Contract for Game2048Contract {
                 if !leaderboard_id.is_empty() {
                     leaderboard.leaderboard_id.set(leaderboard_id.clone());
                     shard.leaderboard_id.set(leaderboard_id.clone());
-                    shard.shard_id.set(leaderboard_id.clone());
                 }
 
                 if !host.is_empty() {

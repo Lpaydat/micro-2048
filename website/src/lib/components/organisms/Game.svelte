@@ -12,7 +12,7 @@
 	import { boardToString } from '$lib/game/utils';
 	import Board from './Board.svelte';
 	import { userStore } from '$lib/stores/userStore';
-	import { getBoardId } from '$lib/stores/boardId';
+	import { deleteBoardId, getBoardId } from '$lib/stores/boardId';
 	import { getClient } from '$lib/client';
 	import {
 		moveHistoryStore,
@@ -74,7 +74,6 @@
 
 	// Add new state variable
 	let offlineMode = false;
-	const offlineMovesKey = (boardId: string) => `offlineMoves-${boardId}`;
 
 	// Add new move processing flag
 	let isProcessingMove = false;
@@ -99,6 +98,10 @@
 	}
 
 	$: boardEnded = isEnded || $game.data?.board?.isEnded || state?.finished;
+
+	$: if (boardEnded) {
+		deleteBoardId(leaderboardId);
+	}
 
 	let isSetFinalScore = false;
 	const updateScore = () => {

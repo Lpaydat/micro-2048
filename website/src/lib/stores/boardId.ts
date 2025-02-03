@@ -12,3 +12,10 @@ export const getBoardId = (leaderboardId = '') => {
 	}
 	return null;
 };
+
+export const deleteBoardId = (leaderboardId = '') => {
+	const key = leaderboardId ? `boardId-${leaderboardId}` : 'boardId';
+	if (typeof window !== 'undefined') {
+		localStorage.removeItem(key);
+	}
+};
