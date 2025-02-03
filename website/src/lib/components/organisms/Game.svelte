@@ -461,7 +461,7 @@
 		class="mt-2 flex flex-col items-center justify-center gap-y-2 text-xs lg:flex-row lg:gap-3 lg:text-sm"
 	>
 		<div
-			class="bg-surface-800/50 border-surface-600/50 flex w-full flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border px-4 py-2 lg:w-auto"
+			class="bg-surface-800/50 border-surface-600/50 flex w-full flex-wrap items-center gap-x-2 gap-y-2 rounded-lg border px-4 py-2 lg:w-auto"
 		>
 			<div class="flex items-center gap-3">
 				<div class="flex items-center gap-2">

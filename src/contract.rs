@@ -589,15 +589,26 @@ impl Contract for Game2048Contract {
             Message::Flush { board_ids, scores } => {
                 let leaderboard = self.state.leaderboards.load_entry_mut("").await.unwrap();
 
-                // 1. Combine scores with their corresponding board IDs
-                let mut entries: Vec<_> = scores
-                    .iter()
-                    .filter_map(|(player, score)| {
-                        board_ids
-                            .get(player)
-                            .map(|board_id| (player.clone(), *score, board_id.clone()))
-                    })
-                    .collect();
+                let mut entries = Vec::new();
+                for (player, score) in scores.iter() {
+                    if let Some(board_id) = board_ids.get(player) {
+                        if let Some(current_score) =
+                            leaderboard.score.get(player).await.unwrap_or_default()
+                        {
+                            if *score > current_score {
+                                entries.push((player.clone(), *score, board_id.clone()));
+                            } else if let Some(current_board_id) =
+                                leaderboard.board_ids.get(player).await.unwrap_or_default()
+                            {
+                                entries.push((
+                                    player.clone(),
+                                    current_score,
+                                    current_board_id.clone(),
+                                ));
+                            }
+                        }
+                    }
+                }
 
                 // 2. Validate sorting logic (descending score, ascending name for ties)
                 entries.sort_unstable_by(|a, b| {
