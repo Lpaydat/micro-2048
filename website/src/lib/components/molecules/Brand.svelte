@@ -8,7 +8,7 @@
 			<BrandLogo />
 			<div class="relative">
 				<h2 class="relative text-xl font-normal text-[#776e65]">
-					on <span class="font-semibold text-[#edc403]">microchain</span>
+					on <span class="font-semibold text-[#cc9900]">microchains</span>
 				</h2>
 				<div
 					class="absolute -bottom-3 left-0 right-0 h-1 rounded-full bg-[#bbada0] opacity-30"

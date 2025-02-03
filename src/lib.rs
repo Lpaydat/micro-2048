@@ -44,11 +44,9 @@ pub enum Operation {
         password_hash: String,
     },
     NewBoard {
-        seed: String,
         player: String,
+        player_chain_id: String,
         timestamp: u64,
-        leaderboard_id: String,
-        shard_id: String,
     },
     NewShard,
     MakeMoves {
@@ -78,6 +76,14 @@ pub enum Message {
     RegisterPlayer {
         username: String,
         password_hash: String,
+    },
+    NewBoard {
+        seed: String,
+        player: String,
+        timestamp: u64,
+        leaderboard_id: String,
+        shard_id: String,
+        end_time: u64,
     },
     CreateLeaderboard {
         leaderboard_id: String,

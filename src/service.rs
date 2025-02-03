@@ -361,12 +361,10 @@ impl MutationRoot {
 
     async fn new_board(
         &self,
-        seed: Option<String>,
         player: String,
         password_hash: String,
+        player_chain_id: String,
         timestamp: String,
-        leaderboard_id: String,
-        shard_id: String,
     ) -> Vec<u8> {
         if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
             if *player.password_hash.get() != password_hash {
@@ -374,13 +372,10 @@ impl MutationRoot {
             }
         }
 
-        let seed = seed.unwrap_or("".to_string());
         bcs::to_bytes(&Operation::NewBoard {
-            seed,
             player,
+            player_chain_id,
             timestamp: timestamp.parse::<u64>().unwrap(),
-            leaderboard_id,
-            shard_id,
         })
         .unwrap()
     }

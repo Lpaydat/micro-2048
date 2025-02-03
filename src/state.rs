@@ -41,6 +41,7 @@ pub struct BoardState {
     pub chain_id: RegisterView<String>,
     pub leaderboard_id: RegisterView<String>, // client can use to fetch leaderboard
     pub shard_id: RegisterView<String>,
+    pub end_time: RegisterView<u64>,
 }
 
 #[derive(View, SimpleObject)]
@@ -99,4 +100,5 @@ pub struct Game2048 {
     pub shards: CollectionView<String, LeaderboardShard>, // should contain only one shard with empty shard_id
     pub player_records: CollectionView<String, PlayerRecord>, // player_chain_id
     pub onboard_chains: QueueView<String>,                // chain_id
+    pub nonce: RegisterView<u64>,
 }
