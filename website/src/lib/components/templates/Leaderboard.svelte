@@ -81,13 +81,16 @@
 	const isPinned = $derived($leaderboard?.data?.leaderboard?.isPinned);
 
 	let newGameAt = $state(Date.now().toString());
+	let newGameCreated = $state(false);
 	let checkNewGameInterval: NodeJS.Timeout;
 	const newEventGame = async () => {
+		if (newGameCreated) return;
 		if (!leaderboardId || !$userStore.username) return;
 
 		const shardId = await getRandomShard(leaderboardId, $userStore.username);
 		if (!shardId) return;
 
+		newGameCreated = true;
 		newGameAt = Date.now().toString();
 		await newGameBoard(leaderboardId, shardId, newGameAt);
 
@@ -221,7 +224,7 @@
 								</ActionButton>
 							</a>
 						{/if}
-						<ActionButton label="NEW GAME" onclick={newEventGame} />
+						<ActionButton label="NEW GAME" onclick={newEventGame} disabled={newGameCreated} />
 					{/if}
 				{/snippet}
 			</PageHeader>

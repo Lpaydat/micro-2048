@@ -65,9 +65,19 @@
 
 	let newGameAt = $state(Date.now().toString());
 	let checkNewGameInterval: NodeJS.Timeout;
+	let newGameCreatedAt = $state(Date.now());
+	let showCooldownMessage = $state(false);
 
 	// Mutation functions
 	const newSingleGame = async () => {
+		// Prevent creating more than 1 game per 10 seconds
+		if (Date.now() - newGameCreatedAt < 10000) {
+			showCooldownMessage = true;
+			setTimeout(() => {
+				showCooldownMessage = false;
+			}, 3000);
+			return;
+		}
 		if (!canStartNewGame || !leaderboardId || !$userStore.username) return;
 
 		const shardId = await getRandomShard(leaderboardId, $userStore.username);
@@ -84,6 +94,7 @@
 	$effect(() => {
 		if ($board.data?.board?.boardId && newGameAt === $board.data?.board?.createdAt) {
 			newGameAt = '';
+			newGameCreatedAt = Date.now();
 			const url = new URL('/game', window.location.origin);
 			url.searchParams.set('boardId', $board.data?.board?.boardId);
 			url.searchParams.set('leaderboardId', leaderboardId);
@@ -128,7 +139,11 @@
 				class="text-md rounded-md border-none bg-[#8f7a66] px-2 py-2 text-center font-bold text-[#f9f6f2] md:px-4 md:text-xl
 				{canStartNewGame ? 'visible' : 'invisible'}"
 			>
-				<span>New Game</span>
+				{#if showCooldownMessage}
+					<span>Wait a sec!</span>
+				{:else}
+					<span>New Game</span>
+				{/if}
 			</button>
 		</div>
 	{:else}
