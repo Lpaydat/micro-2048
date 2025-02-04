@@ -42,7 +42,7 @@
 
 	// GraphQL Definitions
 	const GET_BOARD_STATE = gql`
-		query BoardState($boardId: Int!) {
+		query BoardState($boardId: String!) {
 			board(boardId: $boardId) {
 				boardId
 				board
@@ -51,6 +51,7 @@
 				player
 				leaderboardId
 				chainId
+				endTime
 			}
 		}
 	`;
@@ -101,10 +102,20 @@
 
 	$: if (boardEnded) {
 		deleteBoardId(leaderboardId);
+		if (offlineMode) {
+			toggleOfflineMode();
+		}
+		setTimeout(() => {
+			const isLeaderboardEnded = parseInt($game.data?.board?.endTime) <= Date.now();
+			if (!isSetFinalScore && isLeaderboardEnded) {
+				isSetFinalScore = true;
+				updateLeaderboardScore();
+			}
+		}, 2000);
 	}
 
 	let isSetFinalScore = false;
-	const updateScore = () => {
+	const updateLeaderboardScore = () => {
 		if (!boardId || !$game.data?.board?.chainId) return;
 		if (score <= bestScore) return;
 		if ($game.data?.board?.player !== $userStore.username) return;
@@ -112,11 +123,6 @@
 		const client = getClient(chainId);
 		makeMoves(client, '[]', boardId);
 	};
-
-	$: if (!isSetFinalScore && boardId && boardEnded) {
-		isSetFinalScore = true;
-		updateScore();
-	}
 
 	$: if (boardId) {
 		setGameCreationStatus(true);
@@ -302,7 +308,6 @@
 			localStorage.setItem('offlineModePreference', 'false');
 		}
 
-		syncStatus = 'syncing';
 		const moves = flushMoveHistory(boardId);
 		try {
 			if ((moves.length > 0 || force) && !offlineMode) {

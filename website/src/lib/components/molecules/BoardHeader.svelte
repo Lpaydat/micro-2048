@@ -3,7 +3,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { boardSize } from '$lib/stores/gameStore';
-	import { getBoardId } from '$lib/stores/boardId';
+	import { getBoardId, setBoardId } from '$lib/stores/boardId';
 	import { userStore } from '$lib/stores/userStore';
 	import UsernameBadge from '../atoms/UsernameBadge.svelte';
 	import { newGameBoard } from '$lib/game/newGameBoard';
@@ -11,6 +11,7 @@
 	import { gql } from 'urql';
 	import { getClient } from '$lib/client';
 	import { queryStore } from '@urql/svelte';
+	import { getBoard } from '$lib/graphql/queries/getBoard';
 
 	interface Props {
 		player: string;
@@ -43,6 +44,7 @@
 	const isOwner = $derived(player === $userStore.username);
 
 	const leaderboardClient = $derived(getClient(leaderboardId, true));
+	const playerClient = getClient($userStore.chainId, true);
 
 	const leaderboard = $derived(
 		queryStore({
@@ -50,6 +52,8 @@
 			query: LEADERBOARD
 		})
 	);
+
+	const board = $derived(getBoard(playerClient));
 
 	// Size configurations
 	const sizeConfig = {
@@ -59,18 +63,39 @@
 		lg: { width: 555, buttonHeight: 10, fontSize: 'text-2xl', scoreSize: 'text-2xl' }
 	};
 
+	let newGameAt = $state(Date.now().toString());
+	let checkNewGameInterval: NodeJS.Timeout;
+
 	// Mutation functions
 	const newSingleGame = async () => {
-		if (!canStartNewGame || !$userStore.username) return;
+		if (!canStartNewGame || !leaderboardId || !$userStore.username) return;
+
 		const shardId = await getRandomShard(leaderboardId, $userStore.username);
 		if (!shardId) return;
 
-		boardId = await newGameBoard(leaderboardId, shardId);
+		newGameAt = Date.now().toString();
+		await newGameBoard(leaderboardId, shardId, newGameAt);
 
-		const url = new URL($page.url);
-		url.searchParams.set('boardId', boardId);
-		goto(url.toString(), { replaceState: true });
+		checkNewGameInterval = setInterval(() => {
+			board.reexecute({ requestPolicy: 'network-only' });
+		}, 500);
 	};
+
+	$effect(() => {
+		if ($board.data?.board?.boardId && newGameAt === $board.data?.board?.createdAt) {
+			newGameAt = '';
+			const url = new URL('/game', window.location.origin);
+			url.searchParams.set('boardId', $board.data?.board?.boardId);
+			url.searchParams.set('leaderboardId', leaderboardId);
+
+			setBoardId($board.data?.board?.boardId, leaderboardId);
+			goto(url.toString(), { replaceState: false });
+		}
+
+		return () => {
+			clearInterval(checkNewGameInterval);
+		};
+	});
 
 	$effect(() => {
 		if ($leaderboard.data?.leaderboard?.shardIds?.length) {

@@ -42,6 +42,7 @@ pub struct BoardState {
     pub leaderboard_id: RegisterView<String>, // client can use to fetch leaderboard
     pub shard_id: RegisterView<String>,
     pub end_time: RegisterView<u64>,
+    pub created_at: RegisterView<u64>,
 }
 
 #[derive(View, SimpleObject)]
@@ -101,4 +102,5 @@ pub struct Game2048 {
     pub player_records: CollectionView<String, PlayerRecord>, // player_chain_id
     pub onboard_chains: QueueView<String>,                // chain_id
     pub nonce: RegisterView<u64>,
+    pub latest_board_id: RegisterView<String>,
 }

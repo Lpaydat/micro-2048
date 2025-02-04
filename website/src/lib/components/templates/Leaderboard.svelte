@@ -22,6 +22,7 @@
 	import { newGameBoard } from '$lib/game/newGameBoard';
 	import { newShard } from '$lib/graphql/mutations/newShard';
 	import { addShards, getRandomShard, getShards } from '$lib/stores/shards';
+	import { getBoard } from '$lib/graphql/queries/getBoard';
 
 	interface Props {
 		leaderboardId?: string;
@@ -55,6 +56,7 @@
 
 	const mainClient = getContextClient();
 	const leaderboardClient = getClient(leaderboardId, true);
+	const playerClient = getClient($userStore.chainId, true);
 
 	const leaderboard = $derived(
 		queryStore({
@@ -62,8 +64,8 @@
 			query: LEADERBOARD
 		})
 	);
-
 	const currentBoardId = $derived(getBoardId(leaderboardId));
+	const board = $derived(getBoard(playerClient));
 
 	const isEnded = $derived(
 		Number($leaderboard?.data?.leaderboard?.endTime ?? '0') - Date.now() < 0
@@ -78,21 +80,20 @@
 	const canPlayGame = $derived(isStarted && !isEnded && $userStore.username);
 	const isPinned = $derived($leaderboard?.data?.leaderboard?.isPinned);
 
+	let newGameAt = $state(Date.now().toString());
+	let checkNewGameInterval: NodeJS.Timeout;
 	const newEventGame = async () => {
 		if (!leaderboardId || !$userStore.username) return;
 
 		const shardId = await getRandomShard(leaderboardId, $userStore.username);
 		if (!shardId) return;
 
-		const boardId = await newGameBoard(leaderboardId, shardId);
-		const url = new URL('/game', window.location.origin);
-		url.searchParams.set('boardId', boardId);
-		url.searchParams.set('leaderboardId', leaderboardId);
+		newGameAt = Date.now().toString();
+		await newGameBoard(leaderboardId, shardId, newGameAt);
 
-		setBoardId(leaderboardId, boardId);
-		setTimeout(() => {
-			goto(url.toString(), { replaceState: false });
-		}, 1000);
+		checkNewGameInterval = setInterval(() => {
+			board.reexecute({ requestPolicy: 'network-only' });
+		}, 500);
 	};
 
 	const deleteEventGame = () => {
@@ -140,20 +141,19 @@
 		else size = 'lg';
 	};
 
-	// let shardCreated = $state(false);
-	// $effect(() => {
-	// 	if (
-	// 		!$leaderboard.fetching &&
-	// 		!$leaderboard.data?.leaderboard?.shardIds?.length &&
-	// 		!shardCreated
-	// 	) {
-	// 		Array.from({ length: 16 }).forEach(() => {
-	// 			newShard(leaderboardClient);
-	// 		});
-	// 		leaderboard.reexecute({ requestPolicy: 'network-only' });
-	// 		shardCreated = true;
-	// 	}
-	// });
+	$effect(() => {
+		if ($board.data?.board?.boardId && newGameAt === $board.data?.board?.createdAt) {
+			newGameAt = '';
+			const url = new URL('/game', window.location.origin);
+			url.searchParams.set('boardId', $board.data?.board?.boardId);
+			url.searchParams.set('leaderboardId', leaderboardId);
+
+			setBoardId($board.data?.board?.boardId, leaderboardId);
+			goto(url.toString(), { replaceState: false });
+		}
+
+		return () => clearInterval(checkNewGameInterval);
+	});
 
 	$effect(() => {
 		if ($leaderboard.data?.leaderboard?.shardIds?.length) {

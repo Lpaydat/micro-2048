@@ -114,7 +114,7 @@ impl Contract for Game2048Contract {
                     panic!("Timestamp cannot be after planned end time");
                 }
 
-                let message_payload = Message::NewBoard {
+                let message_payload = Message::CreateNewBoard {
                     seed: nonce.to_string(),
                     player: player.clone(),
                     timestamp,
@@ -189,6 +189,7 @@ impl Contract for Game2048Contract {
 
                         let timestamp = timestamp.parse::<u64>().unwrap();
                         if timestamp > end_time {
+                            board.is_ended.set(true);
                             break;
                         }
                         if timestamp < latest_timestamp {
@@ -453,7 +454,7 @@ impl Contract for Game2048Contract {
                 player.password_hash.set(password_hash);
                 player.chain_id.set(chain_id);
             }
-            Message::NewBoard {
+            Message::CreateNewBoard {
                 seed,
                 player,
                 timestamp,
@@ -464,12 +465,7 @@ impl Contract for Game2048Contract {
                 self.check_player_registered(&player, RegistrationCheck::EnsureRegistered)
                     .await;
 
-                let player_obj = self
-                    .state
-                    .players
-                    .load_entry_or_insert(&player)
-                    .await
-                    .unwrap();
+                let player_obj = self.state.players.load_entry_mut(&player).await.unwrap();
 
                 let current_chain_id = self.runtime.chain_id().to_string();
                 if current_chain_id != *player_obj.chain_id.get() {
@@ -488,6 +484,10 @@ impl Contract for Game2048Contract {
                 game.shard_id.set(shard_id.clone());
                 game.chain_id.set(player_obj.chain_id.get().to_string());
                 game.end_time.set(end_time);
+                game.created_at.set(timestamp);
+
+                self.state.latest_board_id.set(board_id.clone());
+
                 // increment player and board count
                 let leaderboard_chain_id = ChainId::from_str(&leaderboard_id).unwrap();
                 self.runtime

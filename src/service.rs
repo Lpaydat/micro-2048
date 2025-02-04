@@ -65,6 +65,8 @@ struct BoardState {
     chain_id: String,
     leaderboard_id: String,
     shard_id: String,
+    created_at: String,
+    end_time: String,
 }
 
 #[derive(SimpleObject)]
@@ -159,7 +161,8 @@ impl QueryRoot {
         }
     }
 
-    async fn board(&self, board_id: String) -> Option<BoardState> {
+    async fn board(&self, board_id: Option<String>) -> Option<BoardState> {
+        let board_id = board_id.unwrap_or(self.state.latest_board_id.get().to_string());
         if let Ok(Some(game)) = self.state.boards.try_load_entry(&board_id).await {
             let game_state = BoardState {
                 board_id: game.board_id.get().to_string(),
@@ -170,6 +173,8 @@ impl QueryRoot {
                 chain_id: game.chain_id.get().to_string(),
                 leaderboard_id: game.leaderboard_id.get().to_string(),
                 shard_id: game.shard_id.get().to_string(),
+                created_at: game.created_at.get().to_string(),
+                end_time: game.end_time.get().to_string(),
             };
             Some(game_state)
         } else {
@@ -196,6 +201,8 @@ impl QueryRoot {
                     chain_id: board.chain_id.get().to_string(),
                     leaderboard_id: board.leaderboard_id.get().to_string(),
                     shard_id: board.shard_id.get().to_string(),
+                    created_at: board.created_at.get().to_string(),
+                    end_time: board.end_time.get().to_string(),
                 });
             }
         }

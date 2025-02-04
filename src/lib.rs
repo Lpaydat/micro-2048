@@ -77,7 +77,10 @@ pub enum Message {
         username: String,
         password_hash: String,
     },
-    NewBoard {
+    // RequestNewBoard {
+    //     seed: String,
+    // },
+    CreateNewBoard {
         seed: String,
         player: String,
         timestamp: u64,
