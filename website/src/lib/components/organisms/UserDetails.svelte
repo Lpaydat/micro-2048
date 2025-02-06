@@ -10,6 +10,7 @@
 	import { getPlayerInfo } from '$lib/graphql/queries/getPlayerInfo';
 	import { onMount } from 'svelte';
 	import { formatBalance } from '$lib/utils/formatBalance';
+	import { requestFaucetMutation } from '$lib/graphql/mutations/requestFaucet';
 
 	const modalStore: ModalStore = getModalStore();
 
@@ -77,7 +78,7 @@
 				<p class="game-font mb-1 text-xs font-bold uppercase tracking-wider text-[#fffefc]">
 					Balance
 				</p>
-				<p class="game-font text-lg font-bold text-green-900">
+				<p class="game-font text-lg font-bold text-cyan-800">
 					{formatBalance($playerInfo?.data?.balance ?? '0.00')}
 				</p>
 			</div>
@@ -85,7 +86,8 @@
 				size="sm"
 				class="btn sm text-black"
 				variant="primary"
-				onclick={() => console.log('Faucet clicked')}
+				onclick={() => requestFaucetMutation(playerClient)}
+				disabled={parseFloat($playerInfo?.data?.balance ?? '0.00') > 0.2}
 			>
 				Faucet
 			</Button>

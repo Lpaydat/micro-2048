@@ -12,6 +12,7 @@ pub use crate::moves::{Moves, COL_MASK, ROW_MASK};
 pub use crate::random::{hash_seed, rnd_range};
 
 use async_graphql::{Request, Response};
+use linera_sdk::base::{Amount, ChainId};
 use linera_sdk::{
     base::{ContractAbi, ServiceAbi},
     graphql::GraphQLMutationRoot,
@@ -64,17 +65,21 @@ pub enum Operation {
     ToggleAdmin {
         username: String,
     },
-    // Faucet {
-    //     chain_id: String,
-    // }
+    CloseChain {
+        chain_id: String,
+    },
+    Faucet,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub enum Message {
-    CloseChain,
     RegisterPlayer {
         username: String,
         password_hash: String,
+    },
+    Transfer {
+        chain_id: ChainId,
+        amount: Amount,
     },
     // RequestNewBoard {
     //     seed: String,

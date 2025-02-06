@@ -5,7 +5,7 @@ mod state;
 use std::str::FromStr;
 
 use linera_sdk::{
-    base::{Amount, ApplicationPermissions, ChainId, WithContractAbi},
+    base::{Account, Amount, ApplicationPermissions, ChainId, WithContractAbi},
     serde_json,
     views::{RootView, View},
     Contract, ContractRuntime,
@@ -59,6 +59,23 @@ impl Contract for Game2048Contract {
 
     async fn execute_operation(&mut self, operation: Self::Operation) -> Self::Response {
         match operation {
+            Operation::Faucet => {
+                let current_balance = self.runtime.chain_balance();
+
+                if current_balance.saturating_mul(10) > Amount::from_tokens(2) {
+                    panic!("Faucet is not available");
+                }
+
+                let app_chain_id = self.runtime.application_creator_chain_id();
+                let chain_id = self.runtime.chain_id();
+
+                self.runtime
+                    .prepare_message(Message::Transfer {
+                        chain_id,
+                        amount: Amount::from_tokens(1),
+                    })
+                    .send_to(app_chain_id);
+            }
             Operation::RegisterPlayer {
                 username,
                 password_hash,
@@ -301,7 +318,7 @@ impl Contract for Game2048Contract {
                     let chain_ownership = self.runtime.chain_ownership();
                     let app_id = self.runtime.application_id().forget_abi();
                     let application_permissions = ApplicationPermissions::new_single(app_id);
-                    let amount = Amount::from_tokens(if *is_mod { 5 } else { 1 });
+                    let amount = Amount::from_tokens(1);
                     let (_, chain_id) =
                         self.runtime
                             .open_chain(chain_ownership, application_permissions, amount);
@@ -378,7 +395,6 @@ impl Contract for Game2048Contract {
                             .leaderboards
                             .remove_entry(&leaderboard_id)
                             .unwrap();
-                        self.close_chain(leaderboard_id).await;
                     }
                     LeaderboardAction::TogglePin => {
                         if !is_mod {
@@ -401,6 +417,23 @@ impl Contract for Game2048Contract {
                 let player = self.state.players.load_entry_mut(&username).await.unwrap();
                 player.is_mod.set(!*player.is_mod.get());
             }
+            Operation::CloseChain { chain_id } => {
+                let chain_id = ChainId::from_str(&chain_id).unwrap();
+                let account = Account {
+                    chain_id,
+                    owner: None,
+                };
+                // let amount = self.runtime.chain_balance();
+                let amount = self
+                    .runtime
+                    .chain_balance()
+                    .saturating_sub(Amount::from_tokens(1));
+                self.runtime.transfer(None, account, amount);
+
+                self.runtime
+                    .close_chain()
+                    .expect("The application does not have permission to close the chain");
+            }
         }
 
         self.state
@@ -410,11 +443,12 @@ impl Contract for Game2048Contract {
 
     async fn execute_message(&mut self, message: Self::Message) {
         match message {
-            Message::CloseChain => {
-                // TODO: send the remaining balance to the application creator chain
-                self.runtime
-                    .close_chain()
-                    .expect("The application does not have permission to close the chain");
+            Message::Transfer { chain_id, amount } => {
+                let account = Account {
+                    chain_id,
+                    owner: None,
+                };
+                self.runtime.transfer(None, account, amount);
             }
             Message::RegisterPlayer {
                 username,
@@ -641,6 +675,13 @@ impl Contract for Game2048Contract {
                     leaderboard.score.insert(&player, score).unwrap();
                     leaderboard.board_ids.insert(&player, board_id).unwrap();
                 }
+
+                let current_balance = self.runtime.chain_balance();
+                let app_id = self.runtime.application_id();
+                if current_balance.saturating_mul(10) < Amount::from_tokens(2) {
+                    self.runtime
+                        .call_application(true, app_id, &Operation::Faucet);
+                }
             }
         }
 
@@ -758,13 +799,6 @@ impl Game2048Contract {
                 is_end,
                 timestamp,
             })
-            .send_to(chain_id);
-    }
-
-    async fn close_chain(&mut self, chain_id: String) {
-        let chain_id = ChainId::from_str(&chain_id).unwrap();
-        self.runtime
-            .prepare_message(Message::CloseChain)
             .send_to(chain_id);
     }
 

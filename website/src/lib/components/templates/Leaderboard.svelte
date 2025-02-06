@@ -57,7 +57,7 @@
 
 	const mainClient = getContextClient();
 	const leaderboardClient = getClient(leaderboardId, true);
-	const playerClient = getClient($userStore.chainId, true);
+	const playerClient = $derived(getClient($userStore.chainId, true));
 
 	const leaderboard = $derived(
 		queryStore({
@@ -82,26 +82,19 @@
 	const canPlayGame = $derived(isStarted && !isEnded && $userStore.username);
 	const isPinned = $derived($leaderboard?.data?.leaderboard?.isPinned);
 
-	let newGameAt = $state(Date.now().toString());
-	let newGameCreated = $state(false);
+	let newGameAt = $state(Date.now());
 	let isNewGameCreated = $state(false);
-	let checkNewGameInterval: NodeJS.Timeout;
 
 	const newEventGame = async () => {
-		if (newGameCreated) return;
+		if (isNewGameCreated) return;
 		if (!leaderboardId || !$userStore.username) return;
 
 		const shardId = await getRandomShard(leaderboardId, $userStore.username);
 		if (!shardId) return;
 
-		newGameCreated = true;
-		newGameAt = Date.now().toString();
+		newGameAt = Date.now();
 		isNewGameCreated = true;
-		await newGameBoard(leaderboardId, shardId, newGameAt);
-
-		checkNewGameInterval = setInterval(() => {
-			board.reexecute({ requestPolicy: 'network-only' });
-		}, 500);
+		await newGameBoard(leaderboardId, shardId, newGameAt.toString());
 	};
 
 	const deleteEventGame = () => {
@@ -149,24 +142,29 @@
 		else size = 'lg';
 	};
 
-	$effect(() => {
-		if (
-			isNewGameCreated &&
-			$board.data?.board?.boardId &&
-			newGameAt &&
-			$board.data?.board?.createdAt &&
-			newGameAt >= $board.data?.board?.createdAt
-		) {
-			newGameAt = '';
-			const url = new URL('/game', window.location.origin);
-			url.searchParams.set('boardId', $board.data?.board?.boardId);
-			url.searchParams.set('leaderboardId', leaderboardId);
+	onMount(() => {
+		const interval = setInterval(() => {
+			board?.reexecute({ requestPolicy: 'network-only' });
+			if (
+				isNewGameCreated &&
+				$board?.data?.board?.boardId &&
+				newGameAt &&
+				$board?.data?.board?.createdAt &&
+				Math.abs($board?.data?.board?.createdAt - newGameAt) < 10000 &&
+				$board?.data?.board?.leaderboardId === leaderboardId
+			) {
+				console.log('new game found');
+				newGameAt = 0;
+				const url = new URL('/game', window.location.origin);
+				url.searchParams.set('boardId', $board?.data?.board?.boardId);
+				url.searchParams.set('leaderboardId', leaderboardId);
 
-			setBoardId($board.data?.board?.boardId, leaderboardId);
-			goto(url.toString(), { replaceState: false });
-		}
+				setBoardId($board.data?.board?.boardId, leaderboardId);
+				goto(url.toString(), { replaceState: false });
+			}
+		}, 1000);
 
-		return () => clearInterval(checkNewGameInterval);
+		return () => clearInterval(interval);
 	});
 
 	$effect(() => {
@@ -239,7 +237,7 @@
 								</ActionButton>
 							</a>
 						{/if}
-						<ActionButton label="NEW GAME" onclick={newEventGame} disabled={newGameCreated} />
+						<ActionButton label="NEW GAME" onclick={newEventGame} disabled={isNewGameCreated} />
 					{/if}
 				{/snippet}
 			</PageHeader>

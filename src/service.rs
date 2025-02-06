@@ -455,4 +455,14 @@ impl MutationRoot {
         let operation = Operation::ToggleAdmin { username };
         bcs::to_bytes(&operation).unwrap()
     }
+
+    async fn faucet(&self) -> Vec<u8> {
+        let operation = Operation::Faucet;
+        bcs::to_bytes(&operation).unwrap()
+    }
+
+    async fn close_chain(&self, chain_id: String) -> Vec<u8> {
+        let operation = Operation::CloseChain { chain_id };
+        bcs::to_bytes(&operation).unwrap()
+    }
 }

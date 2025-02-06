@@ -21,6 +21,7 @@
 		getMoveBatchForSubmission
 	} from '$lib/stores/moveHistories';
 	import { formatBalance } from '$lib/utils/formatBalance';
+	import { requestFaucetMutation } from '$lib/graphql/mutations/requestFaucet';
 
 	// Props
 	export let isMultiplayer: boolean = false;
@@ -347,13 +348,14 @@
 	};
 
 	// Add toggle handler for balance view
+	let dirtyBalance = false;
 	const toggleBalanceView = () => {
+		dirtyBalance = true;
 		showBalance = !showBalance;
 	};
 
-	const requestFaucet = async () => {
-		// Implement faucet request logic
-		console.log('Requesting faucet...');
+	const requestFaucet = () => {
+		requestFaucetMutation(client);
 	};
 
 	// Lifecycle Hooks
@@ -453,6 +455,11 @@
 		$game.data?.board?.player === $userStore.username
 			? getOverlayMessage($game.data?.board?.board)
 			: $game.data?.board?.player;
+
+	$: if (parseFloat($game.data?.balance ?? '0.00') <= 0.2 && !dirtyBalance) {
+		showBalance = true;
+		dirtyBalance = true;
+	}
 </script>
 
 <div class="game-container {$boardSize}">
@@ -496,9 +503,11 @@
 
 					<button
 						onclick={requestFaucet}
-						class="ms-8 rounded-sm font-bold text-white transition-colors hover:text-orange-400"
-						>Faucet</button
+						class="ms-8 rounded-sm font-bold text-white transition-colors enabled:hover:text-orange-400 disabled:opacity-50"
+						disabled={parseFloat($game.data?.balance ?? '0.00') > 0.2}
 					>
+						Faucet
+					</button>
 				</div>
 			{:else}
 				<!-- Original Status View -->
@@ -542,7 +551,7 @@
 
 					{#if lastSyncTime}
 						<div class="bg-surface-600 h-px w-full lg:h-4 lg:w-px"></div>
-						<div class="flex w-full items-center gap-2 lg:w-auto">
+						<div class="flex w-full items-center gap-2 whitespace-nowrap lg:w-auto">
 							<span class="text-surface-400">Last sync:</span>
 							<span class="font-mono text-purple-400">
 								{new Date(lastSyncTime).toLocaleTimeString([], {

@@ -63,15 +63,14 @@
 		lg: { width: 555, buttonHeight: 10, fontSize: 'text-2xl', scoreSize: 'text-2xl' }
 	};
 
-	let newGameAt = $state(Date.now().toString());
-	let checkNewGameInterval: NodeJS.Timeout;
-	let newGameCreatedAt = $state(Date.now());
+	let newGameAt = $state(Date.now());
+	let isNewGameCreated = $state(false);
 	let showCooldownMessage = $state(false);
 
 	// Mutation functions
 	const newSingleGame = async () => {
 		// Prevent creating more than 1 game per 10 seconds
-		if (Date.now() - newGameCreatedAt < 10000) {
+		if (Date.now() - newGameAt < 10000) {
 			showCooldownMessage = true;
 			setTimeout(() => {
 				showCooldownMessage = false;
@@ -83,30 +82,9 @@
 		const shardId = await getRandomShard(leaderboardId, $userStore.username);
 		if (!shardId) return;
 
-		newGameAt = Date.now().toString();
-		await newGameBoard(leaderboardId, shardId, newGameAt);
-
-		checkNewGameInterval = setInterval(() => {
-			board.reexecute({ requestPolicy: 'network-only' });
-		}, 500);
+		await newGameBoard(leaderboardId, shardId, newGameAt.toString());
+		isNewGameCreated = true;
 	};
-
-	$effect(() => {
-		if ($board.data?.board?.boardId && newGameAt === $board.data?.board?.createdAt) {
-			newGameAt = '';
-			newGameCreatedAt = Date.now();
-			const url = new URL('/game', window.location.origin);
-			url.searchParams.set('boardId', $board.data?.board?.boardId);
-			url.searchParams.set('leaderboardId', leaderboardId);
-
-			setBoardId($board.data?.board?.boardId, leaderboardId);
-			goto(url.toString(), { replaceState: false });
-		}
-
-		return () => {
-			clearInterval(checkNewGameInterval);
-		};
-	});
 
 	$effect(() => {
 		if ($leaderboard.data?.leaderboard?.shardIds?.length) {
@@ -115,6 +93,31 @@
 				addShards(leaderboardId, $leaderboard.data?.leaderboard?.shardIds);
 			}
 		}
+	});
+
+	onMount(() => {
+		const interval = setInterval(() => {
+			board?.reexecute({ requestPolicy: 'network-only' });
+			if (
+				isNewGameCreated &&
+				$board?.data?.board?.boardId &&
+				newGameAt &&
+				$board?.data?.board?.createdAt &&
+				Math.abs($board?.data?.board?.createdAt - newGameAt) < 10000 &&
+				$board?.data?.board?.leaderboardId === leaderboardId
+			) {
+				newGameAt = Date.now();
+				isNewGameCreated = false;
+				const url = new URL('/game', window.location.origin);
+				url.searchParams.set('boardId', $board?.data?.board?.boardId);
+				url.searchParams.set('leaderboardId', leaderboardId);
+
+				setBoardId($board.data?.board?.boardId, leaderboardId);
+				goto(url.toString(), { replaceState: false });
+			}
+		}, 1000);
+
+		return () => clearInterval(interval);
 	});
 
 	onMount(() => {

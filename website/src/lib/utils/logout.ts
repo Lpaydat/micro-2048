@@ -14,4 +14,8 @@ export const logout = () => {
 	localStorage.removeItem('chainId');
 	localStorage.removeItem('boardId');
 	localStorage.removeItem('isMod');
+	localStorage.removeItem('balance');
+	Object.keys(localStorage)
+		.filter((key) => key.startsWith('boardId-'))
+		.forEach((key) => localStorage.removeItem(key));
 };

@@ -1,5 +1,4 @@
-import type { Client } from '@urql/svelte';
-import { gql, queryStore } from '@urql/svelte';
+import { Client, gql, queryStore } from '@urql/svelte';
 
 export const GET_BOARD = gql`
 	query GetBoard {
@@ -8,7 +7,6 @@ export const GET_BOARD = gql`
 			player
 			chainId
 			leaderboardId
-			shardId
 			score
 			isEnded
 			board
@@ -17,6 +15,6 @@ export const GET_BOARD = gql`
 	}
 `;
 
-export const getBoard = (client: Client) => {
-	return queryStore({ client, query: GET_BOARD });
+export const getBoard = (playerClient: Client) => {
+	return queryStore({ client: playerClient, query: GET_BOARD });
 };
