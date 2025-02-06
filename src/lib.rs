@@ -68,11 +68,7 @@ pub enum Operation {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub enum Message {
-    Ping,
     CloseChain,
-    RequestApplication {
-        chain_id: String,
-    },
     RegisterPlayer {
         username: String,
         password_hash: String,

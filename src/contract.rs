@@ -76,7 +76,7 @@ impl Contract for Game2048Contract {
 
                 let chain_ownership = self.runtime.chain_ownership();
                 let application_permissions = ApplicationPermissions::default();
-                let amount = Amount::from_tokens(10_000);
+                let amount = Amount::from_tokens(1);
                 let (_, chain_id) =
                     self.runtime
                         .open_chain(chain_ownership, application_permissions, amount);
@@ -86,7 +86,6 @@ impl Contract for Game2048Contract {
                 player.password_hash.set(password_hash.clone());
                 player.chain_id.set(chain_id.to_string());
 
-                self.request_application(chain_id).await;
                 self.register_player(chain_id, &username, &password_hash)
                     .await;
             }
@@ -135,7 +134,7 @@ impl Contract for Game2048Contract {
                 let chain_ownership = self.runtime.chain_ownership();
                 let app_id = self.runtime.application_id().forget_abi();
                 let application_permissions = ApplicationPermissions::new_single(app_id);
-                let amount = Amount::from_tokens(1_000);
+                let amount = Amount::from_tokens(1);
                 let (_, shard_id) =
                     self.runtime
                         .open_chain(chain_ownership, application_permissions, amount);
@@ -144,7 +143,6 @@ impl Contract for Game2048Contract {
                 leaderboard.current_shard_id.set(shard_id.to_string());
 
                 let leaderboard_id = leaderboard.chain_id.get().clone();
-                self.request_application(shard_id).await;
                 self.upsert_leaderboard(
                     ChainId::from_str(&leaderboard_id).unwrap(),
                     "",
@@ -294,7 +292,7 @@ impl Contract for Game2048Contract {
                     let chain_ownership = self.runtime.chain_ownership();
                     let app_id = self.runtime.application_id().forget_abi();
                     let application_permissions = ApplicationPermissions::new_single(app_id);
-                    let amount = Amount::from_tokens(100_000);
+                    let amount = Amount::from_tokens(1);
                     let (_, chain_id) =
                         self.runtime
                             .open_chain(chain_ownership, application_permissions, amount);
@@ -359,8 +357,6 @@ impl Contract for Game2048Contract {
                             leaderboard.leaderboard_id.set(chain_id_str.clone());
                             leaderboard.chain_id.set(chain_id_str);
                             leaderboard.host.set(player.clone());
-
-                            self.request_application(chain_id).await;
                         }
                         self.upsert_leaderboard(
                             chain_id,
@@ -406,40 +402,19 @@ impl Contract for Game2048Contract {
                 player.is_mod.set(!*player.is_mod.get());
             }
         }
+
+        self.state
+            .balance
+            .set(self.runtime.chain_balance().to_string());
     }
 
     async fn execute_message(&mut self, message: Self::Message) {
         match message {
             Message::CloseChain => {
+                // TODO: send the remaining balance to the application creator chain
                 self.runtime
                     .close_chain()
                     .expect("The application does not have permission to close the chain");
-            }
-            Message::Ping => {
-                log::info!("Ping received");
-            }
-            Message::RequestApplication { chain_id } => {
-                let target_chain_id = self.runtime.application_creator_chain_id().to_string();
-                let creation_height = self.runtime.application_id().creation.height.to_string();
-                let creation_height_hex =
-                    format!("{:02x}", creation_height.parse::<u64>().unwrap());
-                let padded_height_hex = format!("{:0<24}", creation_height_hex);
-
-                let application_id = format!(
-                    "{}{}{}{}",
-                    self.runtime.application_id().bytecode_id.contract_blob_hash,
-                    self.runtime.application_id().bytecode_id.service_blob_hash,
-                    self.runtime.application_id().creation.chain_id,
-                    padded_height_hex
-                );
-
-                // IMPORTANT
-                log::info!(
-                    "REQUEST_APPLICATION - application_id: {}, requester_chain_id: {}, target_chain_id: {}",
-                    application_id,
-                    chain_id,
-                    target_chain_id
-                );
             }
             Message::RegisterPlayer {
                 username,
@@ -668,6 +643,10 @@ impl Contract for Game2048Contract {
                 }
             }
         }
+
+        self.state
+            .balance
+            .set(self.runtime.chain_balance().to_string());
     }
 
     async fn store(mut self) {
@@ -728,14 +707,6 @@ impl Game2048Contract {
             shard.board_ids.insert(player, board_id).unwrap();
             shard.counter.set(*shard.counter.get() + 1);
         }
-    }
-
-    async fn request_application(&mut self, chain_id: ChainId) {
-        self.runtime
-            .prepare_message(Message::RequestApplication {
-                chain_id: chain_id.to_string(),
-            })
-            .send_to(chain_id);
     }
 
     async fn register_player(&mut self, chain_id: ChainId, player: &str, password_hash: &str) {

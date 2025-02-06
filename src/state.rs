@@ -95,6 +95,7 @@ pub struct Chain {
 #[derive(RootView, SimpleObject)]
 #[view(context = "ViewStorageContext")]
 pub struct Game2048 {
+    pub balance: RegisterView<String>,
     pub boards: CollectionView<String, BoardState>,
     pub players: CollectionView<String, Player>,
     pub leaderboards: CollectionView<String, Leaderboard>, // leaderboard_id

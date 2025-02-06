@@ -2,8 +2,8 @@
 
 mod state;
 
-use std::collections::HashMap;
 use std::sync::Arc;
+use std::{collections::HashMap, sync::Mutex};
 
 use self::state::Game2048;
 use async_graphql::{EmptySubscription, Object, Schema, SimpleObject};
@@ -12,7 +12,7 @@ use linera_sdk::{base::WithServiceAbi, bcs, views::View, Service, ServiceRuntime
 
 pub struct Game2048Service {
     state: Arc<Game2048>,
-    // runtime: Arc<Mutex<ServiceRuntime<Self>>>,
+    runtime: Arc<Mutex<ServiceRuntime<Self>>>,
 }
 
 linera_sdk::service!(Game2048Service);
@@ -30,7 +30,7 @@ impl Service for Game2048Service {
             .expect("Failed to load state");
         Game2048Service {
             state: Arc::new(state),
-            // runtime: Arc::new(Mutex::new(runtime)),
+            runtime: Arc::new(Mutex::new(runtime)),
         }
     }
 
@@ -38,7 +38,7 @@ impl Service for Game2048Service {
         let schema = Schema::build(
             QueryRoot {
                 state: self.state.clone(),
-                // runtime: self.runtime.clone(),
+                runtime: self.runtime.clone(),
             },
             MutationRoot {
                 state: self.state.clone(),
@@ -52,7 +52,7 @@ impl Service for Game2048Service {
 
 struct QueryRoot {
     state: Arc<Game2048>,
-    // runtime: Arc<Mutex<ServiceRuntime<Game2048Service>>>,
+    runtime: Arc<Mutex<ServiceRuntime<Game2048Service>>>,
 }
 
 #[derive(SimpleObject)]
