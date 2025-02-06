@@ -119,6 +119,10 @@ struct Shard {
 
 #[Object]
 impl QueryRoot {
+    async fn balance(&self) -> String {
+        self.state.balance.get().to_string()
+    }
+
     async fn player(&self, username: String) -> Option<Player> {
         if let Ok(Some(player)) = self.state.players.try_load_entry(&username).await {
             Some(Player {

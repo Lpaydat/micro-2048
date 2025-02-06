@@ -1,0 +1,76 @@
+First wallet address: 9b3a99641049daa94b4c558c8f0d25e96772461e8d71738790215a9f6af2548b
+Moved config to /home/lpaydat/.config/linera-1
+1 9b3a99641049daa94b4c558c8f0d25e96772461e8d71738790215a9f6af2548b
+Transferring 99.99 from 0f4c9cc0dbb66ad2a5577389b4a7db629aff258f6dc2302a6332deeb14209f82 to 9b3a99641049daa94b4c558c8f0d25e96772461e8d71738790215a9f6af2548b
+Error: Transfer failed in iteration 2
+Transfer output: Error: non-existent chain: 0f4c9cc0dbb66ad2
+
+Stack backtrace:
+   0: anyhow::error::<impl core::convert::From<E> for anyhow::Error>::from
+             at /home/lpaydat/.cargo/registry/src/index.crates.io-6f17d22bba15001f/anyhow-1.0.89/src/backtrace.rs:27:14
+   1: <core::result::Result<T,F> as core::ops::try_trait::FromResidual<core::result::Result<core::convert::Infallible,E>>>::from_residual
+             at /rustc/eeb90cda1969383f56a2637cbd3037bdf598841c/library/core/src/result.rs:1989:27
+   2: <linera::Job as linera_client::storage::Runnable>::run::{{closure}}
+             at /home/lpaydat/Workspaces/linera-protocol/linera-service/src/linera/main.rs:117:36
+   3: <core::pin::Pin<P> as core::future::future::Future>::poll
+             at /rustc/eeb90cda1969383f56a2637cbd3037bdf598841c/library/core/src/future/future.rs:123:9
+   4: linera_client::storage::run_with_storage::{{closure}}
+             at /home/lpaydat/Workspaces/linera-protocol/linera-client/src/storage.rs:604:33
+   5: <core::pin::Pin<P> as core::future::future::Future>::poll
+             at /rustc/eeb90cda1969383f56a2637cbd3037bdf598841c/library/core/src/future/future.rs:123:9
+   6: linera_client::client_options::ClientOptions::run_with_storage::{{closure}}
+             at /home/lpaydat/Workspaces/linera-protocol/linera-client/src/client_options.rs:187:10
+   7: linera::run::{{closure}}
+             at /home/lpaydat/Workspaces/linera-protocol/linera-service/src/linera/main.rs:1652:61
+   8: <tracing::instrument::Instrumented<T> as core::future::future::Future>::poll
+             at /home/lpaydat/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tracing-0.1.40/src/instrument.rs:321:9
+   9: tokio::runtime::park::CachedParkThread::block_on::{{closure}}
+             at /home/lpaydat/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.40.0/src/runtime/park.rs:281:63
+  10: tokio::runtime::coop::with_budget
+             at /home/lpaydat/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.40.0/src/runtime/coop.rs:107:5
+  11: tokio::runtime::coop::budget
+             at /home/lpaydat/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.40.0/src/runtime/coop.rs:73:5
+  12: tokio::runtime::park::CachedParkThread::block_on
+             at /home/lpaydat/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.40.0/src/runtime/park.rs:281:31
+  13: tokio::runtime::context::blocking::BlockingRegionGuard::block_on
+             at /home/lpaydat/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.40.0/src/runtime/context/blocking.rs:66:9
+  14: tokio::runtime::scheduler::multi_thread::MultiThread::block_on::{{closure}}
+             at /home/lpaydat/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.40.0/src/runtime/scheduler/multi_thread/mod.rs:87:22
+  15: tokio::runtime::context::runtime::enter_runtime
+             at /home/lpaydat/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.40.0/src/runtime/context/runtime.rs:65:16
+  16: tokio::runtime::scheduler::multi_thread::MultiThread::block_on
+             at /home/lpaydat/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.40.0/src/runtime/scheduler/multi_thread/mod.rs:86:9
+  17: tokio::runtime::runtime::Runtime::block_on_inner
+             at /home/lpaydat/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.40.0/src/runtime/runtime.rs:363:50
+  18: tokio::runtime::runtime::Runtime::block_on
+             at /home/lpaydat/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.40.0/src/runtime/runtime.rs:335:13
+  19: linera::main
+             at /home/lpaydat/Workspaces/linera-protocol/linera-service/src/linera/main.rs:1316:5
+  20: core::ops::function::FnOnce::call_once
+             at /rustc/eeb90cda1969383f56a2637cbd3037bdf598841c/library/core/src/ops/function.rs:250:5
+  21: std::sys::backtrace::__rust_begin_short_backtrace
+             at /rustc/eeb90cda1969383f56a2637cbd3037bdf598841c/library/std/src/sys/backtrace.rs:152:18
+  22: std::rt::lang_start::{{closure}}
+             at /rustc/eeb90cda1969383f56a2637cbd3037bdf598841c/library/std/src/rt.rs:162:18
+  23: core::ops::function::impls::<impl core::ops::function::FnOnce<A> for &F>::call_once
+             at /rustc/eeb90cda1969383f56a2637cbd3037bdf598841c/library/core/src/ops/function.rs:284:13
+  24: std::panicking::try::do_call
+             at /rustc/eeb90cda1969383f56a2637cbd3037bdf598841c/library/std/src/panicking.rs:557:40
+  25: std::panicking::try
+             at /rustc/eeb90cda1969383f56a2637cbd3037bdf598841c/library/std/src/panicking.rs:521:19
+  26: std::panic::catch_unwind
+             at /rustc/eeb90cda1969383f56a2637cbd3037bdf598841c/library/std/src/panic.rs:350:14
+  27: std::rt::lang_start_internal::{{closure}}
+             at /rustc/eeb90cda1969383f56a2637cbd3037bdf598841c/library/std/src/rt.rs:141:48
+  28: std::panicking::try::do_call
+             at /rustc/eeb90cda1969383f56a2637cbd3037bdf598841c/library/std/src/panicking.rs:557:40
+  29: std::panicking::try
+             at /rustc/eeb90cda1969383f56a2637cbd3037bdf598841c/library/std/src/panicking.rs:521:19
+  30: std::panic::catch_unwind
+             at /rustc/eeb90cda1969383f56a2637cbd3037bdf598841c/library/std/src/panic.rs:350:14
+  31: std::rt::lang_start_internal
+             at /rustc/eeb90cda1969383f56a2637cbd3037bdf598841c/library/std/src/rt.rs:141:20
+  32: main
+  33: <unknown>
+  34: __libc_start_main
+  35: _start

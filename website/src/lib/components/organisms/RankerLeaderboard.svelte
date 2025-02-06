@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { isMobile } from '$lib/stores/isMobile';
+	import { formatBalance } from '$lib/utils/formatBalance';
 	import LeaderboardDetails from '../molecules/LeaderboardDetails.svelte';
 	import RankerCard from '../molecules/RankerCard.svelte';
 
@@ -12,6 +13,7 @@
 		endTime?: string;
 		totalBoards?: number;
 		totalPlayers?: number;
+		balance?: number;
 		rankers?: {
 			username: string;
 			score: number;
@@ -19,7 +21,7 @@
 		}[];
 	}
 
-	let { rankers = [], leaderboardId, hasSubHeader = false, ...rest }: Props = $props();
+	let { rankers = [], leaderboardId, hasSubHeader = false, balance, ...rest }: Props = $props();
 
 	const height = $derived(
 		$isMobile
@@ -36,11 +38,19 @@
 
 <div class="mx-auto mt-4 flex {height} w-full max-w-4xl flex-col overflow-hidden">
 	<div class="flex gap-3 md:gap-6">
-		<h1
-			class="md:ms-none mb-4 ms-2 text-center text-2xl font-extrabold text-gray-100 md:mb-6 md:text-4xl"
-		>
-			Leaderboard
-		</h1>
+		<div class="flex flex-row items-center gap-4">
+			<h1
+				class="md:ms-none mb-2 text-center text-2xl font-extrabold text-gray-100 md:mb-3 md:text-4xl"
+			>
+				Leaderboard
+			</h1>
+			<span
+				class="mb-2 rounded-lg bg-gray-800 px-3 py-1 text-sm font-medium text-gray-300 shadow-sm"
+			>
+				<span class="opacity-75">Balance:</span>
+				<span class="ml-1 font-mono">{formatBalance(balance)}</span>
+			</span>
+		</div>
 		{#if leaderboardId}
 			<LeaderboardDetails {...rest} />
 		{/if}

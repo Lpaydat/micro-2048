@@ -64,6 +64,9 @@ pub enum Operation {
     ToggleAdmin {
         username: String,
     },
+    // Faucet {
+    //     chain_id: String,
+    // }
 }
 
 #[derive(Debug, Deserialize, Serialize)]

@@ -134,7 +134,7 @@ impl Contract for Game2048Contract {
                 let chain_ownership = self.runtime.chain_ownership();
                 let app_id = self.runtime.application_id().forget_abi();
                 let application_permissions = ApplicationPermissions::new_single(app_id);
-                let amount = Amount::from_tokens(1);
+                let amount = Amount::from_tokens(5);
                 let (_, shard_id) =
                     self.runtime
                         .open_chain(chain_ownership, application_permissions, amount);
@@ -288,11 +288,20 @@ impl Contract for Game2048Contract {
                 self.check_player_registered(&player, RegistrationCheck::EnsureRegistered)
                     .await;
 
+                let is_mod = self
+                    .state
+                    .players
+                    .load_entry_or_insert(&player)
+                    .await
+                    .unwrap()
+                    .is_mod
+                    .get();
+
                 let chain_id = if action == LeaderboardAction::Create {
                     let chain_ownership = self.runtime.chain_ownership();
                     let app_id = self.runtime.application_id().forget_abi();
                     let application_permissions = ApplicationPermissions::new_single(app_id);
-                    let amount = Amount::from_tokens(1);
+                    let amount = Amount::from_tokens(if *is_mod { 5 } else { 1 });
                     let (_, chain_id) =
                         self.runtime
                             .open_chain(chain_ownership, application_permissions, amount);
@@ -310,15 +319,6 @@ impl Contract for Game2048Contract {
                     .load_entry_mut(&chain_id.to_string())
                     .await
                     .unwrap();
-
-                let is_mod = self
-                    .state
-                    .players
-                    .load_entry_or_insert(&player)
-                    .await
-                    .unwrap()
-                    .is_mod
-                    .get();
 
                 let host = leaderboard.host.get().clone();
                 if !host.is_empty() && host != player && !is_mod {
@@ -629,8 +629,8 @@ impl Contract for Game2048Contract {
                         .then_with(|| a.0.cmp(&b.0)) // Secondary sort: alphabetical for ties
                 });
 
-                // 3. Strict truncation to top 200
-                entries.truncate(200);
+                // 3. Strict truncation to top 100
+                entries.truncate(100);
 
                 // 4. Atomic update of leaderboard state
                 leaderboard.score.clear();

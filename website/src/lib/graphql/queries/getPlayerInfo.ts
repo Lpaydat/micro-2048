@@ -8,6 +8,7 @@ const GET_PLAYER = gql`
 			chainId
 			isMod
 		}
+		balance
 	}
 `;
 

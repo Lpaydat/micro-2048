@@ -51,6 +51,7 @@
 				}
 				shardIds
 			}
+			balance
 		}
 	`;
 
@@ -76,13 +77,16 @@
 	const canDeleteEvent = $derived(
 		($leaderboard?.data?.leaderboard?.host === $userStore.username || $userStore.isMod) && !isEnded
 	);
+	const balance = $derived($leaderboard.data?.balance);
 	const canPinEvent = $derived($userStore.isMod && !isEnded);
 	const canPlayGame = $derived(isStarted && !isEnded && $userStore.username);
 	const isPinned = $derived($leaderboard?.data?.leaderboard?.isPinned);
 
 	let newGameAt = $state(Date.now().toString());
 	let newGameCreated = $state(false);
+	let isNewGameCreated = $state(false);
 	let checkNewGameInterval: NodeJS.Timeout;
+
 	const newEventGame = async () => {
 		if (newGameCreated) return;
 		if (!leaderboardId || !$userStore.username) return;
@@ -92,6 +96,7 @@
 
 		newGameCreated = true;
 		newGameAt = Date.now().toString();
+		isNewGameCreated = true;
 		await newGameBoard(leaderboardId, shardId, newGameAt);
 
 		checkNewGameInterval = setInterval(() => {
@@ -110,7 +115,7 @@
 		togglePinLeaderboard(mainClient, leaderboardId);
 		setTimeout(() => {
 			leaderboard.reexecute({ requestPolicy: 'network-only' });
-		}, 500);
+		}, 1000);
 	};
 
 	const createShards = () => {
@@ -145,7 +150,13 @@
 	};
 
 	$effect(() => {
-		if ($board.data?.board?.boardId && newGameAt === $board.data?.board?.createdAt) {
+		if (
+			isNewGameCreated &&
+			$board.data?.board?.boardId &&
+			newGameAt &&
+			$board.data?.board?.createdAt &&
+			newGameAt >= $board.data?.board?.createdAt
+		) {
 			newGameAt = '';
 			const url = new URL('/game', window.location.origin);
 			url.searchParams.set('boardId', $board.data?.board?.boardId);
@@ -191,7 +202,11 @@
 
 	{#snippet main()}
 		{#if !leaderboardId}
-			<RankerLeaderboard rankers={$leaderboard?.data?.leaderboard?.rankers} />
+			<RankerLeaderboard
+				rankers={$leaderboard.data?.leaderboard?.rankers}
+				{balance}
+				{...$leaderboard.data?.leaderboard}
+			/>
 		{:else}
 			<PageHeader title={$leaderboard?.data?.leaderboard?.name} {prevPage}>
 				{#snippet subActions()}
@@ -229,7 +244,8 @@
 				{/snippet}
 			</PageHeader>
 			<RankerLeaderboard
-				rankers={$leaderboard?.data?.leaderboard?.rankers}
+				rankers={$leaderboard.data?.leaderboard?.rankers}
+				{balance}
 				hasSubHeader
 				{...$leaderboard.data?.leaderboard}
 			/>
