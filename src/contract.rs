@@ -83,7 +83,7 @@ impl Contract for Game2048Contract {
                 if username.trim().is_empty() {
                     panic!("Username cannot be empty");
                 }
-                let is_main_chain = self.is_main_chain().await;
+                let is_main_chain = self.is_main_chain();
                 if !is_main_chain {
                     panic!("Only main chain can register player");
                 }
@@ -103,8 +103,7 @@ impl Contract for Game2048Contract {
                 player.password_hash.set(password_hash.clone());
                 player.chain_id.set(chain_id.to_string());
 
-                self.register_player(chain_id, &username, &password_hash)
-                    .await;
+                self.register_player(chain_id, &username, &password_hash);
             }
             Operation::NewBoard {
                 player,
@@ -141,6 +140,8 @@ impl Contract for Game2048Contract {
                 self.state.nonce.set(nonce + 1);
                 let message = self.runtime.prepare_message(message_payload);
                 message.send_to(ChainId::from_str(&player_chain_id).unwrap());
+
+                self.auto_faucet(Some(1));
             }
             Operation::NewShard => {
                 let leaderboard = self.state.leaderboards.load_entry_mut("").await.unwrap();
@@ -151,7 +152,7 @@ impl Contract for Game2048Contract {
                 let chain_ownership = self.runtime.chain_ownership();
                 let app_id = self.runtime.application_id().forget_abi();
                 let application_permissions = ApplicationPermissions::new_single(app_id);
-                let amount = Amount::from_tokens(5);
+                let amount = Amount::from_tokens(1);
                 let (_, shard_id) =
                     self.runtime
                         .open_chain(chain_ownership, application_permissions, amount);
@@ -275,8 +276,7 @@ impl Contract for Game2048Contract {
                             final_score,
                             is_ended,
                             latest_timestamp,
-                        )
-                        .await;
+                        );
                     }
                 } else if moves.is_empty() {
                     let score = Game::score(*board.board.get());
@@ -284,8 +284,7 @@ impl Contract for Game2048Contract {
                         panic!("Chain id is empty");
                     }
                     let shard_id = ChainId::from_str(&shard_id).unwrap();
-                    self.update_score(shard_id, &player, &board_id, score, true, 111970)
-                        .await;
+                    self.update_score(shard_id, &player, &board_id, score, true, 111970);
                 } else {
                     panic!("Game is ended");
                 }
@@ -297,7 +296,7 @@ impl Contract for Game2048Contract {
                 player,
                 timestamp,
             } => {
-                let is_main_chain = self.is_main_chain().await;
+                let is_main_chain = self.is_main_chain();
                 if !is_main_chain {
                     panic!("Only main chain can perform event leaderboard action");
                 }
@@ -402,11 +401,22 @@ impl Contract for Game2048Contract {
                         }
 
                         leaderboard.is_pinned.set(!*leaderboard.is_pinned.get());
+
+                        if *leaderboard.is_pinned.get() {
+                            self.auto_faucet(Some(16));
+                        } else {
+                            let exceed_amount = self
+                                .runtime
+                                .chain_balance()
+                                .saturating_sub(Amount::from_tokens(1));
+                            // TODO: transfer to my pool
+                            self.transfer(chain_id, exceed_amount);
+                        }
                     }
                 }
             }
             Operation::ToggleAdmin { username } => {
-                let is_main_chain = self.is_main_chain().await;
+                let is_main_chain = self.is_main_chain();
                 if !is_main_chain {
                     panic!("Only main chain can toggle admin");
                 }
@@ -427,7 +437,7 @@ impl Contract for Game2048Contract {
                 let amount = self
                     .runtime
                     .chain_balance()
-                    .saturating_sub(Amount::from_tokens(1));
+                    .saturating_sub(Amount::from_micros(50));
                 self.runtime.transfer(None, account, amount);
 
                 self.runtime
@@ -444,11 +454,7 @@ impl Contract for Game2048Contract {
     async fn execute_message(&mut self, message: Self::Message) {
         match message {
             Message::Transfer { chain_id, amount } => {
-                let account = Account {
-                    chain_id,
-                    owner: None,
-                };
-                self.runtime.transfer(None, account, amount);
+                self.transfer(chain_id, amount);
             }
             Message::RegisterPlayer {
                 username,
@@ -632,6 +638,8 @@ impl Contract for Game2048Contract {
                             .send_to(main_chain_id);
                     }
                 }
+
+                self.auto_faucet(Some(1));
             }
             Message::Flush { board_ids, scores } => {
                 let leaderboard = self.state.leaderboards.load_entry_mut("").await.unwrap();
@@ -676,12 +684,7 @@ impl Contract for Game2048Contract {
                     leaderboard.board_ids.insert(&player, board_id).unwrap();
                 }
 
-                let current_balance = self.runtime.chain_balance();
-                let app_id = self.runtime.application_id();
-                if current_balance.saturating_mul(10) < Amount::from_tokens(2) {
-                    self.runtime
-                        .call_application(true, app_id, &Operation::Faucet);
-                }
+                self.auto_faucet(Some(1));
             }
         }
 
@@ -696,13 +699,13 @@ impl Contract for Game2048Contract {
 }
 
 impl Game2048Contract {
-    async fn is_main_chain(&mut self) -> bool {
+    fn is_main_chain(&mut self) -> bool {
         self.runtime.chain_id().to_string()
             == self.runtime.application_creator_chain_id().to_string()
     }
 
     async fn is_leaderboard_active(&mut self, timestamp: u64) -> &mut Leaderboard {
-        let is_main_chain = self.is_main_chain().await;
+        let is_main_chain = self.is_main_chain();
         let leaderboard = self.state.leaderboards.load_entry_mut("").await.unwrap();
         let start_time = leaderboard.start_time.get();
         let end_time = leaderboard.end_time.get();
@@ -718,7 +721,7 @@ impl Game2048Contract {
     }
 
     async fn is_shard_active(&mut self, timestamp: u64) -> &mut LeaderboardShard {
-        let is_main_chain = self.is_main_chain().await;
+        let is_main_chain = self.is_main_chain();
         let shard = self.state.shards.load_entry_mut("").await.unwrap();
         let start_time = shard.start_time.get();
         let end_time = shard.end_time.get();
@@ -750,7 +753,7 @@ impl Game2048Contract {
         }
     }
 
-    async fn register_player(&mut self, chain_id: ChainId, player: &str, password_hash: &str) {
+    fn register_player(&mut self, chain_id: ChainId, player: &str, password_hash: &str) {
         self.runtime
             .prepare_message(Message::RegisterPlayer {
                 username: player.to_string(),
@@ -782,7 +785,30 @@ impl Game2048Contract {
             .send_to(send_to.unwrap_or(chain_id));
     }
 
-    async fn update_score(
+    fn transfer(&mut self, destination: ChainId, amount: Amount) {
+        let account = Account {
+            chain_id: destination,
+            owner: None,
+        };
+        self.runtime.transfer(None, account, amount);
+    }
+
+    fn auto_faucet(&mut self, faucet_amount: Option<u128>) {
+        let current_balance = self.runtime.chain_balance();
+        if current_balance.saturating_mul(10) < Amount::from_tokens(5) {
+            let app_chain_id = self.runtime.application_creator_chain_id();
+            let chain_id = self.runtime.chain_id();
+
+            self.runtime
+                .prepare_message(Message::Transfer {
+                    chain_id,
+                    amount: Amount::from_tokens(faucet_amount.unwrap_or(1)),
+                })
+                .send_to(app_chain_id);
+        }
+    }
+
+    fn update_score(
         &mut self,
         chain_id: ChainId,
         player: &str,
