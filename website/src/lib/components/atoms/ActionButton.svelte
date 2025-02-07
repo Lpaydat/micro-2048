@@ -84,4 +84,10 @@
 		border: 2px solid #fff;
 		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 	}
+
+	button:disabled {
+		opacity: 0.5;
+		border-color: rgba(255, 255, 255, 0.2);
+		box-shadow: none;
+	}
 </style>

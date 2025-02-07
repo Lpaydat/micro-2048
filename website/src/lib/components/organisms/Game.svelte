@@ -11,7 +11,7 @@
 	import { boardSize, isNewGameCreated, setGameCreationStatus } from '$lib/stores/gameStore';
 	import { boardToString } from '$lib/game/utils';
 	import Board from './Board.svelte';
-	import { userBalanceStore, userStore } from '$lib/stores/userStore';
+	import { userStore } from '$lib/stores/userStore';
 	import { deleteBoardId, getBoardId } from '$lib/stores/boardId';
 	import { getClient } from '$lib/client';
 	import {
@@ -487,95 +487,97 @@
 			{/snippet}
 		</Board>
 	</div>
-	<div
-		class="mt-2 flex flex-col items-center justify-center gap-y-2 text-xs lg:flex-row lg:gap-3 lg:text-sm"
-	>
+	{#if $userStore.username}
 		<div
-			class="bg-surface-800/50 border-surface-600/50 flex w-full cursor-pointer flex-wrap items-center gap-x-2 gap-y-2 rounded-lg border px-4 py-2 transition-all lg:w-auto"
+			class="mt-2 flex flex-col items-center justify-center gap-y-2 text-xs lg:flex-row lg:gap-3 lg:text-sm"
 		>
-			{#if showBalance}
-				<!-- Balance View -->
-				<div class="flex w-full items-center justify-between gap-3">
-					<button class="flex w-full flex-grow items-center gap-2" onclick={toggleBalanceView}>
-						<span class="text-surface-400">Balance:</span>
-						<span class="font-mono text-emerald-400">{formatBalance($game.data?.balance)}</span>
-					</button>
+			<div
+				class="bg-surface-800/50 border-surface-600/50 flex w-full cursor-pointer flex-wrap items-center gap-x-2 gap-y-2 rounded-lg border px-4 py-2 transition-all lg:w-auto"
+			>
+				{#if showBalance}
+					<!-- Balance View -->
+					<div class="flex w-full items-center justify-between gap-3">
+						<button class="flex w-full flex-grow items-center gap-2" onclick={toggleBalanceView}>
+							<span class="text-surface-400">Balance:</span>
+							<span class="font-mono text-emerald-400">{formatBalance($game.data?.balance)}</span>
+						</button>
 
-					<button
-						onclick={requestFaucet}
-						class="ms-8 rounded-sm font-bold text-white transition-colors enabled:hover:text-orange-400 disabled:opacity-50"
-						disabled={parseFloat($game.data?.balance ?? '0.00') > 0.2}
-					>
-						Faucet
-					</button>
-				</div>
-			{:else}
-				<!-- Original Status View -->
-				<button class="flex w-full items-center gap-3" onclick={toggleBalanceView}>
-					<div class="flex w-full items-center gap-3">
-						<div class="flex items-center gap-2">
-							<span class="text-surface-400">Sync:</span>
-							<div class="flex items-center gap-1.5">
-								<div
-									class="h-2 w-2 rounded-full
+						<button
+							onclick={requestFaucet}
+							class="ms-8 rounded-sm font-bold text-white transition-colors enabled:hover:text-orange-400 disabled:opacity-50"
+							disabled={parseFloat($game.data?.balance ?? '0.00') > 0.2}
+						>
+							Faucet
+						</button>
+					</div>
+				{:else}
+					<!-- Original Status View -->
+					<button class="flex w-full items-center gap-3" onclick={toggleBalanceView}>
+						<div class="flex w-full items-center gap-3">
+							<div class="flex items-center gap-2">
+								<span class="text-surface-400">Sync:</span>
+								<div class="flex items-center gap-1.5">
+									<div
+										class="h-2 w-2 rounded-full
 								{syncStatus === 'synced'
-										? 'animate-pulse bg-emerald-500'
-										: syncStatus === 'failed'
-											? 'bg-red-500'
-											: syncStatus === 'syncing'
-												? 'animate-pulse bg-yellow-500'
-												: 'bg-surface-400'}"
-								></div>
-								<span
-									class="text-xs capitalize lg:text-sm
+											? 'animate-pulse bg-emerald-500'
+											: syncStatus === 'failed'
+												? 'bg-red-500'
+												: syncStatus === 'syncing'
+													? 'animate-pulse bg-yellow-500'
+													: 'bg-surface-400'}"
+									></div>
+									<span
+										class="text-xs capitalize lg:text-sm
 								{syncStatus === 'synced'
-										? 'text-emerald-400'
-										: syncStatus === 'failed'
-											? 'text-red-400'
-											: syncStatus === 'syncing'
-												? 'text-yellow-400'
-												: 'text-surface-400'}"
-								>
-									{offlineMode ? 'Offline' : syncStatus}
-								</span>
+											? 'text-emerald-400'
+											: syncStatus === 'failed'
+												? 'text-red-400'
+												: syncStatus === 'syncing'
+													? 'text-yellow-400'
+													: 'text-surface-400'}"
+									>
+										{offlineMode ? 'Offline' : syncStatus}
+									</span>
+								</div>
+							</div>
+
+							<div class="bg-surface-600 h-4 w-px"></div>
+
+							<div class="flex flex-grow items-center gap-2">
+								<span class="text-surface-400">Pending:</span>
+								<span class="font-mono text-orange-400">{pendingMoveCount}</span>
 							</div>
 						</div>
 
-						<div class="bg-surface-600 h-4 w-px"></div>
+						{#if lastSyncTime}
+							<div class="bg-surface-600 h-px w-full lg:h-4 lg:w-px"></div>
+							<div class="flex w-full items-center gap-2 whitespace-nowrap lg:w-auto">
+								<span class="text-surface-400">Last sync:</span>
+								<span class="font-mono text-purple-400">
+									{new Date(lastSyncTime).toLocaleTimeString([], {
+										hour: '2-digit',
+										minute: '2-digit',
+										second: '2-digit'
+									})}
+								</span>
+							</div>
+						{/if}
+					</button>
+				{/if}
+			</div>
 
-						<div class="flex flex-grow items-center gap-2">
-							<span class="text-surface-400">Pending:</span>
-							<span class="font-mono text-orange-400">{pendingMoveCount}</span>
-						</div>
-					</div>
-
-					{#if lastSyncTime}
-						<div class="bg-surface-600 h-px w-full lg:h-4 lg:w-px"></div>
-						<div class="flex w-full items-center gap-2 whitespace-nowrap lg:w-auto">
-							<span class="text-surface-400">Last sync:</span>
-							<span class="font-mono text-purple-400">
-								{new Date(lastSyncTime).toLocaleTimeString([], {
-									hour: '2-digit',
-									minute: '2-digit',
-									second: '2-digit'
-								})}
-							</span>
-						</div>
-					{/if}
-				</button>
-			{/if}
-		</div>
-
-		<button
-			onclick={toggleOfflineMode}
-			class="bg-surface-800/50 border-surface-600/50 hover:bg-surface-700/50 flex w-full items-center gap-2 rounded-lg border px-4 py-2 transition-colors lg:w-auto"
-		>
-			<div class="h-2 w-2 rounded-full {offlineMode ? 'bg-orange-500' : 'bg-emerald-500'}"></div>
-			<span class="text-surface-400 whitespace-nowrap text-xs lg:text-sm"
-				>{offlineMode ? 'Go Online' : 'Go Offline'}</span
+			<button
+				onclick={toggleOfflineMode}
+				class="bg-surface-800/50 border-surface-600/50 hover:bg-surface-700/50 flex w-full items-center gap-2 rounded-lg border px-4 py-2 transition-colors lg:w-auto"
 			>
-		</button>
-	</div>
+				<div class="h-2 w-2 rounded-full {offlineMode ? 'bg-orange-500' : 'bg-emerald-500'}"></div>
+				<span class="text-surface-400 whitespace-nowrap text-xs lg:text-sm"
+					>{offlineMode ? 'Go Online' : 'Go Offline'}</span
+				>
+			</button>
+		</div>
+	{/if}
 </div>
 
 <style>
