@@ -317,7 +317,7 @@ impl Contract for Game2048Contract {
                     let chain_ownership = self.runtime.chain_ownership();
                     let app_id = self.runtime.application_id().forget_abi();
                     let application_permissions = ApplicationPermissions::new_single(app_id);
-                    let amount = Amount::from_tokens(1);
+                    let amount = Amount::from_tokens(if *is_mod { 17 } else { 1 });
                     let (_, chain_id) =
                         self.runtime
                             .open_chain(chain_ownership, application_permissions, amount);
@@ -401,17 +401,6 @@ impl Contract for Game2048Contract {
                         }
 
                         leaderboard.is_pinned.set(!*leaderboard.is_pinned.get());
-
-                        if *leaderboard.is_pinned.get() {
-                            self.auto_faucet(Some(16));
-                        } else {
-                            let exceed_amount = self
-                                .runtime
-                                .chain_balance()
-                                .saturating_sub(Amount::from_tokens(1));
-                            // TODO: transfer to my pool
-                            self.transfer(chain_id, exceed_amount);
-                        }
                     }
                 }
             }
@@ -644,44 +633,25 @@ impl Contract for Game2048Contract {
             Message::Flush { board_ids, scores } => {
                 let leaderboard = self.state.leaderboards.load_entry_mut("").await.unwrap();
 
-                let mut entries = Vec::new();
+                // 1. Only process incoming scores (O(n) complexity)
                 for (player, score) in scores.iter() {
                     if let Some(board_id) = board_ids.get(player) {
-                        if let Some(current_score) =
-                            leaderboard.score.get(player).await.unwrap_or_default()
-                        {
-                            if *score > current_score {
-                                entries.push((player.clone(), *score, board_id.clone()));
-                            } else if let Some(current_board_id) =
-                                leaderboard.board_ids.get(player).await.unwrap_or_default()
-                            {
-                                entries.push((
-                                    player.clone(),
-                                    current_score,
-                                    current_board_id.clone(),
-                                ));
-                            }
+                        // 2. Atomic compare-and-swap per entry
+                        let current_score = leaderboard
+                            .score
+                            .get(&player.clone())
+                            .await
+                            .unwrap_or_default()
+                            .unwrap_or(0);
+                        if *score > current_score {
+                            // 3. Single insert operation per improvement
+                            leaderboard.score.insert(&player.clone(), *score).unwrap();
+                            leaderboard
+                                .board_ids
+                                .insert(&player.clone(), board_id.clone())
+                                .unwrap();
                         }
                     }
-                }
-
-                // 2. Validate sorting logic (descending score, ascending name for ties)
-                entries.sort_unstable_by(|a, b| {
-                    b.1.cmp(&a.1) // Primary sort: highest score first
-                        .then_with(|| a.0.cmp(&b.0)) // Secondary sort: alphabetical for ties
-                });
-
-                // 3. Strict truncation to top 100
-                entries.truncate(100);
-
-                // 4. Atomic update of leaderboard state
-                leaderboard.score.clear();
-                leaderboard.board_ids.clear();
-
-                // 5. Bulk insert of validated top entries
-                for (player, score, board_id) in entries {
-                    leaderboard.score.insert(&player, score).unwrap();
-                    leaderboard.board_ids.insert(&player, board_id).unwrap();
                 }
 
                 self.auto_faucet(Some(1));

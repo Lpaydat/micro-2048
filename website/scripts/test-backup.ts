@@ -80,8 +80,22 @@ export default async function () {
 	}`;
 
 	// Create new game
-	const newBoardQuery = `mutation newBoard($player: String!, $passwordHash: String!, $timestamp: String!, $seed: String, $leaderboardId: String!, $shardId: String!) {
-		newBoard(player: $player, passwordHash: $passwordHash, timestamp: $timestamp, seed: $seed, leaderboardId: $leaderboardId, shardId: $shardId)
+	const newBoardQuery = `mutation newBoard(
+		$player: String!,
+		$passwordHash: String!,
+		$timestamp: String!,
+		$seed: String,
+		$leaderboardId: String!,
+		$shardId: String!
+	) {
+		newBoard(
+			player: $player,
+			passwordHash: $passwordHash,
+			timestamp: $timestamp,
+			seed: $seed,
+			leaderboardId: $leaderboardId,
+			shardId: $shardId
+		)
 	}`;
 
 	// Get board

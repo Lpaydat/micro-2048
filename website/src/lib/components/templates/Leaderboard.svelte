@@ -4,6 +4,7 @@
 	import Trash from 'lucide-svelte/icons/trash-2';
 	import Star from 'lucide-svelte/icons/star';
 	import Plus from 'lucide-svelte/icons/plus';
+	import GitBranchPlus from 'lucide-svelte/icons/git-branch-plus';
 	import ContinueIcon from 'lucide-svelte/icons/step-forward';
 	import MainTemplate from '../organisms/MainTemplate.svelte';
 	import RankerLeaderboard from '../organisms/RankerLeaderboard.svelte';
@@ -23,6 +24,7 @@
 	import { newShard } from '$lib/graphql/mutations/newShard';
 	import { addShards, getRandomShard, getShards } from '$lib/stores/shards';
 	import { getBoard } from '$lib/graphql/queries/getBoard';
+	import { requestFaucetMutation } from '$lib/graphql/mutations/requestFaucet';
 
 	interface Props {
 		leaderboardId?: string;
@@ -111,16 +113,23 @@
 		}, 1000);
 	};
 
+	let isCreatingShards = $state(false);
 	const createShards = () => {
 		if (
 			leaderboardId &&
+			!isCreatingShards &&
 			!$leaderboard.fetching &&
 			!$leaderboard.data?.leaderboard?.shardIds?.length
 		) {
+			isCreatingShards = true;
 			Array.from({ length: 16 }).forEach(() => {
 				newShard(leaderboardClient);
 			});
 		}
+	};
+
+	const faucet = () => {
+		requestFaucetMutation(leaderboardClient);
 	};
 
 	const modalStore = getModalStore();
@@ -219,8 +228,11 @@
 						</button>
 					{/if}
 					{#if $userStore.isMod}
-						<button type="button" class="btn-icon" onclick={createShards}>
+						<button type="button" class="btn-icon" onclick={faucet}>
 							<Plus size={20} />
+						</button>
+						<button type="button" class="btn-icon" onclick={createShards}>
+							<GitBranchPlus size={20} />
 						</button>
 					{/if}
 				{/snippet}

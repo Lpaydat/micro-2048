@@ -13,7 +13,8 @@
 				<span
 					class="font-handwriting absolute -right-2 -top-12 z-10 -rotate-12 transform text-2xl text-red-500 opacity-80 drop-shadow-[0_1px_1px_rgba(0,0,0,0.25)]"
 				>
-					Archimedes
+					<!-- Archimedes -->
+					Beta
 				</span>
 				<div
 					class="absolute -bottom-3 left-0 right-0 h-1 rounded-full bg-[#bbada0] opacity-30"

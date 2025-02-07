@@ -401,14 +401,6 @@
 			if (offlineMode) return; // Skip sync checks in offline mode
 			if (boardId && (pendingMoveCount === 0 || syncStatus === 'syncing')) {
 				// // Force check threshold conditions periodically
-				// const timeSince = roundFirstMoveTime ? Date.now() - roundFirstMoveTime : 0;
-				// const threshold = 5000 - Math.min(pendingMoveCount - 1, 49) * (5000 / 49);
-				// console.log('timeSince', timeSince);
-				// console.log('threshold', threshold);
-				// if (timeSince >= threshold) {
-				// 	handleIdleSubmit();
-				// }
-
 				game.reexecute({ requestPolicy: 'network-only' });
 				if ($game.data?.board) {
 					const backendBoardStr = boardToString($game.data.board.board);
@@ -456,10 +448,10 @@
 			? getOverlayMessage($game.data?.board?.board)
 			: $game.data?.board?.player;
 
-	$: if (parseFloat($game.data?.balance ?? '0.00') <= 0.2 && !dirtyBalance) {
-		showBalance = true;
-		dirtyBalance = true;
-	}
+	// $: if (!$game.fetching && parseFloat($game.data?.balance ?? '0.00') <= 0.2 && !dirtyBalance) {
+	// 	showBalance = true;
+	// 	dirtyBalance = false;
+	// }
 </script>
 
 <div class="game-container {$boardSize}">
