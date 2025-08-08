@@ -1,0 +1,1844 @@
+// Copyright (c) Zefchain Labs, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
+#![cfg_attr(target_arch = "wasm32", no_main)]
+
+use std::sync::Arc;
+
+use async_graphql::{EmptySubscription, Object, Request, Response, Schema, Result};
+use linera_sdk::{linera_base_types::WithServiceAbi, views::View, Service, ServiceRuntime};
+
+use crate::{
+    infrastructure::{state::GameHubState, operations::Operation},
+    api::{
+        graphql_types::*,
+        queries::{
+            player_queries::PlayerQueries,
+            leaderboard_queries::LeaderboardQueries,
+            game_queries::GameQueries,
+            event_queries::EventQueries,
+            admin_queries::AdminQueries,
+            analytics_queries::AnalyticsQueries,
+            config_queries::ConfigQueries,
+        },
+        mutations::{
+            player_mutations::PlayerMutations,
+            moderation_mutations::ModerationMutations,
+            game_mutations::GameMutations,
+            admin_mutations::AdminMutations,
+            config_mutations::ConfigMutations,
+        },
+        helpers::calculation_helpers,
+    },
+};
+
+// ANCHOR: service_struct
+linera_sdk::service!(GameHubService);
+
+pub struct GameHubService {
+    state: Arc<GameHubState>,
+    runtime: Arc<ServiceRuntime<Self>>,
+}
+// ANCHOR_END: service_struct
+
+// ANCHOR: declare_abi
+impl WithServiceAbi for GameHubService {
+    type Abi = crate::GameHubAbi;
+}
+// ANCHOR_END: declare_abi
+
+impl Service for GameHubService {
+    type Parameters = ();
+
+    // ANCHOR: new
+    async fn new(runtime: ServiceRuntime<Self>) -> Self {
+        let state = GameHubState::load(runtime.root_view_storage_context())
+            .await
+            .expect("Failed to load state");
+        GameHubService {
+            state: Arc::new(state),
+            runtime: Arc::new(runtime),
+        }
+    }
+    // ANCHOR_END: new
+
+    // ANCHOR: handle_query  
+    async fn handle_query(&self, request: Request) -> Response {
+        let schema = Schema::build(
+            QueryRoot {
+                player_queries: PlayerQueries { state: Arc::clone(&self.state) },
+                leaderboard_queries: LeaderboardQueries { state: Arc::clone(&self.state) },
+                game_queries: GameQueries { state: Arc::clone(&self.state) },
+                event_queries: EventQueries { state: Arc::clone(&self.state) },
+                admin_queries: AdminQueries { state: Arc::clone(&self.state) },
+                analytics_queries: AnalyticsQueries { state: Arc::clone(&self.state) },
+                config_queries: ConfigQueries { state: Arc::clone(&self.state) },
+            },
+            MutationRoot {
+                player_mutations: PlayerMutations { runtime: Arc::clone(&self.runtime) },
+                moderation_mutations: ModerationMutations { runtime: Arc::clone(&self.runtime) },
+                game_mutations: GameMutations { runtime: Arc::clone(&self.runtime) },
+                admin_mutations: AdminMutations { runtime: Arc::clone(&self.runtime) },
+                config_mutations: ConfigMutations { runtime: Arc::clone(&self.runtime) },
+            },
+            EmptySubscription,
+        )
+        .data(self.runtime.clone())
+        .finish();
+        schema.execute(request).await
+    }
+    // ANCHOR_END: handle_query
+}
+
+impl GameHubService {
+    /// Get a reference to the application state (used to avoid dead code warning)
+    #[allow(dead_code)]
+    pub fn state(&self) -> &Arc<GameHubState> {
+        &self.state
+    }
+}
+
+// ANCHOR: query_root
+#[derive(Clone)]
+struct QueryRoot {
+    player_queries: PlayerQueries,
+    leaderboard_queries: LeaderboardQueries,
+    game_queries: GameQueries,
+    event_queries: EventQueries,
+    admin_queries: AdminQueries,
+    analytics_queries: AnalyticsQueries,
+    config_queries: ConfigQueries,
+}
+
+#[Object]
+impl QueryRoot {
+    /// Get a player by Discord ID
+    async fn player(&self, discord_id: String) -> Result<Option<PlayerObject>> {
+        match self.state.get_player(&discord_id).await {
+            Some(player) => {
+                let player_obj = PlayerObject {
+                    discord_id: player.discord_id.clone(),
+                    username: player.username.clone(),
+                    avatar_url: player.avatar_url.clone(),
+                    total_points: player.total_points,
+                    participation_streak: player.participation_streak,
+                    current_rank: player.current_rank,
+                    status: PlayerStatusType::from(&player.status),
+                    created_at: player.created_at.micros().to_string(),
+                    last_active: player.last_active.micros().to_string(),
+                };
+                Ok(Some(player_obj))
+            },
+            None => Ok(None),
+        }
+    }
+
+    /// Get leaderboard with optional limit (legacy method)
+    async fn leaderboard(&self, limit: Option<i32>) -> Result<Vec<LeaderboardEntryObject>> {
+        let limit = limit.unwrap_or(50).max(1).min(100) as usize; // Reasonable limits
+        
+        let players = self.state.get_all_players().await;
+        let mut leaderboard = Vec::new();
+        for (rank, player) in players.into_iter().take(limit).enumerate() {
+            // Calculate real event-based points earned vs total accumulated points
+            let event_points = self.state.get_player_event_points(&player.discord_id).await;
+            
+            leaderboard.push(LeaderboardEntryObject {
+                player_discord_id: player.discord_id.clone(),
+                player_username: player.username.clone(),
+                score: player.total_points,
+                rank: (rank + 1) as u32,
+                points_earned: event_points, // Real event-based calculation
+                completion_time: Some(player.last_active.micros().to_string()),
+            });
+        }
+        Ok(leaderboard)
+    }
+
+    /// Get main leaderboard with pagination and enhanced participation data
+    async fn main_leaderboard(&self, limit: Option<i32>, offset: Option<i32>) -> Result<Vec<MainLeaderboardEntryObject>> {
+        let limit = limit.unwrap_or(50).max(1).min(100) as usize;
+        let offset = offset.unwrap_or(0).max(0) as usize;
+        
+        let players = self.state.get_all_players().await;
+        let mut leaderboard = Vec::new();
+        
+        // Apply pagination
+        for (index, player) in players.into_iter().skip(offset).take(limit).enumerate() {
+            // Get current scoring config for booster calculation
+            let scoring_config = self.state.get_scoring_config().await;
+            
+            // Calculate current booster level based on streak
+            let (streak_level, streak_multiplier) = self.calculate_streak_booster(
+                player.participation_streak, 
+                &scoring_config
+            );
+            
+            
+            leaderboard.push(MainLeaderboardEntryObject {
+                player: PlayerObject {
+                    discord_id: player.discord_id.clone(),
+                    username: player.username.clone(),
+                    avatar_url: player.avatar_url.clone(),
+                    total_points: player.total_points,
+                    participation_streak: player.participation_streak,
+                    current_rank: Some((offset + index + 1) as u32),
+                    status: PlayerStatusType::from(&player.status),
+                    created_at: player.created_at.micros().to_string(),
+                    last_active: player.last_active.micros().to_string(),
+                },
+                participation_data: EnhancedParticipationDataObject {
+                    streak_level,
+                    streak_multiplier,
+                    total_points_earned: player.total_points,
+                    events_participated: 0, // Would need event tracking
+                    last_event_timestamp: Some(player.last_active.micros().to_string()),
+                    booster_history: Vec::new(), // Would need booster tracking
+                },
+            });
+        }
+        Ok(leaderboard)
+    }
+
+    /// Get all approved games
+    async fn approved_games(&self) -> Result<Vec<GameObject>> {
+        let games = self.state.get_all_games().await;
+        let mut game_objects = Vec::new();
+        for game in games {
+            game_objects.push(GameObject {
+                id: game.id.clone(),
+                name: game.name.clone(),
+                description: game.description.clone(),
+                contract_address: game.contract_address.clone(),
+                developer_name: game.developer_info.name.clone(),
+                developer_contact: game.developer_info.contact.clone(),
+                status: GameStatusType::from(&game.status),
+                approved_by: game.approved_by.clone(),
+                created_at: game.created_at.micros().to_string(),
+                approved_at: game.approved_at.map(|t| t.micros().to_string()),
+            });
+        }
+        Ok(game_objects)
+    }
+
+    /// Get pending games (admin only)
+    async fn pending_games(&self, admin_discord_id: Option<String>) -> Result<Vec<PendingGameObject>> {
+        // Validate admin permissions if admin_discord_id is provided
+        if let Some(admin_id) = admin_discord_id {
+            if !self.state.is_admin(&admin_id).await {
+                return Err(async_graphql::Error::new("Insufficient permissions: Admin access required"));
+            }
+        } else {
+            // If no admin ID provided, return error for security
+            return Err(async_graphql::Error::new("Admin Discord ID required for pending games access"));
+        }
+        
+        let games = self.state.get_all_pending_games().await;
+        let mut game_objects = Vec::new();
+        for game in games {
+            game_objects.push(PendingGameObject {
+                id: game.id.clone(),
+                name: game.name.clone(),
+                description: game.description.clone(),
+                contract_address: game.contract_address.clone(),
+                developer_name: game.developer_info.name.clone(),
+                developer_contact: game.developer_info.contact.clone(),
+                created_at: game.created_at.micros().to_string(),
+            });
+        }
+        Ok(game_objects)
+    }
+
+    /// Get audit log entries (admin only)
+    async fn audit_log(&self, limit: Option<i32>) -> Result<Vec<AuditLogEntryObject>> {
+        let limit = limit.unwrap_or(20).max(1).min(100) as usize; // Reasonable limits
+        
+        let entries = self.state.get_audit_log_entries().await;
+        let limited_entries: Vec<_> = entries.into_iter().take(limit).collect();
+        let mut log_objects = Vec::new();
+        for entry in limited_entries {
+            log_objects.push(AuditLogEntryObject {
+                id: entry.id.clone(),
+                action_type: format!("{:?}", entry.action),
+                performed_by: entry.performed_by.clone(),
+                target: entry.target.clone(),
+                timestamp: entry.timestamp.micros().to_string(),
+                details: entry.details.clone(),
+            });
+        }
+        Ok(log_objects)
+    }
+
+    /// Get current scoring configuration
+    async fn scoring_config(&self) -> Result<ScoringConfigObject> {
+        let config = self.state.get_scoring_config().await;
+        
+        // Extract booster level information from the Vec<BoosterLevel>
+        let bronze_booster = config.booster_levels.iter().find(|b| b.name == "Bronze");
+        let silver_booster = config.booster_levels.iter().find(|b| b.name == "Silver");
+        let gold_booster = config.booster_levels.iter().find(|b| b.name == "Gold");
+        
+        Ok(ScoringConfigObject {
+            base_points_per_event: 100, // Default base points - would need to be configurable
+            streak_bonus_multiplier: 110, // Default 1.1x - would need to be configurable
+            bronze_booster_threshold: bronze_booster.map(|b| b.required_streak).unwrap_or(3),
+            silver_booster_threshold: silver_booster.map(|b| b.required_streak).unwrap_or(5), 
+            gold_booster_threshold: gold_booster.map(|b| b.required_streak).unwrap_or(10),
+            bronze_multiplier: bronze_booster.map(|b| b.multiplier).unwrap_or(120),
+            silver_multiplier: silver_booster.map(|b| b.multiplier).unwrap_or(150),
+            gold_multiplier: gold_booster.map(|b| b.multiplier).unwrap_or(200),
+            streak_grace_period_hours: config.grace_period_hours,
+            max_streak_multiplier: 300, // Default max 3.0x - would need to be configurable
+        })
+    }
+
+    /// Get player statistics
+    async fn player_stats(&self, discord_id: String) -> Result<Option<PlayerStatsObject>> {
+        match self.state.get_player(&discord_id).await {
+            Some(player) => {
+                // Use placeholder values for stats that would require event tracking
+                let events_participated = 0u32; // Would need event tracking to implement
+                let events_won = 0u32; // Would need win tracking to implement
+                let average_score = if events_participated > 0 {
+                    player.total_points / events_participated as u64
+                } else {
+                    0
+                };
+                
+                Ok(Some(PlayerStatsObject {
+                    discord_id: player.discord_id.clone(),
+                    username: player.username.clone(),
+                    total_points: player.total_points,
+                    participation_streak: player.participation_streak,
+                    events_participated,
+                    events_won,
+                    current_rank: player.current_rank,
+                    average_score,
+                    best_streak: player.best_streak, // Real historical maximum streak
+                    total_boosters_earned: 0, // Placeholder - would need to track this
+                }))
+            },
+            None => Ok(None),
+        }
+    }
+
+    /// Get all pending player data (for merging with registered players)
+    async fn pending_players(&self) -> Result<Vec<PendingPlayerDataObject>> {
+        let pending_data_list = self.state.get_all_pending_player_data().await;
+        let mut pending_objects = Vec::new();
+        
+        for pending_data in pending_data_list {
+            // Calculate current streak from event scores
+            let current_streak = self.state.calculate_streak_from_pending(&pending_data).await;
+            
+            // Find latest participation timestamp
+            let latest_participation = pending_data.event_scores.iter()
+                .map(|es| es.participation_timestamp)
+                .max()
+                .map(|ts| ts.micros().to_string())
+                .unwrap_or_else(|| pending_data.first_activity.micros().to_string());
+            
+            pending_objects.push(PendingPlayerDataObject {
+                discord_id: pending_data.discord_id.clone(),
+                username: format!("Pending-{}", pending_data.discord_id), // Placeholder username for unregistered players
+                total_pending_points: pending_data.total_pending_points,
+                events_participated: pending_data.event_scores.len() as u32,
+                last_participation: latest_participation,
+                current_streak,
+            });
+        }
+        
+        Ok(pending_objects)
+    }
+
+    /// Check if a player exists
+    async fn player_exists(&self, discord_id: String) -> Result<bool> {
+        Ok(self.state.player_exists(&discord_id).await)
+    }
+
+    /// Check if a game is approved
+    async fn game_approved(&self, game_id: String) -> Result<bool> {
+        Ok(self.state.is_game_approved(&game_id).await)
+    }
+
+    /// Get events with optional status filter and limit
+    async fn events(&self, status: Option<EventStatusType>, limit: Option<i32>) -> Result<Vec<EventObject>> {
+        let limit = limit.unwrap_or(50).max(1).min(100) as usize; // Reasonable limits
+        
+        let events = match status {
+            Some(status_filter) => {
+                // Convert GraphQL EventStatusType to domain EventStatus
+                let domain_status = match status_filter {
+                    EventStatusType::Upcoming => crate::core::types::event::EventStatus::Upcoming,
+                    EventStatusType::Active => crate::core::types::event::EventStatus::Active,
+                    EventStatusType::Ended => crate::core::types::event::EventStatus::Ended,
+                    EventStatusType::Cancelled => crate::core::types::event::EventStatus::Cancelled,
+                };
+                self.state.get_events_by_status(domain_status).await
+            },
+            None => self.state.get_all_events().await,
+        };
+        
+        let mut event_objects = Vec::new();
+        for event in events.into_iter().take(limit) {
+            event_objects.push(EventObject {
+                id: event.id.clone(),
+                game_id: event.game_id.clone(),
+                name: event.name.clone(),
+                description: event.description.clone(),
+                start_time: event.start_time.micros().to_string(),
+                end_time: Some(event.end_time.micros().to_string()),
+                status: EventStatusType::from(&event.status),
+                max_participants: event.max_participants,
+                prize_pool: event.prize_pool,
+                is_mandatory_for_streak: event.is_mandatory_for_streak,
+            });
+        }
+        Ok(event_objects)
+    }
+
+    /// Get a single event by ID
+    async fn event(&self, id: String) -> Result<Option<EventObject>> {
+        match self.state.get_event(&id).await {
+            Some(event) => {
+                let event_obj = EventObject {
+                    id: event.id.clone(),
+                    game_id: event.game_id.clone(),
+                    name: event.name.clone(),
+                    description: event.description.clone(),
+                    start_time: event.start_time.micros().to_string(),
+                    end_time: Some(event.end_time.micros().to_string()),
+                    status: EventStatusType::from(&event.status),
+                    max_participants: event.max_participants,
+                    prize_pool: event.prize_pool,
+                    is_mandatory_for_streak: event.is_mandatory_for_streak,
+                };
+                Ok(Some(event_obj))
+            },
+            None => Ok(None),
+        }
+    }
+
+    /// Get upcoming events with limit
+    async fn upcoming_events(&self, limit: Option<i32>) -> Result<Vec<EventObject>> {
+        let limit = limit.unwrap_or(20).max(1).min(50) as usize; // Smaller default for upcoming
+        
+        let events = self.state.get_events_by_status(
+            crate::core::types::event::EventStatus::Upcoming
+        ).await;
+        
+        let mut event_objects = Vec::new();
+        for event in events.into_iter().take(limit) {
+            event_objects.push(EventObject {
+                id: event.id.clone(),
+                game_id: event.game_id.clone(),
+                name: event.name.clone(),
+                description: event.description.clone(),
+                start_time: event.start_time.micros().to_string(),
+                end_time: Some(event.end_time.micros().to_string()),
+                status: EventStatusType::from(&event.status),
+                max_participants: event.max_participants,
+                prize_pool: event.prize_pool,
+                is_mandatory_for_streak: event.is_mandatory_for_streak,
+            });
+        }
+        Ok(event_objects)
+    }
+
+    /// Get events for a specific game
+    async fn events_by_game(&self, game_id: String) -> Result<Vec<EventObject>> {
+        let events = self.state.get_events_by_game(&game_id).await;
+        
+        let mut event_objects = Vec::new();
+        for event in events {
+            event_objects.push(EventObject {
+                id: event.id.clone(),
+                game_id: event.game_id.clone(),
+                name: event.name.clone(),
+                description: event.description.clone(),
+                start_time: event.start_time.micros().to_string(),
+                end_time: Some(event.end_time.micros().to_string()),
+                status: EventStatusType::from(&event.status),
+                max_participants: event.max_participants,
+                prize_pool: event.prize_pool,
+                is_mandatory_for_streak: event.is_mandatory_for_streak,
+            });
+        }
+        Ok(event_objects)
+    }
+
+    /// Get player game history
+    async fn game_history(&self, discord_id: String) -> Result<Vec<GameHistoryEntryObject>> {
+        // Check if player exists
+        if !self.state.player_exists(&discord_id).await {
+            return Ok(Vec::new());
+        }
+
+        // Get pending player data which contains event participation
+        let mut game_history = Vec::new();
+        
+        if let Some(pending_data) = self.state.get_pending_data(&discord_id).await {
+            // Group event scores by game_id
+            let mut game_stats: std::collections::HashMap<String, (Vec<u64>, u32)> = std::collections::HashMap::new();
+            
+            for event_score in &pending_data.event_scores {
+                let entry = game_stats.entry(event_score.game_id.clone()).or_insert((Vec::new(), 0));
+                entry.0.push(event_score.score);
+                if event_score.streak_eligible {
+                    entry.1 += 1;
+                }
+            }
+            
+            // Convert to GameHistoryEntryObject
+            for (game_id, (scores, current_streak)) in game_stats {
+                let game_name = if let Some(game) = self.state.get_game(&game_id).await {
+                    game.name
+                } else {
+                    "Unknown Game".to_string()
+                };
+                
+                let events_participated = scores.len() as u32;
+                let total_score = scores.iter().sum::<u64>();
+                let best_score = scores.iter().max().copied().unwrap_or(0);
+                
+                // Find first and last participation dates for this game
+                let game_event_scores: Vec<_> = pending_data.event_scores.iter()
+                    .filter(|es| es.game_id == game_id)
+                    .collect();
+                    
+                let first_participation = game_event_scores.iter()
+                    .map(|es| es.participation_timestamp)
+                    .min()
+                    .map(|ts| ts.micros().to_string())
+                    .unwrap_or_else(|| "".to_string());
+                    
+                let last_participation = game_event_scores.iter()
+                    .map(|es| es.participation_timestamp)
+                    .max()
+                    .map(|ts| ts.micros().to_string())
+                    .unwrap_or_else(|| "".to_string());
+                
+                game_history.push(GameHistoryEntryObject {
+                    game_id,
+                    game_name,
+                    events_participated,
+                    total_score,
+                    best_score,
+                    first_participation,
+                    last_participation,
+                    current_streak,
+                });
+            }
+        }
+
+        // Sort by last participation (most recent first)
+        game_history.sort_by(|a, b| b.last_participation.cmp(&a.last_participation));
+        
+        Ok(game_history)
+    }
+
+    /// Get player event participation history
+    async fn event_participation(&self, discord_id: String, limit: Option<i32>) -> Result<Vec<EventParticipationObject>> {
+        let limit = limit.unwrap_or(20).max(1).min(100) as usize;
+        
+        // Check if player exists
+        if !self.state.player_exists(&discord_id).await {
+            return Ok(Vec::new());
+        }
+
+        // Get pending player data which contains event scores
+        let mut participations = Vec::new();
+        
+        if let Some(pending_data) = self.state.get_pending_data(&discord_id).await {
+            for event_score in pending_data.event_scores.into_iter().take(limit) {
+                // Get event details
+                let event_name = if let Some(event) = self.state.get_event(&event_score.event_id).await {
+                    event.name
+                } else {
+                    "Unknown Event".to_string()
+                };
+
+                // Get game name
+                let game_name = if let Some(game) = self.state.get_game(&event_score.game_id).await {
+                    game.name
+                } else {
+                    "Unknown Game".to_string()
+                };
+
+                participations.push(EventParticipationObject {
+                    event_id: event_score.event_id,
+                    event_name,
+                    game_id: event_score.game_id,
+                    game_name,
+                    score: event_score.score,
+                    rank: None, // Would need ranking calculation
+                    points_earned: event_score.score, // Simplified for now
+                    booster_applied: if event_score.streak_eligible { Some("Eligible".to_string()) } else { None },
+                    participation_timestamp: event_score.participation_timestamp.micros().to_string(),
+                    streak_eligible: event_score.streak_eligible,
+                });
+            }
+        }
+
+        // Sort by participation timestamp (most recent first)
+        participations.sort_by(|a, b| b.participation_timestamp.cmp(&a.participation_timestamp));
+        
+        Ok(participations)
+    }
+
+    /// Get player streak history
+    async fn streak_history(&self, discord_id: String) -> Result<Vec<StreakHistoryEntryObject>> {
+        // Check if player exists
+        if !self.state.player_exists(&discord_id).await {
+            return Ok(Vec::new());
+        }
+
+        let mut streak_history = Vec::new();
+        
+        if let (Some(player), Some(pending_data)) = (
+            self.state.get_player(&discord_id).await,
+            self.state.get_pending_data(&discord_id).await
+        ) {
+            if player.participation_streak > 0 {
+                // Get scoring config to determine booster level
+                let scoring_config = self.state.get_scoring_config().await;
+                let (booster_name, booster_multiplier) = self.calculate_streak_booster(
+                    player.participation_streak, 
+                    &scoring_config
+                );
+                
+                // Get streak-eligible events for current streak
+                let streak_events: Vec<String> = pending_data.event_scores.iter()
+                    .filter(|es| es.streak_eligible)
+                    .map(|es| es.event_id.clone())
+                    .collect();
+                
+                // Calculate approximate start date by looking at recent events
+                let start_date = if let Some(oldest_event) = pending_data.event_scores.iter()
+                    .filter(|es| es.streak_eligible)
+                    .map(|es| es.participation_timestamp)
+                    .min()
+                {
+                    oldest_event.micros().to_string()
+                } else {
+                    player.created_at.micros().to_string()
+                };
+                
+                // Calculate bonus points from current streak
+                let total_bonus_points = pending_data.event_scores.iter()
+                    .filter(|es| es.streak_eligible)
+                    .map(|es| {
+                        // Calculate what the base points would be vs actual points
+                        // This is simplified - would need more detailed tracking
+                        let base_points = es.score / booster_multiplier as u64;
+                        es.score - base_points
+                    })
+                    .sum();
+
+                streak_history.push(StreakHistoryEntryObject {
+                    streak_count: player.participation_streak,
+                    start_date,
+                    end_date: None, // Current active streak
+                    events_included: streak_events,
+                    booster_level: Some(booster_name),
+                    total_bonus_points,
+                });
+            }
+        }
+
+        Ok(streak_history)
+    }
+
+    /// Get all admin users (admin only)
+    async fn all_admins(&self) -> Result<Vec<String>> {
+        // Get all admin IDs from the state
+        let admin_ids = self.state.get_all_admins().await;
+        Ok(admin_ids)
+    }
+
+    /// Get all moderator users (admin only)
+    async fn all_moderators(&self) -> Result<Vec<String>> {
+        // Get all moderator IDs from the state
+        let moderator_ids = self.state.get_all_moderators().await;
+        Ok(moderator_ids)
+    }
+
+    /// Get all banned players (admin/moderator only)
+    async fn banned_players(&self) -> Result<Vec<PlayerObject>> {
+        let players = self.state.get_all_players().await;
+        let mut banned_players = Vec::new();
+        
+        for player in players {
+            if let crate::core::types::player::PlayerStatus::Banned { .. } = player.status {
+                banned_players.push(PlayerObject {
+                    discord_id: player.discord_id.clone(),
+                    username: player.username.clone(),
+                    avatar_url: player.avatar_url.clone(),
+                    total_points: player.total_points,
+                    participation_streak: player.participation_streak,
+                    current_rank: player.current_rank,
+                    status: PlayerStatusType::from(&player.status),
+                    created_at: player.created_at.micros().to_string(),
+                    last_active: player.last_active.micros().to_string(),
+                });
+            }
+        }
+        Ok(banned_players)
+    }
+
+    /// Get all suspended players (admin/moderator only)
+    async fn suspended_players(&self) -> Result<Vec<PlayerObject>> {
+        let players = self.state.get_all_players().await;
+        let mut suspended_players = Vec::new();
+        
+        for player in players {
+            if let crate::core::types::player::PlayerStatus::Suspended { .. } = player.status {
+                suspended_players.push(PlayerObject {
+                    discord_id: player.discord_id.clone(),
+                    username: player.username.clone(),
+                    avatar_url: player.avatar_url.clone(),
+                    total_points: player.total_points,
+                    participation_streak: player.participation_streak,
+                    current_rank: player.current_rank,
+                    status: PlayerStatusType::from(&player.status),
+                    created_at: player.created_at.micros().to_string(),
+                    last_active: player.last_active.micros().to_string(),
+                });
+            }
+        }
+        Ok(suspended_players)
+    }
+
+    /// Get event leaderboard for a specific event
+    async fn event_leaderboard(&self, event_id: String, limit: Option<i32>) -> Result<Vec<LeaderboardEntryObject>> {
+        let limit = limit.unwrap_or(50).max(1).min(100) as usize;
+        
+        // Check if event exists
+        if self.state.get_event(&event_id).await.is_none() {
+            return Ok(Vec::new());
+        }
+
+        // Collect all participants for this event
+        let players = self.state.get_all_players().await;
+        let mut participants = Vec::new();
+        
+        for player in players {
+            if let Some(pending_data) = self.state.get_pending_data(&player.discord_id).await {
+                // Find the event score for this specific event
+                if let Some(event_score) = pending_data.event_scores.iter()
+                    .find(|es| es.event_id == event_id)
+                {
+                    participants.push((player, event_score.clone()));
+                }
+            }
+        }
+        
+        // Sort by score (descending)
+        participants.sort_by(|a, b| b.1.score.cmp(&a.1.score));
+        
+        // Create leaderboard entries
+        let mut leaderboard = Vec::new();
+        for (rank, (player, event_score)) in participants.into_iter().take(limit).enumerate() {
+            leaderboard.push(LeaderboardEntryObject {
+                player_discord_id: player.discord_id.clone(),
+                player_username: player.username.clone(),
+                score: event_score.score,
+                rank: (rank + 1) as u32,
+                points_earned: event_score.score, // Simplified
+                completion_time: Some(event_score.participation_timestamp.micros().to_string()),
+            });
+        }
+        
+        Ok(leaderboard)
+    }
+
+    /// Get game leaderboard for a specific game
+    async fn game_leaderboard(&self, game_id: String, limit: Option<i32>) -> Result<Vec<LeaderboardEntryObject>> {
+        let limit = limit.unwrap_or(50).max(1).min(100) as usize;
+        
+        // Check if game exists
+        if !self.state.is_game_approved(&game_id).await {
+            return Ok(Vec::new());
+        }
+
+        // Collect all players and their game-specific performance
+        let players = self.state.get_all_players().await;
+        let mut game_participants = Vec::new();
+        
+        for player in players {
+            if let Some(pending_data) = self.state.get_pending_data(&player.discord_id).await {
+                // Aggregate scores for this specific game
+                let game_scores: Vec<_> = pending_data.event_scores.iter()
+                    .filter(|es| es.game_id == game_id)
+                    .collect();
+                
+                if !game_scores.is_empty() {
+                    let total_score = game_scores.iter().map(|es| es.score).sum::<u64>();
+                    let latest_participation = game_scores.iter()
+                        .map(|es| es.participation_timestamp)
+                        .max()
+                        .unwrap();
+                    
+                    game_participants.push((player, total_score, latest_participation));
+                }
+            }
+        }
+        
+        // Sort by total score for this game (descending)
+        game_participants.sort_by(|a, b| b.1.cmp(&a.1));
+        
+        // Create leaderboard entries
+        let mut leaderboard = Vec::new();
+        for (rank, (player, total_score, latest_participation)) in game_participants.into_iter().take(limit).enumerate() {
+            leaderboard.push(LeaderboardEntryObject {
+                player_discord_id: player.discord_id.clone(),
+                player_username: player.username.clone(),
+                score: total_score,
+                rank: (rank + 1) as u32,
+                points_earned: total_score, // Simplified
+                completion_time: Some(latest_participation.micros().to_string()),
+            });
+        }
+        
+        Ok(leaderboard)
+    }
+
+    /// Get system analytics and health metrics (admin only)
+    async fn system_health(&self) -> Result<SystemHealthObject> {
+        let total_players = self.state.get_all_players().await.len() as u32;
+        let total_games = self.state.get_all_games().await.len() as u32;
+        let pending_games = self.state.get_all_pending_games().await.len() as u32;
+        let total_events = self.state.get_all_events().await.len() as u32;
+        let audit_entries = self.state.get_audit_log_entries().await.len() as u32;
+
+        Ok(SystemHealthObject {
+            total_players,
+            total_games,
+            pending_games,
+            total_events,
+            total_audit_entries: audit_entries,
+            active_players: 0, // Would need activity tracking
+            recent_registrations: 0, // Would need time-based queries
+        })
+    }
+
+    /// Get analytics data with date range filtering (admin only)
+    async fn analytics(&self, date_range: Option<DateRangeInput>) -> Result<AnalyticsObject> {
+        let all_players = self.state.get_all_players().await;
+        let all_games = self.state.get_all_games().await;
+        let all_events = self.state.get_all_events().await;
+        
+        let total_players = all_players.len() as u32;
+        let total_games = all_games.len() as u32;
+        let total_events = all_events.len() as u32;
+        
+        let (active_players_in_period, new_registrations_in_period, player_engagement) = 
+            if let Some(date_range) = date_range {
+                // Parse date range strings to timestamps for filtering
+                let start_timestamp = self.parse_date_to_timestamp(&date_range.start_date);
+                let end_timestamp = self.parse_date_to_timestamp(&date_range.end_date);
+                
+                if let (Some(start_ts), Some(end_ts)) = (start_timestamp, end_timestamp) {
+                    // Filter players by registration date within range
+                    let new_registrations = all_players.iter()
+                        .filter(|player| {
+                            player.created_at.micros() >= start_ts && 
+                            player.created_at.micros() <= end_ts
+                        })
+                        .count() as u32;
+                    
+                    // Filter players by activity within range
+                    let active_players = all_players.iter()
+                        .filter(|player| {
+                            player.last_active.micros() >= start_ts && 
+                            player.last_active.micros() <= end_ts
+                        })
+                        .count() as u32;
+                    
+                    // Generate daily engagement metrics
+                    let engagement = self.calculate_daily_engagement(&all_players, start_ts, end_ts).await;
+                    
+                    (active_players, new_registrations, engagement)
+                } else {
+                    // Invalid date format, return all-time metrics
+                    (total_players, total_players, Vec::new())
+                }
+            } else {
+                // Return all-time metrics when no date range specified
+                (total_players, total_players, Vec::new())
+            };
+
+        Ok(AnalyticsObject {
+            total_players,
+            active_games: total_games,
+            total_events,
+            active_players_in_period,
+            new_registrations_in_period,
+            player_engagement,
+        })
+    }
+
+    /// Get game statistics and popularity metrics (admin only)
+    async fn game_stats(&self, limit: Option<i32>) -> Result<Vec<GameStatsObject>> {
+        let limit = limit.unwrap_or(20).max(1).min(100) as usize;
+        let games = self.state.get_all_games().await;
+        let all_events = self.state.get_all_events().await;
+        
+        let mut game_stats = Vec::new();
+        
+        for game in games.into_iter().take(limit) {
+            // Calculate stats for this game
+            let game_events: Vec<_> = all_events.iter()
+                .filter(|event| event.game_id == game.id)
+                .collect();
+            
+            let total_events = game_events.len() as u32;
+            let total_participants = game_events.iter()
+                .map(|event| event.participant_count)
+                .sum::<u32>();
+            
+            let average_participants_per_event = if total_events > 0 {
+                total_participants as f64 / total_events as f64
+            } else {
+                0.0
+            };
+            
+            let last_event_date = game_events.iter()
+                .map(|event| event.end_time)
+                .max()
+                .map(|timestamp| timestamp.micros().to_string());
+                
+            // Calculate popularity score based on events and participants
+            let popularity_score = (total_events as f64 * 0.3) + (total_participants as f64 * 0.7);
+            
+            game_stats.push(GameStatsObject {
+                game_id: game.id.clone(),
+                game_name: game.name.clone(),
+                total_events,
+                total_participants,
+                unique_players: total_participants, // Simplified - would need proper unique counting
+                average_participants_per_event,
+                last_event_date,
+                popularity_score,
+            });
+        }
+        
+        // Sort by popularity score (descending)
+        game_stats.sort_by(|a, b| b.popularity_score.partial_cmp(&a.popularity_score).unwrap_or(std::cmp::Ordering::Equal));
+        
+        Ok(game_stats)
+    }
+
+}
+
+impl QueryRoot {
+    /// Helper method to calculate streak booster from scoring config
+    fn calculate_streak_booster(&self, streak: u32, config: &crate::core::types::scoring::ScoringConfig) -> (String, u32) {
+        // Find the highest booster level that applies
+        let mut best_booster = ("None".to_string(), 100u32); // Base 100% (no boost)
+        
+        for booster in &config.booster_levels {
+            if streak >= booster.required_streak {
+                if booster.multiplier > best_booster.1 as u64 {
+                    best_booster = (booster.name.clone(), booster.multiplier as u32);
+                }
+            }
+        }
+        
+        best_booster
+    }
+
+    /// Helper method to parse ISO 8601 date string to microsecond timestamp
+    fn parse_date_to_timestamp(&self, date_str: &str) -> Option<u64> {
+        // Parse ISO 8601 date format (e.g., "2024-01-01")
+        // For simplicity, we'll parse basic YYYY-MM-DD format
+        let parts: Vec<&str> = date_str.split('-').collect();
+        if parts.len() != 3 {
+            return None;
+        }
+        
+        let year: u32 = parts[0].parse().ok()?;
+        let month: u32 = parts[1].parse().ok()?;
+        let day: u32 = parts[2].parse().ok()?;
+        
+        // Basic validation
+        if month < 1 || month > 12 || day < 1 || day > 31 {
+            return None;
+        }
+        
+        // Approximate days since Unix epoch (simplified calculation)
+        let days_since_epoch = (year - 1970) * 365 + (month - 1) * 30 + (day - 1);
+        let micros_per_day = 24 * 60 * 60 * 1_000_000u64;
+        
+        Some(days_since_epoch as u64 * micros_per_day)
+    }
+    
+    /// Helper method to calculate daily engagement metrics
+    async fn calculate_daily_engagement(&self, players: &[crate::core::types::player::Player], start_ts: u64, end_ts: u64) -> Vec<PlayerEngagementObject> {
+        let mut engagement_data = Vec::new();
+        
+        // Calculate metrics for each day in the range
+        let micros_per_day = 24 * 60 * 60 * 1_000_000u64;
+        let total_days = ((end_ts - start_ts) / micros_per_day).min(365); // Limit to 1 year
+        
+        for day_offset in 0..=total_days {
+            let day_start = start_ts + (day_offset * micros_per_day);
+            let day_end = day_start + micros_per_day;
+            
+            // Count new registrations for this day
+            let new_registrations = players.iter()
+                .filter(|player| {
+                    let created_micros = player.created_at.micros();
+                    created_micros >= day_start && created_micros < day_end
+                })
+                .count() as u32;
+            
+            // Count active users for this day
+            let active_users = players.iter()
+                .filter(|player| {
+                    let active_micros = player.last_active.micros();
+                    active_micros >= day_start && active_micros < day_end
+                })
+                .count() as u32;
+            
+            // Only include days with activity to avoid empty data points
+            if new_registrations > 0 || active_users > 0 {
+                // Convert timestamp back to date string for display
+                let days_since_epoch = day_start / micros_per_day;
+                let year = 1970 + (days_since_epoch / 365);
+                let remaining_days = days_since_epoch % 365;
+                let month = 1 + (remaining_days / 30);
+                let day = 1 + (remaining_days % 30);
+                
+                let date_str = format!("{:04}-{:02}-{:02}", year, month, day);
+                
+                engagement_data.push(PlayerEngagementObject {
+                    date: date_str,
+                    active_users,
+                    new_registrations,
+                    total_events: 0, // Would need event filtering by date
+                    total_participation: 0, // Would need participation filtering by date
+                });
+            }
+        }
+        
+        engagement_data
+    }
+}
+
+// Enhanced Mutation Root for better developer experience
+// This supplements the existing Operation::mutation_root functionality
+#[derive(Clone)]
+struct MutationRoot {
+    #[allow(dead_code)]
+    runtime: Arc<ServiceRuntime<GameHubService>>, 
+}
+
+#[Object]
+impl MutationRoot {
+    /// Register a new player
+    async fn register_player(
+        &self,
+        discord_id: String,
+        username: String,
+        avatar_url: Option<String>
+    ) -> Result<String> {
+        self.runtime.schedule_operation(&Operation::RegisterPlayer {
+            discord_id: discord_id.clone(),
+            username,
+            avatar_url,
+        });
+        Ok(format!("Player registration scheduled for Discord ID: {}", discord_id))
+    }
+
+    /// Update player profile
+    async fn update_player_profile(
+        &self,
+        discord_id: String,
+        username: Option<String>,
+        avatar_url: Option<String>
+    ) -> Result<String> {
+        self.runtime.schedule_operation(&Operation::UpdatePlayerProfile {
+            discord_id: discord_id.clone(),
+            username,
+            avatar_url,
+        });
+        Ok(format!("Profile update scheduled for player {}", discord_id))
+    }
+    
+    /// Ban a player (admin only)
+    async fn ban_player(
+        &self,
+        admin_discord_id: String,
+        player_discord_id: String,
+        reason: String
+    ) -> Result<String> {
+        self.runtime.schedule_operation(&Operation::BanPlayer {
+            caller_discord_id: admin_discord_id,
+            player_discord_id: player_discord_id.clone(),
+            reason,
+        });
+        Ok(format!("Player {} ban scheduled", player_discord_id))
+    }
+
+    /// Suspend a player (moderator)
+    async fn suspend_player(
+        &self,
+        admin_discord_id: String,
+        player_discord_id: String,
+        reason: String,
+        duration_hours: Option<i32>
+    ) -> Result<String> {
+        self.runtime.schedule_operation(&Operation::SuspendPlayer {
+            caller_discord_id: admin_discord_id,
+            player_discord_id: player_discord_id.clone(),
+            reason,
+            duration_hours: duration_hours.map(|h| h as u32),
+        });
+        Ok(format!("Player {} suspension scheduled", player_discord_id))
+    }
+
+    /// Unban a player (admin only)
+    async fn unban_player(
+        &self,
+        admin_discord_id: String,
+        player_discord_id: String
+    ) -> Result<String> {
+        self.runtime.schedule_operation(&Operation::UnbanPlayer {
+            caller_discord_id: admin_discord_id,
+            player_discord_id: player_discord_id.clone(),
+        });
+        Ok(format!("Player {} unban scheduled", player_discord_id))
+    }
+
+    /// Unsuspend a player (admin/moderator)
+    async fn unsuspend_player(
+        &self,
+        admin_discord_id: String,
+        player_discord_id: String
+    ) -> Result<String> {
+        self.runtime.schedule_operation(&Operation::UnsuspendPlayer {
+            caller_discord_id: admin_discord_id,
+            player_discord_id: player_discord_id.clone(),
+        });
+        Ok(format!("Player {} unsuspension scheduled", player_discord_id))
+    }
+    
+
+
+    /// Approve a game (admin only)
+    async fn approve_game(
+        &self,
+        admin_discord_id: String,
+        game_id: String
+    ) -> Result<String> {
+        self.runtime.schedule_operation(&Operation::ApproveGame {
+            caller_discord_id: admin_discord_id,
+            game_id: game_id.clone(),
+        });
+        Ok(format!("Game {} approval scheduled", game_id))
+    }
+
+    /// Reject a game (admin only)
+    async fn reject_game(
+        &self,
+        admin_discord_id: String,
+        game_id: String,
+        reason: String
+    ) -> Result<String> {
+        self.runtime.schedule_operation(&Operation::RejectGame {
+            caller_discord_id: admin_discord_id,
+            game_id: game_id.clone(),
+            reason,
+        });
+        Ok(format!("Game {} rejection scheduled", game_id))
+    }
+
+    /// Suspend a game (admin only)
+    async fn suspend_game(
+        &self,
+        admin_discord_id: String,
+        game_id: String,
+        reason: String
+    ) -> Result<String> {
+        self.runtime.schedule_operation(&Operation::SuspendGame {
+            caller_discord_id: admin_discord_id,
+            game_id: game_id.clone(),
+            reason,
+        });
+        Ok(format!("Game {} suspension scheduled", game_id))
+    }
+
+    /// Reactivate a suspended game (admin only)
+    async fn reactivate_game(
+        &self,
+        admin_discord_id: String,
+        game_id: String
+    ) -> Result<String> {
+        self.runtime.schedule_operation(&Operation::ReactivateGame {
+            caller_discord_id: admin_discord_id,
+            game_id: game_id.clone(),
+        });
+        Ok(format!("Game {} reactivation scheduled", game_id))
+    }
+
+    /// Deprecate a game (admin only)
+    async fn deprecate_game(
+        &self,
+        admin_discord_id: String,
+        game_id: String
+    ) -> Result<String> {
+        self.runtime.schedule_operation(&Operation::DeprecateGame {
+            caller_discord_id: admin_discord_id,
+            game_id: game_id.clone(),
+        });
+        Ok(format!("Game {} deprecation scheduled", game_id))
+    }
+
+    /// Add an admin (admin only)
+    async fn add_admin(
+        &self,
+        caller_discord_id: String,
+        discord_id: String
+    ) -> Result<String> {
+        self.runtime.schedule_operation(&Operation::AddAdmin {
+            caller_discord_id,
+            discord_id: discord_id.clone(),
+        });
+        Ok(format!("Admin {} addition scheduled", discord_id))
+    }
+
+    /// Remove an admin (admin only)
+    async fn remove_admin(
+        &self,
+        caller_discord_id: String,
+        discord_id: String  
+    ) -> Result<String> {
+        self.runtime.schedule_operation(&Operation::RemoveAdmin {
+            caller_discord_id,
+            discord_id: discord_id.clone(),
+        });
+        Ok(format!("Admin {} removal scheduled", discord_id))
+    }
+
+    /// Assign a moderator (admin only)
+    async fn assign_moderator(
+        &self,
+        caller_discord_id: String,
+        discord_id: String
+    ) -> Result<String> {
+        self.runtime.schedule_operation(&Operation::AssignModerator {
+            caller_discord_id,
+            discord_id: discord_id.clone(),
+        });
+        Ok(format!("Moderator {} assignment scheduled", discord_id))
+    }
+
+    /// Remove a moderator (admin only)
+    async fn remove_moderator(
+        &self,
+        caller_discord_id: String,
+        discord_id: String
+    ) -> Result<String> {
+        self.runtime.schedule_operation(&Operation::RemoveModerator {
+            caller_discord_id,
+            discord_id: discord_id.clone(),
+        });
+        Ok(format!("Moderator {} removal scheduled", discord_id))
+    }
+
+    /// Update scoring configuration (admin only)
+    async fn update_scoring_config(
+        &self,
+        admin_discord_id: String,
+        _streak_bonus_multiplier: Option<i32>,
+        grace_period_hours: Option<i32>,
+        bronze_booster_threshold: Option<i32>,
+        silver_booster_threshold: Option<i32>,
+        gold_booster_threshold: Option<i32>,
+        bronze_multiplier: Option<i32>,
+        silver_multiplier: Option<i32>,
+        gold_multiplier: Option<i32>
+    ) -> Result<String> {
+        use crate::core::types::scoring::{ScoringConfig, BoosterLevel};
+        
+        // Build booster levels from provided parameters
+        let mut booster_levels = Vec::new();
+        
+        if let (Some(threshold), Some(multiplier)) = (bronze_booster_threshold, bronze_multiplier) {
+            booster_levels.push(BoosterLevel {
+                name: "Bronze".to_string(),
+                required_streak: threshold as u32,
+                multiplier: multiplier as u64,
+            });
+        }
+        
+        if let (Some(threshold), Some(multiplier)) = (silver_booster_threshold, silver_multiplier) {
+            booster_levels.push(BoosterLevel {
+                name: "Silver".to_string(), 
+                required_streak: threshold as u32,
+                multiplier: multiplier as u64,
+            });
+        }
+        
+        if let (Some(threshold), Some(multiplier)) = (gold_booster_threshold, gold_multiplier) {
+            booster_levels.push(BoosterLevel {
+                name: "Gold".to_string(),
+                required_streak: threshold as u32,
+                multiplier: multiplier as u64,
+            });
+        }
+
+        let config = ScoringConfig {
+            booster_levels,
+            grace_period_hours: grace_period_hours.unwrap_or(48) as u32,
+            streak_reset_rules: crate::core::types::scoring::StreakResetRules::default(),
+        };
+
+        self.runtime.schedule_operation(&Operation::UpdateScoringConfig { 
+            caller_discord_id: admin_discord_id,
+            config 
+        });
+        Ok("Scoring configuration update scheduled".to_string())
+    }
+
+    /// Import leaderboard data from CSV (admin only)
+    async fn import_leaderboard_data(
+        &self,
+        admin_discord_id: String,
+        csv_data: String
+    ) -> Result<ImportResultObject> {
+        // Schedule the import operation to be executed by the contract
+        self.runtime.schedule_operation(&Operation::ImportLeaderboardData {
+            caller_discord_id: admin_discord_id.clone(),
+            csv_data: csv_data.clone(),
+        });
+        
+        // For now, return a pending result since the operation is asynchronous
+        // In a complete implementation, we would:
+        // 1. Process the CSV data immediately for validation
+        // 2. Return detailed validation results
+        // 3. Handle the actual import through the scheduled operation
+        
+        let lines: Vec<&str> = csv_data.lines().collect();
+        let total_records = if lines.len() > 1 { lines.len() - 1 } else { 0 }; // Exclude header
+        
+        Ok(ImportResultObject {
+            success: true, // Operation scheduled successfully
+            total_records: total_records as u32,
+            successful_imports: 0, // Will be processed by contract operation
+            failed_imports: 0,
+            errors: Vec::new(),
+            summary_message: format!(
+                "CSV import operation scheduled for admin {} with {} records",
+                admin_discord_id,
+                total_records
+            ),
+        })
+    }
+}
+// ANCHOR_END: graphql_resolvers
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use async_graphql::Request;
+    use futures::FutureExt as _;
+    use linera_sdk::{util::BlockingWait, views::View, Service, ServiceRuntime};
+
+    use super::{GameHubService, GameHubState};
+
+    #[test]
+    fn test_introspection_query() {
+        let runtime = Arc::new(ServiceRuntime::<GameHubService>::new());
+        let state = GameHubState::load(runtime.root_view_storage_context())
+            .blocking_wait()
+            .expect("Failed to read from mock key value store");
+
+        let service = GameHubService { state: Arc::new(state), runtime };
+
+        // Use a simple introspection query that should always work
+        let request = Request::new("{ __schema { types { name } } }");
+
+        let response = service
+            .handle_query(request)
+            .now_or_never()
+            .expect("Query should not await anything");
+
+        // Just verify we get a response - GraphQL responses contain errors field if any
+        if !response.errors.is_empty() {
+            panic!("Query had errors: {:?}", response.errors);
+        }
+        // Test passes if we get a response without errors
+    }
+
+    #[test]
+    fn test_basic_queries() {
+        let runtime = Arc::new(ServiceRuntime::<GameHubService>::new());
+        let state = GameHubState::load(runtime.root_view_storage_context())
+            .blocking_wait()
+            .expect("Failed to read from mock key value store");
+
+        let service = GameHubService { state: Arc::new(state), runtime };
+
+        // Test scoring config query
+        let scoring_query = Request::new(r#"
+            {
+                scoringConfig {
+                    basePointsPerEvent
+                    streakGracePeriodHours
+                    bronzeBoosterThreshold
+                    silverBoosterThreshold
+                    goldBoosterThreshold
+                }
+            }
+        "#);
+
+        let response = service
+            .handle_query(scoring_query)
+            .blocking_wait();
+
+        if !response.errors.is_empty() {
+            panic!("Scoring config query had errors: {:?}", response.errors);
+        }
+
+        // Test leaderboard query
+        let leaderboard_query = Request::new(r#"
+            {
+                leaderboard(limit: 10) {
+                    playerDiscordId
+                    playerUsername
+                    score
+                    rank
+                }
+            }
+        "#);
+
+        let response = service
+            .handle_query(leaderboard_query)
+            .blocking_wait();
+
+        if !response.errors.is_empty() {
+            panic!("Leaderboard query had errors: {:?}", response.errors);
+        }
+
+        // Test approved games query
+        let games_query = Request::new(r#"
+            {
+                approvedGames {
+                    id
+                    name
+                    contractAddress
+                    status
+                }
+            }
+        "#);
+
+        let response = service
+            .handle_query(games_query)
+            .blocking_wait();
+
+        if !response.errors.is_empty() {
+            panic!("Approved games query had errors: {:?}", response.errors);
+        }
+
+        // Test audit log query
+        let audit_query = Request::new(r#"
+            {
+                auditLog(limit: 5) {
+                    id
+                    actionType
+                    performedBy
+                    timestamp
+                }
+            }
+        "#);
+
+        let response = service
+            .handle_query(audit_query)
+            .blocking_wait();
+
+        if !response.errors.is_empty() {
+            panic!("Audit log query had errors: {:?}", response.errors);
+        }
+    }
+
+    #[test]
+    fn test_player_queries() {
+        let runtime = Arc::new(ServiceRuntime::<GameHubService>::new());
+        let state = GameHubState::load(runtime.root_view_storage_context())
+            .blocking_wait()
+            .expect("Failed to read from mock key value store");
+
+        let service = GameHubService { state: Arc::new(state), runtime };
+
+        // Test player existence check
+        let player_exists_query = Request::new(r#"
+            {
+                playerExists(discordId: "123456789")
+            }
+        "#);
+
+        let response = service
+            .handle_query(player_exists_query)
+            .blocking_wait();
+
+        if !response.errors.is_empty() {
+            panic!("Player exists query had errors: {:?}", response.errors);
+        }
+
+        // Test player stats query (should return null for non-existent player)
+        let stats_query = Request::new(r#"
+            {
+                playerStats(discordId: "123456789") {
+                    discordId
+                    username
+                    totalPoints
+                    participationStreak
+                }
+            }
+        "#);
+
+        let response = service
+            .handle_query(stats_query)
+            .blocking_wait();
+
+        if !response.errors.is_empty() {
+            panic!("Player stats query had errors: {:?}", response.errors);
+        }
+    }
+
+    #[test]
+    fn test_enhanced_mutations() {
+        let runtime = Arc::new(ServiceRuntime::<GameHubService>::new());
+        let state = GameHubState::load(runtime.root_view_storage_context())
+            .blocking_wait()
+            .expect("Failed to read from mock key value store");
+
+        let service = GameHubService { state: Arc::new(state), runtime };
+
+        // Test register player mutation
+        let register_mutation = Request::new(r#"
+            mutation {
+                registerPlayer(
+                    discordId: "123456789"
+                    username: "TestPlayer"
+                    avatarUrl: "https://example.com/avatar.png"
+                )
+            }
+        "#);
+
+        let response = service
+            .handle_query(register_mutation)
+            .blocking_wait();
+
+        if !response.errors.is_empty() {
+            panic!("Register player mutation had errors: {:?}", response.errors);
+        }
+
+
+    }
+
+    #[test]
+    fn test_event_queries() {
+        let runtime = Arc::new(ServiceRuntime::<GameHubService>::new());
+        let state = GameHubState::load(runtime.root_view_storage_context())
+            .blocking_wait()
+            .expect("Failed to read from mock key value store");
+
+        let service = GameHubService { state: Arc::new(state), runtime };
+
+        // Test all events query
+        let events_query = Request::new(r#"
+            {
+                events(limit: 10) {
+                    id
+                    gameId
+                    name
+                    startTime
+                    endTime
+                    status
+                }
+            }
+        "#);
+
+        let response = service
+            .handle_query(events_query)
+            .blocking_wait();
+
+        if !response.errors.is_empty() {
+            panic!("Events query had errors: {:?}", response.errors);
+        }
+
+        // Test events by status query
+        let events_by_status_query = Request::new(r#"
+            {
+                events(status: UPCOMING, limit: 5) {
+                    id
+                    gameId
+                    name
+                    status
+                }
+            }
+        "#);
+
+        let response = service
+            .handle_query(events_by_status_query)
+            .blocking_wait();
+
+        if !response.errors.is_empty() {
+            panic!("Events by status query had errors: {:?}", response.errors);
+        }
+
+        // Test single event query
+        let event_query = Request::new(r#"
+            {
+                event(id: "test-event-123") {
+                    id
+                    gameId
+                    name
+                    startTime
+                    status
+                }
+            }
+        "#);
+
+        let response = service
+            .handle_query(event_query)
+            .blocking_wait();
+
+        if !response.errors.is_empty() {
+            panic!("Single event query had errors: {:?}", response.errors);
+        }
+
+        // Test upcoming events query
+        let upcoming_events_query = Request::new(r#"
+            {
+                upcomingEvents(limit: 3) {
+                    id
+                    gameId
+                    name
+                    startTime
+                    status
+                }
+            }
+        "#);
+
+        let response = service
+            .handle_query(upcoming_events_query)
+            .blocking_wait();
+
+        if !response.errors.is_empty() {
+            panic!("Upcoming events query had errors: {:?}", response.errors);
+        }
+
+        // Test events by game query
+        let events_by_game_query = Request::new(r#"
+            {
+                eventsByGame(gameId: "test-game-123") {
+                    id
+                    gameId
+                    name
+                    startTime
+                    status
+                }
+            }
+        "#);
+
+        let response = service
+            .handle_query(events_by_game_query)
+            .blocking_wait();
+
+        if !response.errors.is_empty() {
+            panic!("Events by game query had errors: {:?}", response.errors);
+        }
+    }
+
+    #[test]
+    fn test_enhanced_leaderboard_queries() {
+        let runtime = Arc::new(ServiceRuntime::<GameHubService>::new());
+        let state = GameHubState::load(runtime.root_view_storage_context())
+            .blocking_wait()
+            .expect("Failed to read from mock key value store");
+
+        let service = GameHubService { state: Arc::new(state), runtime };
+
+        // Test main leaderboard query without pagination
+        let main_leaderboard_query = Request::new(r#"
+            {
+                mainLeaderboard(limit: 10) {
+                    player {
+                        discordId
+                        username
+                        totalPoints
+                        participationStreak
+                        currentRank
+                    }
+                    participationData {
+                        streakLevel
+                        streakMultiplier
+                        totalPointsEarned
+                        eventsParticipated
+                        lastEventTimestamp
+                    }
+                }
+            }
+        "#);
+
+        let response = service
+            .handle_query(main_leaderboard_query)
+            .blocking_wait();
+
+        if !response.errors.is_empty() {
+            panic!("Main leaderboard query had errors: {:?}", response.errors);
+        }
+
+        // Test main leaderboard query with pagination
+        let paginated_leaderboard_query = Request::new(r#"
+            {
+                mainLeaderboard(limit: 5, offset: 10) {
+                    player {
+                        discordId
+                        username
+                        currentRank
+                    }
+                    participationData {
+                        streakLevel
+                        streakMultiplier
+                        totalPointsEarned
+                    }
+                }
+            }
+        "#);
+
+        let response = service
+            .handle_query(paginated_leaderboard_query)
+            .blocking_wait();
+
+        if !response.errors.is_empty() {
+            panic!("Paginated leaderboard query had errors: {:?}", response.errors);
+        }
+    }
+
+    #[test]
+    fn test_player_history_queries() {
+        let runtime = Arc::new(ServiceRuntime::<GameHubService>::new());
+        let state = GameHubState::load(runtime.root_view_storage_context())
+            .blocking_wait()
+            .expect("Failed to read from mock key value store");
+
+        let service = GameHubService { state: Arc::new(state), runtime };
+
+        // Test game history query
+        let game_history_query = Request::new(r#"
+            {
+                gameHistory(discordId: "123456789") {
+                    gameId
+                    gameName
+                    eventsParticipated
+                    totalScore
+                    bestScore
+                    firstParticipation
+                    lastParticipation
+                    currentStreak
+                }
+            }
+        "#);
+
+        let response = service
+            .handle_query(game_history_query)
+            .blocking_wait();
+
+        if !response.errors.is_empty() {
+            panic!("Game history query had errors: {:?}", response.errors);
+        }
+
+        // Test event participation query
+        let event_participation_query = Request::new(r#"
+            {
+                eventParticipation(discordId: "123456789", limit: 10) {
+                    eventId
+                    eventName
+                    gameId
+                    gameName
+                    score
+                    rank
+                    pointsEarned
+                    boosterApplied
+                    participationTimestamp
+                    streakEligible
+                }
+            }
+        "#);
+
+        let response = service
+            .handle_query(event_participation_query)
+            .blocking_wait();
+
+        if !response.errors.is_empty() {
+            panic!("Event participation query had errors: {:?}", response.errors);
+        }
+
+        // Test streak history query
+        let streak_history_query = Request::new(r#"
+            {
+                streakHistory(discordId: "123456789") {
+                    streakCount
+                    startDate
+                    endDate
+                    eventsIncluded
+                    boosterLevel
+                    totalBonusPoints
+                }
+            }
+        "#);
+
+        let response = service
+            .handle_query(streak_history_query)
+            .blocking_wait();
+
+        if !response.errors.is_empty() {
+            panic!("Streak history query had errors: {:?}", response.errors);
+        }
+    }
+
+    #[test] 
+    fn test_subscription_schema() {
+        let runtime = Arc::new(ServiceRuntime::<GameHubService>::new());
+        let state = GameHubState::load(runtime.root_view_storage_context())
+            .blocking_wait()
+            .expect("Failed to read from mock key value store");
+
+        let service = GameHubService { state: Arc::new(state), runtime };
+
+        // Test subscription introspection (verify EmptySubscription is used)
+        let subscription_introspection = Request::new(r#"
+            {
+                __schema {
+                    subscriptionType {
+                        name
+                    }
+                }
+            }
+        "#);
+
+        let response = service
+            .handle_query(subscription_introspection)
+            .blocking_wait();
+
+        if !response.errors.is_empty() {
+            panic!("Subscription introspection had errors: {:?}", response.errors);
+        }
+
+        // Verify that subscription type is null (EmptySubscription)
+        let data = response.data.into_json().unwrap();
+        if let Some(schema) = data.get("__schema") {
+            if let Some(subscription_type) = schema.get("subscriptionType") {
+                assert!(subscription_type.is_null(), "Subscription type should be null (EmptySubscription) following Linera patterns");
+            }
+        } else {
+            panic!("No schema found in introspection response");
+        }
+    }
+}

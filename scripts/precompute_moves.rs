@@ -1,6 +1,19 @@
-use game2048::Moves;
 use std::fs::File;
 use std::io::Write;
+
+/// A `u64` mask with 4 sections each starting after the n * 16th bit.
+/// Used to extract a "vertical slice" out of a 64 bit integer.
+static COL_MASK: u64 = 0x000F_000F_000F_000F_u64;
+
+// Proper Moves implementation for precomputation (from src_ref/moves.rs)
+struct Moves;
+
+impl Moves {
+    /// Returns the 4th bit from each row in given board OR'd.
+    fn column_from(board: u64) -> u64 {
+        (board | (board << 12) | (board << 24) | (board << 36)) & COL_MASK
+    }
+}
 
 fn main() {
     let mut left_moves = vec![0u64; 65536];
