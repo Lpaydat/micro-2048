@@ -61,7 +61,7 @@ linera publish-and-create target/wasm32-unknown-unknown/release/game2048_contrac
 
 ---
 
-- [ ] 1. Create minimal working Linera contract (absolute basics)
+- [x] 1. Create minimal working Linera contract (absolute basics)
   - Create new Cargo.toml based on example project with Linera SDK v0.14.1 dependencies only
   - Create minimal lib.rs with basic ABI (no complex types yet)
   - Create minimal contract.rs with empty state and one simple operation (like Ping)
