@@ -11,7 +11,7 @@ pub use crate::game::Game;
 pub use crate::moves::{Moves, COL_MASK, ROW_MASK};
 pub use crate::random::{hash_seed, rnd_range};
 
-use async_graphql::{Request, Response};
+
 use linera_sdk::linera_base_types::{Amount, ChainId};
 use linera_sdk::{
     abi::{ContractAbi, ServiceAbi},
@@ -27,8 +27,8 @@ impl ContractAbi for Game2048Abi {
 }
 
 impl ServiceAbi for Game2048Abi {
-    type Query = Request;
-    type QueryResponse = Response;
+    type Query = async_graphql::Request;
+    type QueryResponse = async_graphql::Response;
 }
 
 #[derive(async_graphql::SimpleObject, Debug, Deserialize, Serialize)]
@@ -48,22 +48,26 @@ pub enum Operation {
         player: String,
         player_chain_id: String,
         timestamp: u64,
+        password_hash: String,
     },
     NewShard,
     MakeMoves {
         board_id: String,
         moves: String, // JSON array of MoveEntry
         player: String,
+        password_hash: String,
     },
-    LeaderboardAction {
-        leaderboard_id: String,
-        action: LeaderboardAction,
-        settings: LeaderboardSettings,
-        player: String,
-        timestamp: u64,
-    },
+     LeaderboardAction {
+         leaderboard_id: String,
+         action: LeaderboardAction,
+         settings: LeaderboardSettings,
+         player: String,
+         password_hash: String,
+     },
     ToggleAdmin {
         username: String,
+        player: String,
+        password_hash: String,
     },
     CloseChain {
         chain_id: String,
