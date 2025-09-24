@@ -5,16 +5,18 @@ edition = "2021"
 
 [dependencies]
 async-graphql = "7.0"
-linera-sdk = "0.14.1"
+linera-sdk = "^0.15.3"
 futures = { version = "0.3 "}
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0" }
 thiserror = "1.0"
 async-trait = "0.1"
 regex = "1.0"
+sha2 = "0.10"
+lazy_static = "1.4"
 
 [dev-dependencies]
-linera-sdk = { version = "0.14.1", features = ["test", "wasmer"] }
+linera-sdk = { version = "^0.15.3", features = ["test", "wasmer"] }
 tokio = { version = "1.40", features = ["rt", "sync"] }
 
 [[bin]]
