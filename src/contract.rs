@@ -1,7 +1,7 @@
 #![cfg_attr(target_arch = "wasm32", no_main)]
 
 mod state;
-mod contract_handlers;
+mod contract_domain;
 
 use linera_sdk::{
     linera_base_types::{Account, AccountOwner, Amount, ChainId},
@@ -13,7 +13,6 @@ use state::{Leaderboard, LeaderboardShard};
 
 use self::state::Game2048;
 use game2048::{Message, Operation, RegistrationCheck};
-use self::contract_handlers::{MessageHandler, OperationHandler};
 
 pub struct Game2048Contract {
     state: Game2048,
@@ -57,133 +56,18 @@ impl Contract for Game2048Contract {
     }
 
     async fn execute_operation(&mut self, operation: Self::Operation) -> Self::Response {
-        match operation {
-            Operation::Faucet => {
-                OperationHandler::handle_faucet(self);
-            }
-            Operation::RegisterPlayer {
-                username,
-                password_hash,
-            } => {
-                OperationHandler::handle_register_player(self, username, password_hash).await;
-            }
-            Operation::NewBoard {
-                player,
-                player_chain_id,
-                timestamp,
-                password_hash,
-            } => {
-                OperationHandler::handle_new_board(self, player, player_chain_id, timestamp, password_hash).await;
-            }
-            Operation::NewShard => {
-                OperationHandler::handle_new_shard(self).await;
-            }
-            Operation::MakeMoves {
-                board_id,
-                moves,
-                player,
-                password_hash,
-            } => {
-                OperationHandler::handle_make_moves(self, board_id, moves, player, password_hash).await;
-            }
-             Operation::LeaderboardAction {
-                 leaderboard_id,
-                 action,
-                 settings,
-                 player,
-                 password_hash,
-             } => {
-                 OperationHandler::handle_leaderboard_action(
-                     self,
-                     leaderboard_id,
-                     action,
-                     settings,
-                     player,
-                     password_hash,
-                 ).await;
-             }
-            Operation::ToggleAdmin { username, player, password_hash } => {
-                OperationHandler::handle_toggle_admin(self, username, player, password_hash).await;
-            }
-            Operation::CloseChain { chain_id } => {
-                OperationHandler::handle_close_chain(self, chain_id);
-            }
-        }
+        use crate::contract_domain::OperationDispatcher;
+        
+        OperationDispatcher::dispatch(self, operation).await;
 
         self.state
             .balance
             .set(self.runtime.chain_balance().to_string());
     }
-
     async fn execute_message(&mut self, message: Self::Message) {
-        match message {
-            Message::Transfer { chain_id, amount } => {
-                MessageHandler::handle_transfer(self, chain_id, amount);
-            }
-            Message::RegisterPlayer {
-                username,
-                password_hash,
-            } => {
-                MessageHandler::handle_register_player(self, username, password_hash).await;
-            }
-            Message::CreateNewBoard {
-                seed,
-                player,
-                timestamp,
-                leaderboard_id,
-                shard_id,
-                end_time,
-            } => {
-                MessageHandler::handle_create_new_board(
-                    self,
-                    seed,
-                    player,
-                    timestamp,
-                    leaderboard_id,
-                    shard_id,
-                    end_time,
-                ).await;
-            }
-            Message::CreateLeaderboard {
-                leaderboard_id,
-                name,
-                description,
-                chain_id,
-                host,
-                start_time,
-                end_time,
-            } => {
-                MessageHandler::handle_create_leaderboard(
-                    self,
-                    leaderboard_id,
-                    name,
-                    description,
-                    chain_id,
-                    host,
-                    start_time,
-                    end_time,
-                ).await;
-            }
-            Message::LeaderboardNewGame {
-                player,
-                board_id,
-                timestamp,
-            } => {
-                MessageHandler::handle_leaderboard_new_game(self, player, board_id, timestamp).await;
-            }
-            Message::UpdateScore {
-                player,
-                board_id,
-                score,
-                is_end,
-                timestamp,
-            } => {
-                MessageHandler::handle_update_score(self, player, board_id, score, is_end, timestamp).await;
-            }
-            Message::Flush { board_ids, scores } => {
-                MessageHandler::handle_flush(self, board_ids, scores).await;
-            }
-        }
+        use crate::contract_domain::MessageDispatcher;
+        
+        MessageDispatcher::dispatch(self, message).await;
 
         self.state
             .balance

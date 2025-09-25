@@ -1,78 +1,15 @@
 use std::str::FromStr;
-use linera_sdk::{
-    linera_base_types::{Amount, ChainId},
-    views::View,
-};
-use game2048::{hash_seed, Game, Message, RegistrationCheck};
+use linera_sdk::views::View;
+/// Leaderboard Messages Handler
+/// 
+/// Handles leaderboard-related messages including creation, game notifications, score updates, and flushing.
 
-pub struct MessageHandler;
+use linera_sdk::linera_base_types::ChainId;
+use game2048::Message;
 
-impl MessageHandler {
-    pub fn handle_transfer(contract: &mut crate::Game2048Contract, chain_id: ChainId, amount: Amount) {
-        contract.transfer(chain_id, amount);
-    }
+pub struct LeaderboardMessageHandler;
 
-    pub async fn handle_register_player(
-        contract: &mut crate::Game2048Contract,
-        username: String,
-        password_hash: String,
-    ) {
-        contract.check_player_registered(&username, RegistrationCheck::EnsureNotRegistered)
-            .await;
-
-        let player = contract.state.players.load_entry_mut(&username).await.unwrap();
-        let chain_id = contract.runtime.chain_id().to_string();
-        player.username.set(username);
-        player.password_hash.set(password_hash);
-        player.chain_id.set(chain_id);
-    }
-
-    pub async fn handle_create_new_board(
-        contract: &mut crate::Game2048Contract,
-        seed: String,
-        player: String,
-        timestamp: u64,
-        leaderboard_id: String,
-        shard_id: String,
-        end_time: u64,
-    ) {
-        contract.check_player_registered(&player, RegistrationCheck::EnsureRegistered)
-            .await;
-
-        let player_obj = contract.state.players.load_entry_mut(&player).await.unwrap();
-
-        let current_chain_id = contract.runtime.chain_id().to_string();
-        if current_chain_id != *player_obj.chain_id.get() {
-            panic!("You can only create board on your own chain");
-        }
-
-        let mut board_id = hash_seed(&seed, &player, timestamp).to_string();
-        board_id = format!("{}.{}", player_obj.chain_id.get(), board_id);
-
-        let new_board = Game::new(&board_id, &player, timestamp).board;
-        let game = contract.state.boards.load_entry_mut(&board_id).await.unwrap();
-        game.board_id.set(board_id.clone());
-        game.board.set(new_board);
-        game.player.set(player.clone());
-        game.leaderboard_id.set(leaderboard_id.clone());
-        game.shard_id.set(shard_id.clone());
-        game.chain_id.set(player_obj.chain_id.get().to_string());
-        game.end_time.set(end_time);
-        game.created_at.set(timestamp);
-
-        contract.state.latest_board_id.set(board_id.clone());
-
-        // increment player and board count
-        let leaderboard_chain_id = ChainId::from_str(&leaderboard_id).unwrap();
-        contract.runtime
-            .prepare_message(Message::LeaderboardNewGame {
-                player: player.clone(),
-                board_id: board_id.clone(),
-                timestamp,
-            })
-            .send_to(leaderboard_chain_id);
-    }
-
+impl LeaderboardMessageHandler {
     pub async fn handle_create_leaderboard(
         contract: &mut crate::Game2048Contract,
         leaderboard_id: String,
