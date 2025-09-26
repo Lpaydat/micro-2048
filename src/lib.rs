@@ -49,6 +49,7 @@ pub enum Operation {
         player_chain_id: String,
         timestamp: u64,
         password_hash: String,
+        tournament_id: String, // 🚀 NEW: Must specify tournament
     },
     NewShard,
     MakeMoves {
@@ -73,6 +74,18 @@ pub enum Operation {
         chain_id: String,
     },
     Faucet,
+    /// 🚀 IMPROVED: Triggers shard chain to aggregate scores from monitored player chains
+    AggregateScores,
+    /// 🚀 IMPROVED: Triggers leaderboard chain to update from registered shard chains  
+    UpdateLeaderboard,
+    /// 🚀 NEW: Emit current active tournaments (leaderboard chains)
+    UpdateActiveTournaments,
+    /// 🚀 NEW: Emit current workload (shard chains)
+    UpdateShardWorkload,
+    /// 🚀 NEW: Centralized aggregation trigger (for designated triggerers)
+    RequestAggregation {
+        requester_chain_id: String,
+    },
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -104,6 +117,7 @@ pub enum Message {
         host: String,
         start_time: u64,
         end_time: u64,
+        shard_ids: Vec<String>,
     },
     LeaderboardNewGame {
         player: String,
@@ -121,6 +135,111 @@ pub enum Message {
         board_ids: std::collections::HashMap<String, String>,
         scores: std::collections::HashMap<String, u64>,
     },
+    /// 🚀 NEW: Player registers with shard for tournament monitoring
+    RegisterPlayerWithShard {
+        player_chain_id: String,
+        tournament_id: String,
+        player_name: String,
+    },
+    /// 🚀 NEW: Request leaderboard to trigger aggregation (delegated triggerer pattern)
+    RequestAggregationTrigger {
+        requester_chain_id: String,
+        timestamp: u64,
+    },
+    /// 🚀 NEW: Leaderboard tells shard to aggregate
+    TriggerShardAggregation {
+        timestamp: u64,
+    },
+}
+
+/// 🚀 ENHANCED: Four event types for four channels
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub enum GameEvent {
+    /// Channel: "player_score_update" - Emitted on every score change, game creation, game end
+    PlayerScoreUpdate {
+        player: String,
+        board_id: String,
+        score: u64,
+        chain_id: String,
+        timestamp: u64,
+        game_status: GameStatus,
+        highest_tile: u64,
+        moves_count: u32,
+        leaderboard_id: String,
+        /// Current best score for this player in this leaderboard (for shard filtering)
+        current_leaderboard_best: u64,
+    },
+    
+    /// Channel: "shard_score_update" - Emitted by shard chains with aggregated scores
+    ShardScoreUpdate {
+        shard_chain_id: String,
+        player_scores: std::collections::HashMap<String, PlayerScoreSummary>,
+        aggregation_timestamp: u64,
+        total_players: u32,
+        leaderboard_id: String,
+    },
+
+    /// Channel: "active_tournaments" - Emitted by leaderboard with current active tournaments
+    ActiveTournaments {
+        tournaments: Vec<TournamentInfo>,
+        timestamp: u64,
+    },
+
+    /// Channel: "shard_workload" - Emitted by shards for load balancing
+    ShardWorkload {
+        shard_chain_id: String,
+        tournament_id: String,
+        total_players: u32,
+        active_players_last_5min: u32,
+        timestamp: u64,
+    },
+}
+
+/// Tournament information for the registry
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct TournamentInfo {
+    pub tournament_id: String,
+    pub name: String,
+    pub shard_chain_ids: Vec<String>,
+    pub start_time: u64,
+    pub end_time: u64,
+    pub status: TournamentStatus,
+    pub total_players: u32,
+}
+
+/// Tournament status
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub enum TournamentStatus {
+    Active,
+    Ended,
+}
+
+/// Game status for tracking lifecycle
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub enum GameStatus {
+    Created,    // Game just created
+    Active,     // Game is being played
+    Ended(GameEndReason), // Game finished with reason
+}
+
+/// Player score summary for shard aggregation
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct PlayerScoreSummary {
+    pub player: String,
+    pub best_score: u64,
+    pub board_id: String,
+    pub chain_id: String,
+    pub highest_tile: u64,
+    pub last_update: u64,
+    pub game_status: GameStatus,
+}
+
+
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub enum GameEndReason {
+    NoMoves, // Board is full, no valid moves available
+    TournamentEnded, // Tournament/leaderboard time expired
 }
 
 pub enum RegistrationCheck {

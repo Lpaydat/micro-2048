@@ -6,8 +6,8 @@ mod service_handlers;
 use std::sync::Arc;
 
 use self::state::Game2048;
-use self::service_handlers::{QueryHandler, MutationHandler};
-use async_graphql::{EmptySubscription, Request, Response, Schema};
+use self::service_handlers::{QueryHandler, MutationHandler, SubscriptionHandler};
+use async_graphql::{Request, Response, Schema};
 use linera_sdk::{linera_base_types::WithServiceAbi, views::View, Service, ServiceRuntime};
 
 pub struct Game2048Service {
@@ -43,7 +43,10 @@ impl Service for Game2048Service {
                 state: self.state.clone(),
                 runtime: self.runtime.clone(),
             },
-            EmptySubscription,
+            SubscriptionHandler {
+                state: self.state.clone(),
+                runtime: self.runtime.clone(),
+            },
         )
         .finish();
         schema.execute(request).await

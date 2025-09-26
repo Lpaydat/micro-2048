@@ -1,7 +1,7 @@
 use std::str::FromStr;
 use linera_sdk::views::View;
 /// Leaderboard Messages Handler
-/// 
+///
 /// Handles leaderboard-related messages including creation, game notifications, score updates, and flushing.
 
 use linera_sdk::linera_base_types::ChainId;
@@ -19,6 +19,7 @@ impl LeaderboardMessageHandler {
         host: String,
         start_time: u64,
         end_time: u64,
+        shard_ids: Vec<String>,
     ) {
         let leaderboard = contract.state.leaderboards.load_entry_mut("").await.unwrap();
         let shard = contract.state.shards.load_entry_mut("").await.unwrap();
@@ -27,8 +28,8 @@ impl LeaderboardMessageHandler {
             leaderboard.name.set(name.clone());
         }
 
-        if let Some(desc) = description {
-            leaderboard.description.set(desc);
+        if let Some(ref desc) = description {
+            leaderboard.description.set(desc.clone());
         }
 
         if !chain_id.is_empty() {
@@ -54,6 +55,18 @@ impl LeaderboardMessageHandler {
             leaderboard.end_time.set(end_time);
             shard.end_time.set(end_time);
         }
+
+        // Add provided shard IDs to leaderboard (from main chain)
+        
+        for shard_id in &shard_ids {
+            leaderboard.shard_ids.push_back(shard_id.clone());
+            if leaderboard.current_shard_id.get().is_empty() {
+                leaderboard.current_shard_id.set(shard_id.clone());
+            }
+        }
+
+        // Emit ActiveTournaments event so clients know the leaderboard is ready with real shard IDs
+        contract.emit_active_tournaments().await;
     }
 
     pub async fn handle_leaderboard_new_game(

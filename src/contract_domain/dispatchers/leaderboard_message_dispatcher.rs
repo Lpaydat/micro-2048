@@ -18,8 +18,9 @@ impl LeaderboardMessageDispatcher {
         host: String,
         start_time: u64,
         end_time: u64,
+        shard_ids: Vec<String>,
     ) {
-        LeaderboardMessageHandler::handle_create_leaderboard(contract, leaderboard_id, name, description, chain_id, host, start_time, end_time).await;
+        LeaderboardMessageHandler::handle_create_leaderboard(contract, leaderboard_id, name, description, chain_id, host, start_time, end_time, shard_ids).await;
     }
 
     /// Handle new game notifications

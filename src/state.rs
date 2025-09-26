@@ -57,6 +57,17 @@ pub struct LeaderboardShard {
     pub score: MapView<String, u64>,        // username, score
     pub board_ids: MapView<String, String>, // username, board_id
     pub counter: RegisterView<u16>,         // update count
+    
+    // 🚀 NEW: Player chain tracking and workload stats
+    pub monitored_player_chains: QueueView<String>, // Player chain IDs we're monitoring
+    pub active_players_count: RegisterView<u32>,     // Current active players
+    pub total_games_count: RegisterView<u32>,        // Total games handled
+    pub last_activity: RegisterView<u64>,            // Last activity timestamp
+    
+    // 🚀 PERFORMANCE: Smart player activity tracking
+    pub player_activity_levels: MapView<String, u8>,    // chain_id -> activity_level (0=very_active, 1=active, 2=inactive, 3=very_inactive)
+    pub player_last_seen: MapView<String, u64>,         // chain_id -> last_event_timestamp
+    pub player_read_intervals: MapView<String, u8>,     // chain_id -> read_interval_multiplier (1, 5, 15)
 }
 
 #[derive(View, SimpleObject)]
@@ -78,6 +89,14 @@ pub struct Leaderboard {
 
     pub shard_ids: QueueView<String>,           // shard_id
     pub current_shard_id: RegisterView<String>, // current shard_id
+    
+    // 🚀 NEW: Smart Triggerer Delegation System
+    pub primary_triggerer: RegisterView<String>,         // Primary triggerer chain_id
+    pub backup_triggerers: QueueView<String>,           // Backup triggerers (up to 4)
+    pub last_trigger_time: RegisterView<u64>,           // Last aggregation trigger timestamp
+    pub last_trigger_by: RegisterView<String>,          // Who triggered last
+    pub trigger_rotation_counter: RegisterView<u32>,    // Rotation counter for fairness
+    pub trigger_cooldown_until: RegisterView<u64>,      // Cooldown period (no triggers until this time)
 }
 
 #[derive(View, SimpleObject)]
@@ -104,4 +123,10 @@ pub struct Game2048 {
     pub onboard_chains: QueueView<String>,                // chain_id
     pub nonce: RegisterView<u64>,
     pub latest_board_id: RegisterView<String>,
+    
+    // 🚀 NEW: Event index tracking for reliable event reading
+    pub player_score_event_indices: MapView<String, u64>, // chain_id -> last processed event index
+    pub shard_score_event_indices: MapView<String, u64>,  // chain_id -> last processed event index  
+    pub active_tournaments_event_index: RegisterView<u64>, // Last processed tournament registry index
+    pub shard_workload_event_indices: MapView<String, u64>, // chain_id -> last processed workload index
 }

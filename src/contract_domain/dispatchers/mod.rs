@@ -46,8 +46,8 @@ impl OperationDispatcher {
             Operation::MakeMoves { board_id, moves, player, password_hash } => {
                 GameDispatcher::dispatch_make_moves(contract, board_id, moves, player, password_hash).await;
             }
-            Operation::NewBoard { player, player_chain_id, timestamp, password_hash } => {
-                GameDispatcher::dispatch_new_board(contract, player, player_chain_id, timestamp, password_hash).await;
+            Operation::NewBoard { player, player_chain_id, timestamp, password_hash, tournament_id } => {
+                GameDispatcher::dispatch_new_board(contract, player, player_chain_id, timestamp, password_hash, tournament_id).await;
             }
             
             // Leaderboard operations
@@ -64,6 +64,30 @@ impl OperationDispatcher {
             }
             Operation::CloseChain { chain_id } => {
                 SystemDispatcher::dispatch_close_chain(contract, chain_id);
+            }
+            
+            // 🚀 IMPROVED: Event-driven aggregation operations (use state data)
+            Operation::AggregateScores => {
+                GameDispatcher::dispatch_aggregate_scores(contract).await;
+            }
+            Operation::UpdateLeaderboard => {
+                GameDispatcher::dispatch_update_leaderboard(contract).await;
+            }
+            
+            // 🚀 NEW: Tournament and workload management operations
+            Operation::UpdateActiveTournaments => {
+                contract.emit_active_tournaments().await;
+            }
+            Operation::UpdateShardWorkload => {
+                contract.emit_shard_workload().await;
+            }
+            
+            // 🚀 NEW: Centralized aggregation request
+            Operation::RequestAggregation { requester_chain_id } => {
+                let timestamp = contract.runtime.system_time().micros();
+                if let Err(e) = contract.handle_aggregation_trigger_request(&requester_chain_id, timestamp).await {
+                    panic!("Not authorized to trigger aggregation: {}", e);
+                }
             }
         }
     }

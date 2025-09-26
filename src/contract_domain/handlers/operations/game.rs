@@ -3,10 +3,8 @@
 //! Handles game-related operations including moves and board creation.
 
 use std::str::FromStr;
-use linera_sdk::{
-    linera_base_types::ChainId,
-};
-use game2048::{Direction, Game, Message};
+use linera_sdk::linera_base_types::ChainId;
+use game2048::{Direction, Game, GameEvent, GameEndReason, GameStatus, Message, hash_seed};
 use crate::contract_domain::game_logic::{GameMoveProcessor, GameMoveResult};
 
 pub struct GameOperationHandler;
@@ -60,7 +58,47 @@ impl GameOperationHandler {
                         board.is_ended.set(true);
                     }
 
-                    // Update player record if score improvement is significant
+                    // 🚀 NEW: Always emit score update on every score change!
+                    let game_status = if is_ended {
+                        // Game ends only when no moves available (board is full)
+                        // Players can continue indefinitely for higher scores (2048 -> 4096 -> 8192 -> ...)
+                        GameStatus::Ended(GameEndReason::NoMoves)
+                    } else {
+                        GameStatus::Active
+                    };
+
+                    let leaderboard = contract.state.leaderboards.load_entry_mut("").await.unwrap();
+                    let leaderboard_id = leaderboard.leaderboard_id.get().clone();
+
+                    // Get current best score for this player in this leaderboard
+                    let current_best = leaderboard.score.get(&player).await.unwrap().unwrap_or(0);
+
+                    let score_event = GameEvent::PlayerScoreUpdate {
+                        player: player.clone(),
+                        board_id: board_id.clone(),
+                        score: final_score,
+                        chain_id: contract.runtime.chain_id().to_string(),
+                        timestamp: latest_timestamp,
+                        game_status,
+                        highest_tile: final_highest_tile,
+                        moves_count: 0, // TODO: Track actual move count
+                        leaderboard_id: leaderboard_id.clone(),
+                        current_leaderboard_best: current_best,
+                    };
+
+                    use linera_sdk::linera_base_types::StreamName;
+                    let stream_name = StreamName::from("player_score_update".to_string());
+                    contract.runtime.emit(stream_name, &score_event);
+                    
+                    // 🚀 NEW: Update shard workload when scores change significantly
+                    let score_improvement = final_score.saturating_sub(current_best);
+                    if score_improvement > 2000 || is_ended {
+                        contract.emit_shard_workload().await;
+                        
+                        // 🚀 REMOVED: Dynamic update happens in leaderboard update instead
+                    }
+
+                    // Update player record for significant improvements
                     let player_record = contract
                         .state
                         .player_records
@@ -83,26 +121,37 @@ impl GameOperationHandler {
                             .best_score
                             .insert(&shard_id, final_score)
                             .unwrap();
-                        let shard_id = ChainId::from_str(&shard_id).unwrap();
-                        contract.update_score(
-                            shard_id,
-                            &player,
-                            &board_id,
-                            final_score,
-                            is_ended,
-                            latest_timestamp,
-                        );
                     }
                 }
                 GameMoveResult::Error(msg) => panic!("{}", msg),
             }
         } else if moves.is_empty() {
             let score = Game::score(*board.board.get());
-            if shard_id.is_empty() {
-                panic!("Chain id is empty");
-            }
-            let shard_id = ChainId::from_str(&shard_id).unwrap();
-            contract.update_score(shard_id, &player, &board_id, score, true, 111970);
+            
+            // 🚀 NEW: Emit player score update for tournament end
+            // This case handles when tournament time expires and game ends
+            let leaderboard = contract.state.leaderboards.load_entry_mut("").await.unwrap();
+            let leaderboard_id = leaderboard.leaderboard_id.get().clone();
+            
+            // Get current best score for this player in this leaderboard
+            let current_best = leaderboard.score.get(&player).await.unwrap().unwrap_or(0);
+            
+            let score_event = GameEvent::PlayerScoreUpdate {
+                player: player.clone(),
+                board_id: board_id.clone(),
+                score,
+                chain_id: contract.runtime.chain_id().to_string(),
+                timestamp: 111970,
+                game_status: GameStatus::Ended(GameEndReason::TournamentEnded),
+                highest_tile: Game::highest_tile(*board.board.get()),
+                moves_count: 0, // TODO: Track actual move count
+                leaderboard_id: leaderboard_id.clone(),
+                current_leaderboard_best: current_best,
+            };
+            
+            use linera_sdk::linera_base_types::StreamName;
+            let stream_name = StreamName::from("player_score_update".to_string());
+            contract.runtime.emit(stream_name, &score_event);
         } else {
             panic!("Game is ended");
         }
@@ -111,43 +160,144 @@ impl GameOperationHandler {
     pub async fn handle_new_board(
         contract: &mut crate::Game2048Contract,
         player: String,
-        player_chain_id: String,
+        _player_chain_id: String,
         timestamp: u64,
         password_hash: String,
+        tournament_id: String, // 🚀 NEW: Tournament ID parameter
     ) {
         // Validate password
         contract.validate_player_password(&player, &password_hash).await;
+
+        // 🚀 NEW: Get leaderboard chain ID (in real implementation, this would be configured)
+        let leaderboard_chain_id = ChainId::from_str("leaderboard_main").unwrap_or(contract.runtime.chain_id());
+        
+        // 🚀 NEW: Validate tournament exists and is active
+        if !contract.validate_tournament(&tournament_id, leaderboard_chain_id).await {
+            panic!("Tournament '{}' is not active or does not exist", tournament_id);
+        }
+
+        // 🚀 NEW: Get tournament info and select optimal shard
+        let selected_shard_id = contract.select_optimal_shard(&tournament_id, leaderboard_chain_id).await;
+        
+        // 🚀 NEW: Create board locally (no cross-chain message needed)
         let nonce = contract.state.nonce.get();
-        let leaderboard = contract.state.leaderboards.load_entry_mut("").await.unwrap();
-        let leaderboard_id = leaderboard.leaderboard_id.get();
-
-        if leaderboard_id.is_empty() {
-            panic!("No leaderboard found");
-        }
-
-        let start_time = *leaderboard.start_time.get();
-        let end_time = *leaderboard.end_time.get();
-
-        if timestamp < start_time {
-            panic!("Timestamp cannot be before planned start time");
-        }
-
-        if timestamp > end_time {
-            panic!("Timestamp cannot be after planned end time");
-        }
-
-        let message_payload = Message::CreateNewBoard {
-            seed: nonce.to_string(),
-            player: player.clone(),
-            timestamp,
-            leaderboard_id: leaderboard_id.clone(),
-            shard_id: contract.runtime.chain_id().to_string(),
-            end_time,
-        };
+        let board_id = format!("{}.{}", contract.runtime.chain_id(), hash_seed(&nonce.to_string(), &player, timestamp));
+        
+        let new_board = Game::new(&board_id, &player, timestamp).board;
+        let game = contract.state.boards.load_entry_mut(&board_id).await.unwrap();
+        game.board_id.set(board_id.clone());
+        game.board.set(new_board);
+        game.player.set(player.clone());
+        game.leaderboard_id.set(tournament_id.clone());
+        game.shard_id.set(selected_shard_id.clone());
+        game.chain_id.set(contract.runtime.chain_id().to_string());
+        game.created_at.set(timestamp);
+        
         contract.state.nonce.set(nonce + 1);
-        let message = contract.runtime.prepare_message(message_payload);
-        message.send_to(ChainId::from_str(&player_chain_id).unwrap());
+        contract.state.latest_board_id.set(board_id.clone());
 
-        contract.auto_faucet(Some(1));
+        // 🚀 NEW: Register with selected shard (one-time registration)
+        let registration_message = Message::RegisterPlayerWithShard {
+            player_chain_id: contract.runtime.chain_id().to_string(),
+            tournament_id: tournament_id.clone(),
+            player_name: player.clone(),
+        };
+        contract.runtime
+            .prepare_message(registration_message)
+            .send_to(ChainId::from_str(&selected_shard_id).unwrap());
+        
+        // 🚀 BOOTSTRAP: First player triggers initial aggregation
+        let is_first_player = {
+            let leaderboard = contract.state.leaderboards.load_entry_mut("").await.unwrap();
+            leaderboard.primary_triggerer.get().is_empty()
+        };
+        
+        if is_first_player {
+            // This is the first player - trigger initial aggregation to bootstrap
+            if let Ok(leaderboard_chain_id) = ChainId::from_str(&tournament_id) {
+                let requester_id = contract.runtime.chain_id().to_string();
+                contract.runtime
+                    .prepare_message(Message::RequestAggregationTrigger {
+                        requester_chain_id: requester_id,
+                        timestamp: timestamp,
+                    })
+                    .send_to(leaderboard_chain_id);
+            }
+        }
+
+        // 🚀 NEW: Emit game creation event
+        contract.emit_game_creation_event(&board_id, &player, &tournament_id, timestamp).await;
+        
+        // 🚀 NEW: Track activity for workload statistics
+        contract.track_game_activity().await;
+        
+        // 🚀 NEW: Emit workload update when new games are created
+        contract.emit_shard_workload().await;
+    }
+
+    /// 🚀 IMPROVED: Handle score aggregation using monitored player chains from shard state
+    pub async fn handle_aggregate_scores(
+        contract: &mut crate::Game2048Contract,
+    ) {
+        // Get monitored player chains from shard state
+        let shard = contract.state.shards.load_entry_mut("").await.unwrap();
+        let mut player_chain_ids = Vec::new();
+        
+        // Collect all monitored player chain IDs from the queue
+        match shard.monitored_player_chains.read_front(100).await {
+            Ok(chain_id_strings) => {
+                for chain_id_str in chain_id_strings {
+                    if let Ok(chain_id) = ChainId::from_str(&chain_id_str) {
+                        player_chain_ids.push(chain_id);
+                    }
+                }
+            }
+            Err(_) => {
+                // No entries or error - proceed with empty list
+            }
+        }
+        
+        // Aggregate scores from monitored player chains
+        contract.aggregate_scores_from_player_chains(player_chain_ids).await;
+        
+        // 🚀 NEW: Emit workload update after aggregation
+        contract.emit_shard_workload().await;
+    }
+
+    /// 🚀 IMPROVED: Handle leaderboard update using registered shard chains from leaderboard state
+    pub async fn handle_update_leaderboard(
+        contract: &mut crate::Game2048Contract,
+    ) {
+        // Get registered shard chain IDs from leaderboard state
+        let leaderboard = contract.state.leaderboards.load_entry_mut("").await.unwrap();
+        let mut shard_chain_ids = Vec::new();
+        
+        // 🚀 FIXED: Collect ALL registered shard chain IDs (no limit)
+        let mut read_count = 0;
+        loop {
+            match leaderboard.shard_ids.read_front(1000).await { // Large batch size
+                Ok(shard_id_strings) => {
+                    if shard_id_strings.is_empty() {
+                        break; // No more shards to read
+                    }
+                    
+                    for shard_id_str in shard_id_strings {
+                        if let Ok(chain_id) = ChainId::from_str(&shard_id_str) {
+                            shard_chain_ids.push(chain_id);
+                        }
+                    }
+                    read_count += 1;
+                    
+                    // Safety valve - prevent infinite loops
+                    if read_count > 100 { 
+                        break;
+                    }
+                }
+                Err(_) => break, // Error or end of queue
+            }
+        }
+        
+        // Update leaderboard from registered shard chains
+        contract.update_leaderboard_from_shard_chains(shard_chain_ids).await;
     }
 }

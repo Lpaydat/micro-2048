@@ -30,8 +30,8 @@ impl MessageDispatcher {
             }
             
             // Leaderboard messages
-            Message::CreateLeaderboard { leaderboard_id, name, description, chain_id, host, start_time, end_time } => {
-                crate::contract_domain::dispatchers::LeaderboardMessageDispatcher::dispatch_create_leaderboard(contract, leaderboard_id, name, description, chain_id, host, start_time, end_time).await;
+            Message::CreateLeaderboard { leaderboard_id, name, description, chain_id, host, start_time, end_time, shard_ids } => {
+                crate::contract_domain::dispatchers::LeaderboardMessageDispatcher::dispatch_create_leaderboard(contract, leaderboard_id, name, description, chain_id, host, start_time, end_time, shard_ids).await;
             }
             Message::LeaderboardNewGame { player, board_id, timestamp } => {
                 crate::contract_domain::dispatchers::LeaderboardMessageDispatcher::dispatch_leaderboard_new_game(contract, player, board_id, timestamp).await;
@@ -41,6 +41,27 @@ impl MessageDispatcher {
             }
             Message::Flush { board_ids, scores } => {
                 crate::contract_domain::dispatchers::LeaderboardMessageDispatcher::dispatch_flush(contract, board_ids, scores).await;
+            }
+            
+            // 🚀 NEW: Shard registration message
+            Message::RegisterPlayerWithShard { player_chain_id, tournament_id, player_name } => {
+                crate::contract_domain::handlers::messages::PlayerMessageHandler::handle_register_player_with_shard(contract, player_chain_id, tournament_id, player_name).await;
+            }
+            
+            // 🚀 NEW: Aggregation trigger request (delegated triggerer pattern)
+            Message::RequestAggregationTrigger { requester_chain_id, timestamp } => {
+                if let Err(e) = contract.handle_aggregation_trigger_request(&requester_chain_id, timestamp).await {
+                    // Log error but don't panic - unauthorized triggers are expected
+                    eprintln!("Aggregation trigger rejected: {}", e);
+                }
+                // Also trigger self-update
+                contract.update_leaderboard_from_shard_chains(Vec::new()).await;
+            }
+            
+            // 🚀 NEW: Shard aggregation trigger from leaderboard
+            Message::TriggerShardAggregation { timestamp: _ } => {
+                // Aggregate scores when requested by leaderboard
+                contract.aggregate_scores_from_player_chains(Vec::new()).await;
             }
         }
     }

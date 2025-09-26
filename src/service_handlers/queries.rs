@@ -14,6 +14,45 @@ impl QueryHandler {
     async fn balance(&self) -> String {
         self.state.balance.get().to_string()
     }
+    
+    /// 🚀 NEW: Check if a chain is authorized to trigger aggregation
+    async fn is_authorized_triggerer(&self, chain_id: String) -> bool {
+        // Check against the main leaderboard (empty string key)
+        if let Ok(Some(leaderboard)) = self.state.leaderboards.try_load_entry("").await {
+            // Check if primary triggerer
+            if leaderboard.primary_triggerer.get() == &chain_id {
+                return true;
+            }
+            
+            // Check backup triggerers
+            if let Ok(backups) = leaderboard.backup_triggerers.read_front(5).await {
+                return backups.contains(&chain_id);
+            }
+        }
+        false
+    }
+    
+    /// 🚀 NEW: Get current triggerer pool for transparency
+    async fn get_triggerer_pool(&self) -> TriggererPool {
+        let mut pool = TriggererPool {
+            primary: None,
+            backups: Vec::new(),
+            last_trigger_time: 0,
+            cooldown_until: 0,
+        };
+        
+        if let Ok(Some(leaderboard)) = self.state.leaderboards.try_load_entry("").await {
+            pool.primary = Some(leaderboard.primary_triggerer.get().to_string());
+            pool.last_trigger_time = *leaderboard.last_trigger_time.get();
+            pool.cooldown_until = *leaderboard.trigger_cooldown_until.get();
+            
+            if let Ok(backups) = leaderboard.backup_triggerers.read_front(5).await {
+                pool.backups = backups;
+            }
+        }
+        
+        pool
+    }
 
     async fn player(&self, username: String) -> Option<Player> {
         if let Ok(Some(player)) = self.state.players.try_load_entry(&username).await {
@@ -109,7 +148,7 @@ impl QueryHandler {
     async fn leaderboard(&self, leaderboard_id: Option<String>) -> Option<LeaderboardState> {
         let mut players: HashMap<String, Ranker> = HashMap::new();
         let leaderboard_id = leaderboard_id.unwrap_or("".to_string());
-
+        
         if let Ok(Some(leaderboard)) = self
             .state
             .leaderboards
@@ -174,7 +213,7 @@ impl QueryHandler {
             })
             .await
             .unwrap();
-
+            
         let mut tournament_games: Vec<LeaderboardState> = Vec::new();
         for leaderboard_id in leaderboard_ids {
             if let Ok(Some(leaderboard)) = self
@@ -183,6 +222,8 @@ impl QueryHandler {
                 .try_load_entry(&leaderboard_id)
                 .await
             {
+                let shard_ids = leaderboard.shard_ids.read_front(100).await.unwrap_or_default();
+                
                 tournament_games.push(LeaderboardState {
                     leaderboard_id,
                     chain_id: leaderboard.chain_id.get().to_string(),
@@ -195,7 +236,7 @@ impl QueryHandler {
                     total_boards: *leaderboard.total_boards.get(),
                     total_players: *leaderboard.total_players.get(),
                     rankers: Vec::new(),
-                    shard_ids: Vec::new(),
+                    shard_ids,
                 });
             }
         }

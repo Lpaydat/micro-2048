@@ -62,3 +62,12 @@ pub struct Shard {
     pub end_time: String,
     pub counter: u16,
 }
+
+/// 🚀 NEW: Triggerer pool information for clients
+#[derive(SimpleObject)]
+pub struct TriggererPool {
+    pub primary: Option<String>,
+    pub backups: Vec<String>,
+    pub last_trigger_time: u64,
+    pub cooldown_until: u64,
+}

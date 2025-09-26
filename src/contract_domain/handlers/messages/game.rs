@@ -4,7 +4,7 @@ use std::str::FromStr;
 /// Handles game-related messages including board creation.
 
 use linera_sdk::linera_base_types::ChainId;
-use game2048::{hash_seed, Game, Message, RegistrationCheck};
+use game2048::{hash_seed, Game, GameEvent, GameStatus, Message, RegistrationCheck};
 
 pub struct GameMessageHandler;
 
@@ -44,6 +44,28 @@ impl GameMessageHandler {
 
         contract.state.latest_board_id.set(board_id.clone());
 
+        // 🚀 NEW: Emit player score update for game creation (score = 0, status = Created)
+        // Get current best score for this player (likely 0 for new players)
+        let leaderboard_obj = contract.state.leaderboards.load_entry_mut("").await.unwrap();
+        let current_best = leaderboard_obj.score.get(&player).await.unwrap().unwrap_or(0);
+        
+        let score_event = GameEvent::PlayerScoreUpdate {
+            player: player.clone(),
+            board_id: board_id.clone(),
+            score: 0, // Initial score is 0
+            chain_id: contract.runtime.chain_id().to_string(),
+            timestamp,
+            game_status: GameStatus::Created,
+            highest_tile: 2, // Initial highest tile
+            moves_count: 0,
+            leaderboard_id: leaderboard_id.clone(),
+            current_leaderboard_best: current_best,
+        };
+        
+        use linera_sdk::linera_base_types::StreamName;
+        let stream_name = StreamName::from("player_score_update".to_string());
+        contract.runtime.emit(stream_name, &score_event);
+
         // increment player and board count
         let leaderboard_chain_id = ChainId::from_str(&leaderboard_id).unwrap();
         contract.runtime
@@ -54,4 +76,6 @@ impl GameMessageHandler {
             })
             .send_to(leaderboard_chain_id);
     }
+
+
 }

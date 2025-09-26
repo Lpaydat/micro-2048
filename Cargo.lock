@@ -1513,6 +1513,7 @@ dependencies = [
  "futures",
  "lazy_static",
  "linera-sdk",
+ "log",
  "regex",
  "serde",
  "serde_json",

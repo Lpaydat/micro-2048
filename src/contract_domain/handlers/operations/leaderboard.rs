@@ -6,7 +6,7 @@ use std::str::FromStr;
 use linera_sdk::{
     linera_base_types::{Amount, ApplicationPermissions, ChainId, Timestamp},
 };
-use game2048::{LeaderboardAction, LeaderboardSettings, RegistrationCheck};
+use game2048::{LeaderboardAction, LeaderboardSettings, RegistrationCheck, Message};
 
 pub struct LeaderboardOperationHandler;
 
@@ -97,18 +97,84 @@ impl LeaderboardOperationHandler {
                     leaderboard.leaderboard_id.set(chain_id_str.clone());
                     leaderboard.chain_id.set(chain_id_str);
                     leaderboard.host.set(player.clone());
+                    
+                    // Create shard chains from main chain (ONLY on creation) 
+                    let shard_number = settings.shard_number.unwrap_or(1);
+                    let mut created_shard_ids = Vec::new();
+                    
+
+                    
+                    for _ in 0..shard_number {
+                        let shard_chain_ownership = contract.runtime.chain_ownership();
+                        let shard_app_id = contract.runtime.application_id().forget_abi();
+                        let shard_application_permissions = ApplicationPermissions::new_single(shard_app_id);
+                        let shard_amount = Amount::from_tokens(1);
+                        let shard_id = contract.runtime.open_chain(shard_chain_ownership, shard_application_permissions, shard_amount);
+                        
+
+                        created_shard_ids.push(shard_id.to_string());
+                        
+                        // Send CreateLeaderboard message to each shard
+                        contract.runtime
+                            .prepare_message(Message::CreateLeaderboard {
+                                leaderboard_id: chain_id.to_string(),
+                                name: settings.name.clone(),
+                                description: settings.description.clone(),
+                                chain_id: chain_id.to_string(),
+                                host: player.clone(),
+                                start_time,
+                                end_time,
+                                shard_ids: vec![], // Shards don't need shard IDs
+                            })
+                            .send_to(shard_id);
+                    }
+                    
+
+                    
+                    // Update main chain leaderboard list with shard info
+                    let main_leaderboard = contract
+                        .state
+                        .leaderboards
+                        .load_entry_mut(&chain_id.to_string())
+                        .await
+                        .unwrap();
+                        
+
+                    for shard_id in &created_shard_ids {
+
+                        main_leaderboard.shard_ids.push_back(shard_id.clone());
+                    }
+                    main_leaderboard.current_shard_id.set(created_shard_ids.first().cloned().unwrap_or_default());
+
+                    // Send CreateLeaderboard message to new leaderboard chain with shard IDs
+                    log::info!("🔍 DEBUG: Sending CreateLeaderboard to leaderboard chain {} with {} shard IDs: {:?}", chain_id, created_shard_ids.len(), created_shard_ids);
+                    contract.runtime
+                        .prepare_message(Message::CreateLeaderboard {
+                            leaderboard_id: chain_id.to_string(),
+                            name: settings.name.clone(),
+                            description: settings.description.clone(),
+                            chain_id: chain_id.to_string(),
+                            host: player.clone(),
+                            start_time,
+                            end_time,
+                            shard_ids: created_shard_ids.clone(),
+                        })
+                        .send_to(chain_id);
+                } else if action == LeaderboardAction::Update {
+                    // For updates, just send message to existing leaderboard chain (no shard creation)
+                    contract.runtime
+                        .prepare_message(Message::CreateLeaderboard {
+                            leaderboard_id: chain_id.to_string(),
+                            name: settings.name.clone(),
+                            description: settings.description.clone(),
+                            chain_id: chain_id.to_string(),
+                            host: player.clone(),
+                            start_time,
+                            end_time,
+                            shard_ids: vec![], // No shard changes on update
+                        })
+                        .send_to(chain_id);
                 }
-                
-                contract.upsert_leaderboard(
-                    chain_id,
-                    &settings.name,
-                    &settings.description.unwrap_or_default(),
-                    &player,
-                    start_time,
-                    end_time,
-                    None,
-                )
-                .await;
             }
             LeaderboardAction::Delete => {
                 if leaderboard.leaderboard_id.get().is_empty() {

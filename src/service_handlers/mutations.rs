@@ -27,6 +27,7 @@ impl MutationHandler {
         password_hash: String,
         player_chain_id: String,
         timestamp: String,
+        tournament_id: String, // 🚀 NEW: Tournament ID parameter
     ) -> [u8; 0] {
         // Validate player exists and password is correct
         self.validate_player_password(&player, &password_hash).await;
@@ -36,6 +37,7 @@ impl MutationHandler {
             player_chain_id,
             timestamp: timestamp.parse::<u64>().unwrap(),
             password_hash,
+            tournament_id, // 🚀 NOW: Use provided tournament ID
         };
         self.runtime.schedule_operation(&operation);
         []
@@ -111,6 +113,84 @@ impl MutationHandler {
 
     async fn close_chain(&self, chain_id: String) -> [u8; 0] {
         let operation = Operation::CloseChain { chain_id };
+        self.runtime.schedule_operation(&operation);
+        []
+    }
+
+    /// 🚀 NEW: Trigger score aggregation from monitored player chains (for shard chains)
+    async fn aggregate_scores(&self) -> [u8; 0] {
+        let operation = Operation::AggregateScores;
+        self.runtime.schedule_operation(&operation);
+        []
+    }
+
+    /// 🚀 NEW: Trigger leaderboard update from registered shard chains (for leaderboard chains)
+    async fn update_leaderboard(&self) -> [u8; 0] {
+        let operation = Operation::UpdateLeaderboard;
+        self.runtime.schedule_operation(&operation);
+        []
+    }
+
+    /// 🚀 NEW: Emit current active tournaments (for leaderboard chains)
+    async fn update_active_tournaments(&self) -> [u8; 0] {
+        let operation = Operation::UpdateActiveTournaments;
+        self.runtime.schedule_operation(&operation);
+        []
+    }
+
+    /// 🚀 NEW: Emit current shard workload (for shard chains)
+    async fn update_shard_workload(&self) -> [u8; 0] {
+        let operation = Operation::UpdateShardWorkload;
+        self.runtime.schedule_operation(&operation);
+        []
+    }
+    
+    /// 🚀 IMPROVED: Request centralized aggregation (with client-side authorization check)
+    async fn request_aggregation(&self, requester_chain_id: String) -> [u8; 0] {
+        // Check authorization on the client side first
+        let is_authorized = if let Ok(Some(leaderboard)) = self.state.leaderboards.try_load_entry("").await {
+            // Check if primary triggerer
+            if leaderboard.primary_triggerer.get() == &requester_chain_id {
+                true
+            } else {
+                // Check backup triggerers
+                if let Ok(backups) = leaderboard.backup_triggerers.read_front(5).await {
+                    backups.contains(&requester_chain_id)
+                } else {
+                    false
+                }
+            }
+        } else {
+            false
+        };
+        
+        if !is_authorized {
+            panic!("Not authorized to trigger aggregation. Chain {} is not in the triggerer pool.", requester_chain_id);
+        }
+        
+        // 🚀 IMPROVED: Check cooldown using runtime system time (more reliable)
+        if let Ok(Some(leaderboard)) = self.state.leaderboards.try_load_entry("").await {
+            // Use runtime's system time for consistency
+            let current_time = self.runtime.system_time().micros();
+            
+            let cooldown_until = *leaderboard.trigger_cooldown_until.get();
+            if current_time < cooldown_until {
+                let remaining = (cooldown_until - current_time) / 1_000_000;
+                panic!("Aggregation on cooldown. Please wait {} seconds.", remaining);
+            }
+            
+            // Also check staleness to prevent unnecessary triggers
+            let last_trigger = *leaderboard.last_trigger_time.get();
+            let time_since_last = current_time.saturating_sub(last_trigger);
+            
+            // Require at least 3 seconds between triggers (even if cooldown expired)
+            if time_since_last < 3_000_000 {
+                panic!("Too soon since last trigger. Please wait a moment.");
+            }
+        }
+        
+        // Proceed with the operation if authorized and not on cooldown
+        let operation = Operation::RequestAggregation { requester_chain_id };
         self.runtime.schedule_operation(&operation);
         []
     }

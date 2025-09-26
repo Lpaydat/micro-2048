@@ -20,4 +20,5 @@ impl GameMessageDispatcher {
     ) {
         GameMessageHandler::handle_create_new_board(contract, seed, player, timestamp, leaderboard_id, shard_id, end_time).await;
     }
+
 }
