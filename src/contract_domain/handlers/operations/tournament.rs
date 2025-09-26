@@ -80,37 +80,67 @@ impl TournamentOperationHandler {
     /// Read latest active tournaments - ascends until error (blockchain-style)
     pub async fn read_active_tournaments(
         contract: &mut crate::Game2048Contract,
-        leaderboard_chain_id: ChainId,
+        main_chain_id: ChainId,
     ) -> Option<GameEvent> {
         use linera_sdk::linera_base_types::StreamName;
         let stream_name = StreamName::from("active_tournaments".to_string());
-        
-        // Get last processed index
-        let mut current_index = *contract.state.active_tournaments_event_index.get();
+
+        // Get the highest known working index (starts at 0)
+        let mut highest_known_index = *contract.state.active_tournaments_event_index.get();
         let mut latest_event: Option<GameEvent> = None;
-        
-        // Read ascending until error (latest has highest index)
+
+        // First, check if there are new events beyond the known highest
+        let mut current_index = highest_known_index + 1;
+        let mut found_new = false;
+
+        // Try to read new events
         loop {
             match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                contract.runtime.read_event(leaderboard_chain_id, stream_name.clone(), current_index as u32)
+                contract.runtime.read_event(main_chain_id, stream_name.clone(), current_index as u32)
             })) {
                 Ok(event) => {
-                    // Found an event - this could be the latest
+                    // Found new event
                     latest_event = Some(event);
-                    current_index += 1; // Try next index
+                    highest_known_index = current_index;
+                    current_index += 1;
+                    found_new = true;
+                }
+                Err(_) => break,
+            }
+        }
+
+        // If no new events, read the highest known working event
+        if !found_new {
+            match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                contract.runtime.read_event(main_chain_id, stream_name.clone(), highest_known_index as u32)
+            })) {
+                Ok(event) => {
+                    latest_event = Some(event);
                 }
                 Err(_) => {
-                    // Hit error - no more events, current_index-1 was the latest
-                    break;
+                    // Stored index is invalid, fall back to reading from 0
+                    current_index = 0;
+                    loop {
+                        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                            contract.runtime.read_event(main_chain_id, stream_name.clone(), current_index as u32)
+                        })) {
+                            Ok(event) => {
+                                latest_event = Some(event);
+                                highest_known_index = current_index;
+                                current_index += 1;
+                            }
+                            Err(_) => break,
+                        }
+                    }
                 }
             }
         }
-        
-        // Update state with the latest index we successfully read
+
+        // Update stored index with the highest known working index
         if latest_event.is_some() {
-            contract.state.active_tournaments_event_index.set(current_index);
+            contract.state.active_tournaments_event_index.set(highest_known_index);
         }
-        
+
         latest_event
     }
 

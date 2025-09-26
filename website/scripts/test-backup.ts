@@ -84,17 +84,13 @@ export default async function () {
 		$player: String!,
 		$passwordHash: String!,
 		$timestamp: String!,
-		$seed: String,
-		$leaderboardId: String!,
-		$shardId: String!
+		$leaderboardId: String!
 	) {
 		newBoard(
 			player: $player,
 			passwordHash: $passwordHash,
 			timestamp: $timestamp,
-			seed: $seed,
-			leaderboardId: $leaderboardId,
-			shardId: $shardId
+			leaderboardId: $leaderboardId
 		)
 	}`;
 
@@ -189,9 +185,7 @@ export default async function () {
 			player: username,
 			passwordHash,
 			timestamp,
-			seed,
-			leaderboardId,
-			shardId: getShardId()
+			leaderboardId
 		};
 
 		// Create new game

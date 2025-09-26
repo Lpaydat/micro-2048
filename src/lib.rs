@@ -46,10 +46,9 @@ pub enum Operation {
     },
     NewBoard {
         player: String,
-        player_chain_id: String,
         timestamp: u64,
         password_hash: String,
-        tournament_id: String, // 🚀 NEW: Must specify tournament
+        leaderboard_id: String, // Must specify leaderboard
     },
     NewShard,
     MakeMoves {

@@ -160,24 +160,27 @@ impl GameOperationHandler {
     pub async fn handle_new_board(
         contract: &mut crate::Game2048Contract,
         player: String,
-        _player_chain_id: String,
         timestamp: u64,
         password_hash: String,
-        tournament_id: String, // 🚀 NEW: Tournament ID parameter
+        leaderboard_id: String, // Leaderboard ID parameter
     ) {
         // Validate password
         contract.validate_player_password(&player, &password_hash).await;
 
-        // 🚀 NEW: Get leaderboard chain ID (in real implementation, this would be configured)
-        let leaderboard_chain_id = ChainId::from_str("leaderboard_main").unwrap_or(contract.runtime.chain_id());
-        
-        // 🚀 NEW: Validate tournament exists and is active
-        if !contract.validate_tournament(&tournament_id, leaderboard_chain_id).await {
-            panic!("Tournament '{}' is not active or does not exist", tournament_id);
+        // 🚀 NEW: Get main chain ID (central registry)
+        let main_chain_id = contract.runtime.application_creator_chain_id();
+
+        // 🚀 NEW: Validate leaderboard exists and is active
+        // Read active tournaments from main chain (central registry)
+        let is_valid_leaderboard = contract.validate_tournament(&leaderboard_id, main_chain_id).await;
+
+        if !is_valid_leaderboard {
+            panic!("Leaderboard '{}' is not active or does not exist", leaderboard_id);
         }
 
-        // 🚀 NEW: Get tournament info and select optimal shard
-        let selected_shard_id = contract.select_optimal_shard(&tournament_id, leaderboard_chain_id).await;
+        // 🚀 NEW: Get leaderboard info and select optimal shard
+        // Select optimal shard from main chain registry
+        let selected_shard_id = contract.select_optimal_shard(&leaderboard_id, main_chain_id).await;
         
         // 🚀 NEW: Create board locally (no cross-chain message needed)
         let nonce = contract.state.nonce.get();
@@ -188,7 +191,7 @@ impl GameOperationHandler {
         game.board_id.set(board_id.clone());
         game.board.set(new_board);
         game.player.set(player.clone());
-        game.leaderboard_id.set(tournament_id.clone());
+        game.leaderboard_id.set(leaderboard_id.clone());
         game.shard_id.set(selected_shard_id.clone());
         game.chain_id.set(contract.runtime.chain_id().to_string());
         game.created_at.set(timestamp);
@@ -199,7 +202,7 @@ impl GameOperationHandler {
         // 🚀 NEW: Register with selected shard (one-time registration)
         let registration_message = Message::RegisterPlayerWithShard {
             player_chain_id: contract.runtime.chain_id().to_string(),
-            tournament_id: tournament_id.clone(),
+            tournament_id: leaderboard_id.clone(),
             player_name: player.clone(),
         };
         contract.runtime
@@ -214,7 +217,7 @@ impl GameOperationHandler {
         
         if is_first_player {
             // This is the first player - trigger initial aggregation to bootstrap
-            if let Ok(leaderboard_chain_id) = ChainId::from_str(&tournament_id) {
+            if let Ok(leaderboard_chain_id) = ChainId::from_str(&leaderboard_id) {
                 let requester_id = contract.runtime.chain_id().to_string();
                 contract.runtime
                     .prepare_message(Message::RequestAggregationTrigger {
@@ -226,7 +229,7 @@ impl GameOperationHandler {
         }
 
         // 🚀 NEW: Emit game creation event
-        contract.emit_game_creation_event(&board_id, &player, &tournament_id, timestamp).await;
+        contract.emit_game_creation_event(&board_id, &player, &leaderboard_id, timestamp).await;
         
         // 🚀 NEW: Track activity for workload statistics
         contract.track_game_activity().await;

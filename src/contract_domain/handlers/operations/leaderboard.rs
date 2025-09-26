@@ -157,24 +157,34 @@ impl LeaderboardOperationHandler {
                             host: player.clone(),
                             start_time,
                             end_time,
-                            shard_ids: created_shard_ids.clone(),
-                        })
-                        .send_to(chain_id);
-                } else if action == LeaderboardAction::Update {
-                    // For updates, just send message to existing leaderboard chain (no shard creation)
-                    contract.runtime
-                        .prepare_message(Message::CreateLeaderboard {
-                            leaderboard_id: chain_id.to_string(),
-                            name: settings.name.clone(),
-                            description: settings.description.clone(),
-                            chain_id: chain_id.to_string(),
-                            host: player.clone(),
-                            start_time,
-                            end_time,
-                            shard_ids: vec![], // No shard changes on update
-                        })
-                        .send_to(chain_id);
-                }
+                             shard_ids: created_shard_ids.clone(),
+                         })
+                         .send_to(chain_id);
+
+                     // Main chain: emit updated active tournaments registry
+                     if is_main_chain {
+                         contract.emit_active_tournaments().await;
+                     }
+                 } else if action == LeaderboardAction::Update {
+                     // For updates, just send message to existing leaderboard chain (no shard creation)
+                     contract.runtime
+                         .prepare_message(Message::CreateLeaderboard {
+                             leaderboard_id: chain_id.to_string(),
+                             name: settings.name.clone(),
+                             description: settings.description.clone(),
+                             chain_id: chain_id.to_string(),
+                             host: player.clone(),
+                             start_time,
+                             end_time,
+                             shard_ids: vec![], // No shard changes on update
+                         })
+                          .send_to(chain_id);
+
+                      // Main chain: emit updated active tournaments registry
+                      if is_main_chain {
+                          contract.emit_active_tournaments().await;
+                      }
+                 }
             }
             LeaderboardAction::Delete => {
                 if leaderboard.leaderboard_id.get().is_empty() {
@@ -356,27 +366,63 @@ impl LeaderboardOperationHandler {
     /// Emit current active tournaments (for leaderboard chains)
     pub async fn emit_active_tournaments(contract: &mut crate::Game2048Contract) {
         use linera_sdk::linera_base_types::StreamName;
-        
-        // Create tournament list from current leaderboard state
-        let leaderboard = contract.state.leaderboards.load_entry_mut("").await.unwrap();
-        let tournament_id = leaderboard.leaderboard_id.get().clone();
-        
-        if !tournament_id.is_empty() {
-            let tournament_info = TournamentInfo {
-                tournament_id: tournament_id.clone(),
-                name: leaderboard.name.get().clone(),
-                shard_chain_ids: leaderboard.shard_ids.read_front(100).await.unwrap_or_default(),
-                start_time: *leaderboard.start_time.get(),
-                end_time: *leaderboard.end_time.get(),
-                status: TournamentStatus::Active,
-                total_players: *leaderboard.total_players.get(),
-            };
-            
+
+        let is_main_chain = contract.is_main_chain();
+        let mut tournaments = Vec::new();
+
+        if is_main_chain {
+            // Main chain: emit ALL active leaderboards as central registry
+            // Iterate through all leaderboard entries
+            let mut leaderboard_ids = Vec::new();
+            contract.state.leaderboards.for_each_index_while(|key| {
+                if !key.is_empty() {
+                    leaderboard_ids.push(key);
+                }
+                Ok(true) // Continue iteration
+            }).await.unwrap();
+
+            for leaderboard_id in leaderboard_ids {
+                if let Ok(Some(leaderboard)) = contract.state.leaderboards.try_load_entry(&leaderboard_id).await {
+                    let tournament_id = leaderboard.leaderboard_id.get().clone();
+                    if !tournament_id.is_empty() {
+                        let tournament_info = TournamentInfo {
+                            tournament_id,
+                            name: leaderboard.name.get().clone(),
+                            shard_chain_ids: leaderboard.shard_ids.read_front(100).await.unwrap_or_default(),
+                            start_time: *leaderboard.start_time.get(),
+                            end_time: *leaderboard.end_time.get(),
+                            status: TournamentStatus::Active,
+                            total_players: *leaderboard.total_players.get(),
+                        };
+                        tournaments.push(tournament_info);
+                    }
+                }
+            }
+        } else {
+            // Non-main chain: emit current chain's leaderboard only
+            let leaderboard = contract.state.leaderboards.load_entry_mut("").await.unwrap();
+            let tournament_id = leaderboard.leaderboard_id.get().clone();
+
+            if !tournament_id.is_empty() {
+                let tournament_info = TournamentInfo {
+                    tournament_id: tournament_id.clone(),
+                    name: leaderboard.name.get().clone(),
+                    shard_chain_ids: leaderboard.shard_ids.read_front(100).await.unwrap_or_default(),
+                    start_time: *leaderboard.start_time.get(),
+                    end_time: *leaderboard.end_time.get(),
+                    status: TournamentStatus::Active,
+                    total_players: *leaderboard.total_players.get(),
+                };
+                tournaments.push(tournament_info);
+            }
+        }
+
+        if !tournaments.is_empty() {
             let tournaments_event = GameEvent::ActiveTournaments {
-                tournaments: vec![tournament_info],
+                tournaments,
                 timestamp: contract.runtime.system_time().micros(),
             };
-            
+
             let stream_name = StreamName::from("active_tournaments".to_string());
             contract.runtime.emit(stream_name, &tournaments_event);
         }

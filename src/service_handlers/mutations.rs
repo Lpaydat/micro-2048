@@ -25,19 +25,17 @@ impl MutationHandler {
         &self,
         player: String,
         password_hash: String,
-        player_chain_id: String,
         timestamp: String,
-        tournament_id: String, // 🚀 NEW: Tournament ID parameter
+        leaderboard_id: String, // Leaderboard ID parameter
     ) -> [u8; 0] {
         // Validate player exists and password is correct
         self.validate_player_password(&player, &password_hash).await;
 
         let operation = Operation::NewBoard {
             player,
-            player_chain_id,
             timestamp: timestamp.parse::<u64>().unwrap(),
             password_hash,
-            tournament_id, // 🚀 NOW: Use provided tournament ID
+            leaderboard_id, // Use provided leaderboard ID
         };
         self.runtime.schedule_operation(&operation);
         []

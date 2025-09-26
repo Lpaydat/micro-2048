@@ -9,6 +9,7 @@ use linera_sdk::{
     views::{RootView, View},
     Contract, ContractRuntime,
 };
+use std::str::FromStr;
 use state::Leaderboard;
 
 use self::state::Game2048;
@@ -79,23 +80,26 @@ impl Contract for Game2048Contract {
     }
 
     async fn process_streams(&mut self, updates: Vec<linera_sdk::linera_base_types::StreamUpdate>) {
+        let mut processed_player_updates = false;
+
         for update in updates {
             // Determine which stream we're processing based on stream name
             let stream_name_bytes = &update.stream_id.stream_name.0;
             let stream_name = String::from_utf8_lossy(stream_name_bytes);
-            
+
             // Process all new events in this stream update
             for event_index in update.previous_index..update.next_index {
                 match stream_name.as_ref() {
                     "player_score_update" => {
-                        if let Some(GameEvent::PlayerScoreUpdate { 
-                            player, 
-                            score, 
-                            timestamp, 
-                            .. 
+                        if let Some(GameEvent::PlayerScoreUpdate {
+                            player,
+                            score,
+                            timestamp,
+                            ..
                         }) = self.read_player_score_event_from_chain(update.chain_id, event_index) {
                             // Update shard state based on player score updates
                             self.update_shard_score(&player, format!("remote_{}", timestamp), score, timestamp).await;
+                            processed_player_updates = true;
                         }
                     }
                     "shard_score_update" => {
@@ -123,6 +127,30 @@ impl Contract for Game2048Contract {
                     }
                 }
             }
+        }
+
+        // After processing all streams, emit aggregated shard scores if we processed player updates
+        if processed_player_updates {
+            // Get monitored player chains from shard state and aggregate their scores
+            let shard = self.state.shards.load_entry_mut("").await.unwrap();
+            let mut player_chain_ids = Vec::new();
+
+            // Collect all monitored player chain IDs from the queue
+            match shard.monitored_player_chains.read_front(100).await {
+                Ok(chain_id_strings) => {
+                    for chain_id_str in chain_id_strings {
+                        if let Ok(chain_id) = ChainId::from_str(&chain_id_str) {
+                            player_chain_ids.push(chain_id);
+                        }
+                    }
+                }
+                Err(_) => {
+                    // No entries or error - proceed with empty list
+                }
+            }
+
+            // Emit aggregated player scores from this shard
+            self.aggregate_scores_from_player_chains(player_chain_ids).await;
         }
     }
 

@@ -29,8 +29,8 @@ impl OperationDispatcher {
             Operation::MakeMoves { board_id, moves, player, password_hash } => {
                 GameOperationHandler::handle_make_moves(contract, board_id, moves, player, password_hash).await;
             }
-            Operation::NewBoard { player, player_chain_id, timestamp, password_hash, tournament_id } => {
-                GameOperationHandler::handle_new_board(contract, player, player_chain_id, timestamp, password_hash, tournament_id).await;
+            Operation::NewBoard { player, timestamp, password_hash, leaderboard_id } => {
+                GameOperationHandler::handle_new_board(contract, player, timestamp, password_hash, leaderboard_id).await;
             }
             
             // Leaderboard operations
