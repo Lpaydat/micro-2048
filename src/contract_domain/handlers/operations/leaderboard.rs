@@ -1,12 +1,13 @@
 //! Leaderboard Operations Handler
 //! 
-//! Handles leaderboard-related operations including creation, updates, and management.
+//! Handles leaderboard-related operations including creation, updates, management, score aggregation, and triggerer coordination.
 
 use std::str::FromStr;
 use linera_sdk::{
     linera_base_types::{Amount, ApplicationPermissions, ChainId, Timestamp},
 };
-use game2048::{LeaderboardAction, LeaderboardSettings, RegistrationCheck, Message};
+use game2048::{LeaderboardAction, LeaderboardSettings, RegistrationCheck, Message, GameEvent, TournamentInfo, TournamentStatus, PlayerScoreSummary};
+use crate::state::Leaderboard;
 
 pub struct LeaderboardOperationHandler;
 
@@ -43,8 +44,7 @@ impl LeaderboardOperationHandler {
             let app_id = contract.runtime.application_id().forget_abi();
             let application_permissions = ApplicationPermissions::new_single(app_id);
             let amount = Amount::from_tokens(if *is_mod { 17 } else { 1 });
-            let chain_id = contract.runtime.open_chain(chain_ownership, application_permissions, amount);
-            chain_id
+            contract.runtime.open_chain(chain_ownership, application_permissions, amount)
         } else if !leaderboard_id.is_empty() {
             ChainId::from_str(&leaderboard_id).unwrap()
         } else {
@@ -194,5 +194,319 @@ impl LeaderboardOperationHandler {
                 leaderboard.is_pinned.set(!*leaderboard.is_pinned.get());
             }
         }
+    }
+
+    /// Check if leaderboard is active for the given timestamp
+    pub async fn is_leaderboard_active(
+        contract: &mut crate::Game2048Contract,
+        timestamp: u64,
+    ) -> &mut Leaderboard {
+        let leaderboard = contract.state.leaderboards.load_entry_mut("").await.unwrap();
+        let start_time = leaderboard.start_time.get();
+        let end_time = leaderboard.end_time.get();
+
+        // Basic bounds checking: prevent obviously invalid timestamps
+        if timestamp > u64::MAX / 2 {
+            panic!("Timestamp too large");
+        }
+
+        // Apply timestamp validation to all chains for consistency
+        // Keep bypass for system operations (111970) - used for game ending without moves
+        if timestamp != 111970
+            && (timestamp < *start_time || timestamp > *end_time)
+        {
+            panic!("Leaderboard is not active");
+        }
+
+        leaderboard
+    }
+
+    /// Update leaderboard from shard chains with proper index tracking
+    pub async fn update_leaderboard_from_shard_chains(
+        contract: &mut crate::Game2048Contract,
+        shard_chain_ids: Vec<ChainId>,
+    ) {
+        use std::collections::HashMap;
+        
+        let mut all_player_summaries: HashMap<String, PlayerScoreSummary> = HashMap::new();
+        
+        // Process each shard chain with index tracking
+        for chain_id in shard_chain_ids.iter() {
+            let chain_id_str = chain_id.to_string();
+            
+            // Get last processed index for this shard chain
+            let last_processed_index = contract.state
+                .shard_score_event_indices
+                .get(&chain_id_str)
+                .await
+                .unwrap()
+                .unwrap_or(0);
+            
+            // Read ascending from last index until error (blockchain-style)  
+            let mut current_index = last_processed_index;
+            
+            // Read until we hit error (no more events)
+            // Read until we hit error (no more events)
+            #[allow(clippy::while_let_loop)]
+            loop {
+                if let Some(event) = contract.read_shard_score_event_from_chain(*chain_id, current_index as u32) {
+                    match event {
+                        GameEvent::ShardScoreUpdate { 
+                            player_scores,
+                            .. 
+                        } => {
+                            // Smart merge player summaries from this shard
+                            for (player, summary) in player_scores.iter() {
+                                let should_update = if let Some(existing) = all_player_summaries.get(player) {
+                                    // Update if better score OR more recent timestamp
+                                    summary.best_score > existing.best_score || 
+                                    (summary.best_score == existing.best_score && summary.last_update > existing.last_update)
+                                } else {
+                                    true // New player
+                                };
+                                
+                                if should_update {
+                                    // Merge with the BEST data from any shard
+                                    let merged_summary = if let Some(existing) = all_player_summaries.get(player) {
+                                        PlayerScoreSummary {
+                                            player: player.clone(),
+                                            best_score: summary.best_score.max(existing.best_score),
+                                            board_id: if summary.best_score >= existing.best_score { 
+                                                summary.board_id.clone() 
+                                            } else { 
+                                                existing.board_id.clone() 
+                                            },
+                                            chain_id: if summary.best_score >= existing.best_score { 
+                                                summary.chain_id.clone() 
+                                            } else { 
+                                                existing.chain_id.clone() 
+                                            },
+                                            highest_tile: summary.highest_tile.max(existing.highest_tile),
+                                            last_update: summary.last_update.max(existing.last_update),
+                                            game_status: if summary.last_update >= existing.last_update { 
+                                                summary.game_status.clone() 
+                                            } else { 
+                                                existing.game_status.clone() 
+                                            },
+                                        }
+                                    } else {
+                                        summary.clone()
+                                    };
+                                    
+                                    all_player_summaries.insert(player.clone(), merged_summary);
+                                }
+                            }
+                        },
+                        _ => {
+                            // Ignore other event types
+                        }
+                    }
+                    
+                    current_index += 1;
+                } else {
+                    // Hit error - no more events available
+                    break;
+                }
+            }
+            
+            // Update index tracking: save our progress
+            if current_index > last_processed_index {
+                contract.state
+                    .shard_score_event_indices
+                    .insert(&chain_id_str, current_index)
+                    .unwrap();
+            }
+        }
+        
+        // Update leaderboard state with comprehensive tracking
+        if !all_player_summaries.is_empty() {
+            let leaderboard = contract.state.leaderboards.load_entry_mut("").await.unwrap();
+            let mut _players_updated = 0u32;
+            let mut total_unique_players = 0u32;
+            
+            // Update leaderboard state with all player data
+            for (player, summary) in all_player_summaries.iter() {
+                let current_score = leaderboard.score.get(player).await.unwrap().unwrap_or(0);
+                total_unique_players += 1;
+                
+                // Always update if we have better score OR if this is a new player
+                if summary.best_score >= current_score {
+                    leaderboard.score.insert(player, summary.best_score).unwrap();
+                    leaderboard.board_ids.insert(player, summary.board_id.clone()).unwrap();
+                    
+                    if summary.best_score > current_score {
+                        _players_updated += 1;
+                    }
+                }
+            }
+            
+            // Update leaderboard metadata
+            leaderboard.total_players.set(total_unique_players);
+            
+            // Subscribe to all shard chains for real-time updates
+            for chain_id in shard_chain_ids.iter() {
+                contract.subscribe_to_shard_score_events(*chain_id);
+            }
+            
+            // Update triggerer pool based on latest scores
+            Self::update_triggerer_pool(contract).await;
+        }
+    }
+
+    /// Emit current active tournaments (for leaderboard chains)
+    pub async fn emit_active_tournaments(contract: &mut crate::Game2048Contract) {
+        use linera_sdk::linera_base_types::StreamName;
+        
+        // Create tournament list from current leaderboard state
+        let leaderboard = contract.state.leaderboards.load_entry_mut("").await.unwrap();
+        let tournament_id = leaderboard.leaderboard_id.get().clone();
+        
+        if !tournament_id.is_empty() {
+            let tournament_info = TournamentInfo {
+                tournament_id: tournament_id.clone(),
+                name: leaderboard.name.get().clone(),
+                shard_chain_ids: leaderboard.shard_ids.read_front(100).await.unwrap_or_default(),
+                start_time: *leaderboard.start_time.get(),
+                end_time: *leaderboard.end_time.get(),
+                status: TournamentStatus::Active,
+                total_players: *leaderboard.total_players.get(),
+            };
+            
+            let tournaments_event = GameEvent::ActiveTournaments {
+                tournaments: vec![tournament_info],
+                timestamp: contract.runtime.system_time().micros(),
+            };
+            
+            let stream_name = StreamName::from("active_tournaments".to_string());
+            contract.runtime.emit(stream_name, &tournaments_event);
+        }
+    }
+
+    /// Dynamic Triggerer Management - Updates based on actual scores
+    pub async fn update_triggerer_pool(contract: &mut crate::Game2048Contract) {
+        let leaderboard = contract.state.leaderboards.load_entry_mut("").await.unwrap();
+        
+        // Collect top 5 players by score
+        let mut top_players: Vec<(String, u64)> = Vec::new();
+        
+        // Iterate through all scores to find top 5
+        leaderboard.score.for_each_index_value(|player, score| {
+            top_players.push((player.clone(), *score));
+            Ok(())
+        }).await.unwrap();
+        
+        // Sort by score (descending)
+        top_players.sort_by(|a, b| b.1.cmp(&a.1));
+        
+        // Take top 5 (or fewer if less players)
+        top_players.truncate(5);
+        
+        // Update triggerer pool
+        if !top_players.is_empty() {
+            // First player is primary
+            if let Some((top_player, _)) = top_players.first() {
+                // Get board_id for the top player to get their chain_id
+                if let Some(board_id) = leaderboard.board_ids.get(top_player).await.unwrap() {
+                    // Extract chain_id from board_id (format: "chain_id.hash")
+                    let chain_id = board_id.split('.').next().unwrap_or(top_player).to_string();
+                    leaderboard.primary_triggerer.set(chain_id);
+                }
+            }
+            
+            // Clear and rebuild backup pool with players 2-5
+            while leaderboard.backup_triggerers.count() > 0 {
+                leaderboard.backup_triggerers.delete_front();
+            }
+            
+            // Add new backups (positions 2-5)
+            for i in 1..top_players.len().min(5) {
+                if let Some((player, _)) = top_players.get(i) {
+                    if let Some(board_id) = leaderboard.board_ids.get(player).await.unwrap() {
+                        let chain_id = board_id.split('.').next().unwrap_or(player).to_string();
+                        leaderboard.backup_triggerers.push_back(chain_id);
+                    }
+                }
+            }
+        }
+        
+        // Update rotation counter for tracking
+        let counter = *leaderboard.trigger_rotation_counter.get();
+        leaderboard.trigger_rotation_counter.set(counter + 1);
+    }
+
+    /// Check if a chain is authorized to trigger
+    pub async fn is_authorized_triggerer(
+        contract: &mut crate::Game2048Contract,
+        requester_chain_id: &str,
+    ) -> bool {
+        let leaderboard = contract.state.leaderboards.load_entry_mut("").await.unwrap();
+        
+        // Check if primary triggerer
+        if leaderboard.primary_triggerer.get() == requester_chain_id {
+            return true;
+        }
+        
+        // Check if in backup pool
+        let backup_triggerers = leaderboard.backup_triggerers.read_front(5).await.unwrap_or_default();
+        backup_triggerers.contains(&requester_chain_id.to_string())
+    }
+
+    /// Handle aggregation trigger request with robust cooldown
+    pub async fn handle_aggregation_trigger_request(
+        contract: &mut crate::Game2048Contract,
+        requester_chain_id: &str,
+        _timestamp: u64,
+    ) -> Result<(), String> {
+        // Check if requester is authorized
+        if !Self::is_authorized_triggerer(contract, requester_chain_id).await {
+            return Err(format!("Chain {} is not authorized to trigger aggregation", requester_chain_id));
+        }
+        
+        let leaderboard = contract.state.leaderboards.load_entry_mut("").await.unwrap();
+        let current_time = contract.runtime.system_time().micros();
+        
+        // Multi-layer cooldown checks
+        let cooldown_until = *leaderboard.trigger_cooldown_until.get();
+        let last_trigger_time = *leaderboard.last_trigger_time.get();
+        
+        // Check explicit cooldown
+        if current_time < cooldown_until {
+            // Don't error, just silently ignore (prevents error spam)
+            return Ok(());
+        }
+        
+        // Check minimum time between triggers (3 seconds hard minimum)
+        let time_since_last = current_time.saturating_sub(last_trigger_time);
+        if time_since_last < 3_000_000 {
+            // Too frequent - silently ignore
+            return Ok(());
+        }
+        
+        // Set cooldown IMMEDIATELY before doing any work
+        leaderboard.trigger_cooldown_until.set(current_time + 5_000_000); // 5 second cooldown
+        leaderboard.last_trigger_time.set(current_time);
+        leaderboard.last_trigger_by.set(requester_chain_id.to_string());
+        
+        // Send trigger messages to all shards
+        let shard_ids = leaderboard.shard_ids.read_front(100).await.unwrap_or_default();
+        if shard_ids.is_empty() {
+            return Err("No shards registered for this leaderboard".to_string());
+        }
+        
+        for shard_id_str in shard_ids {
+            if let Ok(shard_chain_id) = ChainId::from_str(&shard_id_str) {
+                contract.runtime
+                    .prepare_message(Message::TriggerShardAggregation { 
+                        timestamp: current_time  // Use current time
+                    })
+                    .send_to(shard_chain_id);
+            }
+        }
+        
+        // Update aggregation counter for monitoring
+        let rotation_counter = *leaderboard.trigger_rotation_counter.get();
+        leaderboard.trigger_rotation_counter.set(rotation_counter + 1);
+        
+        Ok(())
     }
 }

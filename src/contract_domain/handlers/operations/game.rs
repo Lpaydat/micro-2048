@@ -219,7 +219,7 @@ impl GameOperationHandler {
                 contract.runtime
                     .prepare_message(Message::RequestAggregationTrigger {
                         requester_chain_id: requester_id,
-                        timestamp: timestamp,
+                        timestamp,
                     })
                     .send_to(leaderboard_chain_id);
             }
@@ -274,6 +274,7 @@ impl GameOperationHandler {
         
         // 🚀 FIXED: Collect ALL registered shard chain IDs (no limit)
         let mut read_count = 0;
+        #[allow(clippy::while_let_loop)]
         loop {
             match leaderboard.shard_ids.read_front(1000).await { // Large batch size
                 Ok(shard_id_strings) => {

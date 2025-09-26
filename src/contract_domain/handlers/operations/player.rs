@@ -1,6 +1,6 @@
 //! Player Operations Handler
 //! 
-//! Handles player-related operations including registration and admin management.
+//! Handles player-related operations including registration, authentication, and admin management.
 
 use linera_sdk::{
     linera_base_types::{Amount, ApplicationPermissions},
@@ -62,5 +62,46 @@ impl PlayerOperationHandler {
 
         let player = contract.state.players.load_entry_mut(&username).await.unwrap();
         player.is_mod.set(!*player.is_mod.get());
+    }
+
+    /// Check if player is registered and optionally validate registration status
+    pub async fn check_player_registered(
+        contract: &mut crate::Game2048Contract,
+        player_username: &str,
+        check: RegistrationCheck,
+    ) -> String {
+        let player = contract
+            .state
+            .players
+            .load_entry_or_insert(player_username)
+            .await
+            .unwrap();
+        let username = player.username.get();
+
+        let is_registered = !username.trim().is_empty();
+
+        match check {
+            RegistrationCheck::EnsureRegistered if !is_registered => {
+                panic!("Player not registered");
+            }
+            RegistrationCheck::EnsureNotRegistered if is_registered => {
+                panic!("Player already registered");
+            }
+            _ => {}
+        }
+
+        player.password_hash.get().to_string()
+    }
+
+    /// Validate player password against stored hash
+    pub async fn validate_player_password(
+        contract: &mut crate::Game2048Contract,
+        player_username: &str,
+        provided_password_hash: &str,
+    ) {
+        let stored_password_hash = Self::check_player_registered(contract, player_username, RegistrationCheck::EnsureRegistered).await;
+        if stored_password_hash != provided_password_hash {
+            panic!("Invalid password");
+        }
     }
 }

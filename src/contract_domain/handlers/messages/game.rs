@@ -2,7 +2,6 @@ use std::str::FromStr;
 /// Game Messages Handler
 /// 
 /// Handles game-related messages including board creation.
-
 use linera_sdk::linera_base_types::ChainId;
 use game2048::{hash_seed, Game, GameEvent, GameStatus, Message, RegistrationCheck};
 

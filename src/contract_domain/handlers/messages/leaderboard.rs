@@ -3,7 +3,6 @@ use linera_sdk::views::View;
 /// Leaderboard Messages Handler
 ///
 /// Handles leaderboard-related messages including creation, game notifications, score updates, and flushing.
-
 use linera_sdk::linera_base_types::ChainId;
 use game2048::Message;
 
