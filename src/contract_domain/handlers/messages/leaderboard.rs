@@ -412,7 +412,7 @@ impl LeaderboardMessageHandler {
         // Sort by activity score (highest first), then by chain_id for deterministic ordering
         all_players_activity.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
 
-        for (_player_id, _activity_score) in all_players_activity.iter().take(10) {}
+        // Top 10 most active players are available in all_players_activity
 
         // Update primary triggerer to most active player
         if let Some((most_active_player, _)) = all_players_activity.first() {

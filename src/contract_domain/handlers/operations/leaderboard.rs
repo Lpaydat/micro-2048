@@ -573,8 +573,7 @@ impl LeaderboardOperationHandler {
                 timestamp,
             ).await;
 
-            // Log tournament details
-            for _tournament in &tournaments {}
+            // Log tournament details available in cache
         }
     }
 

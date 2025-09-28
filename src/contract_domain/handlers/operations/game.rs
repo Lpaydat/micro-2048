@@ -246,7 +246,7 @@ impl GameOperationHandler {
         }
 
         // Check if target tournament is in cache
-        if let Some(_target_tournament) = contract.get_cached_tournament(&leaderboard_id).await {}
+        let _target_tournament = contract.get_cached_tournament(&leaderboard_id).await;
 
         // 🚀 NEW: Validate tournament exists and is active
         let is_valid_tournament = contract.validate_tournament(&leaderboard_id).await;
