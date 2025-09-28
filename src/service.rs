@@ -38,6 +38,7 @@ impl Service for Game2048Service {
         let schema = Schema::build(
             QueryHandler {
                 state: self.state.clone(),
+                runtime: self.runtime.clone(),
             },
             MutationHandler {
                 state: self.state.clone(),

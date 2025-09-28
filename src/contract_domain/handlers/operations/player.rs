@@ -5,7 +5,7 @@
 use linera_sdk::{
     linera_base_types::{Amount, ApplicationPermissions},
 };
-use game2048::RegistrationCheck;
+use game2048::{RegistrationCheck, Message};
 
 pub struct PlayerOperationHandler;
 
@@ -35,6 +35,19 @@ impl PlayerOperationHandler {
         player.username.set(username.clone());
         player.password_hash.set(password_hash.clone());
         player.chain_id.set(chain_id.to_string());
+
+        // 🚀 NEW: Set up cross-chain subscription for new player chain
+        // Player chains should subscribe to main chain's active_tournaments stream
+        let main_chain_id = contract.runtime.application_creator_chain_id();
+        log::info!("🔔 PLAYER_REGISTER: Setting up subscription from new player chain {} to main chain {} for active_tournaments", 
+            chain_id, main_chain_id);
+        
+        // Send message to new player chain to subscribe to main chain's tournament events
+        contract.runtime
+            .prepare_message(Message::SubscribeToMainChain {
+                main_chain_id: main_chain_id.to_string(),
+            })
+            .send_to(chain_id);
 
         contract.register_player(chain_id, &username, &password_hash);
     }

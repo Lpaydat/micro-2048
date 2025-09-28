@@ -48,6 +48,11 @@ impl GameMessageHandler {
         let leaderboard_obj = contract.state.leaderboards.load_entry_mut("").await.unwrap();
         let current_best = leaderboard_obj.score.get(&player).await.unwrap().unwrap_or(0);
         
+        // Get player's current board count for this tournament
+        let player_state = contract.state.players.load_entry_mut(&player).await.unwrap();
+        let current_board_count = player_state.boards_per_tournament
+            .get(&leaderboard_id).await.unwrap().unwrap_or(0);
+        
         let score_event = GameEvent::PlayerScoreUpdate {
             player: player.clone(),
             board_id: board_id.clone(),
@@ -59,6 +64,7 @@ impl GameMessageHandler {
             moves_count: 0,
             leaderboard_id: leaderboard_id.clone(),
             current_leaderboard_best: current_best,
+            boards_in_tournament: current_board_count,
         };
         
         use linera_sdk::linera_base_types::StreamName;
@@ -67,6 +73,7 @@ impl GameMessageHandler {
 
         // increment player and board count
         let leaderboard_chain_id = ChainId::from_str(&leaderboard_id).unwrap();
+        log::info!("🎯 BOARD_CREATE: Sending LeaderboardNewGame message to leaderboard {} for board {}", leaderboard_id, board_id);
         contract.runtime
             .prepare_message(Message::LeaderboardNewGame {
                 player: player.clone(),
@@ -74,6 +81,7 @@ impl GameMessageHandler {
                 timestamp,
             })
             .send_to(leaderboard_chain_id);
+        log::info!("🎯 BOARD_CREATE: ✅ LeaderboardNewGame message sent successfully");
     }
 
 

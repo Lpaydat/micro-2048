@@ -1,12 +1,26 @@
 use std::sync::Arc;
 use std::collections::HashMap;
-use async_graphql::Object;
+use async_graphql::{Object, Enum};
 use game2048::Game;
+use linera_sdk::ServiceRuntime;
 use crate::state::Game2048;
 use crate::service_handlers::types::*;
 
+#[derive(Enum, Copy, Clone, Eq, PartialEq)]
+pub enum TournamentFilter {
+    /// Show only currently active tournaments (default)
+    Active,
+    /// Show only past/completed tournaments
+    Past,
+    /// Show only future/upcoming tournaments  
+    Future,
+    /// Show all tournaments regardless of time status
+    All,
+}
+
 pub struct QueryHandler {
     pub state: Arc<Game2048>,
+    pub runtime: Arc<ServiceRuntime<crate::Game2048Service>>,
 }
 
 #[Object]
@@ -203,45 +217,15 @@ impl QueryHandler {
         }
     }
 
-    async fn leaderboards(&self) -> Vec<LeaderboardState> {
-        let mut leaderboard_ids: Vec<String> = Vec::new();
-        self.state
-            .leaderboards
-            .for_each_index_while(|leaderboard_id| {
-                leaderboard_ids.push(leaderboard_id);
-                Ok(true)
-            })
-            .await
-            .unwrap();
-            
-        let mut tournament_games: Vec<LeaderboardState> = Vec::new();
-        for leaderboard_id in leaderboard_ids {
-            if let Ok(Some(leaderboard)) = self
-                .state
-                .leaderboards
-                .try_load_entry(&leaderboard_id)
-                .await
-            {
-                let shard_ids = leaderboard.shard_ids.read_front(100).await.unwrap_or_default();
-                
-                tournament_games.push(LeaderboardState {
-                    leaderboard_id,
-                    chain_id: leaderboard.chain_id.get().to_string(),
-                    name: leaderboard.name.get().to_string(),
-                    description: Some(leaderboard.description.get().to_string()),
-                    is_pinned: *leaderboard.is_pinned.get(),
-                    host: leaderboard.host.get().to_string(),
-                    start_time: leaderboard.start_time.get().to_string(),
-                    end_time: leaderboard.end_time.get().to_string(),
-                    total_boards: *leaderboard.total_boards.get(),
-                    total_players: *leaderboard.total_players.get(),
-                    rankers: Vec::new(),
-                    shard_ids,
-                });
-            }
-        }
+    /// Query tournaments with optional filtering by time status (defaults to active)
+    async fn leaderboards(&self, filter: Option<TournamentFilter>) -> Vec<LeaderboardState> {
+        let filter = filter.unwrap_or(TournamentFilter::Active);
+        self.get_tournaments_by_filter(filter).await
+    }
 
-        tournament_games
+    /// Query tournaments filtered by specific status
+    async fn tournaments_by_status(&self, filter: TournamentFilter) -> Vec<LeaderboardState> {
+        self.get_tournaments_by_filter(filter).await
     }
 
     async fn shards(&self) -> Shard {
@@ -286,5 +270,77 @@ impl QueryHandler {
                 board_ids: HashMap::new(),
             }
         }
+    }
+}
+
+impl QueryHandler {
+    /// Helper method to get tournaments filtered by status
+    async fn get_tournaments_by_filter(&self, filter: TournamentFilter) -> Vec<LeaderboardState> {
+        let mut leaderboard_ids: Vec<String> = Vec::new();
+        self.state
+            .leaderboards
+            .for_each_index_while(|leaderboard_id| {
+                leaderboard_ids.push(leaderboard_id);
+                Ok(true)
+            })
+            .await
+            .unwrap();
+            
+        let current_time = self.runtime.system_time().micros();
+            
+        let mut tournament_games: Vec<LeaderboardState> = Vec::new();
+        for leaderboard_id in leaderboard_ids {
+            if let Ok(Some(leaderboard)) = self
+                .state
+                .leaderboards
+                .try_load_entry(&leaderboard_id)
+                .await
+            {
+                let start_time_raw = *leaderboard.start_time.get();
+                let end_time_raw = *leaderboard.end_time.get();
+                
+                let start_time = if start_time_raw == 0 { None } else { Some(start_time_raw) };
+                let end_time = if end_time_raw == 0 { None } else { Some(end_time_raw) };
+                
+                // Determine tournament status
+                let is_started = start_time.map_or(true, |start| current_time >= start);
+                let is_ended = end_time.map_or(false, |end| current_time >= end);
+                
+                let tournament_status = if !is_started {
+                    TournamentFilter::Future
+                } else if is_ended {
+                    TournamentFilter::Past
+                } else {
+                    TournamentFilter::Active
+                };
+                
+                // Apply filter
+                let include_tournament = match filter {
+                    TournamentFilter::All => true,
+                    _ => tournament_status == filter,
+                };
+                
+                if include_tournament {
+                    let shard_ids = leaderboard.shard_ids.read_front(100).await.unwrap_or_default();
+                    
+                    tournament_games.push(LeaderboardState {
+                        leaderboard_id,
+                        chain_id: leaderboard.chain_id.get().to_string(),
+                        name: leaderboard.name.get().to_string(),
+                        description: Some(leaderboard.description.get().to_string()),
+                        is_pinned: *leaderboard.is_pinned.get(),
+                        host: leaderboard.host.get().to_string(),
+                        start_time: leaderboard.start_time.get().to_string(),
+                        end_time: leaderboard.end_time.get().to_string(),
+                        total_boards: *leaderboard.total_boards.get(),
+                        total_players: *leaderboard.total_players.get(),
+                        rankers: Vec::new(),
+                        shard_ids,
+                    });
+                }
+            }
+        }
+
+        tournament_games
     }
 }

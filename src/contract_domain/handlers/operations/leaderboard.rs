@@ -3,10 +3,8 @@
 //! Handles leaderboard-related operations including creation, updates, management, score aggregation, and triggerer coordination.
 
 use std::str::FromStr;
-use linera_sdk::{
-    linera_base_types::{Amount, ApplicationPermissions, ChainId, Timestamp},
-};
-use game2048::{LeaderboardAction, LeaderboardSettings, RegistrationCheck, Message, GameEvent, TournamentInfo, TournamentStatus, PlayerScoreSummary};
+use linera_sdk::linera_base_types::{Amount, ApplicationPermissions, ChainId};
+use game2048::{LeaderboardAction, LeaderboardSettings, RegistrationCheck, Message, GameEvent, TournamentInfo, PlayerScoreSummary};
 use crate::state::Leaderboard;
 
 pub struct LeaderboardOperationHandler;
@@ -65,16 +63,33 @@ impl LeaderboardOperationHandler {
 
         match action {
             LeaderboardAction::Create | LeaderboardAction::Update => {
-                let start_time = settings.start_time.parse::<u64>().unwrap();
-                let end_time = settings.end_time.parse::<u64>().unwrap();
-
-                let current_time = contract.runtime.system_time();
-                let end_timestamp = Timestamp::from(end_time);
-                if start_time >= end_time {
-                    panic!("Start time cannot be after end time");
-                } else if current_time >= end_timestamp {
-                    panic!("Current time cannot be after planned end time");
+                // Parse optional start/end times: "0" or empty = None (unlimited)
+                let start_time = if settings.start_time.is_empty() || settings.start_time == "0" {
+                    None
+                } else {
+                    Some(settings.start_time.parse::<u64>().unwrap())
                 };
+
+                let end_time = if settings.end_time.is_empty() || settings.end_time == "0" {
+                    None
+                } else {
+                    Some(settings.end_time.parse::<u64>().unwrap())
+                };
+
+                // Only validate times if both are set
+                if let (Some(start), Some(end)) = (start_time, end_time) {
+                    // Temporarily skip current time validation to avoid system_time() WASM panic
+                    // let current_time = contract.runtime.system_time().micros();
+                    if start >= end {
+                        panic!("Start time cannot be after end time");
+                    }
+                    // Commented out to avoid system_time() issues:
+                    // else if current_time >= end {
+                    //     panic!("Current time cannot be after planned end time");
+                    // }
+                }
+
+                log::info!("🎯 TOURNAMENT: Creating tournament with start_time: {:?}, end_time: {:?}", start_time, end_time);
 
                 if !settings.name.is_empty() {
                     leaderboard.name.set(settings.name.clone());
@@ -84,13 +99,9 @@ impl LeaderboardOperationHandler {
                     leaderboard.description.set(desc);
                 }
 
-                if start_time != 0 {
-                    leaderboard.start_time.set(start_time);
-                }
-
-                if end_time != 0 {
-                    leaderboard.end_time.set(end_time);
-                }
+                // Store times: None -> 0 (unlimited), Some(value) -> value
+                leaderboard.start_time.set(start_time.unwrap_or(0));
+                leaderboard.end_time.set(end_time.unwrap_or(0));
 
                 if action == LeaderboardAction::Create {
                     let chain_id_str = chain_id.to_string();
@@ -122,8 +133,8 @@ impl LeaderboardOperationHandler {
                                 description: settings.description.clone(),
                                 chain_id: chain_id.to_string(),
                                 host: player.clone(),
-                                start_time,
-                                end_time,
+                                start_time: start_time.unwrap_or(0),
+                                end_time: end_time.unwrap_or(0),
                                 shard_ids: vec![], // Shards don't need shard IDs
                             })
                             .send_to(shard_id);
@@ -155,8 +166,8 @@ impl LeaderboardOperationHandler {
                             description: settings.description.clone(),
                             chain_id: chain_id.to_string(),
                             host: player.clone(),
-                            start_time,
-                            end_time,
+                            start_time: start_time.unwrap_or(0),
+                            end_time: end_time.unwrap_or(0),
                              shard_ids: created_shard_ids.clone(),
                          })
                          .send_to(chain_id);
@@ -174,8 +185,8 @@ impl LeaderboardOperationHandler {
                              description: settings.description.clone(),
                              chain_id: chain_id.to_string(),
                              host: player.clone(),
-                             start_time,
-                             end_time,
+                             start_time: start_time.unwrap_or(0),
+                             end_time: end_time.unwrap_or(0),
                              shard_ids: vec![], // No shard changes on update
                          })
                           .send_to(chain_id);
@@ -220,12 +231,31 @@ impl LeaderboardOperationHandler {
             panic!("Timestamp too large");
         }
 
-        // Apply timestamp validation to all chains for consistency
+        // Apply timestamp validation to all chains for consistency with optional time limits
         // Keep bypass for system operations (111970) - used for game ending without moves
-        if timestamp != 111970
-            && (timestamp < *start_time || timestamp > *end_time)
-        {
-            panic!("Leaderboard is not active");
+        if timestamp != 111970 {
+            let start_time_raw = *start_time;
+            let end_time_raw = *end_time;
+            
+            // Only validate if times are set (non-zero)
+            let start_limit = if start_time_raw == 0 { None } else { Some(start_time_raw) };
+            let end_limit = if end_time_raw == 0 { None } else { Some(end_time_raw) };
+            
+            let mut invalid = false;
+            if let Some(start) = start_limit {
+                if timestamp < start {
+                    invalid = true;
+                }
+            }
+            if let Some(end) = end_limit {
+                if timestamp > end {
+                    invalid = true;
+                }
+            }
+            
+            if invalid {
+                panic!("Leaderboard is not active for timestamp {}", timestamp);
+            }
         }
 
         leaderboard
@@ -259,7 +289,8 @@ impl LeaderboardOperationHandler {
             // Read until we hit error (no more events)
             #[allow(clippy::while_let_loop)]
             loop {
-                if let Some(event) = contract.read_shard_score_event_from_chain(*chain_id, current_index as u32) {
+                // if let Some(event) = contract.read_shard_score_event_from_chain(*chain_id, current_index as u32) {
+                if let Some(event) = None::<game2048::GameEvent> { // Commented out manual event reading
                     match event {
                         GameEvent::ShardScoreUpdate { 
                             player_scores,
@@ -278,7 +309,7 @@ impl LeaderboardOperationHandler {
                                 if should_update {
                                     // Merge with the BEST data from any shard
                                     let merged_summary = if let Some(existing) = all_player_summaries.get(player) {
-                                        PlayerScoreSummary {
+                                         PlayerScoreSummary {
                                             player: player.clone(),
                                             best_score: summary.best_score.max(existing.best_score),
                                             board_id: if summary.best_score >= existing.best_score { 
@@ -298,6 +329,7 @@ impl LeaderboardOperationHandler {
                                             } else { 
                                                 existing.game_status.clone() 
                                             },
+                                            boards_in_tournament: summary.boards_in_tournament.max(existing.boards_in_tournament),
                                         }
                                     } else {
                                         summary.clone()
@@ -369,6 +401,9 @@ impl LeaderboardOperationHandler {
 
         let is_main_chain = contract.is_main_chain();
         let mut tournaments = Vec::new();
+        let current_time = contract.runtime.system_time().micros();
+        
+        log::info!("📡 EMIT_TOURNAMENTS: Starting tournament emission (is_main_chain: {}, current_time: {})", is_main_chain, current_time);
 
         if is_main_chain {
             // Main chain: emit ALL active leaderboards as central registry
@@ -385,16 +420,35 @@ impl LeaderboardOperationHandler {
                 if let Ok(Some(leaderboard)) = contract.state.leaderboards.try_load_entry(&leaderboard_id).await {
                     let tournament_id = leaderboard.leaderboard_id.get().clone();
                     if !tournament_id.is_empty() {
-                        let tournament_info = TournamentInfo {
-                            tournament_id,
-                            name: leaderboard.name.get().clone(),
-                            shard_chain_ids: leaderboard.shard_ids.read_front(100).await.unwrap_or_default(),
-                            start_time: *leaderboard.start_time.get(),
-                            end_time: *leaderboard.end_time.get(),
-                            status: TournamentStatus::Active,
-                            total_players: *leaderboard.total_players.get(),
+                        let start_time_raw = *leaderboard.start_time.get();
+                        let end_time_raw = *leaderboard.end_time.get();
+                        
+                        // 🚀 NEW: Time-based filtering - only include active tournaments
+                        let start_time = if start_time_raw == 0 { None } else { Some(start_time_raw) };
+                        let end_time = if end_time_raw == 0 { None } else { Some(end_time_raw) };
+                        
+                        // Check if tournament is currently active (not expired and started)
+                        let is_active = {
+                            let started = start_time.map_or(true, |start| current_time >= start);
+                            let not_ended = end_time.map_or(true, |end| current_time < end);
+                            started && not_ended
                         };
-                        tournaments.push(tournament_info);
+                        
+                        if is_active {
+                            let tournament_info = TournamentInfo {
+                                tournament_id: tournament_id.clone(),
+                                name: leaderboard.name.get().clone(),
+                                shard_chain_ids: leaderboard.shard_ids.read_front(100).await.unwrap_or_default(),
+                                start_time,
+                                end_time,
+                                total_players: *leaderboard.total_players.get(),
+                            };
+                            tournaments.push(tournament_info);
+                            log::info!("📡 EMIT_TOURNAMENTS: ✅ Including active tournament '{}'", tournament_id);
+                        } else {
+                            log::info!("📡 EMIT_TOURNAMENTS: ⏰ Excluding expired/future tournament '{}' (start: {:?}, end: {:?}, current: {})", 
+                                tournament_id, start_time, end_time, current_time);
+                        }
                     }
                 }
             }
@@ -404,27 +458,59 @@ impl LeaderboardOperationHandler {
             let tournament_id = leaderboard.leaderboard_id.get().clone();
 
             if !tournament_id.is_empty() {
-                let tournament_info = TournamentInfo {
-                    tournament_id: tournament_id.clone(),
-                    name: leaderboard.name.get().clone(),
-                    shard_chain_ids: leaderboard.shard_ids.read_front(100).await.unwrap_or_default(),
-                    start_time: *leaderboard.start_time.get(),
-                    end_time: *leaderboard.end_time.get(),
-                    status: TournamentStatus::Active,
-                    total_players: *leaderboard.total_players.get(),
+                let start_time_raw = *leaderboard.start_time.get();
+                let end_time_raw = *leaderboard.end_time.get();
+                
+                // 🚀 NEW: Time-based filtering for non-main chain too
+                let start_time = if start_time_raw == 0 { None } else { Some(start_time_raw) };
+                let end_time = if end_time_raw == 0 { None } else { Some(end_time_raw) };
+                
+                // Check if tournament is currently active (not expired and started)
+                let is_active = {
+                    let started = start_time.map_or(true, |start| current_time >= start);
+                    let not_ended = end_time.map_or(true, |end| current_time < end);
+                    started && not_ended
                 };
-                tournaments.push(tournament_info);
+                
+                if is_active {
+                    let tournament_info = TournamentInfo {
+                        tournament_id: tournament_id.clone(),
+                        name: leaderboard.name.get().clone(),
+                        shard_chain_ids: leaderboard.shard_ids.read_front(100).await.unwrap_or_default(),
+                        start_time,
+                        end_time,
+                        total_players: *leaderboard.total_players.get(),
+                    };
+                    tournaments.push(tournament_info);
+                    log::info!("📡 EMIT_TOURNAMENTS: ✅ Including active tournament '{}'", tournament_id);
+                } else {
+                    log::info!("📡 EMIT_TOURNAMENTS: ⏰ Excluding expired/future tournament '{}' (start: {:?}, end: {:?}, current: {})", 
+                        tournament_id, start_time, end_time, current_time);
+                }
             }
         }
 
         if !tournaments.is_empty() {
+            log::info!("📡 EMIT_TOURNAMENTS: Emitting {} active tournaments from chain {}", 
+                tournaments.len(), contract.runtime.chain_id());
+            
             let tournaments_event = GameEvent::ActiveTournaments {
-                tournaments,
+                tournaments: tournaments.clone(),
                 timestamp: contract.runtime.system_time().micros(),
             };
 
             let stream_name = StreamName::from("active_tournaments".to_string());
             contract.runtime.emit(stream_name, &tournaments_event);
+            
+            log::info!("📡 EMIT_TOURNAMENTS: ✅ Successfully emitted active_tournaments event with {} tournaments", tournaments.len());
+            
+            // Log tournament details
+            for tournament in &tournaments {
+                log::info!("📡 EMIT_TOURNAMENTS: Tournament '{}' - {} shards", 
+                    tournament.tournament_id, tournament.shard_chain_ids.len());
+            }
+        } else {
+            log::warn!("📡 EMIT_TOURNAMENTS: ⚠️ No tournaments to emit");
         }
     }
 

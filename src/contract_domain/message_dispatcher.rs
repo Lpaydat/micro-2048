@@ -48,7 +48,11 @@ impl MessageDispatcher {
             
             // Shard registration message
             Message::RegisterPlayerWithShard { player_chain_id, tournament_id, player_name } => {
-                PlayerMessageHandler::handle_register_player_with_shard(contract, player_chain_id, tournament_id, player_name).await;
+                log::info!("🎯 SHARD_RECEIVE: Received registration message from player chain {}", player_chain_id);
+                log::info!("🎯 SHARD_RECEIVE: Tournament: {}, Player: {}, Current chain: {}", 
+                          tournament_id, player_name, contract.runtime.chain_id());
+                PlayerMessageHandler::handle_register_player_with_shard(contract, player_chain_id.clone(), tournament_id, player_name).await;
+                log::info!("🎯 SHARD_RECEIVE: ✅ Registration completed for player chain {}", player_chain_id);
             }
             
             // Aggregation trigger request (delegated triggerer pattern)
@@ -67,6 +71,24 @@ impl MessageDispatcher {
                 use crate::contract_domain::handlers::operations::ShardOperationHandler;
                 // Aggregate scores when requested by leaderboard
                 ShardOperationHandler::aggregate_scores_from_player_chains(contract, Vec::new()).await;
+            }
+            
+            // Player chain subscribes to main chain's active tournaments
+            Message::SubscribeToMainChain { main_chain_id } => {
+                use crate::contract_domain::handlers::messages::PlayerMessageHandler;
+                PlayerMessageHandler::handle_subscribe_to_main_chain(contract, main_chain_id).await;
+            }
+            
+            // Shard registers first player with leaderboard for triggerer system
+            Message::RegisterFirstPlayer { shard_chain_id, player_chain_id, tournament_id } => {
+                log::info!("🎯 LEADERBOARD_RECEIVE: First player registration from shard {} for tournament {}", shard_chain_id, tournament_id);
+                LeaderboardMessageHandler::handle_register_first_player(contract, shard_chain_id, player_chain_id, tournament_id).await;
+            }
+            
+            // Player chain sends trigger update request to leaderboard
+            Message::TriggerUpdate { triggerer_chain_id, tournament_id, timestamp } => {
+                log::info!("⏰ TRIGGER_RECEIVE: Trigger update request from {} for tournament {}", triggerer_chain_id, tournament_id);
+                LeaderboardMessageHandler::handle_trigger_update(contract, triggerer_chain_id, tournament_id, timestamp).await;
             }
         }
     }

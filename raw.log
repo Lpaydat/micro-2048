@@ -1,0 +1,684 @@
+2025-09-28T04:22:44.299197Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0
+2025-09-28T04:22:44.299744Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:44.299865Z  INFO linera_execution::wasm::runtime_api: 🎮 OPERATION: Executing operation on chain 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0
+2025-09-28T04:22:44.300572Z  INFO linera_execution::wasm::runtime_api: 🔔 PLAYER_REGISTER: Setting up subscription from new player chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 to main chain 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0 for active_tournaments
+2025-09-28T04:22:44.305298Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0
+2025-09-28T04:22:44.305824Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:44.305937Z  INFO linera_execution::wasm::runtime_api: 🎮 OPERATION: Executing operation on chain 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0
+2025-09-28T04:22:44.306686Z  INFO linera_execution::wasm::runtime_api: 🔔 PLAYER_REGISTER: Setting up subscription from new player chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 to main chain 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0 for active_tournaments
+2025-09-28T04:22:44.309616Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0
+2025-09-28T04:22:44.310154Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:44.310274Z  INFO linera_execution::wasm::runtime_api: 🎮 OPERATION: Executing operation on chain 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0
+2025-09-28T04:22:44.310777Z  INFO linera_execution::wasm::runtime_api: 🔔 PLAYER_REGISTER: Setting up subscription from new player chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 to main chain 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0 for active_tournaments
+2025-09-28T04:22:44.328598Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:44.329248Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:44.329379Z  INFO linera_execution::wasm::runtime_api: 🔔 PLAYER_CHAIN: Subscribing to main chain 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0 for active_tournaments
+2025-09-28T04:22:44.329532Z  INFO linera_execution::wasm::runtime_api: 🔔 PLAYER_CHAIN: Setting up subscription - Chain: 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0, Stream: 'active_tournaments', App: 0f7278196e4306b7a546dddc34d73c52390038ff98a62e186b5b5c2e6876fb14
+2025-09-28T04:22:44.329690Z  INFO linera_execution::wasm::runtime_api: 🔔 PLAYER_CHAIN: ✅ Successfully subscribed to active_tournaments from main chain 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0
+2025-09-28T04:22:44.331803Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:44.332374Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:44.333838Z  INFO linera::main:node_service{port=8088}: linera_core::client: Connected to validator 021df3e7265efff690f1808b175ecda8d36fb1cef1b50dda851c743f97b533b429
+2025-09-28T04:22:44.335749Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:44.336234Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:44.336362Z  INFO linera_execution::wasm::runtime_api: 🔔 PLAYER_CHAIN: Subscribing to main chain 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0 for active_tournaments
+2025-09-28T04:22:44.336508Z  INFO linera_execution::wasm::runtime_api: 🔔 PLAYER_CHAIN: Setting up subscription - Chain: 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0, Stream: 'active_tournaments', App: 0f7278196e4306b7a546dddc34d73c52390038ff98a62e186b5b5c2e6876fb14
+2025-09-28T04:22:44.336567Z  INFO linera_execution::wasm::runtime_api: 🔔 PLAYER_CHAIN: ✅ Successfully subscribed to active_tournaments from main chain 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0
+2025-09-28T04:22:44.338741Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:44.339207Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:44.341891Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:44.342339Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:44.342449Z  INFO linera_execution::wasm::runtime_api: 🔔 PLAYER_CHAIN: Subscribing to main chain 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0 for active_tournaments
+2025-09-28T04:22:44.342586Z  INFO linera_execution::wasm::runtime_api: 🔔 PLAYER_CHAIN: Setting up subscription - Chain: 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0, Stream: 'active_tournaments', App: 0f7278196e4306b7a546dddc34d73c52390038ff98a62e186b5b5c2e6876fb14
+2025-09-28T04:22:44.342653Z  INFO linera_execution::wasm::runtime_api: 🔔 PLAYER_CHAIN: ✅ Successfully subscribed to active_tournaments from main chain 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0
+2025-09-28T04:22:44.344340Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:44.344806Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:44.375738Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 1 blocks created.
+2025-09-28T04:22:44.376152Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:44.376366Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:44.376593Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:44.376793Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:44.377000Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:44.377189Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:44.377369Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:44.377588Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:44.377819Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:44.378037Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:44.378268Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:44.378471Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:44.378704Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:44.378909Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:44.379082Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:44.379281Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:44.379474Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:44.379888Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:44.380215Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:44.380489Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:44.380954Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:46.339766Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0
+2025-09-28T04:22:46.340267Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:46.340410Z  INFO linera_execution::wasm::runtime_api: 🎮 OPERATION: Executing operation on chain 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0
+2025-09-28T04:22:46.341890Z  INFO linera_execution::wasm::runtime_api: 🎯 TOURNAMENT: Creating tournament with start_time: None, end_time: None
+2025-09-28T04:22:46.342584Z  INFO linera_execution::wasm::runtime_api: 🔍 DEBUG: Sending CreateLeaderboard to leaderboard chain 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18 with 2 shard IDs: ["de08d87e756c503cf1a94ff1c1e9029315c6409a01674f41f1b4a233d7cc48ed", "6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f"]
+2025-09-28T04:22:46.342789Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Starting tournament emission (is_main_chain: true)
+2025-09-28T04:22:46.343138Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Emitting 1 active tournaments from chain 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0
+2025-09-28T04:22:46.343243Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: ✅ Successfully emitted active_tournaments event with 1 tournaments
+2025-09-28T04:22:46.343259Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Tournament '1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18' - 2 shards
+2025-09-28T04:22:46.346265Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0
+2025-09-28T04:22:46.346745Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:46.346888Z  INFO linera_execution::wasm::runtime_api: 🎮 OPERATION: Executing operation on chain 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0
+2025-09-28T04:22:46.348165Z  INFO linera_execution::wasm::runtime_api: 🎯 TOURNAMENT: Creating tournament with start_time: None, end_time: None
+2025-09-28T04:22:46.348828Z  INFO linera_execution::wasm::runtime_api: 🔍 DEBUG: Sending CreateLeaderboard to leaderboard chain 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18 with 2 shard IDs: ["de08d87e756c503cf1a94ff1c1e9029315c6409a01674f41f1b4a233d7cc48ed", "6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f"]
+2025-09-28T04:22:46.349026Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Starting tournament emission (is_main_chain: true)
+2025-09-28T04:22:46.349313Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Emitting 1 active tournaments from chain 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0
+2025-09-28T04:22:46.349406Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: ✅ Successfully emitted active_tournaments event with 1 tournaments
+2025-09-28T04:22:46.349421Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Tournament '1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18' - 2 shards
+2025-09-28T04:22:46.352081Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0
+2025-09-28T04:22:46.352568Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:46.352715Z  INFO linera_execution::wasm::runtime_api: 🎮 OPERATION: Executing operation on chain 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0
+2025-09-28T04:22:46.353995Z  INFO linera_execution::wasm::runtime_api: 🎯 TOURNAMENT: Creating tournament with start_time: None, end_time: None
+2025-09-28T04:22:46.354678Z  INFO linera_execution::wasm::runtime_api: 🔍 DEBUG: Sending CreateLeaderboard to leaderboard chain 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18 with 2 shard IDs: ["de08d87e756c503cf1a94ff1c1e9029315c6409a01674f41f1b4a233d7cc48ed", "6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f"]
+2025-09-28T04:22:46.354875Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Starting tournament emission (is_main_chain: true)
+2025-09-28T04:22:46.355192Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Emitting 1 active tournaments from chain 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0
+2025-09-28T04:22:46.355289Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: ✅ Successfully emitted active_tournaments event with 1 tournaments
+2025-09-28T04:22:46.355305Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Tournament '1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18' - 2 shards
+2025-09-28T04:22:46.373539Z  WARN linera::main:node_service{port=8088}:handle_chain_info_query{address="http://localhost:13001"}: grpc_client: error=Blobs not found: [BlobId { blob_type: ChainDescription, hash: 1724bf92048a1e05 }]
+2025-09-28T04:22:46.373577Z  WARN linera::main:node_service{port=8088}: linera_core::client: Could not connect to validator 021df3e7265efff690f1808b175ecda8d36fb1cef1b50dda851c743f97b533b429 error=RemoteNodeError(BlobsNotFound([BlobId { blob_type: ChainDescription, hash: 1724bf92048a1e05 }]))
+2025-09-28T04:22:46.373814Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:46.374301Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:46.375726Z  INFO linera_execution::wasm::runtime_api: 🔔 LEADERBOARD_SETUP: Subscribing to shard_score_update events from shard de08d87e756c503cf1a94ff1c1e9029315c6409a01674f41f1b4a233d7cc48ed
+2025-09-28T04:22:46.375824Z  INFO linera_execution::wasm::runtime_api: 🔔 SUBSCRIBE: Subscribing to shard_score_update events from chain de08d87e756c503cf1a94ff1c1e9029315c6409a01674f41f1b4a233d7cc48ed (app: 0f7278196e4306b7a546dddc34d73c52390038ff98a62e186b5b5c2e6876fb14)
+2025-09-28T04:22:46.375938Z  INFO linera_execution::wasm::runtime_api: 🔔 SUBSCRIBE: ✅ Successfully subscribed to shard_score_update from chain de08d87e756c503cf1a94ff1c1e9029315c6409a01674f41f1b4a233d7cc48ed
+2025-09-28T04:22:46.375951Z  INFO linera_execution::wasm::runtime_api: 🔔 LEADERBOARD_SETUP: ✅ Successfully subscribed to shard de08d87e756c503cf1a94ff1c1e9029315c6409a01674f41f1b4a233d7cc48ed
+2025-09-28T04:22:46.375963Z  INFO linera_execution::wasm::runtime_api: 🔔 LEADERBOARD_SETUP: Subscribing to shard_score_update events from shard 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:46.376052Z  INFO linera_execution::wasm::runtime_api: 🔔 SUBSCRIBE: Subscribing to shard_score_update events from chain 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f (app: 0f7278196e4306b7a546dddc34d73c52390038ff98a62e186b5b5c2e6876fb14)
+2025-09-28T04:22:46.376151Z  INFO linera_execution::wasm::runtime_api: 🔔 SUBSCRIBE: ✅ Successfully subscribed to shard_score_update from chain 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:46.376167Z  INFO linera_execution::wasm::runtime_api: 🔔 LEADERBOARD_SETUP: ✅ Successfully subscribed to shard 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:46.376263Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Starting tournament emission (is_main_chain: false)
+2025-09-28T04:22:46.376377Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Emitting 1 active tournaments from chain 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:46.376536Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: ✅ Successfully emitted active_tournaments event with 1 tournaments
+2025-09-28T04:22:46.376555Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Tournament '1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18' - 2 shards
+2025-09-28T04:22:46.380434Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:46.381017Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:46.382526Z  INFO linera_execution::wasm::runtime_api: 🔔 LEADERBOARD_SETUP: Subscribing to shard_score_update events from shard de08d87e756c503cf1a94ff1c1e9029315c6409a01674f41f1b4a233d7cc48ed
+2025-09-28T04:22:46.382623Z  INFO linera_execution::wasm::runtime_api: 🔔 SUBSCRIBE: Subscribing to shard_score_update events from chain de08d87e756c503cf1a94ff1c1e9029315c6409a01674f41f1b4a233d7cc48ed (app: 0f7278196e4306b7a546dddc34d73c52390038ff98a62e186b5b5c2e6876fb14)
+2025-09-28T04:22:46.382711Z  INFO linera_execution::wasm::runtime_api: 🔔 SUBSCRIBE: ✅ Successfully subscribed to shard_score_update from chain de08d87e756c503cf1a94ff1c1e9029315c6409a01674f41f1b4a233d7cc48ed
+2025-09-28T04:22:46.382730Z  INFO linera_execution::wasm::runtime_api: 🔔 LEADERBOARD_SETUP: ✅ Successfully subscribed to shard de08d87e756c503cf1a94ff1c1e9029315c6409a01674f41f1b4a233d7cc48ed
+2025-09-28T04:22:46.382742Z  INFO linera_execution::wasm::runtime_api: 🔔 LEADERBOARD_SETUP: Subscribing to shard_score_update events from shard 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:46.382837Z  INFO linera_execution::wasm::runtime_api: 🔔 SUBSCRIBE: Subscribing to shard_score_update events from chain 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f (app: 0f7278196e4306b7a546dddc34d73c52390038ff98a62e186b5b5c2e6876fb14)
+2025-09-28T04:22:46.382904Z  INFO linera_execution::wasm::runtime_api: 🔔 SUBSCRIBE: ✅ Successfully subscribed to shard_score_update from chain 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:46.382920Z  INFO linera_execution::wasm::runtime_api: 🔔 LEADERBOARD_SETUP: ✅ Successfully subscribed to shard 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:46.383006Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Starting tournament emission (is_main_chain: false)
+2025-09-28T04:22:46.383101Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Emitting 1 active tournaments from chain 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:46.383211Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: ✅ Successfully emitted active_tournaments event with 1 tournaments
+2025-09-28T04:22:46.383227Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Tournament '1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18' - 2 shards
+2025-09-28T04:22:46.387793Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:46.388267Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:46.389687Z  INFO linera_execution::wasm::runtime_api: 🔔 LEADERBOARD_SETUP: Subscribing to shard_score_update events from shard de08d87e756c503cf1a94ff1c1e9029315c6409a01674f41f1b4a233d7cc48ed
+2025-09-28T04:22:46.389787Z  INFO linera_execution::wasm::runtime_api: 🔔 SUBSCRIBE: Subscribing to shard_score_update events from chain de08d87e756c503cf1a94ff1c1e9029315c6409a01674f41f1b4a233d7cc48ed (app: 0f7278196e4306b7a546dddc34d73c52390038ff98a62e186b5b5c2e6876fb14)
+2025-09-28T04:22:46.389855Z  INFO linera_execution::wasm::runtime_api: 🔔 SUBSCRIBE: ✅ Successfully subscribed to shard_score_update from chain de08d87e756c503cf1a94ff1c1e9029315c6409a01674f41f1b4a233d7cc48ed
+2025-09-28T04:22:46.389867Z  INFO linera_execution::wasm::runtime_api: 🔔 LEADERBOARD_SETUP: ✅ Successfully subscribed to shard de08d87e756c503cf1a94ff1c1e9029315c6409a01674f41f1b4a233d7cc48ed
+2025-09-28T04:22:46.389878Z  INFO linera_execution::wasm::runtime_api: 🔔 LEADERBOARD_SETUP: Subscribing to shard_score_update events from shard 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:46.389980Z  INFO linera_execution::wasm::runtime_api: 🔔 SUBSCRIBE: Subscribing to player_score_update events from chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 (app: 0f7278196e4306b7a546dddc34d73c52390038ff98a62e186b5b5c2e6876fb14)
+2025-09-28T04:22:46.390034Z  INFO linera_execution::wasm::runtime_api: 🔔 SUBSCRIBE: ✅ Successfully subscribed to shard_score_update from chain 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:46.390046Z  INFO linera_execution::wasm::runtime_api: 🔔 LEADERBOARD_SETUP: ✅ Successfully subscribed to shard 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:46.390113Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Starting tournament emission (is_main_chain: false)
+2025-09-28T04:22:46.390202Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Emitting 1 active tournaments from chain 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:46.390310Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: ✅ Successfully emitted active_tournaments event with 1 tournaments
+2025-09-28T04:22:46.390326Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Tournament '1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18' - 2 shards
+2025-09-28T04:22:46.424091Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 1 blocks created.
+2025-09-28T04:22:46.426404Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:46.426946Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:46.428446Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Starting tournament emission (is_main_chain: false)
+2025-09-28T04:22:46.428508Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Emitting 1 active tournaments from chain 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:46.428651Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: ✅ Successfully emitted active_tournaments event with 1 tournaments
+2025-09-28T04:22:46.428667Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Tournament '1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18' - 0 shards
+2025-09-28T04:22:46.430308Z  INFO linera::main:node_service{port=8088}: linera_core::client: Connected to validator 021df3e7265efff690f1808b175ecda8d36fb1cef1b50dda851c743f97b533b429
+2025-09-28T04:22:46.431726Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:46.432135Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:46.433387Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Starting tournament emission (is_main_chain: false)
+2025-09-28T04:22:46.433444Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Emitting 1 active tournaments from chain 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:46.433524Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: ✅ Successfully emitted active_tournaments event with 1 tournaments
+2025-09-28T04:22:46.433539Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Tournament '1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18' - 0 shards
+2025-09-28T04:22:46.437019Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:46.437454Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:46.438754Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Starting tournament emission (is_main_chain: false)
+2025-09-28T04:22:46.438813Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Emitting 1 active tournaments from chain 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:46.438897Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: ✅ Successfully emitted active_tournaments event with 1 tournaments
+2025-09-28T04:22:46.438912Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Tournament '1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18' - 0 shards
+2025-09-28T04:22:46.469955Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 1 blocks created.
+2025-09-28T04:22:46.472932Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain de08d87e756c503cf1a94ff1c1e9029315c6409a01674f41f1b4a233d7cc48ed
+2025-09-28T04:22:46.473409Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:46.474684Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Starting tournament emission (is_main_chain: false)
+2025-09-28T04:22:46.474743Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Emitting 1 active tournaments from chain de08d87e756c503cf1a94ff1c1e9029315c6409a01674f41f1b4a233d7cc48ed
+2025-09-28T04:22:46.474852Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: ✅ Successfully emitted active_tournaments event with 1 tournaments
+2025-09-28T04:22:46.474867Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Tournament '1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18' - 0 shards
+2025-09-28T04:22:46.476485Z  INFO linera::main:node_service{port=8088}: linera_core::client: Connected to validator 021df3e7265efff690f1808b175ecda8d36fb1cef1b50dda851c743f97b533b429
+2025-09-28T04:22:46.477825Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain de08d87e756c503cf1a94ff1c1e9029315c6409a01674f41f1b4a233d7cc48ed
+2025-09-28T04:22:46.478252Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:46.479535Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Starting tournament emission (is_main_chain: false)
+2025-09-28T04:22:46.479596Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Emitting 1 active tournaments from chain de08d87e756c503cf1a94ff1c1e9029315c6409a01674f41f1b4a233d7cc48ed
+2025-09-28T04:22:46.479682Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: ✅ Successfully emitted active_tournaments event with 1 tournaments
+2025-09-28T04:22:46.479699Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Tournament '1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18' - 0 shards
+2025-09-28T04:22:46.482482Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain de08d87e756c503cf1a94ff1c1e9029315c6409a01674f41f1b4a233d7cc48ed
+2025-09-28T04:22:46.482924Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:46.484180Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Starting tournament emission (is_main_chain: false)
+2025-09-28T04:22:46.484245Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Emitting 1 active tournaments from chain de08d87e756c503cf1a94ff1c1e9029315c6409a01674f41f1b4a233d7cc48ed
+2025-09-28T04:22:46.484339Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: ✅ Successfully emitted active_tournaments event with 1 tournaments
+2025-09-28T04:22:46.484359Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT_TOURNAMENTS: Tournament '1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18' - 0 shards
+2025-09-28T04:22:46.516052Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 1 blocks created.
+2025-09-28T04:22:46.516624Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:46.516912Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:46.517203Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:46.517448Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:46.517674Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:46.518071Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:46.518372Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:46.518667Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:46.518990Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:46.519257Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:46.519491Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:46.519683Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:46.521944Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:46.522430Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:46.522532Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Received 1 stream updates
+2025-09-28T04:22:46.522590Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Update #1 - Chain: 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0, Stream: 'active_tournaments', Events: 0..1 (count: 1)
+2025-09-28T04:22:46.522607Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Processing event index 0 from stream 'active_tournaments'
+2025-09-28T04:22:46.522659Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🏆 Processing active_tournaments event at index 0 from main chain 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0
+2025-09-28T04:22:46.522702Z  INFO linera_execution::wasm::runtime_api: 📖 STREAM_READ: Reading active_tournaments event from chain 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0 at index 0
+2025-09-28T04:22:46.522831Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 📋 Updating local tournament cache with 1 tournaments
+2025-09-28T04:22:46.522845Z  INFO linera_execution::wasm::runtime_api: 📋 CACHE: Updating local tournament cache with 1 tournaments
+2025-09-28T04:22:46.522935Z  INFO linera_execution::wasm::runtime_api: 📋 CACHE: Storing tournament 'tournament_1' (1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18)
+2025-09-28T04:22:46.523135Z  INFO linera_execution::wasm::runtime_api: 📋 CACHE: Tournament cache updated - 1 tournaments stored
+2025-09-28T04:22:46.523144Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ✅ Local tournament cache updated successfully
+2025-09-28T04:22:46.523157Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ⏭️ No player updates processed, skipping aggregation
+2025-09-28T04:22:46.523166Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ✅ Finished processing all stream updates
+2025-09-28T04:22:46.525110Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:46.525586Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:46.525689Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Received 1 stream updates
+2025-09-28T04:22:46.525737Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Update #1 - Chain: 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0, Stream: 'active_tournaments', Events: 0..1 (count: 1)
+2025-09-28T04:22:46.525750Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Processing event index 0 from stream 'active_tournaments'
+2025-09-28T04:22:46.525788Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🏆 Processing active_tournaments event at index 0 from main chain 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0
+2025-09-28T04:22:46.525823Z  INFO linera_execution::wasm::runtime_api: 📖 STREAM_READ: Reading active_tournaments event from chain 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0 at index 0
+2025-09-28T04:22:46.525944Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 📋 Updating local tournament cache with 1 tournaments
+2025-09-28T04:22:46.525955Z  INFO linera_execution::wasm::runtime_api: 📋 CACHE: Updating local tournament cache with 1 tournaments
+2025-09-28T04:22:46.526035Z  INFO linera_execution::wasm::runtime_api: 📋 CACHE: Storing tournament 'tournament_1' (1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18)
+2025-09-28T04:22:46.526228Z  INFO linera_execution::wasm::runtime_api: 📋 CACHE: Tournament cache updated - 1 tournaments stored
+2025-09-28T04:22:46.526236Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ✅ Local tournament cache updated successfully
+2025-09-28T04:22:46.526245Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ⏭️ No player updates processed, skipping aggregation
+2025-09-28T04:22:46.526251Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ✅ Finished processing all stream updates
+2025-09-28T04:22:46.528176Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:46.528625Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:46.528727Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Received 1 stream updates
+2025-09-28T04:22:46.528775Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Update #1 - Chain: 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0, Stream: 'active_tournaments', Events: 0..1 (count: 1)
+2025-09-28T04:22:46.528788Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Processing event index 0 from stream 'active_tournaments'
+2025-09-28T04:22:46.528826Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🏆 Processing active_tournaments event at index 0 from main chain 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0
+2025-09-28T04:22:46.528860Z  INFO linera_execution::wasm::runtime_api: 📖 STREAM_READ: Reading active_tournaments event from chain 3cf4f0714e42f665ad0fbd3641fa8a65a4e8cffe6888721f56dcb15b0a4ce2b0 at index 0
+2025-09-28T04:22:46.528973Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 📋 Updating local tournament cache with 1 tournaments
+2025-09-28T04:22:46.528984Z  INFO linera_execution::wasm::runtime_api: 📋 CACHE: Updating local tournament cache with 1 tournaments
+2025-09-28T04:22:46.529046Z  INFO linera_execution::wasm::runtime_api: 📋 CACHE: Storing tournament 'tournament_1' (1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18)
+2025-09-28T04:22:46.529237Z  INFO linera_execution::wasm::runtime_api: 📋 CACHE: Tournament cache updated - 1 tournaments stored
+2025-09-28T04:22:46.529245Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ✅ Local tournament cache updated successfully
+2025-09-28T04:22:46.529254Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ⏭️ No player updates processed, skipping aggregation
+2025-09-28T04:22:46.529261Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ✅ Finished processing all stream updates
+2025-09-28T04:22:46.541933Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 1 blocks created.
+2025-09-28T04:22:46.542223Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:46.542434Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:46.542637Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:46.542814Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:46.543007Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:46.543186Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:46.543353Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:46.543552Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:46.543791Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:46.543985Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:46.544357Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:46.544646Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:46.544830Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:46.545173Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:46.545481Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:46.545699Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:48.391994Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:48.392522Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:48.392666Z  INFO linera_execution::wasm::runtime_api: 🎮 OPERATION: Executing operation on chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:48.392928Z  INFO linera_execution::wasm::runtime_api: 🎯 NEW_BOARD: Creating board for tournament '1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18'
+2025-09-28T04:22:48.393341Z  INFO linera_execution::wasm::runtime_api: 🎯 NEW_BOARD: Player chain has 1 cached tournaments from streaming system
+2025-09-28T04:22:48.393351Z  INFO linera_execution::wasm::runtime_api: 🎯 NEW_BOARD: Available tournaments in cache:
+2025-09-28T04:22:48.393396Z  INFO linera_execution::wasm::runtime_api: 🎯 NEW_BOARD:   1. 🎯 TARGET 'tournament_1' (ID: 1724bf92048a1e05...)
+2025-09-28T04:22:48.393597Z  INFO linera_execution::wasm::runtime_api: 🎯 NEW_BOARD: ✅ Target tournament 'tournament_1' found in cache
+2025-09-28T04:22:48.393609Z  INFO linera_execution::wasm::runtime_api: 🎯 NEW_BOARD:   - Shards: 2 available
+2025-09-28T04:22:48.393867Z  INFO linera_execution::wasm::runtime_api: 🎯 SHARD_SELECTION: Player test_72xllh assigned to shard 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f (index 1/2) via hash 862415121
+2025-09-28T04:22:48.394066Z  INFO linera_execution::wasm::runtime_api: 🎯 NEW_BOARD: Found tournament in cache with end_time: None -> 0
+2025-09-28T04:22:48.394913Z  INFO linera_execution::wasm::runtime_api: 🎯 PLAYER_REGISTRATION: Sending registration message to shard 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:48.394955Z  INFO linera_execution::wasm::runtime_api: 🎯 PLAYER_REGISTRATION: Player chain: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8, Tournament: 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18, Player: test_72xllh
+2025-09-28T04:22:48.395090Z  INFO linera_execution::wasm::runtime_api: 🎯 PLAYER_REGISTRATION: ✅ Registration message sent to shard 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:48.395152Z  INFO linera_execution::wasm::runtime_api: 🔔 PLAYER_REGISTRATION: Subscribing to leaderboard_update events from tournament 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.395249Z  INFO linera_execution::wasm::runtime_api: 🔔 SUBSCRIBE: Subscribing to leaderboard_update events from chain 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18 (app: 0f7278196e4306b7a546dddc34d73c52390038ff98a62e186b5b5c2e6876fb14)
+2025-09-28T04:22:48.395363Z  INFO linera_execution::wasm::runtime_api: 🔔 SUBSCRIBE: ✅ Successfully subscribed to leaderboard_update from chain 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.395373Z  INFO linera_execution::wasm::runtime_api: 🔔 PLAYER_REGISTRATION: ✅ Subscribed to triggerer list updates from leaderboard
+2025-09-28T04:22:48.400282Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:48.401071Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:48.401246Z  INFO linera_execution::wasm::runtime_api: 🎮 OPERATION: Executing operation on chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:48.401480Z  INFO linera_execution::wasm::runtime_api: 🎯 NEW_BOARD: Creating board for tournament '1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18'
+2025-09-28T04:22:48.401822Z  INFO linera_execution::wasm::runtime_api: 🎯 NEW_BOARD: Player chain has 1 cached tournaments from streaming system
+2025-09-28T04:22:48.401831Z  INFO linera_execution::wasm::runtime_api: 🎯 NEW_BOARD: Available tournaments in cache:
+2025-09-28T04:22:48.401864Z  INFO linera_execution::wasm::runtime_api: 🎯 NEW_BOARD:   1. 🎯 TARGET 'tournament_1' (ID: 1724bf92048a1e05...)
+2025-09-28T04:22:48.402050Z  INFO linera_execution::wasm::runtime_api: 🎯 NEW_BOARD: ✅ Target tournament 'tournament_1' found in cache
+2025-09-28T04:22:48.402059Z  INFO linera_execution::wasm::runtime_api: 🎯 NEW_BOARD:   - Shards: 2 available
+2025-09-28T04:22:48.402302Z  INFO linera_execution::wasm::runtime_api: 🎯 SHARD_SELECTION: Player test_72xllh assigned to shard 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f (index 1/2) via hash 862415121
+2025-09-28T04:22:48.402494Z  INFO linera_execution::wasm::runtime_api: 🎯 NEW_BOARD: Found tournament in cache with end_time: None -> 0
+2025-09-28T04:22:48.403241Z  INFO linera_execution::wasm::runtime_api: 🎯 PLAYER_REGISTRATION: Sending registration message to shard 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:48.403276Z  INFO linera_execution::wasm::runtime_api: 🎯 PLAYER_REGISTRATION: Player chain: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8, Tournament: 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18, Player: test_72xllh
+2025-09-28T04:22:48.403411Z  INFO linera_execution::wasm::runtime_api: 🎯 PLAYER_REGISTRATION: ✅ Registration message sent to shard 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:48.403467Z  INFO linera_execution::wasm::runtime_api: 🔔 PLAYER_REGISTRATION: Subscribing to leaderboard_update events from tournament 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.403557Z  INFO linera_execution::wasm::runtime_api: 🔔 SUBSCRIBE: Subscribing to leaderboard_update events from chain 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18 (app: 0f7278196e4306b7a546dddc34d73c52390038ff98a62e186b5b5c2e6876fb14)
+2025-09-28T04:22:48.403609Z  INFO linera_execution::wasm::runtime_api: 🔔 SUBSCRIBE: ✅ Successfully subscribed to leaderboard_update from chain 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.403617Z  INFO linera_execution::wasm::runtime_api: 🔔 PLAYER_REGISTRATION: ✅ Subscribed to triggerer list updates from leaderboard
+2025-09-28T04:22:48.407969Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:48.408435Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:48.408564Z  INFO linera_execution::wasm::runtime_api: 🎮 OPERATION: Executing operation on chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:48.408800Z  INFO linera_execution::wasm::runtime_api: 🎯 NEW_BOARD: Creating board for tournament '1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18'
+2025-09-28T04:22:48.409117Z  INFO linera_execution::wasm::runtime_api: 🎯 NEW_BOARD: Player chain has 1 cached tournaments from streaming system
+2025-09-28T04:22:48.409125Z  INFO linera_execution::wasm::runtime_api: 🎯 NEW_BOARD: Available tournaments in cache:
+2025-09-28T04:22:48.409160Z  INFO linera_execution::wasm::runtime_api: 🎯 NEW_BOARD:   1. 🎯 TARGET 'tournament_1' (ID: 1724bf92048a1e05...)
+2025-09-28T04:22:48.409338Z  INFO linera_execution::wasm::runtime_api: 🎯 NEW_BOARD: ✅ Target tournament 'tournament_1' found in cache
+2025-09-28T04:22:48.409348Z  INFO linera_execution::wasm::runtime_api: 🎯 NEW_BOARD:   - Shards: 2 available
+2025-09-28T04:22:48.409588Z  INFO linera_execution::wasm::runtime_api: 🎯 SHARD_SELECTION: Player test_72xllh assigned to shard 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f (index 1/2) via hash 862415121
+2025-09-28T04:22:48.409783Z  INFO linera_execution::wasm::runtime_api: 🎯 NEW_BOARD: Found tournament in cache with end_time: None -> 0
+2025-09-28T04:22:48.410525Z  INFO linera_execution::wasm::runtime_api: 🎯 PLAYER_REGISTRATION: Sending registration message to shard 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:48.410563Z  INFO linera_execution::wasm::runtime_api: 🎯 PLAYER_REGISTRATION: Player chain: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8, Tournament: 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18, Player: test_72xllh
+2025-09-28T04:22:48.410706Z  INFO linera_execution::wasm::runtime_api: 🎯 PLAYER_REGISTRATION: ✅ Registration message sent to shard 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:48.410768Z  INFO linera_execution::wasm::runtime_api: 🔔 PLAYER_REGISTRATION: Subscribing to leaderboard_update events from tournament 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.410862Z  INFO linera_execution::wasm::runtime_api: 🔔 SUBSCRIBE: Subscribing to leaderboard_update events from chain 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18 (app: 0f7278196e4306b7a546dddc34d73c52390038ff98a62e186b5b5c2e6876fb14)
+2025-09-28T04:22:48.410920Z  INFO linera_execution::wasm::runtime_api: 🔔 SUBSCRIBE: ✅ Successfully subscribed to leaderboard_update from chain 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.410929Z  INFO linera_execution::wasm::runtime_api: 🔔 PLAYER_REGISTRATION: ✅ Subscribed to triggerer list updates from leaderboard
+2025-09-28T04:22:48.429842Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:48.431513Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:48.432111Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:48.432244Z  INFO linera_execution::wasm::runtime_api: 🎯 SHARD_RECEIVE: Received registration message from player chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:48.432286Z  INFO linera_execution::wasm::runtime_api: 🎯 SHARD_RECEIVE: Tournament: 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18, Player: test_72xllh, Current chain: 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:48.433028Z  INFO linera_execution::wasm::runtime_api: 🎯 REGISTER_PLAYER: Setting up subscription to player chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 for tournament 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.433038Z  INFO linera_execution::wasm::runtime_api: 🎯 REGISTER_PLAYER: Shard will receive player_score_update events via process_streams
+2025-09-28T04:22:48.433137Z  INFO linera_execution::wasm::runtime_api: 🔔 SUBSCRIBE: Subscribing to player_score_update events from chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 (app: 0f7278196e4306b7a546dddc34d73c52390038ff98a62e186b5b5c2e6876fb14)
+2025-09-28T04:22:48.433229Z  INFO linera_execution::wasm::runtime_api: 🔔 SUBSCRIBE: ✅ Successfully subscribed to player_score_update from chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:48.433241Z  INFO linera_execution::wasm::runtime_api: 🎯 REGISTER_PLAYER: ✅ Successfully subscribed to player chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:48.433336Z  INFO linera_execution::wasm::runtime_api: 🎯 FIRST_PLAYER: Shard 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f registering first player ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 with leaderboard
+2025-09-28T04:22:48.433406Z  INFO linera_execution::wasm::runtime_api: 🎯 FIRST_PLAYER: ✅ Sent first player registration to leaderboard
+2025-09-28T04:22:48.433556Z  INFO linera_execution::wasm::runtime_api: 🎯 SHARD_RECEIVE: ✅ Registration completed for player chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:48.436955Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:48.437515Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:48.437677Z  INFO linera_execution::wasm::runtime_api: 🎯 SHARD_RECEIVE: Received registration message from player chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:48.437725Z  INFO linera_execution::wasm::runtime_api: 🎯 SHARD_RECEIVE: Tournament: 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18, Player: test_72xllh, Current chain: 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:48.438378Z  INFO linera_execution::wasm::runtime_api: 🎯 REGISTER_PLAYER: Setting up subscription to player chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 for tournament 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.438388Z  INFO linera_execution::wasm::runtime_api: 🎯 REGISTER_PLAYER: Shard will receive player_score_update events via process_streams
+2025-09-28T04:22:48.438490Z  INFO linera_execution::wasm::runtime_api: 🔔 SUBSCRIBE: Subscribing to player_score_update events from chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 (app: 0f7278196e4306b7a546dddc34d73c52390038ff98a62e186b5b5c2e6876fb14)
+2025-09-28T04:22:48.438563Z  INFO linera_execution::wasm::runtime_api: 🔔 SUBSCRIBE: ✅ Successfully subscribed to player_score_update from chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:48.438578Z  INFO linera_execution::wasm::runtime_api: 🎯 REGISTER_PLAYER: ✅ Successfully subscribed to player chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:48.438676Z  INFO linera_execution::wasm::runtime_api: 🎯 FIRST_PLAYER: Shard 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f registering first player ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 with leaderboard
+2025-09-28T04:22:48.438752Z  INFO linera_execution::wasm::runtime_api: 🎯 FIRST_PLAYER: ✅ Sent first player registration to leaderboard
+2025-09-28T04:22:48.438867Z  INFO linera_execution::wasm::runtime_api: 🎯 SHARD_RECEIVE: ✅ Registration completed for player chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:48.441487Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:48.442196Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:48.442409Z  INFO linera_execution::wasm::runtime_api: 🎯 SHARD_RECEIVE: Received registration message from player chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:48.442473Z  INFO linera_execution::wasm::runtime_api: 🎯 SHARD_RECEIVE: Tournament: 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18, Player: test_72xllh, Current chain: 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:48.443399Z  INFO linera_execution::wasm::runtime_api: 🎯 REGISTER_PLAYER: Setting up subscription to player chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 for tournament 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.443408Z  INFO linera_execution::wasm::runtime_api: 🎯 REGISTER_PLAYER: Shard will receive player_score_update events via process_streams
+2025-09-28T04:22:48.443500Z  INFO linera_execution::wasm::runtime_api: 🔔 SUBSCRIBE: Subscribing to player_score_update events from chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 (app: 0f7278196e4306b7a546dddc34d73c52390038ff98a62e186b5b5c2e6876fb14)
+2025-09-28T04:22:48.443563Z  INFO linera_execution::wasm::runtime_api: 🔔 SUBSCRIBE: ✅ Successfully subscribed to player_score_update from chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:48.443574Z  INFO linera_execution::wasm::runtime_api: 🎯 REGISTER_PLAYER: ✅ Successfully subscribed to player chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:48.443662Z  INFO linera_execution::wasm::runtime_api: 🎯 FIRST_PLAYER: Shard 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f registering first player ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 with leaderboard
+2025-09-28T04:22:48.443740Z  INFO linera_execution::wasm::runtime_api: 🎯 FIRST_PLAYER: ✅ Sent first player registration to leaderboard
+2025-09-28T04:22:48.443843Z  INFO linera_execution::wasm::runtime_api: 🎯 SHARD_RECEIVE: ✅ Registration completed for player chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:48.461435Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:48.461951Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:48.462054Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Received 1 stream updates
+2025-09-28T04:22:48.462109Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Update #1 - Chain: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8, Stream: 'player_score_update', Events: 0..1 (count: 1)
+2025-09-28T04:22:48.462127Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Processing event index 0 from stream 'player_score_update'
+2025-09-28T04:22:48.462147Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🎯 Processing player_score_update event at index 0
+2025-09-28T04:22:48.462189Z  INFO linera_execution::wasm::runtime_api: 📖 STREAM_READ: Reading player_score_update event from chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 at index 0
+2025-09-28T04:22:48.462382Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 📊 Player score update from chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 - Player: 'test_72xllh', Score: 0, Status: Created
+2025-09-28T04:22:48.462406Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 📋 Score details - Board: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8.1379784299, Highest Tile: 2, Previous Best: 0
+2025-09-28T04:22:48.462432Z  INFO linera_execution::wasm::runtime_api: 📊 SHARD_UPDATE: Updating shard score via streaming - Player: 'test_72xllh', Score: 0, Board: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8.1379784299
+2025-09-28T04:22:48.463047Z  INFO linera_execution::wasm::runtime_api: 📊 SHARD_UPDATE: Score improvement detected - Old: None, New: 0
+2025-09-28T04:22:48.463081Z  INFO linera_execution::wasm::runtime_api: 📊 SHARD_UPDATE: ✅ Shard state updated via streaming system - Counter: 1
+2025-09-28T04:22:48.463123Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🎯 Shard state - Player 'test_72xllh' now has score: 0, Active players: 1
+2025-09-28T04:22:48.463132Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ✅ Shard state updated with player score
+2025-09-28T04:22:48.463150Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🚀 Triggering score aggregation (processed_player_updates = true)
+2025-09-28T04:22:48.463227Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 📋 Found 1 monitored player chains
+2025-09-28T04:22:48.463295Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🎯 Aggregating scores from 1 player chains
+2025-09-28T04:22:48.463585Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ✅ Finished processing all stream updates
+2025-09-28T04:22:48.465911Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:48.466385Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:48.466487Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Received 1 stream updates
+2025-09-28T04:22:48.466541Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Update #1 - Chain: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8, Stream: 'player_score_update', Events: 0..1 (count: 1)
+2025-09-28T04:22:48.466559Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Processing event index 0 from stream 'player_score_update'
+2025-09-28T04:22:48.466579Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🎯 Processing player_score_update event at index 0
+2025-09-28T04:22:48.466620Z  INFO linera_execution::wasm::runtime_api: 📖 STREAM_READ: Reading player_score_update event from chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 at index 0
+2025-09-28T04:22:48.466778Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 📊 Player score update from chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 - Player: 'test_72xllh', Score: 0, Status: Created
+2025-09-28T04:22:48.466802Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 📋 Score details - Board: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8.1379784299, Highest Tile: 2, Previous Best: 0
+2025-09-28T04:22:48.466828Z  INFO linera_execution::wasm::runtime_api: 📊 SHARD_UPDATE: Updating shard score via streaming - Player: 'test_72xllh', Score: 0, Board: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8.1379784299
+2025-09-28T04:22:48.467393Z  INFO linera_execution::wasm::runtime_api: 📊 SHARD_UPDATE: Score improvement detected - Old: None, New: 0
+2025-09-28T04:22:48.467427Z  INFO linera_execution::wasm::runtime_api: 📊 SHARD_UPDATE: ✅ Shard state updated via streaming system - Counter: 1
+2025-09-28T04:22:48.467466Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🎯 Shard state - Player 'test_72xllh' now has score: 0, Active players: 1
+2025-09-28T04:22:48.467476Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ✅ Shard state updated with player score
+2025-09-28T04:22:48.467493Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🚀 Triggering score aggregation (processed_player_updates = true)
+2025-09-28T04:22:48.467572Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 📋 Found 1 monitored player chains
+2025-09-28T04:22:48.467644Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🎯 Aggregating scores from 1 player chains
+2025-09-28T04:22:48.467999Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ✅ Finished processing all stream updates
+2025-09-28T04:22:48.471228Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:48.471697Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:48.471795Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Received 1 stream updates
+2025-09-28T04:22:48.471846Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Update #1 - Chain: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8, Stream: 'player_score_update', Events: 0..1 (count: 1)
+2025-09-28T04:22:48.471861Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Processing event index 0 from stream 'player_score_update'
+2025-09-28T04:22:48.471879Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🎯 Processing player_score_update event at index 0
+2025-09-28T04:22:48.471917Z  INFO linera_execution::wasm::runtime_api: 📖 STREAM_READ: Reading player_score_update event from chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 at index 0
+2025-09-28T04:22:48.472062Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 📊 Player score update from chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 - Player: 'test_72xllh', Score: 0, Status: Created
+2025-09-28T04:22:48.472081Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 📋 Score details - Board: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8.1379784299, Highest Tile: 2, Previous Best: 0
+2025-09-28T04:22:48.472104Z  INFO linera_execution::wasm::runtime_api: 📊 SHARD_UPDATE: Updating shard score via streaming - Player: 'test_72xllh', Score: 0, Board: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8.1379784299
+2025-09-28T04:22:48.472644Z  INFO linera_execution::wasm::runtime_api: 📊 SHARD_UPDATE: Score improvement detected - Old: Some(0), New: 0
+2025-09-28T04:22:48.472671Z  INFO linera_execution::wasm::runtime_api: 📊 SHARD_UPDATE: ✅ Shard state updated via streaming system - Counter: 1
+2025-09-28T04:22:48.472706Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🎯 Shard state - Player 'test_72xllh' now has score: 0, Active players: 1
+2025-09-28T04:22:48.472714Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ✅ Shard state updated with player score
+2025-09-28T04:22:48.472726Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🚀 Triggering score aggregation (processed_player_updates = true)
+2025-09-28T04:22:48.472797Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 📋 Found 1 monitored player chains
+2025-09-28T04:22:48.472861Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🎯 Aggregating scores from 1 player chains
+2025-09-28T04:22:48.473111Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ✅ Finished processing all stream updates
+2025-09-28T04:22:48.486933Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 2 blocks created.
+2025-09-28T04:22:48.489027Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.489578Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:48.489716Z  INFO linera_execution::wasm::runtime_api: 🎯 LEADERBOARD_RECEIVE: First player registration from shard 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f for tournament 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.489738Z  INFO linera_execution::wasm::runtime_api: 🎯 TRIGGERER_REGISTER: Registering first player ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 from shard 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f for tournament 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.490535Z  INFO linera_execution::wasm::runtime_api: 🎯 TRIGGERER_REGISTER: Setting ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 as primary triggerer
+2025-09-28T04:22:48.490594Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT: Broadcasting triggerer list with 1 players for tournament 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.490669Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT: ✅ Successfully broadcasted triggerer list update
+2025-09-28T04:22:48.490689Z  INFO linera_execution::wasm::runtime_api: 🎯 TRIGGERER_REGISTER: ✅ Successfully registered ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 as triggerer
+2025-09-28T04:22:48.493282Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.493879Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:48.494008Z  INFO linera_execution::wasm::runtime_api: 🎯 LEADERBOARD_RECEIVE: First player registration from shard 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f for tournament 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.494029Z  INFO linera_execution::wasm::runtime_api: 🎯 TRIGGERER_REGISTER: Registering first player ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 from shard 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f for tournament 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.494763Z  INFO linera_execution::wasm::runtime_api: 🎯 TRIGGERER_REGISTER: Setting ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 as primary triggerer
+2025-09-28T04:22:48.494819Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT: Broadcasting triggerer list with 1 players for tournament 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.494875Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT: ✅ Successfully broadcasted triggerer list update
+2025-09-28T04:22:48.494894Z  INFO linera_execution::wasm::runtime_api: 🎯 TRIGGERER_REGISTER: ✅ Successfully registered ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 as triggerer
+2025-09-28T04:22:48.497441Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.497906Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:48.498035Z  INFO linera_execution::wasm::runtime_api: 🎯 LEADERBOARD_RECEIVE: First player registration from shard 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f for tournament 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.498056Z  INFO linera_execution::wasm::runtime_api: 🎯 TRIGGERER_REGISTER: Registering first player ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 from shard 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f for tournament 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.498774Z  INFO linera_execution::wasm::runtime_api: 🎯 TRIGGERER_REGISTER: Setting ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 as primary triggerer
+2025-09-28T04:22:48.498832Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT: Broadcasting triggerer list with 1 players for tournament 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.498891Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT: ✅ Successfully broadcasted triggerer list update
+2025-09-28T04:22:48.498910Z  INFO linera_execution::wasm::runtime_api: 🎯 TRIGGERER_REGISTER: ✅ Successfully registered ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 as triggerer
+2025-09-28T04:22:48.513138Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 1 blocks created.
+2025-09-28T04:22:48.513851Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:48.515601Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:48.516107Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:48.516203Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Received 1 stream updates
+2025-09-28T04:22:48.516255Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Update #1 - Chain: 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18, Stream: 'leaderboard_update', Events: 0..1 (count: 1)
+2025-09-28T04:22:48.516269Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Processing event index 0 from stream 'leaderboard_update'
+2025-09-28T04:22:48.516307Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ⏰ Processing leaderboard_update event at index 0 from leaderboard 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.516341Z  INFO linera_execution::wasm::runtime_api: 📖 STREAM_READ: Reading leaderboard_update event from chain 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18 at index 0
+2025-09-28T04:22:48.516448Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ⏰ Leaderboard update for tournament 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18 with 1 triggerers
+2025-09-28T04:22:48.516463Z  INFO linera_execution::wasm::runtime_api: ⏰ TRIGGERER_CONFIG: Updating triggerer config for tournament 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18 with 1 triggerers
+2025-09-28T04:22:48.516486Z  INFO linera_execution::wasm::runtime_api: ⏰ TRIGGERER_CONFIG: ✅ Updated triggerer list with 1 players, threshold: 10000 μs
+2025-09-28T04:22:48.516596Z  INFO linera_execution::wasm::runtime_api: ⏰ TRIGGER_SEND: Sending trigger update (position 0, time_since_update: 26718 μs)
+2025-09-28T04:22:48.516760Z  INFO linera_execution::wasm::runtime_api: ⏰ TRIGGER_SEND: ✅ Sent trigger update for tournament 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.516770Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ✅ Processed leaderboard update and checked triggering conditions
+2025-09-28T04:22:48.516779Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ⏭️ No player updates processed, skipping aggregation
+2025-09-28T04:22:48.516786Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ✅ Finished processing all stream updates
+2025-09-28T04:22:48.519048Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:48.519580Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:48.519705Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Received 1 stream updates
+2025-09-28T04:22:48.519772Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Update #1 - Chain: 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18, Stream: 'leaderboard_update', Events: 0..1 (count: 1)
+2025-09-28T04:22:48.519785Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Processing event index 0 from stream 'leaderboard_update'
+2025-09-28T04:22:48.519831Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ⏰ Processing leaderboard_update event at index 0 from leaderboard 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.519868Z  INFO linera_execution::wasm::runtime_api: 📖 STREAM_READ: Reading leaderboard_update event from chain 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18 at index 0
+2025-09-28T04:22:48.520080Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ⏰ Leaderboard update for tournament 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18 with 1 triggerers
+2025-09-28T04:22:48.520095Z  INFO linera_execution::wasm::runtime_api: ⏰ TRIGGERER_CONFIG: Updating triggerer config for tournament 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18 with 1 triggerers
+2025-09-28T04:22:48.520126Z  INFO linera_execution::wasm::runtime_api: ⏰ TRIGGERER_CONFIG: ✅ Updated triggerer list with 1 players, threshold: 10000 μs
+2025-09-28T04:22:48.520283Z  INFO linera_execution::wasm::runtime_api: ⏰ TRIGGER_SEND: Sending trigger update (position 0, time_since_update: 26718 μs)
+2025-09-28T04:22:48.520498Z  INFO linera_execution::wasm::runtime_api: ⏰ TRIGGER_SEND: ✅ Sent trigger update for tournament 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.520508Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ✅ Processed leaderboard update and checked triggering conditions
+2025-09-28T04:22:48.520517Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ⏭️ No player updates processed, skipping aggregation
+2025-09-28T04:22:48.520527Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ✅ Finished processing all stream updates
+2025-09-28T04:22:48.523168Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:48.523818Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:48.523912Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Received 1 stream updates
+2025-09-28T04:22:48.523964Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Update #1 - Chain: 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18, Stream: 'leaderboard_update', Events: 0..1 (count: 1)
+2025-09-28T04:22:48.523977Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Processing event index 0 from stream 'leaderboard_update'
+2025-09-28T04:22:48.524014Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ⏰ Processing leaderboard_update event at index 0 from leaderboard 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.524048Z  INFO linera_execution::wasm::runtime_api: 📖 STREAM_READ: Reading leaderboard_update event from chain 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18 at index 0
+2025-09-28T04:22:48.524163Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ⏰ Leaderboard update for tournament 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18 with 1 triggerers
+2025-09-28T04:22:48.524177Z  INFO linera_execution::wasm::runtime_api: ⏰ TRIGGERER_CONFIG: Updating triggerer config for tournament 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18 with 1 triggerers
+2025-09-28T04:22:48.524198Z  INFO linera_execution::wasm::runtime_api: ⏰ TRIGGERER_CONFIG: ✅ Updated triggerer list with 1 players, threshold: 10000 μs
+2025-09-28T04:22:48.524310Z  INFO linera_execution::wasm::runtime_api: ⏰ TRIGGER_SEND: Sending trigger update (position 0, time_since_update: 26718 μs)
+2025-09-28T04:22:48.524450Z  INFO linera_execution::wasm::runtime_api: ⏰ TRIGGER_SEND: ✅ Sent trigger update for tournament 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.524459Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ✅ Processed leaderboard update and checked triggering conditions
+2025-09-28T04:22:48.524468Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ⏭️ No player updates processed, skipping aggregation
+2025-09-28T04:22:48.524475Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ✅ Finished processing all stream updates
+2025-09-28T04:22:48.537907Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 1 blocks created.
+2025-09-28T04:22:48.539689Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.540198Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:48.540326Z  INFO linera_execution::wasm::runtime_api: ⏰ TRIGGER_RECEIVE: Trigger update request from ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 for tournament 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.540341Z  INFO linera_execution::wasm::runtime_api: ⏰ TRIGGER_UPDATE: Processing trigger request from ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 for tournament 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.541099Z  INFO linera_execution::wasm::runtime_api: ⏰ TRIGGER_UPDATE: ✅ Accepted trigger from ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8, starting aggregation
+2025-09-28T04:22:48.541111Z  INFO linera_execution::wasm::runtime_api: ⏰ TRIGGER_UPDATE: ✅ Aggregation completed
+2025-09-28T04:22:48.543824Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.544377Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:48.544512Z  INFO linera_execution::wasm::runtime_api: ⏰ TRIGGER_RECEIVE: Trigger update request from ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 for tournament 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.544527Z  INFO linera_execution::wasm::runtime_api: ⏰ TRIGGER_UPDATE: Processing trigger request from ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 for tournament 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.545292Z  INFO linera_execution::wasm::runtime_api: ⏰ TRIGGER_UPDATE: ✅ Accepted trigger from ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8, starting aggregation
+2025-09-28T04:22:48.545303Z  INFO linera_execution::wasm::runtime_api: ⏰ TRIGGER_UPDATE: ✅ Aggregation completed
+2025-09-28T04:22:48.548114Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.548860Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:48.548988Z  INFO linera_execution::wasm::runtime_api: ⏰ TRIGGER_RECEIVE: Trigger update request from ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 for tournament 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.549002Z  INFO linera_execution::wasm::runtime_api: ⏰ TRIGGER_UPDATE: Processing trigger request from ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 for tournament 1724bf92048a1e059f51b66d4419bbe7ed95dd80ee945a31b25e0a4e97b4fa18
+2025-09-28T04:22:48.549768Z  INFO linera_execution::wasm::runtime_api: ⏰ TRIGGER_UPDATE: ✅ Accepted trigger from ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8, starting aggregation
+2025-09-28T04:22:48.549779Z  INFO linera_execution::wasm::runtime_api: ⏰ TRIGGER_UPDATE: ✅ Aggregation completed
+2025-09-28T04:22:48.562818Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 1 blocks created.
+2025-09-28T04:22:48.563342Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:48.563627Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:48.564020Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:48.564247Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:48.564587Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:48.564790Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:48.565124Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:48.565333Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:51.448081Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:51.448794Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:51.448964Z  INFO linera_execution::wasm::runtime_api: 🎮 OPERATION: Executing operation on chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:51.449924Z  INFO linera_execution::wasm::runtime_api: 🎯 MAKE_MOVES: Processing 8 moves for board ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8.1379784299
+2025-09-28T04:22:51.449938Z  INFO linera_execution::wasm::runtime_api: 🎯 MAKE_MOVES: Board is_ended: false, end_time: None
+2025-09-28T04:22:51.449950Z  INFO linera_execution::wasm::runtime_api: 🎯 MAKE_MOVES: Initial board state: 0x0010002000000000
+2025-09-28T04:22:51.450052Z  INFO linera_execution::wasm::runtime_api: 🎯 MAKE_MOVES: Parsed moves: [(Down, 100000000), (Right, 100001000), (Down, 100002000), (Left, 100003000), (Down, 100004000), (Right, 100005000), (Down, 100006000), (Left, 100007000)]
+2025-09-28T04:22:51.450071Z  INFO linera_execution::wasm::runtime_api: 🎮 PROCESS_MOVES: Starting move processing for board_id: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8.1379784299
+2025-09-28T04:22:51.450084Z  INFO linera_execution::wasm::runtime_api: 🎮 PROCESS_MOVES: Player: test_72xllh, Moves count: 8, End time: None
+2025-09-28T04:22:51.450096Z  INFO linera_execution::wasm::runtime_api: 🎮 PROCESS_MOVES: Initial board: 0x0010002000000000
+2025-09-28T04:22:51.450969Z  INFO linera_execution::wasm::runtime_api: 🎮 PROCESS_MOVES: ✅ SUCCESS - At least one move was valid
+2025-09-28T04:22:51.451781Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT: Emitting player_score_update event - Player: 'test_72xllh', Score: 48, Status: Active, Chain: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:51.451790Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT: Event will be delivered to subscribed shard chains via process_streams
+2025-09-28T04:22:51.451851Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT: ✅ Successfully emitted player_score_update event
+2025-09-28T04:22:51.455196Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:51.455754Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:51.455891Z  INFO linera_execution::wasm::runtime_api: 🎮 OPERATION: Executing operation on chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:51.456923Z  INFO linera_execution::wasm::runtime_api: 🎯 MAKE_MOVES: Processing 8 moves for board ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8.1379784299
+2025-09-28T04:22:51.456945Z  INFO linera_execution::wasm::runtime_api: 🎯 MAKE_MOVES: Board is_ended: false, end_time: None
+2025-09-28T04:22:51.456965Z  INFO linera_execution::wasm::runtime_api: 🎯 MAKE_MOVES: Initial board state: 0x0010002000000000
+2025-09-28T04:22:51.457141Z  INFO linera_execution::wasm::runtime_api: 🎯 MAKE_MOVES: Parsed moves: [(Down, 100000000), (Right, 100001000), (Down, 100002000), (Left, 100003000), (Down, 100004000), (Right, 100005000), (Down, 100006000), (Left, 100007000)]
+2025-09-28T04:22:51.457170Z  INFO linera_execution::wasm::runtime_api: 🎮 PROCESS_MOVES: Starting move processing for board_id: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8.1379784299
+2025-09-28T04:22:51.457191Z  INFO linera_execution::wasm::runtime_api: 🎮 PROCESS_MOVES: Player: test_72xllh, Moves count: 8, End time: None
+2025-09-28T04:22:51.457210Z  INFO linera_execution::wasm::runtime_api: 🎮 PROCESS_MOVES: Initial board: 0x0010002000000000
+2025-09-28T04:22:51.458145Z  INFO linera_execution::wasm::runtime_api: 🎮 PROCESS_MOVES: ✅ SUCCESS - At least one move was valid
+2025-09-28T04:22:51.458904Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT: Emitting player_score_update event - Player: 'test_72xllh', Score: 48, Status: Active, Chain: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:51.458913Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT: Event will be delivered to subscribed shard chains via process_streams
+2025-09-28T04:22:51.459000Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT: ✅ Successfully emitted player_score_update event
+2025-09-28T04:22:51.462766Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:51.463313Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:51.463457Z  INFO linera_execution::wasm::runtime_api: 🎮 OPERATION: Executing operation on chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:51.464344Z  INFO linera_execution::wasm::runtime_api: 🎯 MAKE_MOVES: Processing 8 moves for board ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8.1379784299
+2025-09-28T04:22:51.464358Z  INFO linera_execution::wasm::runtime_api: 🎯 MAKE_MOVES: Board is_ended: false, end_time: None
+2025-09-28T04:22:51.464375Z  INFO linera_execution::wasm::runtime_api: 🎯 MAKE_MOVES: Initial board state: 0x0010002000000000
+2025-09-28T04:22:51.464486Z  INFO linera_execution::wasm::runtime_api: 🎯 MAKE_MOVES: Parsed moves: [(Down, 100000000), (Right, 100001000), (Down, 100002000), (Left, 100003000), (Down, 100004000), (Right, 100005000), (Down, 100006000), (Left, 100007000)]
+2025-09-28T04:22:51.464508Z  INFO linera_execution::wasm::runtime_api: 🎮 PROCESS_MOVES: Starting move processing for board_id: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8.1379784299
+2025-09-28T04:22:51.464526Z  INFO linera_execution::wasm::runtime_api: 🎮 PROCESS_MOVES: Player: test_72xllh, Moves count: 8, End time: None
+2025-09-28T04:22:51.464543Z  INFO linera_execution::wasm::runtime_api: 🎮 PROCESS_MOVES: Initial board: 0x0010002000000000
+2025-09-28T04:22:51.465728Z  INFO linera_execution::wasm::runtime_api: 🎮 PROCESS_MOVES: ✅ SUCCESS - At least one move was valid
+2025-09-28T04:22:51.466641Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT: Emitting player_score_update event - Player: 'test_72xllh', Score: 48, Status: Active, Chain: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:51.466653Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT: Event will be delivered to subscribed shard chains via process_streams
+2025-09-28T04:22:51.466723Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT: ✅ Successfully emitted player_score_update event
+2025-09-28T04:22:51.481726Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:51.484198Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:51.484732Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:51.484830Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Received 1 stream updates
+2025-09-28T04:22:51.484899Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Update #1 - Chain: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8, Stream: 'player_score_update', Events: 1..2 (count: 1)
+2025-09-28T04:22:51.484919Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Processing event index 1 from stream 'player_score_update'
+2025-09-28T04:22:51.484940Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🎯 Processing player_score_update event at index 1
+2025-09-28T04:22:51.484977Z  INFO linera_execution::wasm::runtime_api: 📖 STREAM_READ: Reading player_score_update event from chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 at index 1
+2025-09-28T04:22:51.485165Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 📊 Player score update from chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 - Player: 'test_72xllh', Score: 48, Status: Active
+2025-09-28T04:22:51.485182Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 📋 Score details - Board: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8.1379784299, Highest Tile: 8, Previous Best: 0
+2025-09-28T04:22:51.485202Z  INFO linera_execution::wasm::runtime_api: 📊 SHARD_UPDATE: Updating shard score via streaming - Player: 'test_72xllh', Score: 48, Board: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8.1379784299
+2025-09-28T04:22:51.486386Z  INFO linera_execution::wasm::runtime_api: 📊 SHARD_UPDATE: Score improvement detected - Old: Some(0), New: 48
+2025-09-28T04:22:51.486423Z  INFO linera_execution::wasm::runtime_api: 📊 SHARD_UPDATE: ✅ Shard state updated via streaming system - Counter: 2
+2025-09-28T04:22:51.486481Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🎯 Shard state - Player 'test_72xllh' now has score: 48, Active players: 1
+2025-09-28T04:22:51.486490Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ✅ Shard state updated with player score
+2025-09-28T04:22:51.486510Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🚀 Triggering score aggregation (processed_player_updates = true)
+2025-09-28T04:22:51.486630Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 📋 Found 1 monitored player chains
+2025-09-28T04:22:51.486718Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🎯 Aggregating scores from 1 player chains
+2025-09-28T04:22:51.487022Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ✅ Finished processing all stream updates
+2025-09-28T04:22:51.488860Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:51.489381Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:51.489517Z  INFO linera_execution::wasm::runtime_api: 🎮 OPERATION: Executing operation on chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:51.489668Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:51.490276Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:51.490378Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Received 1 stream updates
+2025-09-28T04:22:51.490434Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Update #1 - Chain: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8, Stream: 'player_score_update', Events: 1..2 (count: 1)
+2025-09-28T04:22:51.490453Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Processing event index 1 from stream 'player_score_update'
+2025-09-28T04:22:51.490472Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🎯 Processing player_score_update event at index 1
+2025-09-28T04:22:51.490509Z  INFO linera_execution::wasm::runtime_api: 🎯 MAKE_MOVES: Processing 15 moves for board ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8.1379784299
+2025-09-28T04:22:51.490513Z  INFO linera_execution::wasm::runtime_api: 📖 STREAM_READ: Reading player_score_update event from chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 at index 1
+2025-09-28T04:22:51.490520Z  INFO linera_execution::wasm::runtime_api: 🎯 MAKE_MOVES: Board is_ended: false, end_time: None
+2025-09-28T04:22:51.490532Z  INFO linera_execution::wasm::runtime_api: 🎯 MAKE_MOVES: Initial board state: 0x0000210012003100
+2025-09-28T04:22:51.490680Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 📊 Player score update from chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 - Player: 'test_72xllh', Score: 48, Status: Active
+2025-09-28T04:22:51.490702Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 📋 Score details - Board: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8.1379784299, Highest Tile: 8, Previous Best: 0
+2025-09-28T04:22:51.490717Z  INFO linera_execution::wasm::runtime_api: 🎯 MAKE_MOVES: Parsed moves: [(Down, 100000000), (Right, 100001000), (Down, 100002000), (Left, 100003000), (Down, 100004000), (Right, 100005000), (Down, 100006000), (Left, 100007000), (Down, 100008000), (Right, 100009000), (Down, 100010000), (Left, 100011000), (Down, 100012000), (Right, 100013000), (Down, 100014000)]
+2025-09-28T04:22:51.490725Z  INFO linera_execution::wasm::runtime_api: 📊 SHARD_UPDATE: Updating shard score via streaming - Player: 'test_72xllh', Score: 48, Board: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8.1379784299
+2025-09-28T04:22:51.490731Z  INFO linera_execution::wasm::runtime_api: 🎮 PROCESS_MOVES: Starting move processing for board_id: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8.1379784299
+2025-09-28T04:22:51.490743Z  INFO linera_execution::wasm::runtime_api: 🎮 PROCESS_MOVES: Player: test_72xllh, Moves count: 15, End time: None
+2025-09-28T04:22:51.490754Z  INFO linera_execution::wasm::runtime_api: 🎮 PROCESS_MOVES: Initial board: 0x0000210012003100
+2025-09-28T04:22:51.491305Z  INFO linera_execution::wasm::runtime_api: 📊 SHARD_UPDATE: Score improvement detected - Old: Some(0), New: 48
+2025-09-28T04:22:51.491337Z  INFO linera_execution::wasm::runtime_api: 📊 SHARD_UPDATE: ✅ Shard state updated via streaming system - Counter: 2
+2025-09-28T04:22:51.491377Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🎯 Shard state - Player 'test_72xllh' now has score: 48, Active players: 1
+2025-09-28T04:22:51.491386Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ✅ Shard state updated with player score
+2025-09-28T04:22:51.491403Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🚀 Triggering score aggregation (processed_player_updates = true)
+2025-09-28T04:22:51.491482Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 📋 Found 1 monitored player chains
+2025-09-28T04:22:51.491550Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🎯 Aggregating scores from 1 player chains
+2025-09-28T04:22:51.491927Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ✅ Finished processing all stream updates
+2025-09-28T04:22:51.492063Z  INFO linera_execution::wasm::runtime_api: 🎮 PROCESS_MOVES: ✅ SUCCESS - At least one move was valid
+2025-09-28T04:22:51.492825Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT: Emitting player_score_update event - Player: 'test_72xllh', Score: 184, Status: Active, Chain: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:51.492834Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT: Event will be delivered to subscribed shard chains via process_streams
+2025-09-28T04:22:51.492894Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT: ✅ Successfully emitted player_score_update event
+2025-09-28T04:22:51.494872Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:51.495214Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:51.495338Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:51.495432Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Received 1 stream updates
+2025-09-28T04:22:51.495480Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Update #1 - Chain: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8, Stream: 'player_score_update', Events: 1..2 (count: 1)
+2025-09-28T04:22:51.495493Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Processing event index 1 from stream 'player_score_update'
+2025-09-28T04:22:51.495508Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🎯 Processing player_score_update event at index 1
+2025-09-28T04:22:51.495541Z  INFO linera_execution::wasm::runtime_api: 📖 STREAM_READ: Reading player_score_update event from chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 at index 1
+2025-09-28T04:22:51.495684Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 📊 Player score update from chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 - Player: 'test_72xllh', Score: 48, Status: Active
+2025-09-28T04:22:51.495701Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 📋 Score details - Board: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8.1379784299, Highest Tile: 8, Previous Best: 0
+2025-09-28T04:22:51.495717Z  INFO linera_execution::wasm::runtime_api: 📊 SHARD_UPDATE: Updating shard score via streaming - Player: 'test_72xllh', Score: 48, Board: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8.1379784299
+2025-09-28T04:22:51.495747Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:51.495888Z  INFO linera_execution::wasm::runtime_api: 🎮 OPERATION: Executing operation on chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:51.496278Z  INFO linera_execution::wasm::runtime_api: 📊 SHARD_UPDATE: Score improvement detected - Old: Some(0), New: 48
+2025-09-28T04:22:51.496307Z  INFO linera_execution::wasm::runtime_api: 📊 SHARD_UPDATE: ✅ Shard state updated via streaming system - Counter: 2
+2025-09-28T04:22:51.496342Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🎯 Shard state - Player 'test_72xllh' now has score: 48, Active players: 1
+2025-09-28T04:22:51.496349Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ✅ Shard state updated with player score
+2025-09-28T04:22:51.496361Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🚀 Triggering score aggregation (processed_player_updates = true)
+2025-09-28T04:22:51.496434Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 📋 Found 1 monitored player chains
+2025-09-28T04:22:51.496495Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🎯 Aggregating scores from 1 player chains
+2025-09-28T04:22:51.496749Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ✅ Finished processing all stream updates
+2025-09-28T04:22:51.496928Z  INFO linera_execution::wasm::runtime_api: 🎯 MAKE_MOVES: Processing 15 moves for board ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8.1379784299
+2025-09-28T04:22:51.496940Z  INFO linera_execution::wasm::runtime_api: 🎯 MAKE_MOVES: Board is_ended: false, end_time: None
+2025-09-28T04:22:51.496951Z  INFO linera_execution::wasm::runtime_api: 🎯 MAKE_MOVES: Initial board state: 0x0000210012003100
+2025-09-28T04:22:51.497136Z  INFO linera_execution::wasm::runtime_api: 🎯 MAKE_MOVES: Parsed moves: [(Down, 100000000), (Right, 100001000), (Down, 100002000), (Left, 100003000), (Down, 100004000), (Right, 100005000), (Down, 100006000), (Left, 100007000), (Down, 100008000), (Right, 100009000), (Down, 100010000), (Left, 100011000), (Down, 100012000), (Right, 100013000), (Down, 100014000)]
+2025-09-28T04:22:51.497150Z  INFO linera_execution::wasm::runtime_api: 🎮 PROCESS_MOVES: Starting move processing for board_id: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8.1379784299
+2025-09-28T04:22:51.497164Z  INFO linera_execution::wasm::runtime_api: 🎮 PROCESS_MOVES: Player: test_72xllh, Moves count: 15, End time: None
+2025-09-28T04:22:51.497177Z  INFO linera_execution::wasm::runtime_api: 🎮 PROCESS_MOVES: Initial board: 0x0000210012003100
+2025-09-28T04:22:51.498522Z  INFO linera_execution::wasm::runtime_api: 🎮 PROCESS_MOVES: ✅ SUCCESS - At least one move was valid
+2025-09-28T04:22:51.499290Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT: Emitting player_score_update event - Player: 'test_72xllh', Score: 184, Status: Active, Chain: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:51.499299Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT: Event will be delivered to subscribed shard chains via process_streams
+2025-09-28T04:22:51.499363Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT: ✅ Successfully emitted player_score_update event
+2025-09-28T04:22:51.502895Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:51.503484Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:51.503629Z  INFO linera_execution::wasm::runtime_api: 🎮 OPERATION: Executing operation on chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:51.504740Z  INFO linera_execution::wasm::runtime_api: 🎯 MAKE_MOVES: Processing 15 moves for board ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8.1379784299
+2025-09-28T04:22:51.504756Z  INFO linera_execution::wasm::runtime_api: 🎯 MAKE_MOVES: Board is_ended: false, end_time: None
+2025-09-28T04:22:51.504770Z  INFO linera_execution::wasm::runtime_api: 🎯 MAKE_MOVES: Initial board state: 0x0000210012003100
+2025-09-28T04:22:51.504955Z  INFO linera_execution::wasm::runtime_api: 🎯 MAKE_MOVES: Parsed moves: [(Down, 100000000), (Right, 100001000), (Down, 100002000), (Left, 100003000), (Down, 100004000), (Right, 100005000), (Down, 100006000), (Left, 100007000), (Down, 100008000), (Right, 100009000), (Down, 100010000), (Left, 100011000), (Down, 100012000), (Right, 100013000), (Down, 100014000)]
+2025-09-28T04:22:51.504969Z  INFO linera_execution::wasm::runtime_api: 🎮 PROCESS_MOVES: Starting move processing for board_id: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8.1379784299
+2025-09-28T04:22:51.504987Z  INFO linera_execution::wasm::runtime_api: 🎮 PROCESS_MOVES: Player: test_72xllh, Moves count: 15, End time: None
+2025-09-28T04:22:51.505002Z  INFO linera_execution::wasm::runtime_api: 🎮 PROCESS_MOVES: Initial board: 0x0000210012003100
+2025-09-28T04:22:51.506331Z  INFO linera_execution::wasm::runtime_api: 🎮 PROCESS_MOVES: ✅ SUCCESS - At least one move was valid
+2025-09-28T04:22:51.507158Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT: Emitting player_score_update event - Player: 'test_72xllh', Score: 184, Status: Active, Chain: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8
+2025-09-28T04:22:51.507168Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT: Event will be delivered to subscribed shard chains via process_streams
+2025-09-28T04:22:51.507246Z  INFO linera_execution::wasm::runtime_api: 📡 EMIT: ✅ Successfully emitted player_score_update event
+2025-09-28T04:22:51.510771Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 1 blocks created.
+2025-09-28T04:22:51.511548Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:51.511857Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:51.522384Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:51.524286Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:51.524806Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:51.524906Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Received 1 stream updates
+2025-09-28T04:22:51.524957Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Update #1 - Chain: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8, Stream: 'player_score_update', Events: 2..3 (count: 1)
+2025-09-28T04:22:51.524970Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Processing event index 2 from stream 'player_score_update'
+2025-09-28T04:22:51.524985Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🎯 Processing player_score_update event at index 2
+2025-09-28T04:22:51.525021Z  INFO linera_execution::wasm::runtime_api: 📖 STREAM_READ: Reading player_score_update event from chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 at index 2
+2025-09-28T04:22:51.525183Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 📊 Player score update from chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 - Player: 'test_72xllh', Score: 184, Status: Active
+2025-09-28T04:22:51.525200Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 📋 Score details - Board: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8.1379784299, Highest Tile: 16, Previous Best: 0
+2025-09-28T04:22:51.525217Z  INFO linera_execution::wasm::runtime_api: 📊 SHARD_UPDATE: Updating shard score via streaming - Player: 'test_72xllh', Score: 184, Board: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8.1379784299
+2025-09-28T04:22:51.525800Z  INFO linera_execution::wasm::runtime_api: 📊 SHARD_UPDATE: Score improvement detected - Old: Some(48), New: 184
+2025-09-28T04:22:51.525828Z  INFO linera_execution::wasm::runtime_api: 📊 SHARD_UPDATE: ✅ Shard state updated via streaming system - Counter: 3
+2025-09-28T04:22:51.525864Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🎯 Shard state - Player 'test_72xllh' now has score: 184, Active players: 1
+2025-09-28T04:22:51.525872Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ✅ Shard state updated with player score
+2025-09-28T04:22:51.525884Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🚀 Triggering score aggregation (processed_player_updates = true)
+2025-09-28T04:22:51.525980Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 📋 Found 1 monitored player chains
+2025-09-28T04:22:51.526043Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🎯 Aggregating scores from 1 player chains
+2025-09-28T04:22:51.526203Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ✅ Finished processing all stream updates
+2025-09-28T04:22:51.528686Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:51.529177Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:51.529278Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Received 1 stream updates
+2025-09-28T04:22:51.529331Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Update #1 - Chain: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8, Stream: 'player_score_update', Events: 2..3 (count: 1)
+2025-09-28T04:22:51.529345Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Processing event index 2 from stream 'player_score_update'
+2025-09-28T04:22:51.529363Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🎯 Processing player_score_update event at index 2
+2025-09-28T04:22:51.529405Z  INFO linera_execution::wasm::runtime_api: 📖 STREAM_READ: Reading player_score_update event from chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 at index 2
+2025-09-28T04:22:51.529552Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 📊 Player score update from chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 - Player: 'test_72xllh', Score: 184, Status: Active
+2025-09-28T04:22:51.529569Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 📋 Score details - Board: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8.1379784299, Highest Tile: 16, Previous Best: 0
+2025-09-28T04:22:51.529591Z  INFO linera_execution::wasm::runtime_api: 📊 SHARD_UPDATE: Updating shard score via streaming - Player: 'test_72xllh', Score: 184, Board: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8.1379784299
+2025-09-28T04:22:51.530185Z  INFO linera_execution::wasm::runtime_api: 📊 SHARD_UPDATE: Score improvement detected - Old: Some(48), New: 184
+2025-09-28T04:22:51.530213Z  INFO linera_execution::wasm::runtime_api: 📊 SHARD_UPDATE: ✅ Shard state updated via streaming system - Counter: 3
+2025-09-28T04:22:51.530258Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🎯 Shard state - Player 'test_72xllh' now has score: 184, Active players: 1
+2025-09-28T04:22:51.530266Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ✅ Shard state updated with player score
+2025-09-28T04:22:51.530277Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🚀 Triggering score aggregation (processed_player_updates = true)
+2025-09-28T04:22:51.530359Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 📋 Found 1 monitored player chains
+2025-09-28T04:22:51.530426Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🎯 Aggregating scores from 1 player chains
+2025-09-28T04:22:51.530583Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ✅ Finished processing all stream updates
+2025-09-28T04:22:51.532956Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: Loading Game2048Contract on chain 6e8c04609525a5be7171e7cfb45237067d9ce43180616ebe2094b65acf9e496f
+2025-09-28T04:22:51.533411Z  INFO linera_execution::wasm::runtime_api: 🚀 CONTRACT: ✅ Game2048Contract loaded successfully
+2025-09-28T04:22:51.533506Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Received 1 stream updates
+2025-09-28T04:22:51.533554Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Update #1 - Chain: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8, Stream: 'player_score_update', Events: 2..3 (count: 1)
+2025-09-28T04:22:51.533567Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: Processing event index 2 from stream 'player_score_update'
+2025-09-28T04:22:51.533581Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🎯 Processing player_score_update event at index 2
+2025-09-28T04:22:51.533615Z  INFO linera_execution::wasm::runtime_api: 📖 STREAM_READ: Reading player_score_update event from chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 at index 2
+2025-09-28T04:22:51.533794Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 📊 Player score update from chain ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8 - Player: 'test_72xllh', Score: 184, Status: Active
+2025-09-28T04:22:51.533811Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 📋 Score details - Board: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8.1379784299, Highest Tile: 16, Previous Best: 0
+2025-09-28T04:22:51.533828Z  INFO linera_execution::wasm::runtime_api: 📊 SHARD_UPDATE: Updating shard score via streaming - Player: 'test_72xllh', Score: 184, Board: ba075bb48e49be171d8d02300cd92e0fc9550509f62555f4d19a6fadc83f76d8.1379784299
+2025-09-28T04:22:51.534406Z  INFO linera_execution::wasm::runtime_api: 📊 SHARD_UPDATE: Score improvement detected - Old: Some(48), New: 184
+2025-09-28T04:22:51.534432Z  INFO linera_execution::wasm::runtime_api: 📊 SHARD_UPDATE: ✅ Shard state updated via streaming system - Counter: 3
+2025-09-28T04:22:51.534466Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🎯 Shard state - Player 'test_72xllh' now has score: 184, Active players: 1
+2025-09-28T04:22:51.534473Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ✅ Shard state updated with player score
+2025-09-28T04:22:51.534485Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🚀 Triggering score aggregation (processed_player_updates = true)
+2025-09-28T04:22:51.534567Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 📋 Found 1 monitored player chains
+2025-09-28T04:22:51.534630Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: 🎯 Aggregating scores from 1 player chains
+2025-09-28T04:22:51.534789Z  INFO linera_execution::wasm::runtime_api: 🔥 PROCESS_STREAMS: ✅ Finished processing all stream updates
+2025-09-28T04:22:51.548124Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 1 blocks created.
+2025-09-28T04:22:51.548627Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
+2025-09-28T04:22:51.548892Z  INFO linera::main:node_service{port=8088}: linera_client::chain_listener: Done processing inbox. 0 blocks created.
