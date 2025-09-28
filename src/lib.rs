@@ -11,7 +11,6 @@ pub use crate::game::Game;
 pub use crate::moves::{Moves, COL_MASK, ROW_MASK};
 pub use crate::random::{hash_seed, rnd_range};
 
-
 use linera_sdk::linera_base_types::{Amount, ChainId};
 use linera_sdk::{
     abi::{ContractAbi, ServiceAbi},
@@ -57,13 +56,13 @@ pub enum Operation {
         player: String,
         password_hash: String,
     },
-     LeaderboardAction {
-         leaderboard_id: String,
-         action: LeaderboardAction,
-         settings: LeaderboardSettings,
-         player: String,
-         password_hash: String,
-     },
+    LeaderboardAction {
+        leaderboard_id: String,
+        action: LeaderboardAction,
+        settings: LeaderboardSettings,
+        player: String,
+        password_hash: String,
+    },
     ToggleAdmin {
         username: String,
         player: String,
@@ -79,8 +78,7 @@ pub enum Operation {
     UpdateLeaderboard,
     /// 🚀 NEW: Emit current active tournaments (leaderboard chains)
     UpdateActiveTournaments,
-    /// 🚀 NEW: Emit current workload (shard chains)
-    UpdateShardWorkload,
+
     /// 🚀 NEW: Centralized aggregation trigger (for designated triggerers)
     RequestAggregation {
         requester_chain_id: String,
@@ -186,7 +184,7 @@ pub enum GameEvent {
         /// 🚀 NEW: Player's total board count in this tournament (for distributed counting)
         boards_in_tournament: u32,
     },
-    
+
     /// Channel: "shard_score_update" - Emitted by shard chains with aggregated scores
     ShardScoreUpdate {
         shard_chain_id: String,
@@ -205,21 +203,12 @@ pub enum GameEvent {
         timestamp: u64,
     },
 
-    /// Channel: "shard_workload" - Emitted by shards for load balancing
-    ShardWorkload {
-        shard_chain_id: String,
-        tournament_id: String,
-        total_players: u32,
-        active_players_last_5min: u32,
-        timestamp: u64,
-    },
-
     /// Channel: "leaderboard_update" - Emitted by leaderboard with triggerer list updates
     LeaderboardUpdate {
         leaderboard_id: String,
-        triggerer_list: Vec<(String, u32)>,     // (player_chain_id, activity_score) sorted by activity (most active first)
+        triggerer_list: Vec<(String, u32)>, // (player_chain_id, activity_score) sorted by activity (most active first)
         last_update_timestamp: u64,
-        threshold_config: u64,                  // Minimum time between triggers (microseconds)
+        threshold_config: u64, // Minimum time between triggers (microseconds)
         total_registered_players: u32,
     },
 }
@@ -230,35 +219,35 @@ pub struct TournamentInfo {
     pub tournament_id: String,
     pub name: String,
     pub shard_chain_ids: Vec<String>,
-    pub start_time: Option<u64>,  // None = unlimited start time
-    pub end_time: Option<u64>,    // None = unlimited end time
+    pub start_time: Option<u64>, // None = unlimited start time
+    pub end_time: Option<u64>,   // None = unlimited end time
     pub total_players: u32,
 }
 
 impl TournamentInfo {
     /// Check if tournament is currently active based on time
     pub fn is_active(&self, current_time: u64) -> bool {
-        let started = self.start_time.map_or(true, |start| current_time >= start);
-        let not_ended = self.end_time.map_or(true, |end| current_time < end);
+        let started = self.start_time.is_none_or(|start| current_time >= start);
+        let not_ended = self.end_time.is_none_or(|end| current_time < end);
         started && not_ended
     }
-    
+
     /// Check if tournament is in the future
     pub fn is_future(&self, current_time: u64) -> bool {
-        self.start_time.map_or(false, |start| current_time < start)
+        self.start_time.is_some_and(|start| current_time < start)
     }
-    
+
     /// Check if tournament has ended
     pub fn is_ended(&self, current_time: u64) -> bool {
-        self.end_time.map_or(false, |end| current_time >= end)
+        self.end_time.is_some_and(|end| current_time >= end)
     }
 }
 
 /// Game status for tracking lifecycle
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub enum GameStatus {
-    Created,    // Game just created
-    Active,     // Game is being played
+    Created,              // Game just created
+    Active,               // Game is being played
     Ended(GameEndReason), // Game finished with reason
 }
 
@@ -276,11 +265,9 @@ pub struct PlayerScoreSummary {
     pub boards_in_tournament: u32,
 }
 
-
-
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub enum GameEndReason {
-    NoMoves, // Board is full, no valid moves available
+    NoMoves,         // Board is full, no valid moves available
     TournamentEnded, // Tournament/leaderboard time expired
 }
 

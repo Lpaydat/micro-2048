@@ -1,10 +1,10 @@
-use std::sync::Arc;
-use std::collections::HashMap;
-use async_graphql::{Object, Enum};
+use crate::service_handlers::types::*;
+use crate::state::Game2048;
+use async_graphql::{Enum, Object};
 use game2048::Game;
 use linera_sdk::ServiceRuntime;
-use crate::state::Game2048;
-use crate::service_handlers::types::*;
+use std::collections::HashMap;
+use std::sync::Arc;
 
 #[derive(Enum, Copy, Clone, Eq, PartialEq)]
 pub enum TournamentFilter {
@@ -28,7 +28,7 @@ impl QueryHandler {
     async fn balance(&self) -> String {
         self.state.balance.get().to_string()
     }
-    
+
     /// 🚀 NEW: Check if a chain is authorized to trigger aggregation
     async fn is_authorized_triggerer(&self, chain_id: String) -> bool {
         // Check against the main leaderboard (empty string key)
@@ -37,7 +37,7 @@ impl QueryHandler {
             if leaderboard.primary_triggerer.get() == &chain_id {
                 return true;
             }
-            
+
             // Check backup triggerers
             if let Ok(backups) = leaderboard.backup_triggerers.read_front(5).await {
                 return backups.contains(&chain_id);
@@ -45,7 +45,7 @@ impl QueryHandler {
         }
         false
     }
-    
+
     /// 🚀 NEW: Get current triggerer pool for transparency
     async fn get_triggerer_pool(&self) -> TriggererPool {
         let mut pool = TriggererPool {
@@ -54,17 +54,17 @@ impl QueryHandler {
             last_trigger_time: 0,
             cooldown_until: 0,
         };
-        
+
         if let Ok(Some(leaderboard)) = self.state.leaderboards.try_load_entry("").await {
             pool.primary = Some(leaderboard.primary_triggerer.get().to_string());
             pool.last_trigger_time = *leaderboard.last_trigger_time.get();
             pool.cooldown_until = *leaderboard.trigger_cooldown_until.get();
-            
+
             if let Ok(backups) = leaderboard.backup_triggerers.read_front(5).await {
                 pool.backups = backups;
             }
         }
-        
+
         pool
     }
 
@@ -162,7 +162,7 @@ impl QueryHandler {
     async fn leaderboard(&self, leaderboard_id: Option<String>) -> Option<LeaderboardState> {
         let mut players: HashMap<String, Ranker> = HashMap::new();
         let leaderboard_id = leaderboard_id.unwrap_or("".to_string());
-        
+
         if let Ok(Some(leaderboard)) = self
             .state
             .leaderboards
@@ -285,9 +285,9 @@ impl QueryHandler {
             })
             .await
             .unwrap();
-            
+
         let current_time = self.runtime.system_time().micros();
-            
+
         let mut tournament_games: Vec<LeaderboardState> = Vec::new();
         for leaderboard_id in leaderboard_ids {
             if let Ok(Some(leaderboard)) = self
@@ -298,14 +298,22 @@ impl QueryHandler {
             {
                 let start_time_raw = *leaderboard.start_time.get();
                 let end_time_raw = *leaderboard.end_time.get();
-                
-                let start_time = if start_time_raw == 0 { None } else { Some(start_time_raw) };
-                let end_time = if end_time_raw == 0 { None } else { Some(end_time_raw) };
-                
+
+                let start_time = if start_time_raw == 0 {
+                    None
+                } else {
+                    Some(start_time_raw)
+                };
+                let end_time = if end_time_raw == 0 {
+                    None
+                } else {
+                    Some(end_time_raw)
+                };
+
                 // Determine tournament status
-                let is_started = start_time.map_or(true, |start| current_time >= start);
-                let is_ended = end_time.map_or(false, |end| current_time >= end);
-                
+                let is_started = start_time.is_none_or(|start| current_time >= start);
+                let is_ended = end_time.is_some_and(|end| current_time >= end);
+
                 let tournament_status = if !is_started {
                     TournamentFilter::Future
                 } else if is_ended {
@@ -313,16 +321,20 @@ impl QueryHandler {
                 } else {
                     TournamentFilter::Active
                 };
-                
+
                 // Apply filter
                 let include_tournament = match filter {
                     TournamentFilter::All => true,
                     _ => tournament_status == filter,
                 };
-                
+
                 if include_tournament {
-                    let shard_ids = leaderboard.shard_ids.read_front(100).await.unwrap_or_default();
-                    
+                    let shard_ids = leaderboard
+                        .shard_ids
+                        .read_front(100)
+                        .await
+                        .unwrap_or_default();
+
                     tournament_games.push(LeaderboardState {
                         leaderboard_id,
                         chain_id: leaderboard.chain_id.get().to_string(),

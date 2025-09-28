@@ -1,11 +1,11 @@
 //! GraphQL subscriptions handler for game events
-//! 
+//!
 //! Provides real-time subscriptions for game events using async streams.
 
-use std::sync::Arc;
-use async_graphql::{Subscription, Context, SimpleObject};
+use async_graphql::{Context, SimpleObject, Subscription};
 use futures::Stream;
 use linera_sdk::ServiceRuntime;
+use std::sync::Arc;
 
 use crate::state::Game2048;
 
@@ -34,7 +34,7 @@ impl SubscriptionHandler {
         // 1. Listen to the actual event streams from Linera
         // 2. Use the runtime to monitor cross-chain events
         // 3. Filter events based on subscription parameters
-        
+
         // For demonstration, create an empty stream
         // In practice, you'd connect to Linera's event system
         futures::stream::empty()
@@ -42,9 +42,9 @@ impl SubscriptionHandler {
 
     /// Subscribe to events from a specific chain
     async fn game_events_from_chain(
-        &self, 
-        _ctx: &Context<'_>, 
-        chain_id: String
+        &self,
+        _ctx: &Context<'_>,
+        chain_id: String,
     ) -> impl Stream<Item = GameEventUpdate> {
         // Similar to above, but filtered for a specific chain
         let _chain_id = chain_id; // Use this to filter events
@@ -53,9 +53,9 @@ impl SubscriptionHandler {
 
     /// Subscribe to events for a specific player
     async fn player_events(
-        &self, 
-        _ctx: &Context<'_>, 
-        player_name: String
+        &self,
+        _ctx: &Context<'_>,
+        player_name: String,
     ) -> impl Stream<Item = GameEventUpdate> {
         // Filter events for a specific player
         let _player_name = player_name; // Use this to filter events

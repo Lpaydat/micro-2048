@@ -1,5 +1,5 @@
 //! Transfer Messages Handler
-//! 
+//!
 //! Handles transfer-related messages including token transfers.
 
 use linera_sdk::linera_base_types::{Amount, ChainId};

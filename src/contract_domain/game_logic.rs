@@ -10,10 +10,6 @@ impl GameMoveProcessor {
         initial_board: u64,
         end_time: Option<u64>,
     ) -> GameMoveResult {
-        log::info!("🎮 PROCESS_MOVES: Starting move processing for board_id: {}", board_id);
-        log::info!("🎮 PROCESS_MOVES: Player: {}, Moves count: {}, End time: {:?}", player, moves.len(), end_time);
-        log::info!("🎮 PROCESS_MOVES: Initial board: 0x{:016x}", initial_board);
-        
         let initial_highest_tile = Game::highest_tile(initial_board);
         let mut current_board = initial_board;
         let mut any_change = false;
@@ -28,15 +24,15 @@ impl GameMoveProcessor {
             // Only validate end_time if it's set (Some value)
             if let Some(end_time_value) = end_time {
                 if *timestamp > end_time_value {
-                    log::info!("🎮 PROCESS_MOVES: Timestamp {} > end_time {}, ending game", timestamp, end_time_value);
                     is_ended = true;
                     break;
                 }
             }
-            
+
             if *timestamp < latest_timestamp {
-                log::error!("🎮 PROCESS_MOVES: Timestamp {} < latest_timestamp {}, rejecting", timestamp, latest_timestamp);
-                return GameMoveResult::Error("Timestamp must be after latest timestamp".to_string());
+                return GameMoveResult::Error(
+                    "Timestamp must be after latest timestamp".to_string(),
+                );
             }
             latest_timestamp = *timestamp;
 
@@ -48,7 +44,7 @@ impl GameMoveProcessor {
             };
 
             let new_board = game.execute(*direction);
-            
+
             if current_board == new_board {
                 continue;
             }
@@ -56,19 +52,15 @@ impl GameMoveProcessor {
             any_change = true;
             current_board = new_board;
             is_ended = Game::is_ended(current_board);
-            
+
             if is_ended {
                 break;
             }
         }
 
         if !any_change {
-            log::error!("🎮 PROCESS_MOVES: ❌ FAILED - No valid moves in the sequence of {} moves", moves.len());
-            log::error!("🎮 PROCESS_MOVES: Final board state: 0x{:016x}", current_board);
             return GameMoveResult::Error("No valid moves in the sequence".to_string());
         }
-        
-        log::info!("🎮 PROCESS_MOVES: ✅ SUCCESS - At least one move was valid");
 
         let final_score = Game::score(current_board);
         let final_highest_tile = Game::highest_tile(current_board);

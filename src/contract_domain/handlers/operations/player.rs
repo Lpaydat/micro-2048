@@ -1,11 +1,9 @@
 //! Player Operations Handler
-//! 
+//!
 //! Handles player-related operations including registration, authentication, and admin management.
 
-use linera_sdk::{
-    linera_base_types::{Amount, ApplicationPermissions},
-};
-use game2048::{RegistrationCheck, Message};
+use game2048::{Message, RegistrationCheck};
+use linera_sdk::linera_base_types::{Amount, ApplicationPermissions};
 
 pub struct PlayerOperationHandler;
 
@@ -23,15 +21,24 @@ impl PlayerOperationHandler {
             panic!("Only main chain can register player");
         }
 
-        contract.check_player_registered(&username, RegistrationCheck::EnsureNotRegistered)
+        contract
+            .check_player_registered(&username, RegistrationCheck::EnsureNotRegistered)
             .await;
 
         let chain_ownership = contract.runtime.chain_ownership();
         let application_permissions = ApplicationPermissions::default();
         let amount = Amount::from_tokens(1);
-        let chain_id = contract.runtime.open_chain(chain_ownership, application_permissions, amount);
+        let chain_id =
+            contract
+                .runtime
+                .open_chain(chain_ownership, application_permissions, amount);
 
-        let player = contract.state.players.load_entry_mut(&username).await.unwrap();
+        let player = contract
+            .state
+            .players
+            .load_entry_mut(&username)
+            .await
+            .unwrap();
         player.username.set(username.clone());
         player.password_hash.set(password_hash.clone());
         player.chain_id.set(chain_id.to_string());
@@ -39,11 +46,10 @@ impl PlayerOperationHandler {
         // 🚀 NEW: Set up cross-chain subscription for new player chain
         // Player chains should subscribe to main chain's active_tournaments stream
         let main_chain_id = contract.runtime.application_creator_chain_id();
-        log::info!("🔔 PLAYER_REGISTER: Setting up subscription from new player chain {} to main chain {} for active_tournaments", 
-            chain_id, main_chain_id);
-        
+
         // Send message to new player chain to subscribe to main chain's tournament events
-        contract.runtime
+        contract
+            .runtime
             .prepare_message(Message::SubscribeToMainChain {
                 main_chain_id: main_chain_id.to_string(),
             })
@@ -59,8 +65,10 @@ impl PlayerOperationHandler {
         password_hash: String,
     ) {
         // Validate password
-        contract.validate_player_password(&player, &password_hash).await;
-        
+        contract
+            .validate_player_password(&player, &password_hash)
+            .await;
+
         // Additional admin check
         if player != "lpaydat" {
             panic!("Only lpaydat can toggle admin");
@@ -70,10 +78,16 @@ impl PlayerOperationHandler {
             panic!("Only main chain can toggle admin");
         }
 
-        contract.check_player_registered(&username, RegistrationCheck::EnsureRegistered)
+        contract
+            .check_player_registered(&username, RegistrationCheck::EnsureRegistered)
             .await;
 
-        let player = contract.state.players.load_entry_mut(&username).await.unwrap();
+        let player = contract
+            .state
+            .players
+            .load_entry_mut(&username)
+            .await
+            .unwrap();
         player.is_mod.set(!*player.is_mod.get());
     }
 
@@ -112,7 +126,12 @@ impl PlayerOperationHandler {
         player_username: &str,
         provided_password_hash: &str,
     ) {
-        let stored_password_hash = Self::check_player_registered(contract, player_username, RegistrationCheck::EnsureRegistered).await;
+        let stored_password_hash = Self::check_player_registered(
+            contract,
+            player_username,
+            RegistrationCheck::EnsureRegistered,
+        )
+        .await;
         if stored_password_hash != provided_password_hash {
             panic!("Invalid password");
         }

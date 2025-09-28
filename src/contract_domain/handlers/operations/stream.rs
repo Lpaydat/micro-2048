@@ -1,9 +1,9 @@
 //! Stream Processing Handler
-//! 
+//!
 //! Handles event stream subscriptions and reading operations.
 
-use linera_sdk::linera_base_types::ChainId;
 use game2048::GameEvent;
+use linera_sdk::linera_base_types::ChainId;
 
 pub struct StreamProcessingHandler;
 
@@ -16,12 +16,13 @@ impl StreamProcessingHandler {
     ) -> Option<GameEvent> {
         use linera_sdk::linera_base_types::StreamName;
         let stream_name = StreamName::from("player_score_update".to_string());
-        
-        log::info!("📖 STREAM_READ: Reading player_score_update event from chain {} at index {}", chain_id, event_index);
-        
+
         std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            contract.runtime.read_event(chain_id, stream_name, event_index)
-        })).ok()
+            contract
+                .runtime
+                .read_event(chain_id, stream_name, event_index)
+        }))
+        .ok()
     }
 
     /// Reads a shard score event from another chain
@@ -32,12 +33,13 @@ impl StreamProcessingHandler {
     ) -> Option<GameEvent> {
         use linera_sdk::linera_base_types::StreamName;
         let stream_name = StreamName::from("shard_score_update".to_string());
-        
-        log::info!("📖 STREAM_READ: Reading shard_score_update event from chain {} at index {}", chain_id, event_index);
-        
+
         std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            contract.runtime.read_event(chain_id, stream_name, event_index)
-        })).ok()
+            contract
+                .runtime
+                .read_event(chain_id, stream_name, event_index)
+        }))
+        .ok()
     }
 
     /// Subscribes to player score events from another chain
@@ -45,13 +47,18 @@ impl StreamProcessingHandler {
         contract: &mut crate::Game2048Contract,
         chain_id: ChainId,
     ) {
-        use linera_sdk::linera_base_types::{StreamName, ApplicationId};
+        use linera_sdk::linera_base_types::{ApplicationId, StreamName};
         let stream_name = StreamName::from("player_score_update".to_string());
-        let application_id = ApplicationId::new(contract.runtime.application_id().application_description_hash);
-        
-        log::info!("🔔 SUBSCRIBE: Subscribing to player_score_update events from chain {} (app: {})", chain_id, application_id);
-        contract.runtime.subscribe_to_events(chain_id, application_id, stream_name);
-        log::info!("🔔 SUBSCRIBE: ✅ Successfully subscribed to player_score_update from chain {}", chain_id);
+        let application_id = ApplicationId::new(
+            contract
+                .runtime
+                .application_id()
+                .application_description_hash,
+        );
+
+        contract
+            .runtime
+            .subscribe_to_events(chain_id, application_id, stream_name);
     }
 
     /// Subscribes to shard score events from another chain
@@ -59,13 +66,18 @@ impl StreamProcessingHandler {
         contract: &mut crate::Game2048Contract,
         chain_id: ChainId,
     ) {
-        use linera_sdk::linera_base_types::{StreamName, ApplicationId};
+        use linera_sdk::linera_base_types::{ApplicationId, StreamName};
         let stream_name = StreamName::from("shard_score_update".to_string());
-        let application_id = ApplicationId::new(contract.runtime.application_id().application_description_hash);
-        
-        log::info!("🔔 SUBSCRIBE: Subscribing to shard_score_update events from chain {} (app: {})", chain_id, application_id);
-        contract.runtime.subscribe_to_events(chain_id, application_id, stream_name);
-        log::info!("🔔 SUBSCRIBE: ✅ Successfully subscribed to shard_score_update from chain {}", chain_id);
+        let application_id = ApplicationId::new(
+            contract
+                .runtime
+                .application_id()
+                .application_description_hash,
+        );
+
+        contract
+            .runtime
+            .subscribe_to_events(chain_id, application_id, stream_name);
     }
 
     /// Subscribes to leaderboard update events from leaderboard chain
@@ -73,13 +85,18 @@ impl StreamProcessingHandler {
         contract: &mut crate::Game2048Contract,
         chain_id: ChainId,
     ) {
-        use linera_sdk::linera_base_types::{StreamName, ApplicationId};
+        use linera_sdk::linera_base_types::{ApplicationId, StreamName};
         let stream_name = StreamName::from("leaderboard_update".to_string());
-        let application_id = ApplicationId::new(contract.runtime.application_id().application_description_hash);
-        
-        log::info!("🔔 SUBSCRIBE: Subscribing to leaderboard_update events from chain {} (app: {})", chain_id, application_id);
-        contract.runtime.subscribe_to_events(chain_id, application_id, stream_name);
-        log::info!("🔔 SUBSCRIBE: ✅ Successfully subscribed to leaderboard_update from chain {}", chain_id);
+        let application_id = ApplicationId::new(
+            contract
+                .runtime
+                .application_id()
+                .application_description_hash,
+        );
+
+        contract
+            .runtime
+            .subscribe_to_events(chain_id, application_id, stream_name);
     }
 
     /// Read active tournaments event from main chain
@@ -90,12 +107,13 @@ impl StreamProcessingHandler {
     ) -> Option<GameEvent> {
         use linera_sdk::linera_base_types::StreamName;
         let stream_name = StreamName::from("active_tournaments".to_string());
-        
-        log::info!("📖 STREAM_READ: Reading active_tournaments event from chain {} at index {}", chain_id, event_index);
-        
+
         std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            contract.runtime.read_event(chain_id, stream_name, event_index)
-        })).ok()
+            contract
+                .runtime
+                .read_event(chain_id, stream_name, event_index)
+        }))
+        .ok()
     }
 
     /// Read leaderboard update event from leaderboard chain
@@ -106,12 +124,13 @@ impl StreamProcessingHandler {
     ) -> Option<GameEvent> {
         use linera_sdk::linera_base_types::StreamName;
         let stream_name = StreamName::from("leaderboard_update".to_string());
-        
-        log::info!("📖 STREAM_READ: Reading leaderboard_update event from chain {} at index {}", chain_id, event_index);
-        
+
         std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            contract.runtime.read_event(chain_id, stream_name, event_index)
-        })).ok()
+            contract
+                .runtime
+                .read_event(chain_id, stream_name, event_index)
+        }))
+        .ok()
     }
 
     /// Emit game creation event helper
@@ -123,16 +142,25 @@ impl StreamProcessingHandler {
         timestamp: u64,
     ) {
         use linera_sdk::linera_base_types::StreamName;
-        
+
         // Get current best score for this player in this tournament
-        let leaderboard = contract.state.leaderboards.load_entry_mut("").await.unwrap();
+        let leaderboard = contract
+            .state
+            .leaderboards
+            .load_entry_mut("")
+            .await
+            .unwrap();
         let current_best = leaderboard.score.get(player).await.unwrap().unwrap_or(0);
-        
+
         // Get player's current board count for this tournament
         let player_state = contract.state.players.load_entry_mut(player).await.unwrap();
-        let current_board_count = player_state.boards_per_tournament
-            .get(tournament_id).await.unwrap().unwrap_or(0);
-        
+        let current_board_count = player_state
+            .boards_per_tournament
+            .get(tournament_id)
+            .await
+            .unwrap()
+            .unwrap_or(0);
+
         let score_event = GameEvent::PlayerScoreUpdate {
             player: player.to_string(),
             board_id: board_id.to_string(),
@@ -146,7 +174,7 @@ impl StreamProcessingHandler {
             current_leaderboard_best: current_best,
             boards_in_tournament: current_board_count,
         };
-        
+
         let stream_name = StreamName::from("player_score_update".to_string());
         contract.runtime.emit(stream_name, &score_event);
     }

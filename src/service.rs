@@ -1,12 +1,12 @@
 #![cfg_attr(target_arch = "wasm32", no_main)]
 
-mod state;
 mod service_handlers;
+mod state;
 
 use std::sync::Arc;
 
+use self::service_handlers::{MutationHandler, QueryHandler, SubscriptionHandler};
 use self::state::Game2048;
-use self::service_handlers::{QueryHandler, MutationHandler, SubscriptionHandler};
 use async_graphql::{Request, Response, Schema};
 use linera_sdk::{linera_base_types::WithServiceAbi, views::View, Service, ServiceRuntime};
 
@@ -53,4 +53,3 @@ impl Service for Game2048Service {
         schema.execute(request).await
     }
 }
-

@@ -1,9 +1,9 @@
-use std::sync::Arc;
-use async_graphql::Object;
-use linera_sdk::ServiceRuntime;
-use game2048::{LeaderboardAction, LeaderboardSettings, Operation};
 use crate::state::Game2048;
 use crate::Game2048Service;
+use async_graphql::Object;
+use game2048::{LeaderboardAction, LeaderboardSettings, Operation};
+use linera_sdk::ServiceRuntime;
+use std::sync::Arc;
 
 pub struct MutationHandler {
     pub state: Arc<Game2048>,
@@ -98,7 +98,11 @@ impl MutationHandler {
             panic!("Only lpaydat can toggle admin");
         }
 
-        let operation = Operation::ToggleAdmin { username, player, password_hash };
+        let operation = Operation::ToggleAdmin {
+            username,
+            player,
+            password_hash,
+        };
         self.runtime.schedule_operation(&operation);
         []
     }
@@ -136,57 +140,57 @@ impl MutationHandler {
         []
     }
 
-    /// 🚀 NEW: Emit current shard workload (for shard chains)
-    async fn update_shard_workload(&self) -> [u8; 0] {
-        let operation = Operation::UpdateShardWorkload;
-        self.runtime.schedule_operation(&operation);
-        []
-    }
-    
     /// 🚀 IMPROVED: Request centralized aggregation (with client-side authorization check)
     async fn request_aggregation(&self, requester_chain_id: String) -> [u8; 0] {
         // Check authorization on the client side first
-        let is_authorized = if let Ok(Some(leaderboard)) = self.state.leaderboards.try_load_entry("").await {
-            // Check if primary triggerer
-            if leaderboard.primary_triggerer.get() == &requester_chain_id {
-                true
-            } else {
-                // Check backup triggerers
-                if let Ok(backups) = leaderboard.backup_triggerers.read_front(5).await {
-                    backups.contains(&requester_chain_id)
+        let is_authorized =
+            if let Ok(Some(leaderboard)) = self.state.leaderboards.try_load_entry("").await {
+                // Check if primary triggerer
+                if leaderboard.primary_triggerer.get() == &requester_chain_id {
+                    true
                 } else {
-                    false
+                    // Check backup triggerers
+                    if let Ok(backups) = leaderboard.backup_triggerers.read_front(5).await {
+                        backups.contains(&requester_chain_id)
+                    } else {
+                        false
+                    }
                 }
-            }
-        } else {
-            false
-        };
-        
+            } else {
+                false
+            };
+
         if !is_authorized {
-            panic!("Not authorized to trigger aggregation. Chain {} is not in the triggerer pool.", requester_chain_id);
+            panic!(
+                "Not authorized to trigger aggregation. Chain {} is not in the triggerer pool.",
+                requester_chain_id
+            );
         }
-        
+
         // 🚀 IMPROVED: Check cooldown using runtime system time (more reliable)
         if let Ok(Some(leaderboard)) = self.state.leaderboards.try_load_entry("").await {
             // Use runtime's system time for consistency
             let current_time = self.runtime.system_time().micros();
-            
+
             let cooldown_until = *leaderboard.trigger_cooldown_until.get();
             if current_time < cooldown_until {
                 let remaining = (cooldown_until - current_time) / 1_000_000;
-                panic!("Aggregation on cooldown. Please wait {} seconds.", remaining);
+                panic!(
+                    "Aggregation on cooldown. Please wait {} seconds.",
+                    remaining
+                );
             }
-            
+
             // Also check staleness to prevent unnecessary triggers
             let last_trigger = *leaderboard.last_trigger_time.get();
             let time_since_last = current_time.saturating_sub(last_trigger);
-            
+
             // Require at least 3 seconds between triggers (even if cooldown expired)
             if time_since_last < 3_000_000 {
                 panic!("Too soon since last trigger. Please wait a moment.");
             }
         }
-        
+
         // Proceed with the operation if authorized and not on cooldown
         let operation = Operation::RequestAggregation { requester_chain_id };
         self.runtime.schedule_operation(&operation);
