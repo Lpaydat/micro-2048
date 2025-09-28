@@ -5,7 +5,7 @@ use linera_sdk::views::{
 };
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone)]
 pub enum GameStatus {
     #[default]
     Active,
@@ -28,6 +28,7 @@ pub struct Player {
     pub password_hash: RegisterView<String>,
     pub chain_id: RegisterView<String>,
     pub is_mod: RegisterView<bool>,
+    pub boards_per_tournament: MapView<String, u32>, // tournament_id -> board_count
 }
 
 #[derive(View, SimpleObject)]
@@ -56,7 +57,14 @@ pub struct LeaderboardShard {
 
     pub score: MapView<String, u64>,        // username, score
     pub board_ids: MapView<String, String>, // username, board_id
+    pub player_chain_ids: MapView<String, String>, // username -> chain_id mapping
+    pub highest_tiles: MapView<String, u64>, // username -> highest_tile
+    #[graphql(skip)]
+    pub game_statuses: MapView<String, game2048::GameStatus>, // username -> game_status
     pub counter: RegisterView<u16>,         // update count
+    
+    // 🚀 NEW: Board counting per tournament (flattened key: "tournament_id:player_chain_id")
+    pub tournament_player_board_counts: MapView<String, u32>, // "tournament_id:player_chain_id" -> board_count
     
     // 🚀 NEW: Player chain tracking and workload stats
     pub monitored_player_chains: QueueView<String>, // Player chain IDs we're monitoring
@@ -68,6 +76,12 @@ pub struct LeaderboardShard {
     pub player_activity_levels: MapView<String, u8>,    // chain_id -> activity_level (0=very_active, 1=active, 2=inactive, 3=very_inactive)
     pub player_last_seen: MapView<String, u64>,         // chain_id -> last_event_timestamp
     pub player_read_intervals: MapView<String, u8>,     // chain_id -> read_interval_multiplier (1, 5, 15)
+    
+    // 🚀 NEW: Activity-based triggerer tracking (rolling window)
+    pub current_round_updates: MapView<String, u32>,    // player_chain_id -> update_count_this_round
+    pub round_history: QueueView<String>,               // JSON of past round data (last N rounds)
+    pub round_counter: RegisterView<u32>,               // Current aggregation round number
+    pub round_start_time: RegisterView<u64>,            // When current round started
 }
 
 #[derive(View, SimpleObject)]
@@ -90,13 +104,17 @@ pub struct Leaderboard {
     pub shard_ids: QueueView<String>,           // shard_id
     pub current_shard_id: RegisterView<String>, // current shard_id
     
-    // 🚀 NEW: Smart Triggerer Delegation System
+    // 🚀 NEW: Smart Triggerer Delegation System  
     pub primary_triggerer: RegisterView<String>,         // Primary triggerer chain_id
     pub backup_triggerers: QueueView<String>,           // Backup triggerers (up to 4)
     pub last_trigger_time: RegisterView<u64>,           // Last aggregation trigger timestamp
     pub last_trigger_by: RegisterView<String>,          // Who triggered last
     pub trigger_rotation_counter: RegisterView<u32>,    // Rotation counter for fairness
     pub trigger_cooldown_until: RegisterView<u64>,      // Cooldown period (no triggers until this time)
+    
+    // 🚀 NEW: Activity-based triggerer ranking
+    pub player_activity_scores: MapView<String, u32>,   // player_chain_id -> weighted_activity_score
+    pub last_successful_update: RegisterView<u64>,      // Last time leaderboard was successfully updated
 }
 
 #[derive(View, SimpleObject)]
@@ -111,7 +129,7 @@ pub struct Chain {
     pub chain_id: RegisterView<String>,
 }
 
-#[derive(RootView, SimpleObject)]
+#[derive(RootView)]
 #[view(context = ViewStorageContext)]
 pub struct Game2048 {
     pub balance: RegisterView<String>,
@@ -129,4 +147,17 @@ pub struct Game2048 {
     pub shard_score_event_indices: MapView<String, u64>,  // chain_id -> last processed event index  
     pub active_tournaments_event_index: RegisterView<u64>, // Last processed tournament registry index
     pub shard_workload_event_indices: MapView<String, u64>, // chain_id -> last processed workload index
+    
+    // 🚀 NEW: Tournament cache for player chains (from streaming system)
+    // Note: Using String storage for TournamentInfo to avoid GraphQL OutputType issues
+    pub tournaments_cache_json: MapView<String, String>, // tournament_id -> JSON-serialized tournament info
+    pub last_tournament_update: RegisterView<u64>, // Last tournament update timestamp
+    
+    // 🚀 NEW: Triggerer system for player chains
+    pub triggerer_list: QueueView<String>,              // Current triggerer list (sorted by activity)
+    pub triggerer_activity_scores: QueueView<u32>,      // Activity scores corresponding to triggerer_list
+    pub triggerer_list_timestamp: RegisterView<u64>,    // Last triggerer list update
+    pub trigger_threshold_config: RegisterView<u64>,    // Minimum time between triggers (microseconds)
+    pub last_trigger_sent: RegisterView<u64>,           // Last time this player sent a trigger
+    pub total_registered_players: RegisterView<u32>,    // Total number of registered players
 }

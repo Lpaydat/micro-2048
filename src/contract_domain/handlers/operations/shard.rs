@@ -4,7 +4,7 @@
 
 use std::str::FromStr;
 use linera_sdk::linera_base_types::ChainId;
-use game2048::{GameEvent, GameStatus, GameEndReason, PlayerScoreSummary};
+use game2048::{GameEvent, GameStatus, PlayerScoreSummary, Message};
 use crate::state::LeaderboardShard;
 
 pub struct ShardOperationHandler;
@@ -24,12 +24,31 @@ impl ShardOperationHandler {
             panic!("Timestamp too large");
         }
 
-        // Apply consistent validation to all chains
+        // Apply consistent validation to all chains with optional time limits
         // Keep bypass for system operations (111970) - used for game ending without moves
-        if timestamp != 111970
-            && (timestamp < *start_time || timestamp > *end_time)
-        {
-            panic!("Shard is not active");
+        if timestamp != 111970 {
+            let start_time_raw = *start_time;
+            let end_time_raw = *end_time;
+            
+            // Only validate if times are set (non-zero)
+            let start_limit = if start_time_raw == 0 { None } else { Some(start_time_raw) };
+            let end_limit = if end_time_raw == 0 { None } else { Some(end_time_raw) };
+            
+            let mut invalid = false;
+            if let Some(start) = start_limit {
+                if timestamp < start {
+                    invalid = true;
+                }
+            }
+            if let Some(end) = end_limit {
+                if timestamp > end {
+                    invalid = true;
+                }
+            }
+            
+            if invalid {
+                panic!("Shard is not active for timestamp {}", timestamp);
+            }
         }
 
         shard
@@ -42,140 +61,136 @@ impl ShardOperationHandler {
         board_id: String,
         score: u64,
         timestamp: u64,
+        player_chain_id: String,
+        boards_in_tournament: u32,
+        leaderboard_id: String,
+        game_status: GameStatus,
+        highest_tile: u64,
     ) {
+        log::info!("📊 SHARD_UPDATE: Updating shard score via streaming - Player: '{}', Score: {}, Board: {}", 
+            player, score, board_id);
+        
         let shard = Self::is_shard_active(contract, timestamp).await;
         let player_shard_score = shard.score.get(player).await.unwrap();
 
         if player_shard_score.is_none() || player_shard_score < Some(score) {
+            log::info!("📊 SHARD_UPDATE: Score improvement detected - Old: {:?}, New: {}", player_shard_score, score);
             shard.score.insert(player, score).unwrap();
             shard.board_ids.insert(player, board_id).unwrap();
+            shard.highest_tiles.insert(player, highest_tile).unwrap();
+            shard.game_statuses.insert(player, game_status).unwrap();
             shard.counter.set(*shard.counter.get() + 1);
+            log::info!("📊 SHARD_UPDATE: ✅ Shard state updated via streaming system - Counter: {}", *shard.counter.get());
+        } else {
+            log::info!("📊 SHARD_UPDATE: Score not improved - keeping existing score {:?}", player_shard_score);
         }
+        
+        // Store the player name → chain ID mapping for later aggregation
+        shard.player_chain_ids.insert(player, player_chain_id.clone()).unwrap();
+        
+        // 🚀 NEW: Store board count for distributed counting (tournament_id:player_chain_id -> board_count)
+        let tournament_player_key = format!("{}:{}", leaderboard_id, player_chain_id);
+        shard.tournament_player_board_counts.insert(&tournament_player_key, boards_in_tournament).unwrap();
+        log::info!("📊 SHARD_UPDATE: Updated board count for player '{}' in tournament '{}': {} boards", 
+                  player, leaderboard_id, boards_in_tournament);
+        
+        // Note: Activity tracking removed for MVP simplicity
     }
 
     /// Aggregate scores from player chains with smart activity tracking
     pub async fn aggregate_scores_from_player_chains(
         contract: &mut crate::Game2048Contract,
-        player_chain_ids: Vec<ChainId>,
+        _player_chain_ids: Vec<ChainId>, // Now reads from cache instead
     ) {
         use std::collections::HashMap;
         
         let mut player_summaries: HashMap<String, PlayerScoreSummary> = HashMap::new();
         let current_time = contract.runtime.system_time().micros();
         
-        // Process each player chain with smart activity-based reading
-        for chain_id in player_chain_ids.iter() {
-            let chain_id_str = chain_id.to_string();
-            
-            // Check if we should read this player this round
-            if !Self::should_read_player_chain(contract, &chain_id_str, current_time).await {
-                continue; // Skip this player this round
-            }
-            
-            // Get last processed index for this chain
-            let last_processed_index = contract.state
-                .player_score_event_indices
-                .get(&chain_id_str)
-                .await
-                .unwrap()
-                .unwrap_or(0);
-            
-            // Read ascending from last index until error (blockchain-style)
-            let mut current_index = last_processed_index;
-            
-            // Read until we hit error (no more events)
-            #[allow(clippy::while_let_loop)]
-            loop {
-                if let Some(event) = contract.read_player_score_event_from_chain(*chain_id, current_index as u32) {
-                    match event {
-                        GameEvent::PlayerScoreUpdate { 
-                            player, 
-                            score, 
-                            board_id, 
-                            chain_id: event_chain_id, 
-                            timestamp,
-                            game_status,
-                            highest_tile,
-                            current_leaderboard_best,
-                            .. 
-                        } => {
-                            // Smart filtering: Only process if score is an improvement
-                            let is_improvement = score > current_leaderboard_best;
-                            let is_game_lifecycle = matches!(
-                                game_status, 
-                                GameStatus::Created | 
-                                GameStatus::Ended(GameEndReason::NoMoves) | 
-                                GameStatus::Ended(GameEndReason::TournamentEnded)
-                            );
-                            
-                            // Process if it's an improvement OR important lifecycle events
-                            if is_improvement || is_game_lifecycle {
-                                let should_update = if let Some(existing) = player_summaries.get(&player) {
-                                    score > existing.best_score || timestamp > existing.last_update
-                                } else {
-                                    true
-                                };
-                                
-                                if should_update {
-                                    // Only keep latest score per player
-                                    let new_summary = PlayerScoreSummary {
-                                        player: player.clone(),
-                                        best_score: score,
-                                        board_id,
-                                        chain_id: event_chain_id,
-                                        highest_tile,
-                                        last_update: timestamp,
-                                        game_status,
-                                    };
-                                    
-                                    // Insert or update - HashMap will replace existing entry
-                                    player_summaries.insert(player.clone(), new_summary);
-                                }
-                            }
-                        },
-                        _ => {
-                            // Ignore other event types for score aggregation
-                        }
-                    }
-                    
-                    current_index += 1;
-                } else {
-                    // Hit error - no more events available
-                    break;
-                }
-            }
-            
-            // Update index tracking: save our progress
-            if current_index > last_processed_index {
-                contract.state
-                    .player_score_event_indices
-                    .insert(&chain_id_str, current_index)
-                    .unwrap();
+        // 🚀 FIXED: Read from shard cache instead of broken event reading
+        log::info!("📊 SHARD_TRIGGER: Aggregating from shard cache (triggered by leaderboard)");
+        
+        let shard = contract.state.shards.load_entry_mut("").await.unwrap();
+        let leaderboard_id = shard.leaderboard_id.get().clone();
+        
+
+        
+        // Collect all player names first
+        let mut player_names = Vec::new();
+        shard.score.for_each_index_while(|player| {
+            player_names.push(player);
+            Ok(true)
+        }).await.unwrap();
+        
+        // Process each player from cache
+        for player in player_names {
+            if let Some(score) = shard.score.get(&player).await.unwrap() {
+                let board_id = shard.board_ids.get(&player).await.unwrap().unwrap_or_default();
                 
-                // Update player activity (found new events)
-                Self::update_player_activity(contract, &chain_id_str, current_time, true).await;
-            } else {
-                // Update player activity (no new events)
-                Self::update_player_activity(contract, &chain_id_str, current_time, false).await;
+                // Get the actual player chain ID from stored mapping
+                let player_chain_id = shard.player_chain_ids.get(&player).await.unwrap()
+                    .unwrap_or_else(|| format!("unknown_{}", player));
+                
+                // Get board count for this player in this tournament
+                let tournament_player_key = format!("{}:{}", leaderboard_id, player_chain_id);
+                let board_count = shard.tournament_player_board_counts
+                    .get(&tournament_player_key).await.unwrap().unwrap_or(0);
+                
+                // Get stored highest_tile and game_status
+                let highest_tile = shard.highest_tiles.get(&player).await.unwrap()
+                    .unwrap_or_else(|| (score / 10).max(2)); // Fallback to estimate if not stored
+                let game_status = shard.game_statuses.get(&player).await.unwrap()
+                    .unwrap_or(GameStatus::Active); // Fallback to Active if not stored
+                
+                // Create summary from cached data
+                let summary = PlayerScoreSummary {
+                    player: player.clone(),
+                    best_score: score,
+                    board_id,
+                    chain_id: player_chain_id,
+                    highest_tile,
+                    last_update: current_time,
+                    game_status,
+                    boards_in_tournament: board_count,
+                };
+                
+                player_summaries.insert(player.clone(), summary);
+                log::info!("📊 CACHE_READ: Player '{}' has cached score: {}", player, score);
             }
         }
+        
+        log::info!("📊 SHARD_CACHE: Read {} players from shard cache for aggregation", player_summaries.len());
         
         // If we found any scores, emit a shard aggregation event
         if !player_summaries.is_empty() {
             let shard = contract.state.shards.load_entry_mut("").await.unwrap();
             let leaderboard_id = shard.leaderboard_id.get().clone();
             
+            // Activity scores removed for MVP simplicity
+            
             use linera_sdk::linera_base_types::StreamName;
             let stream_name = StreamName::from("shard_score_update".to_string());
+            // Build player board counts map for this tournament
+            let mut player_board_counts = std::collections::HashMap::new();
+            for (_player, summary) in player_summaries.iter() {
+                // Extract player chain ID and use their board count
+                player_board_counts.insert(summary.chain_id.clone(), summary.boards_in_tournament);
+            }
+            
             let aggregation_event = GameEvent::ShardScoreUpdate {
                 shard_chain_id: contract.runtime.chain_id().to_string(),
                 player_scores: player_summaries.clone(),
+                player_activity_scores: std::collections::HashMap::new(), // Empty for MVP simplicity
+                player_board_counts, // Board counts for distributed counting
                 aggregation_timestamp: contract.runtime.system_time().micros(),
                 total_players: player_summaries.len() as u32,
                 leaderboard_id,
             };
             
+            log::info!("📡 EMIT: Emitting shard_score_update event with {} player scores from chain {}", 
+                player_summaries.len(), contract.runtime.chain_id());
             contract.runtime.emit(stream_name, &aggregation_event);
+            log::info!("📡 EMIT: ✅ Successfully emitted shard_score_update event");
         }
         
         // Update local shard state with comprehensive tracking
@@ -253,6 +268,9 @@ impl ShardOperationHandler {
         
         // Check if this is the right tournament
         if shard.leaderboard_id.get() == &tournament_id {
+            // Check if this is the first player for this shard
+            let is_first_player_in_shard = shard.active_players_count.get() == &0;
+            
             // Add to monitoring list
             shard.monitored_player_chains.push_back(player_chain_id.clone());
             
@@ -261,14 +279,37 @@ impl ShardOperationHandler {
             let current_time = contract.runtime.system_time().micros();
             shard.last_activity.set(current_time);
             
-            // Initialize smart activity tracking for new player
-            shard.player_activity_levels.insert(&player_chain_id, 0).unwrap(); // Start as very_active
-            shard.player_read_intervals.insert(&player_chain_id, 1).unwrap(); // Read every round initially
-            shard.player_last_seen.insert(&player_chain_id, current_time).unwrap();
+            // Activity tracking removed for MVP simplicity
             
             // Subscribe to this player chain's events
             if let Ok(chain_id) = ChainId::from_str(&player_chain_id) {
+                log::info!("🎯 REGISTER_PLAYER: Setting up subscription to player chain {} for tournament {}", player_chain_id, tournament_id);
+                log::info!("🎯 REGISTER_PLAYER: Shard will receive player_score_update events via process_streams");
                 contract.subscribe_to_player_score_events(chain_id);
+                log::info!("🎯 REGISTER_PLAYER: ✅ Successfully subscribed to player chain {}", player_chain_id);
+            } else {
+                log::error!("🎯 REGISTER_PLAYER: ❌ Failed to parse player_chain_id: {}", player_chain_id);
+            }
+            
+            // 🚀 NEW: If this is the first player in this shard, register as potential triggerer
+            if is_first_player_in_shard {
+                if let Ok(leaderboard_chain_id) = ChainId::from_str(&tournament_id) {
+                    let shard_chain_id = contract.runtime.chain_id().to_string();
+                    log::info!("🎯 FIRST_PLAYER: Shard {} registering first player {} with leaderboard", shard_chain_id, player_chain_id);
+                    
+                    // Send message to leaderboard to register this player chain as potential triggerer
+                    contract.runtime
+                        .prepare_message(Message::RegisterFirstPlayer {
+                            shard_chain_id,
+                            player_chain_id: player_chain_id.clone(),
+                            tournament_id: tournament_id.clone(),
+                        })
+                        .send_to(leaderboard_chain_id);
+                        
+                    log::info!("🎯 FIRST_PLAYER: ✅ Sent first player registration to leaderboard");
+                } else {
+                    log::error!("🎯 FIRST_PLAYER: ❌ Invalid tournament_id for leaderboard chain: {}", tournament_id);
+                }
             }
         }
     }
@@ -278,93 +319,5 @@ impl ShardOperationHandler {
         let shard = contract.state.shards.load_entry_mut("").await.unwrap();
         shard.total_games_count.set(*shard.total_games_count.get() + 1);
         shard.last_activity.set(contract.runtime.system_time().micros());
-    }
-
-    /// Smart algorithm to decide if we should read a player chain this round
-    async fn should_read_player_chain(
-        contract: &mut crate::Game2048Contract,
-        chain_id_str: &str,
-        current_time: u64,
-    ) -> bool {
-        let shard = contract.state.shards.load_entry_mut("").await.unwrap();
-        
-        // Get player's read interval multiplier (1, 5, 15)
-        let read_interval = shard
-            .player_read_intervals
-            .get(chain_id_str)
-            .await
-            .unwrap()
-            .unwrap_or(1); // Default: read every round
-        
-        // Get last time we read this player
-        let last_seen = shard
-            .player_last_seen
-            .get(chain_id_str)
-            .await
-            .unwrap()
-            .unwrap_or(0);
-        
-        // Calculate time since last read (in seconds, roughly)
-        let time_since_read = current_time.saturating_sub(last_seen) / 1_000_000;
-        
-        // Should we read based on interval?
-        let should_read = match read_interval {
-            1 => true, // Every round (very active players)
-            5 => time_since_read >= 10, // Every ~10 seconds (active players)
-            15 => time_since_read >= 30, // Every ~30 seconds (inactive players)
-            _ => time_since_read >= 60, // Every ~60 seconds (very inactive players)
-        };
-        
-        should_read
-    }
-
-    /// Update player activity level based on event presence
-    async fn update_player_activity(
-        contract: &mut crate::Game2048Contract,
-        chain_id_str: &str,
-        current_time: u64,
-        found_new_events: bool,
-    ) {
-        let shard = contract.state.shards.load_entry_mut("").await.unwrap();
-        
-        // Update last seen time
-        shard.player_last_seen.insert(chain_id_str, current_time).unwrap();
-        
-        // Get current activity level (0=very_active, 1=active, 2=inactive, 3=very_inactive)
-        let current_level = shard
-            .player_activity_levels
-            .get(chain_id_str)
-            .await
-            .unwrap()
-            .unwrap_or(0); // Default: very active
-        
-        let new_level = if found_new_events {
-            // Found events - promote activity level
-            match current_level {
-                2 | 3 => 1, // inactive/very_inactive -> active
-                _ => 0,     // already active -> very_active
-            }
-        } else {
-            // No events - demote activity level
-            match current_level {
-                0 => 1, // very_active -> active  
-                1 => 2, // active -> inactive
-                2 => 3, // inactive -> very_inactive
-                _ => 3, // stay very_inactive
-            }
-        };
-        
-        // Update activity level
-        shard.player_activity_levels.insert(chain_id_str, new_level).unwrap();
-        
-        // Update read interval based on activity level
-        let new_interval = match new_level {
-            0 => 1,  // very_active: read every round
-            1 => 1,  // active: read every round
-            2 => 5,  // inactive: read every 5 rounds (10 seconds)
-            _ => 15, // very_inactive: read every 15 rounds (30 seconds)
-        };
-        
-        shard.player_read_intervals.insert(chain_id_str, new_interval).unwrap();
     }
 }
