@@ -1,4 +1,4 @@
-use game2048::{hash_seed, Game, GameEvent, GameStatus, Message, RegistrationCheck};
+use game2048::{hash_seed, Game, GameStatus, Message, RegistrationCheck};
 /// Game Messages Handler
 ///
 /// Handles game-related messages including board creation.
@@ -83,23 +83,22 @@ impl GameMessageHandler {
             .unwrap()
             .unwrap_or(0);
 
-        let score_event = GameEvent::PlayerScoreUpdate {
-            player: player.clone(),
-            board_id: board_id.clone(),
-            score: 0, // Initial score is 0
-            chain_id: contract.runtime.chain_id().to_string(),
+        use crate::contract_domain::events::emitters::EventEmitter;
+        let chain_id = contract.runtime.chain_id().to_string();
+        EventEmitter::emit_player_score_update(
+            contract,
+            player.clone(),
+            board_id.clone(),
+            0, // Initial score is 0
+            chain_id,
             timestamp,
-            game_status: GameStatus::Created,
-            highest_tile: 2, // Initial highest tile
-            moves_count: 0,
-            leaderboard_id: leaderboard_id.clone(),
-            current_leaderboard_best: current_best,
-            boards_in_tournament: current_board_count,
-        };
-
-        use linera_sdk::linera_base_types::StreamName;
-        let stream_name = StreamName::from("player_score_update".to_string());
-        contract.runtime.emit(stream_name, &score_event);
+            GameStatus::Created,
+            2, // Initial highest tile
+            0,
+            leaderboard_id.clone(),
+            current_best,
+            current_board_count,
+        ).await;
 
         // increment player and board count
         let leaderboard_chain_id = ChainId::from_str(&leaderboard_id).unwrap();

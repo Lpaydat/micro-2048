@@ -442,7 +442,7 @@ impl LeaderboardOperationHandler {
 
     /// Emit current active tournaments (for leaderboard chains)
     pub async fn emit_active_tournaments(contract: &mut crate::Game2048Contract) {
-        use linera_sdk::linera_base_types::StreamName;
+
 
         let is_main_chain = contract.is_main_chain();
         let mut tournaments = Vec::new();
@@ -565,13 +565,13 @@ impl LeaderboardOperationHandler {
         }
 
         if !tournaments.is_empty() {
-            let tournaments_event = GameEvent::ActiveTournaments {
-                tournaments: tournaments.clone(),
-                timestamp: contract.runtime.system_time().micros(),
-            };
-
-            let stream_name = StreamName::from("active_tournaments".to_string());
-            contract.runtime.emit(stream_name, &tournaments_event);
+            use crate::contract_domain::events::emitters::EventEmitter;
+            let timestamp = contract.runtime.system_time().micros();
+            EventEmitter::emit_active_tournaments(
+                contract,
+                tournaments.clone(),
+                timestamp,
+            ).await;
 
             // Log tournament details
             for _tournament in &tournaments {}

@@ -300,24 +300,22 @@ impl LeaderboardMessageHandler {
         tournament_id: &str,
         all_players_activity: Vec<(String, u32)>,
     ) {
-        use game2048::GameEvent;
-        use linera_sdk::linera_base_types::StreamName;
+
 
         let current_time = contract.runtime.system_time().micros();
 
         // Default threshold: 10ms between triggers (for testing)
         let threshold_config = 10_000; // 10ms in microseconds
 
-        let triggerer_update_event = GameEvent::LeaderboardUpdate {
-            leaderboard_id: tournament_id.to_string(),
-            triggerer_list: all_players_activity.clone(), // Full sorted list with (chain_id, activity_score)
-            last_update_timestamp: current_time,
+        use crate::contract_domain::events::emitters::EventEmitter;
+        EventEmitter::emit_leaderboard_update(
+            contract,
+            tournament_id.to_string(),
+            all_players_activity.clone(), // Full sorted list with (chain_id, activity_score)
+            current_time,
             threshold_config,
-            total_registered_players: all_players_activity.len() as u32,
-        };
-
-        let stream_name = StreamName::from("leaderboard_update".to_string());
-        contract.runtime.emit(stream_name, &triggerer_update_event);
+            all_players_activity.len() as u32,
+        ).await;
     }
 
     /// Handle trigger update request from player chain

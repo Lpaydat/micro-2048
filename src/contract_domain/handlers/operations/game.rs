@@ -3,7 +3,7 @@
 //! Handles game-related operations including moves and board creation.
 
 use crate::contract_domain::game_logic::{GameMoveProcessor, GameMoveResult};
-use game2048::{hash_seed, Direction, Game, GameEndReason, GameEvent, GameStatus, Message};
+use game2048::{hash_seed, Direction, Game, GameEndReason, GameStatus, Message};
 use linera_sdk::linera_base_types::ChainId;
 use std::str::FromStr;
 
@@ -111,24 +111,22 @@ impl GameOperationHandler {
                         .unwrap()
                         .unwrap_or(0);
 
-                    let score_event = GameEvent::PlayerScoreUpdate {
-                        player: player.clone(),
-                        board_id: board_id.clone(),
-                        score: final_score,
-                        chain_id: contract.runtime.chain_id().to_string(),
-                        timestamp: latest_timestamp,
+                    use crate::contract_domain::events::emitters::EventEmitter;
+                    let chain_id = contract.runtime.chain_id().to_string();
+                    EventEmitter::emit_player_score_update(
+                        contract,
+                        player.clone(),
+                        board_id.clone(),
+                        final_score,
+                        chain_id,
+                        latest_timestamp,
                         game_status,
-                        highest_tile: final_highest_tile,
-                        moves_count: 0, // TODO: Track actual move count
-                        leaderboard_id: leaderboard_id.clone(),
-                        current_leaderboard_best: current_best,
-                        boards_in_tournament: current_board_count,
-                    };
-
-                    use linera_sdk::linera_base_types::StreamName;
-                    let stream_name = StreamName::from("player_score_update".to_string());
-                    if let GameEvent::PlayerScoreUpdate { .. } = &score_event {}
-                    contract.runtime.emit(stream_name, &score_event);
+                        final_highest_tile,
+                        0, // TODO: Track actual move count
+                        leaderboard_id.clone(),
+                        current_best,
+                        current_board_count,
+                    ).await;
 
                     // 🚀 NEW: Update shard workload when scores change significantly
                     let score_improvement = final_score.saturating_sub(current_best);
@@ -197,23 +195,23 @@ impl GameOperationHandler {
                 .unwrap()
                 .unwrap_or(0);
 
-            let score_event = GameEvent::PlayerScoreUpdate {
-                player: player.clone(),
-                board_id: board_id.clone(),
+            use crate::contract_domain::events::emitters::EventEmitter;
+            let chain_id = contract.runtime.chain_id().to_string();
+            let highest_tile = Game::highest_tile(*board.board.get());
+            EventEmitter::emit_player_score_update(
+                contract,
+                player.clone(),
+                board_id.clone(),
                 score,
-                chain_id: contract.runtime.chain_id().to_string(),
-                timestamp: 111970,
-                game_status: GameStatus::Ended(GameEndReason::TournamentEnded),
-                highest_tile: Game::highest_tile(*board.board.get()),
-                moves_count: 0, // TODO: Track actual move count
-                leaderboard_id: leaderboard_id.clone(),
-                current_leaderboard_best: current_best,
-                boards_in_tournament: current_board_count,
-            };
-
-            use linera_sdk::linera_base_types::StreamName;
-            let stream_name = StreamName::from("player_score_update".to_string());
-            contract.runtime.emit(stream_name, &score_event);
+                chain_id,
+                111970,
+                GameStatus::Ended(GameEndReason::TournamentEnded),
+                highest_tile,
+                0, // TODO: Track actual move count
+                leaderboard_id.clone(),
+                current_best,
+                current_board_count,
+            ).await;
         } else {
             panic!("Game is ended");
         }

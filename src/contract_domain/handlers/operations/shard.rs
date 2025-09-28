@@ -3,7 +3,7 @@
 //! Handles shard-related operations including score aggregation, activity tracking, and workload management.
 
 use crate::state::LeaderboardShard;
-use game2048::{GameEvent, GameStatus, Message, PlayerScoreSummary};
+use game2048::{GameStatus, Message, PlayerScoreSummary};
 use linera_sdk::linera_base_types::ChainId;
 use std::str::FromStr;
 
@@ -192,8 +192,6 @@ impl ShardOperationHandler {
 
             // Activity scores removed for MVP simplicity
 
-            use linera_sdk::linera_base_types::StreamName;
-            let stream_name = StreamName::from("shard_score_update".to_string());
             // Build player board counts map for this tournament
             let mut player_board_counts = std::collections::HashMap::new();
             for (_player, summary) in player_summaries.iter() {
@@ -201,17 +199,19 @@ impl ShardOperationHandler {
                 player_board_counts.insert(summary.chain_id.clone(), summary.boards_in_tournament);
             }
 
-            let aggregation_event = GameEvent::ShardScoreUpdate {
-                shard_chain_id: contract.runtime.chain_id().to_string(),
-                player_scores: player_summaries.clone(),
-                player_activity_scores: std::collections::HashMap::new(), // Empty for MVP simplicity
+            use crate::contract_domain::events::emitters::EventEmitter;
+            let chain_id = contract.runtime.chain_id().to_string();
+            let timestamp = contract.runtime.system_time().micros();
+            EventEmitter::emit_shard_score_update(
+                contract,
+                chain_id,
+                player_summaries.clone(),
+                std::collections::HashMap::new(), // Empty for MVP simplicity
                 player_board_counts, // Board counts for distributed counting
-                aggregation_timestamp: contract.runtime.system_time().micros(),
-                total_players: player_summaries.len() as u32,
+                timestamp,
+                player_summaries.len() as u32,
                 leaderboard_id,
-            };
-
-            contract.runtime.emit(stream_name, &aggregation_event);
+            ).await;
         }
 
         // Update local shard state with comprehensive tracking

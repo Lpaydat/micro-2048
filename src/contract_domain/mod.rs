@@ -1,3 +1,5 @@
+pub mod contract_helpers;
+pub mod events;
 pub mod game_logic;
 pub mod handlers;
 pub mod message_dispatcher;
@@ -5,6 +7,8 @@ pub mod operation_dispatcher;
 
 // Game logic types exported for internal use
 
+pub use contract_helpers::ContractHelpers;
+pub use events::{EventReader, StreamProcessor, SubscriptionManager};
 pub use message_dispatcher::MessageDispatcher;
 pub use operation_dispatcher::OperationDispatcher;
 
@@ -13,6 +17,6 @@ pub use operation_dispatcher::OperationDispatcher;
 #[allow(unused_imports)]
 pub use handlers::operations::{
     GameOperationHandler, LeaderboardOperationHandler, PlayerOperationHandler,
-    ShardOperationHandler, StreamProcessingHandler, SystemOperationHandler,
+    ShardOperationHandler, SystemOperationHandler,
     TournamentOperationHandler,
 };

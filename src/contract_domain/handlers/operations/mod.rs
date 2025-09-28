@@ -6,7 +6,6 @@ pub mod game;
 pub mod leaderboard;
 pub mod player;
 pub mod shard;
-pub mod stream;
 pub mod system;
 pub mod tournament;
 
@@ -15,6 +14,5 @@ pub use game::GameOperationHandler;
 pub use leaderboard::LeaderboardOperationHandler;
 pub use player::PlayerOperationHandler;
 pub use shard::ShardOperationHandler;
-pub use stream::StreamProcessingHandler;
 pub use system::SystemOperationHandler;
 pub use tournament::TournamentOperationHandler;
