@@ -79,6 +79,10 @@ pub struct LeaderboardShard {
 
     // 🚀 NEW: Activity-based triggerer tracking (rolling window)
     pub current_round_updates: MapView<String, u32>, // player_chain_id -> update_count_this_round
+    
+    // 🚀 NEW: Tournament configuration for dynamic triggerer calculation
+    pub base_triggerer_count: RegisterView<u32>,    // Tournament's configured triggerer count
+    pub total_shard_count: RegisterView<u32>,       // Total shards in this tournament
     pub round_history: QueueView<String>,            // JSON of past round data (last N rounds)
     pub round_counter: RegisterView<u32>,            // Current aggregation round number
     pub round_start_time: RegisterView<u64>,         // When current round started
@@ -110,11 +114,13 @@ pub struct Leaderboard {
     pub last_trigger_time: RegisterView<u64>,    // Last aggregation trigger timestamp
     pub last_trigger_by: RegisterView<String>,   // Who triggered last
     pub trigger_rotation_counter: RegisterView<u32>, // Rotation counter for fairness
-    pub trigger_cooldown_until: RegisterView<u64>, // Cooldown period (no triggers until this time)
+    pub trigger_cooldown_until: RegisterView<u64>, // Global cooldown: no triggers until this time
 
     // 🚀 NEW: Activity-based triggerer ranking
     pub player_activity_scores: MapView<String, u32>, // player_chain_id -> weighted_activity_score
     pub last_successful_update: RegisterView<u64>, // Last time leaderboard was successfully updated
+    
+    pub admin_base_triggerer_count: RegisterView<u32>, // Admin-configurable base triggerer count
 }
 
 #[derive(View, SimpleObject)]
@@ -159,4 +165,5 @@ pub struct Game2048 {
     pub trigger_threshold_config: RegisterView<u64>, // Minimum time between triggers (microseconds)
     pub last_trigger_sent: RegisterView<u64>,      // Last time this player sent a trigger
     pub total_registered_players: RegisterView<u32>, // Total number of registered players
+    pub admin_base_triggerer_count: RegisterView<u32>, // Admin-configurable base triggerer count
 }

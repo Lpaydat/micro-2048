@@ -59,6 +59,8 @@ impl MessageDispatcher {
                 start_time,
                 end_time,
                 shard_ids,
+                base_triggerer_count,
+                total_shard_count,
             } => {
                 LeaderboardMessageHandler::handle_create_leaderboard(
                     contract,
@@ -70,6 +72,8 @@ impl MessageDispatcher {
                     start_time,
                     end_time,
                     shard_ids,
+                    base_triggerer_count,
+                    total_shard_count,
                 )
                 .await;
             }
@@ -162,6 +166,21 @@ impl MessageDispatcher {
                     contract,
                     shard_chain_id,
                     player_chain_id,
+                    tournament_id,
+                )
+                .await;
+            }
+
+            // Shard sends multiple trigger candidates to leaderboard
+            Message::UpdateShardTriggerCandidates {
+                shard_chain_id,
+                player_chain_ids,
+                tournament_id,
+            } => {
+                LeaderboardMessageHandler::handle_update_shard_trigger_candidates(
+                    contract,
+                    shard_chain_id,
+                    player_chain_ids,
                     tournament_id,
                 )
                 .await;

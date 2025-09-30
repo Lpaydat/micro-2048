@@ -196,6 +196,22 @@ impl MutationHandler {
         self.runtime.schedule_operation(&operation);
         []
     }
+
+    /// 🚀 ADMIN: Configure base triggerer count
+    async fn configure_triggerer_count(
+        &self, 
+        admin_username: String,
+        password_hash: String,
+        base_triggerer_count: u32
+    ) -> [u8; 0] {
+        let operation = Operation::ConfigureTriggererCount {
+            admin_username,
+            password_hash,
+            base_triggerer_count,
+        };
+        self.runtime.schedule_operation(&operation);
+        []
+    }
 }
 
 impl MutationHandler {

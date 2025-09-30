@@ -83,6 +83,12 @@ pub enum Operation {
     RequestAggregation {
         requester_chain_id: String,
     },
+    /// 🚀 ADMIN: Configure base triggerer count
+    ConfigureTriggererCount {
+        admin_username: String,
+        password_hash: String,
+        base_triggerer_count: u32,
+    },
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -115,6 +121,8 @@ pub enum Message {
         start_time: u64,
         end_time: u64,
         shard_ids: Vec<String>,
+        base_triggerer_count: u32,
+        total_shard_count: u32,
     },
     LeaderboardNewGame {
         player: String,
@@ -155,6 +163,12 @@ pub enum Message {
     RegisterFirstPlayer {
         shard_chain_id: String,
         player_chain_id: String,
+        tournament_id: String,
+    },
+    /// 🚀 IMPROVED: Shard sends multiple trigger candidates to leaderboard
+    UpdateShardTriggerCandidates {
+        shard_chain_id: String,
+        player_chain_ids: Vec<String>,
         tournament_id: String,
     },
     /// 🚀 NEW: Player chain sends trigger update request to leaderboard

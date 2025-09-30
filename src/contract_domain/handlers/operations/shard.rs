@@ -255,10 +255,15 @@ impl ShardOperationHandler {
         tournament_id: String,
         _player_name: String,
     ) {
-        let shard = contract.state.shards.load_entry_mut("").await.unwrap();
+        // Collect data we need from shard first (to avoid borrow conflicts)
+        let (_is_first_player, player_count, registered_players) = {
+            let shard = contract.state.shards.load_entry_mut("").await.unwrap();
 
-        // Check if this is the right tournament
-        if shard.leaderboard_id.get() == &tournament_id {
+            // Check if this is the right tournament
+            if shard.leaderboard_id.get() != &tournament_id {
+                return; // Wrong tournament, exit early
+            }
+
             // Check if this is the first player for this shard
             let is_first_player_in_shard = shard.active_players_count.get() == &0;
 
@@ -274,29 +279,59 @@ impl ShardOperationHandler {
             let current_time = contract.runtime.system_time().micros();
             shard.last_activity.set(current_time);
 
-            // Activity tracking removed for MVP simplicity
+            let player_count = *shard.active_players_count.get();
+            
+            // Get all registered players for this shard
+            let registered_players = shard
+                .monitored_player_chains
+                .read_front(100) // Get up to 100 players
+                .await
+                .unwrap_or_default();
 
-            // Subscribe to this player chain's events
-            if let Ok(chain_id) = ChainId::from_str(&player_chain_id) {
-                contract.subscribe_to_player_score_events(chain_id);
+            (is_first_player_in_shard, player_count, registered_players)
+        }; // Shard borrow is dropped here
+
+        // Now we can use contract freely
+
+        // Subscribe to this player chain's events
+        if let Ok(chain_id) = ChainId::from_str(&player_chain_id) {
+            contract.subscribe_to_player_score_events(chain_id);
+        }
+
+        // 🚀 DYNAMIC: Send triggerer updates only until threshold reached
+        // Calculate triggerers_per_shard from tournament config
+        let triggerers_per_shard = {
+            let shard = contract.state.shards.load_entry_mut("").await.unwrap();
+            let base_count = *shard.base_triggerer_count.get();
+            let shard_count = *shard.total_shard_count.get();
+            
+            // If config not yet set (race condition: player registers before CreateLeaderboard processed)
+            // Use safe default: 20 (covers 5 triggerers * 4 backup ratio)
+            if base_count == 0 || shard_count == 0 {
+                20
+            } else {
+                ((base_count + shard_count - 1) / shard_count).max(1) // Ceiling division
             }
-
-            // 🚀 NEW: If this is the first player in this shard, register as potential triggerer
-            if is_first_player_in_shard {
-                if let Ok(leaderboard_chain_id) = ChainId::from_str(&tournament_id) {
-                    let shard_chain_id = contract.runtime.chain_id().to_string();
-
-                    // Send message to leaderboard to register this player chain as potential triggerer
-                    contract
-                        .runtime
-                        .prepare_message(Message::RegisterFirstPlayer {
-                            shard_chain_id,
-                            player_chain_id: player_chain_id.clone(),
-                            tournament_id: tournament_id.clone(),
-                        })
-                        .send_to(leaderboard_chain_id);
-                }
+        };
+        
+        if let Ok(leaderboard_chain_id) = ChainId::from_str(&tournament_id) {
+            // Send updates only until we reach triggerers_per_shard
+            // This is dynamic based on base_triggerer_count / total_shard_count
+            if player_count <= triggerers_per_shard {
+                let shard_chain_id = contract.runtime.chain_id().to_string();
+                
+                // Send ALL registered players so far
+                // Leaderboard calculates triggerers_per_shard and selects top N
+                contract
+                    .runtime
+                    .prepare_message(Message::UpdateShardTriggerCandidates {
+                        shard_chain_id,
+                        player_chain_ids: registered_players,
+                        tournament_id: tournament_id.clone(),
+                    })
+                    .send_to(leaderboard_chain_id);
             }
+            // After threshold: Stop sending, we have enough triggerers for this shard
         }
     }
 

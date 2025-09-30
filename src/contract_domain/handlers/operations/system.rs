@@ -85,4 +85,42 @@ impl SystemOperationHandler {
             .close_chain()
             .expect("The application does not have permission to close the chain");
     }
+
+    /// 🚀 ADMIN: Configure base triggerer count
+    pub async fn handle_configure_triggerer_count(
+        contract: &mut crate::Game2048Contract,
+        admin_username: String,
+        password_hash: String,
+        base_triggerer_count: u32,
+    ) {
+        // Validate admin credentials
+        contract
+            .validate_player_password(&admin_username, &password_hash)
+            .await;
+        
+        // Check if user is admin/mod
+        let player = contract
+            .state
+            .players
+            .load_entry_or_insert(&admin_username)
+            .await
+            .unwrap();
+        
+        if !player.is_mod.get() {
+            panic!("Only admins can configure triggerer count");
+        }
+
+        // Validate count (1-20 range)
+        if base_triggerer_count == 0 || base_triggerer_count > 20 {
+            panic!("Base triggerer count must be between 1 and 20");
+        }
+
+        // Update configuration
+        contract.state.admin_base_triggerer_count.set(base_triggerer_count);
+        
+        // Also update leaderboard if it exists
+        if let Ok(leaderboard) = contract.state.leaderboards.load_entry_mut("").await {
+            leaderboard.admin_base_triggerer_count.set(base_triggerer_count);
+        }
+    }
 }

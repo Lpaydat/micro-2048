@@ -1,3 +1,7 @@
 /target
 /db
 todo.md
+
+# Stress test results
+stress_test_results/
+stress_test_results.json

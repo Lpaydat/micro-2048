@@ -59,6 +59,8 @@ impl Contract for Game2048Contract {
         leaderboard.description.set("".to_string());
         leaderboard.total_boards.set(0);
         leaderboard.total_players.set(0);
+        
+        leaderboard.admin_base_triggerer_count.set(5); // Default to 5 triggerers
     }
 
     async fn execute_operation(&mut self, operation: Self::Operation) -> Self::Response {
@@ -126,6 +128,8 @@ impl Game2048Contract {
                 start_time,
                 end_time,
                 shard_ids: vec![], // Default empty, filled by operations handler
+                base_triggerer_count: 5, // Default value
+                total_shard_count: 1,    // Default value
             })
             .send_to(send_to.unwrap_or(chain_id));
     }

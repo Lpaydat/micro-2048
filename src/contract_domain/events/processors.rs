@@ -208,15 +208,33 @@ impl StreamProcessor {
             )
             .await;
 
-            // Check if this player should send a trigger
-            Self::check_and_send_trigger_if_needed(contract, update.chain_id).await;
+            // FIXED: Add chain type guard - only player chains should process triggers
+            // Use simpler detection: player chains have triggerer_list populated by leaderboard updates
+            let triggerer_count = contract.state.triggerer_list.read_front(1).await
+                .map(|items| items.len())
+                .unwrap_or(0);
+            
+            if triggerer_count > 0 {
+                // This is a player chain that has received triggerer list - check if should send trigger
+                Self::check_and_send_trigger_if_needed(contract, update.chain_id).await;
+            }
+            // Shard and leaderboard chains don't have triggerer_list populated
         }
     }
 
     /// Emit shard aggregation if player updates were processed
     async fn emit_shard_aggregation_if_needed(contract: &mut crate::Game2048Contract) {
-        // Get monitored player chains from shard state and aggregate their scores
+        // FIXED: Only run aggregation on SHARD chains, not player chains
+        // Check if this chain has shard state (non-empty leaderboard_id indicates shard chain)
         let shard = contract.state.shards.load_entry_mut("").await.unwrap();
+        let leaderboard_id = shard.leaderboard_id.get();
+        
+        // Guard: Only proceed if this is actually a shard chain
+        if leaderboard_id.is_empty() {
+            // This is a player chain, not a shard chain - skip aggregation
+            return;
+        }
+
         let mut player_chain_ids = Vec::new();
 
         // Collect all monitored player chain IDs from the queue
@@ -313,8 +331,16 @@ impl StreamProcessor {
         let current_time = contract.runtime.system_time().micros();
         let my_chain_id = contract.runtime.chain_id().to_string();
 
-        // Get configuration
-        let threshold = *contract.state.trigger_threshold_config.get();
+        // FIXED: Get configuration with safe default
+        let threshold = match *contract.state.trigger_threshold_config.get() {
+            0 => {
+                // FIXED: Initialize with safe default if never set (30 seconds)
+                let default_threshold = 5_000_000; // 5 seconds in microseconds (stress test)  
+                contract.state.trigger_threshold_config.set(default_threshold);
+                default_threshold
+            }
+            value => value,
+        };
         let last_update_time = *contract.state.triggerer_list_timestamp.get();
         let last_trigger_sent = *contract.state.last_trigger_sent.get();
         let total_players = *contract.state.total_registered_players.get();
@@ -323,15 +349,25 @@ impl StreamProcessor {
         let time_since_update = current_time.saturating_sub(last_update_time);
         let time_since_last_trigger = current_time.saturating_sub(last_trigger_sent);
 
-        // Mathematical tier calculation
-        let tier = if threshold > 0 {
+        // FIXED: Mathematical tier calculation with overflow protection
+        let tier = if threshold > 0 && time_since_update > 0 {
             std::cmp::min(5, (time_since_update / threshold) + 1)
+        } else if threshold == 0 {
+            // FIXED: If threshold is 0, use minimal tier to prevent infinite triggering
+            1
         } else {
+            // FIXED: If time_since_update is 0, no need for escalated triggering
             1
         };
 
         // Calculate how many players should be actively triggering
-        let base_triggerer_count = std::cmp::max(2, total_players / 10);
+        // Use admin-configured base count, default to 5 for stress testing
+        let admin_base_count = *contract.state.admin_base_triggerer_count.get();
+        let base_triggerer_count = if admin_base_count > 0 {
+            admin_base_count
+        } else {
+            5 // Default to 5 for stress testing
+        };
         let active_triggerer_count =
             std::cmp::min(total_players, base_triggerer_count * tier as u32);
 
@@ -364,8 +400,10 @@ impl StreamProcessor {
             return;
         }
 
-        // Only trigger if enough time has passed since our last trigger
-        let should_trigger = time_since_last_trigger > threshold;
+        // FIXED: Only trigger if enough time has passed since our last trigger
+        // Add minimum 2 second threshold to prevent excessive triggering (stress test)
+        let min_threshold = std::cmp::max(threshold, 2_000_000); // At least 2 seconds
+        let should_trigger = time_since_last_trigger > min_threshold;
 
         if should_trigger {
             // Get tournament ID from the first cached tournament

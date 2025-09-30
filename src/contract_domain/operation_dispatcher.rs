@@ -122,6 +122,21 @@ impl OperationDispatcher {
                     panic!("Not authorized to trigger aggregation: {}", e);
                 }
             }
+
+            // Admin configuration
+            Operation::ConfigureTriggererCount {
+                admin_username,
+                password_hash,
+                base_triggerer_count,
+            } => {
+                SystemOperationHandler::handle_configure_triggerer_count(
+                    contract,
+                    admin_username,
+                    password_hash,
+                    base_triggerer_count,
+                )
+                .await;
+            }
         }
     }
 }

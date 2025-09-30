@@ -19,6 +19,8 @@ impl LeaderboardMessageHandler {
         start_time: u64,
         end_time: u64,
         shard_ids: Vec<String>,
+        base_triggerer_count: u32,
+        total_shard_count: u32,
     ) {
         let leaderboard = contract
             .state
@@ -74,6 +76,10 @@ impl LeaderboardMessageHandler {
                 shard_chain_ids.push((shard_id.clone(), chain_id));
             }
         }
+
+        // Store tournament configuration in shard state
+        shard.base_triggerer_count.set(base_triggerer_count);
+        shard.total_shard_count.set(total_shard_count);
 
         // End the borrow scope before subscribing
         let _ = leaderboard;
@@ -284,14 +290,97 @@ impl LeaderboardMessageHandler {
             // Sort by activity score (highest first) - same as activity-based ranking
             all_players_activity.sort_by(|(_, a), (_, b)| b.cmp(a));
 
-            // Emit updated activity-based triggerer list to all player chains
-            Self::emit_activity_based_triggerer_list(
-                contract,
-                &tournament_id,
-                all_players_activity,
-            )
-            .await;
+            // FIXED: Don't emit leaderboard updates during registration - causes cascade failures
+            // Registration should be silent to prevent overwhelming player chains
+            // Event broadcasting will happen later during normal triggerer updates
         }
+    }
+
+    /// 🚀 IMPROVED: Handle multiple trigger candidates from shard (calculates triggerers_per_shard)
+    pub async fn handle_update_shard_trigger_candidates(
+        contract: &mut crate::Game2048Contract,
+        _shard_chain_id: String,
+        player_chain_ids: Vec<String>,
+        tournament_id: String,
+    ) {
+        let leaderboard = contract
+            .state
+            .leaderboards
+            .load_entry_mut("")
+            .await
+            .unwrap();
+
+        // Verify this is the correct tournament
+        if leaderboard.leaderboard_id.get() != &tournament_id {
+            return;
+        }
+
+        // Get tournament configuration
+        let base_triggerer_count = *leaderboard.admin_base_triggerer_count.get();
+        let shard_count = leaderboard.shard_ids.read_front(100).await.unwrap_or_default().len() as u32;
+        
+        if shard_count == 0 {
+            return;
+        }
+
+        // Calculate how many players THIS shard should contribute as triggerers
+        // triggerers_per_shard = ceil(base_triggerer_count / shard_count)
+        let triggerers_per_shard = ((base_triggerer_count + shard_count - 1) / shard_count).max(1);
+        
+        // Select first N players from this shard (they register in order)
+        let selected_players: Vec<String> = player_chain_ids
+            .into_iter()
+            .take(triggerers_per_shard as usize)
+            .collect();
+
+        // Register these players as triggerers
+        for (index, player_chain_id) in selected_players.iter().enumerate() {
+            if index == 0 && leaderboard.primary_triggerer.get().is_empty() {
+                // First player becomes primary
+                leaderboard.primary_triggerer.set(player_chain_id.clone());
+            } else {
+                // Rest become backups (check if already exists to avoid duplicates)
+                match leaderboard.backup_triggerers.read_front(100).await {
+                    Ok(backups) => {
+                        if !backups.contains(player_chain_id) {
+                            leaderboard
+                                .backup_triggerers
+                                .push_back(player_chain_id.clone());
+                        }
+                    }
+                    Err(_) => {
+                        leaderboard
+                            .backup_triggerers
+                            .push_back(player_chain_id.clone());
+                    }
+                }
+            }
+
+            // Add to activity scores (initial score of 1)
+            if leaderboard.player_activity_scores.get(player_chain_id).await.unwrap().is_none() {
+                leaderboard
+                    .player_activity_scores
+                    .insert(player_chain_id, 1)
+                    .unwrap();
+            }
+        }
+
+        // Emit triggerer list update event (same as before)
+        let mut all_players_activity = Vec::new();
+        leaderboard
+            .player_activity_scores
+            .for_each_index_value_while(|player_id, activity_score| {
+                all_players_activity.push((player_id, *activity_score));
+                Ok(true)
+            })
+            .await
+            .unwrap();
+
+        // Sort by activity score (highest first)
+        all_players_activity.sort_by(|(_, a), (_, b)| b.cmp(a));
+
+        // Don't emit during registration to avoid overwhelming player chains
+        // Event broadcasting will happen later during normal triggerer updates
     }
 
     /// Emit activity-based triggerer list update event
@@ -304,8 +393,8 @@ impl LeaderboardMessageHandler {
 
         let current_time = contract.runtime.system_time().micros();
 
-        // Default threshold: 10ms between triggers (for testing)
-        let threshold_config = 10_000; // 10ms in microseconds
+        // STRESS TEST: Reduced threshold: 5 seconds between triggers (for high-frequency testing)
+        let threshold_config = 5_000_000; // 5 seconds in microseconds
 
         use crate::contract_domain::events::emitters::EventEmitter;
         EventEmitter::emit_leaderboard_update(
@@ -318,7 +407,8 @@ impl LeaderboardMessageHandler {
         ).await;
     }
 
-    /// Handle trigger update request from player chain
+    /// Handle trigger update request from player chain with simple global cooldown
+    /// First triggerer wins and sends to ALL shards, then 15s cooldown blocks others
     pub async fn handle_trigger_update(
         contract: &mut crate::Game2048Contract,
         triggerer_chain_id: String,
@@ -339,33 +429,52 @@ impl LeaderboardMessageHandler {
 
         // Check if this chain is authorized to trigger
         let is_authorized = leaderboard.primary_triggerer.get() == &triggerer_chain_id
-            || Self::is_backup_triggerer(leaderboard, &triggerer_chain_id).await;
+            || Self::is_backup_triggerer(&leaderboard, &triggerer_chain_id).await;
 
         if !is_authorized {
             return;
         }
 
-        // Check cooldown period
+        // 🚀 GLOBAL COOLDOWN CHECK - Only first triggerer per window succeeds
         let cooldown_until = *leaderboard.trigger_cooldown_until.get();
-
+        
         if timestamp < cooldown_until {
+            // Leaderboard is in cooldown - ignore this trigger silently
             return;
         }
 
-        // Update trigger tracking
-        leaderboard.last_trigger_time.set(timestamp);
-        leaderboard.last_trigger_by.set(triggerer_chain_id.clone());
+        // Get all shard IDs
+        let shard_ids = leaderboard.shard_ids.read_front(100).await.unwrap_or_default();
+        
+        if shard_ids.is_empty() {
+            return;
+        }
 
-        // Set cooldown: 5ms (for testing)
-        let cooldown_duration = 5_000; // 5ms in microseconds
+        // Set global cooldown FIRST (prevents race conditions)
+        let cooldown_duration = 15_000_000; // 15 seconds in microseconds
         leaderboard
             .trigger_cooldown_until
             .set(timestamp + cooldown_duration);
+        
+        // Update trigger tracking
+        leaderboard.last_trigger_time.set(timestamp);
+        leaderboard.last_trigger_by.set(triggerer_chain_id);
 
-        // Trigger leaderboard update from shard chains
-        use crate::contract_domain::handlers::operations::LeaderboardOperationHandler;
-        LeaderboardOperationHandler::update_leaderboard_from_shard_chains(contract, Vec::new())
-            .await;
+        // Send trigger message to ALL shards (no per-shard cooldown)
+        use game2048::Message;
+        use linera_sdk::linera_base_types::ChainId;
+        use std::str::FromStr;
+        
+        for shard_id in shard_ids.iter() {
+            if let Ok(shard_chain_id) = ChainId::from_str(shard_id) {
+                contract
+                    .runtime
+                    .prepare_message(Message::TriggerShardAggregation {
+                        timestamp,
+                    })
+                    .send_to(shard_chain_id);
+            }
+        }
     }
 
     /// Check if a chain ID is in the backup triggerers list

@@ -18,4 +18,5 @@ pub struct LeaderboardSettings {
     pub start_time: String,
     pub end_time: String,
     pub shard_number: Option<u32>,
+    pub base_triggerer_count: Option<u32>, // Number of players that can trigger updates (default: 5)
 }

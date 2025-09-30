@@ -49,11 +49,27 @@ impl GameOperationHandler {
         if !is_ended && !moves.is_empty() {
             let initial_board = *board.board.get();
 
-            // Convert string timestamps to u64
-            let moves_u64: Vec<(Direction, u64)> = moves
-                .into_iter()
-                .map(|(dir, ts)| (dir, ts.parse::<u64>().unwrap()))
-                .collect();
+            // FIXED: Convert string timestamps to u64 with error handling
+            let mut moves_u64: Vec<(Direction, u64)> = Vec::new();
+            for (dir, ts) in moves {
+                match ts.parse::<u64>() {
+                    Ok(timestamp) => {
+                        // Additional validation: ensure timestamp is reasonable
+                        if timestamp > 0 && timestamp < 1_000_000_000_000_000 { // Max ~31 years in microseconds
+                            moves_u64.push((dir, timestamp));
+                        } else {
+                            // Use current time if timestamp is invalid
+                            let current_time = contract.runtime.system_time().micros();
+                            moves_u64.push((dir, current_time));
+                        }
+                    }
+                    Err(_) => {
+                        // FIXED: Use current system time instead of panicking
+                        let current_time = contract.runtime.system_time().micros();
+                        moves_u64.push((dir, current_time));
+                    }
+                }
+            }
 
             match GameMoveProcessor::process_moves(
                 &board_id,
