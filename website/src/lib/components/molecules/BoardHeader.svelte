@@ -82,8 +82,27 @@
 		const shardId = await getRandomShard(leaderboardId, $userStore.username);
 		if (!shardId) return;
 
-		await newGameBoard(leaderboardId, shardId, newGameAt.toString());
-		isNewGameCreated = true;
+		try {
+			console.log('Creating new board for leaderboard:', leaderboardId);
+			console.log('Player chainId:', $userStore.chainId);
+			
+			const result = await newGameBoard(leaderboardId, shardId, newGameAt.toString());
+			
+			if (result) {
+				result.subscribe(($result: any) => {
+					if ($result.error) {
+						console.error('Board creation error:', $result.error);
+						alert('Failed to create board. Please try again.');
+					} else if ($result.data) {
+						console.log('Board created successfully');
+						isNewGameCreated = true;
+					}
+				});
+			}
+		} catch (error) {
+			console.error('Board creation failed:', error);
+			alert('Failed to create board. Please make sure you are logged in.');
+		}
 	};
 
 	$effect(() => {
