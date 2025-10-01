@@ -113,10 +113,7 @@
 					errorMessage = 'Failed to create tournament. Please check your credentials and try again.';
 				} else if ($result.data) {
 					console.log('Tournament created successfully:', $result.data);
-					alert('Tournament created successfully!');
-					setTimeout(() => {
-						modalStore.close();
-					}, 1000);
+					modalStore.close();
 				}
 			});
 

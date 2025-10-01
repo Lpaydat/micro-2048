@@ -131,7 +131,7 @@ impl QueryHandler {
         }
     }
 
-    async fn boards(&self, board_ids: Option<Vec<String>>) -> Vec<BoardState> {
+    async fn boards(&self, board_ids: Option<Vec<String>>, limit: Option<i32>) -> Vec<BoardState> {
         let mut board_ids = board_ids.unwrap_or_default();
         let mut boards: Vec<BoardState> = Vec::new();
 
@@ -139,7 +139,11 @@ impl QueryHandler {
             board_ids = self.state.boards.indices().await.unwrap();
         }
 
-        for board_id in board_ids {
+        // Apply limit if specified
+        let limit = limit.unwrap_or(100) as usize; // Default limit of 100
+        let board_ids_to_query: Vec<String> = board_ids.into_iter().take(limit).collect();
+
+        for board_id in board_ids_to_query {
             if let Ok(Some(board)) = self.state.boards.try_load_entry(&board_id).await {
                 boards.push(BoardState {
                     board_id,
@@ -155,6 +159,13 @@ impl QueryHandler {
                 });
             }
         }
+
+        // Sort by createdAt descending (most recent first)
+        boards.sort_by(|a, b| {
+            let time_a = a.created_at.parse::<u64>().unwrap_or(0);
+            let time_b = b.created_at.parse::<u64>().unwrap_or(0);
+            time_b.cmp(&time_a)
+        });
 
         boards
     }

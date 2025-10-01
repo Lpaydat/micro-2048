@@ -41,6 +41,7 @@
 
 	// Board ID Management
 	let localBoardId: string | null = null;
+	let isCreatingNewBoard: boolean = false;
 
 	// GraphQL Definitions
 	const GET_BOARD_STATE = gql`
@@ -77,8 +78,9 @@
 	let consecutiveMismatches = 0; // Track consecutive mismatches
 	let roundFirstMoveTime: number | null = null;
 
-	// Add new state variable
-	let offlineMode = false;
+	// Offline mode disabled for website
+	const offlineMode = false;
+	const toggleOfflineMode = () => {};
 
 	// Add new move processing flag
 	let isProcessingMove = false;
@@ -296,15 +298,10 @@
 	};
 
 	const submitMoves = (boardId: string, force = false) => {
-		// Force online mode if game has ended
-		if (force && offlineMode) {
-			offlineMode = false;
-			localStorage.setItem('offlineModePreference', 'false');
-		}
-
+		// Offline mode disabled for website - always submit moves
 		const moves = flushMoveHistory(boardId);
 		try {
-			if ((moves.length > 0 || force) && !offlineMode) {
+			if ((moves.length > 0 || force)) {
 				makeMoves(client, getMoveBatchForSubmission(moves), boardId);
 				const newTablet = boardToString(state?.tablet);
 				stateHash = newTablet ?? '';
@@ -323,17 +320,7 @@
 		}
 	};
 
-	// Add toggle handler
-	const toggleOfflineMode = () => {
-		offlineMode = !offlineMode;
-		syncStatus = offlineMode ? 'idle' : 'syncing';
-		localStorage.setItem('offlineModePreference', String(offlineMode));
-
-		if (!offlineMode && boardId) {
-			// Submit any stored moves when coming online
-			submitMoves(boardId);
-		}
-	};
+	// Offline mode toggle removed for website
 
 	// Add toggle handler for balance view
 	let dirtyBalance = false;
@@ -366,8 +353,7 @@
 			}
 		}, 500);
 
-		// Initialize from localStorage, default to offline mode
-		offlineMode = localStorage.getItem('offlineModePreference') !== 'false';
+		// Offline mode disabled for website
 
 		return () => {
 			cleanupListeners();
@@ -449,7 +435,8 @@
 			canMakeMove={canMakeMove &&
 				!boardEnded &&
 				$game.data?.board?.player === $userStore.username &&
-				!isFrozen}
+				!isFrozen &&
+				!isCreatingNewBoard}
 			isEnded={boardEnded}
 			{overlayMessage}
 			moveCallback={handleMove}
@@ -458,6 +445,7 @@
 			{#snippet header()}
 				<BoardHeader
 					bind:boardId
+					bind:isCreating={isCreatingNewBoard}
 					{canStartNewGame}
 					{showBestScore}
 					player={$game.data?.board?.player ?? $userStore.username}
@@ -517,7 +505,7 @@
 													? 'text-yellow-400'
 													: 'text-surface-400'}"
 									>
-										{offlineMode ? 'Offline' : syncStatus}
+										{syncStatus}
 									</span>
 								</div>
 							</div>
@@ -547,15 +535,18 @@
 				{/if}
 			</div>
 
-			<button
-				onclick={toggleOfflineMode}
-				class="flex w-full items-center gap-2 rounded-lg border border-surface-600/50 bg-surface-800/50 px-4 py-2 transition-colors hover:bg-surface-700/50 lg:w-auto"
-			>
-				<div class="h-2 w-2 rounded-full {offlineMode ? 'bg-orange-500' : 'bg-emerald-500'}"></div>
-				<span class="whitespace-nowrap text-xs text-surface-400 lg:text-sm"
-					>{offlineMode ? 'Go Online' : 'Go Offline'}</span
+			<!-- Offline mode toggle hidden for website -->
+			{#if false}
+				<button
+					onclick={toggleOfflineMode}
+					class="flex w-full items-center gap-2 rounded-lg border border-surface-600/50 bg-surface-800/50 px-4 py-2 transition-colors hover:bg-surface-700/50 lg:w-auto"
 				>
-			</button>
+					<div class="h-2 w-2 rounded-full {offlineMode ? 'bg-orange-500' : 'bg-emerald-500'}"></div>
+					<span class="whitespace-nowrap text-xs text-surface-400 lg:text-sm"
+						>{offlineMode ? 'Go Online' : 'Go Offline'}</span
+					>
+				</button>
+			{/if}
 		</div>
 	{/if}
 </div>
