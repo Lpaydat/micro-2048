@@ -21,9 +21,13 @@ export const newGameBoard = async (
 		throw new Error('Player chainId not found. Please log in first.');
 	}
 	
-	console.log('Creating board on player chain:', playerChainId);
-	console.log('For leaderboard:', leaderboardId);
+	console.log('=== BOARD CREATION DEBUG ===');
+	console.log('Player chain:', playerChainId);
+	console.log('Leaderboard ID:', leaderboardId);
+	console.log('Timestamp:', timestamp);
+	console.log('Player username:', localStorage.getItem('username'));
 	console.log('Smart contract will auto-select shard');
+	console.log('============================');
 	
 	// Create board on the player's chain - smart contract will auto-select shard
 	const client = getClient(playerChainId);
