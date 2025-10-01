@@ -122,8 +122,8 @@ impl QueryHandler {
                 chain_id: game.chain_id.get().to_string(),
                 leaderboard_id: game.leaderboard_id.get().to_string(),
                 shard_id: game.shard_id.get().to_string(),
-                created_at: game.created_at.get().to_string(),
-                end_time: game.end_time.get().to_string(),
+                created_at: micros_to_millis(*game.created_at.get()),
+                end_time: micros_to_millis(*game.end_time.get()),
             };
             Some(game_state)
         } else {
@@ -131,7 +131,7 @@ impl QueryHandler {
         }
     }
 
-    async fn boards(&self, board_ids: Option<Vec<String>>) -> Vec<BoardState> {
+    async fn boards(&self, board_ids: Option<Vec<String>>, limit: Option<i32>) -> Vec<BoardState> {
         let mut board_ids = board_ids.unwrap_or_default();
         let mut boards: Vec<BoardState> = Vec::new();
 
@@ -139,7 +139,11 @@ impl QueryHandler {
             board_ids = self.state.boards.indices().await.unwrap();
         }
 
-        for board_id in board_ids {
+        // Apply limit if specified
+        let limit = limit.unwrap_or(100) as usize; // Default limit of 100
+        let board_ids_to_query: Vec<String> = board_ids.into_iter().take(limit).collect();
+
+        for board_id in board_ids_to_query {
             if let Ok(Some(board)) = self.state.boards.try_load_entry(&board_id).await {
                 boards.push(BoardState {
                     board_id,
@@ -150,16 +154,28 @@ impl QueryHandler {
                     chain_id: board.chain_id.get().to_string(),
                     leaderboard_id: board.leaderboard_id.get().to_string(),
                     shard_id: board.shard_id.get().to_string(),
-                    created_at: board.created_at.get().to_string(),
-                    end_time: board.end_time.get().to_string(),
+                    created_at: micros_to_millis(*board.created_at.get()),
+                    end_time: micros_to_millis(*board.end_time.get()),
                 });
             }
         }
 
+        // Sort by createdAt descending (most recent first)
+        boards.sort_by(|a, b| {
+            let time_a = a.created_at.parse::<u64>().unwrap_or(0);
+            let time_b = b.created_at.parse::<u64>().unwrap_or(0);
+            time_b.cmp(&time_a)
+        });
+
         boards
     }
 
-    async fn leaderboard(&self, leaderboard_id: Option<String>) -> Option<LeaderboardState> {
+    async fn leaderboard(
+        &self, 
+        leaderboard_id: Option<String>,
+        top: Option<u32>,
+        offset: Option<u32>,
+    ) -> Option<LeaderboardState> {
         let mut players: HashMap<String, Ranker> = HashMap::new();
         let leaderboard_id = leaderboard_id.unwrap_or("".to_string());
 
@@ -195,6 +211,18 @@ impl QueryHandler {
                 .await
                 .unwrap();
 
+            // 🚀 SORT rankers by score descending (highest first)
+            let mut rankers: Vec<Ranker> = players.into_values().collect();
+            rankers.sort_by(|a, b| b.score.cmp(&a.score));
+            
+            // 🚀 PAGINATION: Apply top/offset
+            let top = top.unwrap_or(100) as usize; // Default: top 100
+            let offset = offset.unwrap_or(0) as usize;
+            let rankers: Vec<Ranker> = rankers.into_iter()
+                .skip(offset)
+                .take(top)
+                .collect();
+
             let shard_ids = leaderboard.shard_ids.read_front(100).await.unwrap();
             let leaderboard_state = LeaderboardState {
                 leaderboard_id,
@@ -203,11 +231,11 @@ impl QueryHandler {
                 description: Some(leaderboard.description.get().to_string()),
                 is_pinned: *leaderboard.is_pinned.get(),
                 host: leaderboard.host.get().to_string(),
-                start_time: leaderboard.start_time.get().to_string(),
-                end_time: leaderboard.end_time.get().to_string(),
+                start_time: micros_to_millis(*leaderboard.start_time.get()),
+                end_time: micros_to_millis(*leaderboard.end_time.get()),
                 total_boards: *leaderboard.total_boards.get(),
                 total_players: *leaderboard.total_players.get(),
-                rankers: players.into_values().collect(),
+                rankers,
                 shard_ids,
             };
 
@@ -342,8 +370,8 @@ impl QueryHandler {
                         description: Some(leaderboard.description.get().to_string()),
                         is_pinned: *leaderboard.is_pinned.get(),
                         host: leaderboard.host.get().to_string(),
-                        start_time: leaderboard.start_time.get().to_string(),
-                        end_time: leaderboard.end_time.get().to_string(),
+                        start_time: micros_to_millis(*leaderboard.start_time.get()),
+                        end_time: micros_to_millis(*leaderboard.end_time.get()),
                         total_boards: *leaderboard.total_boards.get(),
                         total_players: *leaderboard.total_players.get(),
                         rankers: Vec::new(),

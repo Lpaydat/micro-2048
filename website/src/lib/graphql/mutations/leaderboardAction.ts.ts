@@ -10,30 +10,42 @@ enum LeaderboardAction {
 export const LEADERBOARD_ACTION = gql`
 	mutation LeaderboardAction(
 		$leaderboardId: String!
-		$action: LeaderboardAction!
+		$action: String!
 		$settings: LeaderboardSettings!
 		$player: String!
 		$passwordHash: String!
-		$timestamp: String!
 	) {
 		leaderboardAction(
-			action: $action
 			leaderboardId: $leaderboardId
+			action: $action
+			settings: $settings
 			player: $player
 			passwordHash: $passwordHash
-			timestamp: $timestamp
-			settings: $settings
 		)
 	}
 `;
 
 export type LeaderboardSettings = {
-	id?: string;
 	name: string;
 	description?: string;
 	startTime: string;
 	endTime: string;
-	isPinned?: boolean;
+	shardNumber?: number;
+	baseTriggererCount?: number;
+};
+
+export type LeaderboardState = {
+	leaderboardId: string;
+	chainId: string;
+	name: string;
+	description?: string;
+	isPinned: boolean;
+	host: string;
+	startTime: string;
+	endTime: string;
+	totalBoards: number;
+	totalPlayers: number;
+	shardIds: string[];
 };
 
 const mutation = (
@@ -47,20 +59,31 @@ const mutation = (
 
 	if (!player || !passwordHash) {
 		console.error('Player or password hash not found');
-		return;
+		return null;
 	}
 
-	const timestamp = Date.now().toString();
+	const variables = { leaderboardId, action, player, passwordHash, settings };
+	
+	console.log('LeaderboardAction mutation:', {
+		action,
+		settings,
+		player,
+		leaderboardId
+	});
+	console.log('Mutation variables (full):', JSON.stringify(variables, null, 2));
+	console.log('Action type:', typeof action, 'Value:', action);
+	console.log('Client being used:', client);
+	console.log('Client URL:', (client as any).url);
 
-	mutationStore({
+	return mutationStore({
 		client,
 		query: LEADERBOARD_ACTION,
-		variables: { leaderboardId, action, player, passwordHash, settings, timestamp }
+		variables
 	});
 };
 
 export const createLeaderboard = (client: Client, settings: LeaderboardSettings) => {
-	mutation(client, '', LeaderboardAction.Create, settings);
+	return mutation(client, '', LeaderboardAction.Create, settings);
 };
 
 export const updateLeaderboard = (

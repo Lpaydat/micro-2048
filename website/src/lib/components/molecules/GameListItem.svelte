@@ -62,11 +62,7 @@
 			<ActionButton label="Full" disabled={true} color="disabled" />
 		{:else}
 			<a href="/elimination/{gameId}?autoJoin=true">
-				<ActionButton
-					label="Join Game"
-					color="warning"
-					{loading}
-				/>
+				<ActionButton label="Join Game" color="warning" {loading} />
 			</a>
 		{/if}
 	{/snippet}

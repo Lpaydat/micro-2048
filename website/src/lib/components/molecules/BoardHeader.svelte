@@ -7,11 +7,11 @@
 	import { userStore } from '$lib/stores/userStore';
 	import UsernameBadge from '../atoms/UsernameBadge.svelte';
 	import { newGameBoard } from '$lib/game/newGameBoard';
-	import { addShards, getRandomShard, getShards } from '$lib/stores/shards';
+	import { addShards, getShards } from '$lib/stores/shards';
 	import { gql } from 'urql';
 	import { getClient } from '$lib/client';
 	import { queryStore } from '@urql/svelte';
-	import { getBoard } from '$lib/graphql/queries/getBoard';
+	import { getBoard, getBoards } from '$lib/graphql/queries/getBoard';
 
 	interface Props {
 		player: string;
@@ -20,6 +20,7 @@
 		canStartNewGame?: boolean;
 		showBestScore?: boolean;
 		boardId?: string | undefined;
+		isCreating?: boolean;
 	}
 
 	let {
@@ -28,7 +29,8 @@
 		bestScore = 0,
 		canStartNewGame = true,
 		showBestScore = true,
-		boardId = $bindable()
+		boardId = $bindable(),
+		isCreating = $bindable(false)
 	}: Props = $props();
 
 	const LEADERBOARD = gql`
@@ -44,7 +46,7 @@
 	const isOwner = $derived(player === $userStore.username);
 
 	const leaderboardClient = $derived(getClient(leaderboardId, true));
-	const playerClient = getClient($userStore.chainId, true);
+	const playerClient = $derived(getClient($userStore.chainId, true));
 
 	const leaderboard = $derived(
 		queryStore({
@@ -54,6 +56,20 @@
 	);
 
 	const board = $derived(getBoard(playerClient));
+	const boards = $derived(getBoards(playerClient, 5)); // Only fetch last 5 boards
+	
+	// If board query returns null, find latest board from boards array
+	const latestBoard = $derived.by(() => {
+		if ($board?.data?.board) return $board.data.board;
+		
+		// Fallback: find most recent board from boards array
+		const allBoards = $boards?.data?.boards || [];
+		if (allBoards.length === 0) return null;
+		
+		return allBoards.sort((a, b) => {
+			return parseInt(b.createdAt || '0') - parseInt(a.createdAt || '0');
+		})[0];
+	});
 
 	// Size configurations
 	const sizeConfig = {
@@ -65,25 +81,55 @@
 
 	let newGameAt = $state(Date.now());
 	let isNewGameCreated = $state(false);
-	let showCooldownMessage = $state(false);
+	let boardCreationStartTime = $state<number | null>(null);
+
+	// Check if button should be disabled (creating board OR within 5 seconds of last creation)
+	const isCreatingBoard = $derived(
+		isNewGameCreated || 
+		(boardCreationStartTime && Date.now() - boardCreationStartTime < 5000)
+	);
+	
+	// Update parent's isCreating binding
+	$effect(() => {
+		isCreating = isCreatingBoard;
+	});
 
 	// Mutation functions
 	const newSingleGame = async () => {
-		// Prevent creating more than 1 game per 10 seconds
-		if (Date.now() - newGameAt < 10000) {
-			showCooldownMessage = true;
-			setTimeout(() => {
-				showCooldownMessage = false;
-			}, 3000);
-			return;
-		}
 		if (!canStartNewGame || !leaderboardId || !$userStore.username) return;
+		if (isCreatingBoard) return; // Prevent multiple clicks
 
-		const shardId = await getRandomShard(leaderboardId, $userStore.username);
-		if (!shardId) return;
-
-		await newGameBoard(leaderboardId, shardId, newGameAt.toString());
-		isNewGameCreated = true;
+		try {
+			console.log('Creating new board for leaderboard:', leaderboardId);
+			
+			boardCreationStartTime = Date.now();
+			newGameAt = Date.now();
+			
+			const result = await newGameBoard(leaderboardId, newGameAt.toString());
+			
+			// Wait for operation to complete before starting to poll
+			if (result) {
+				result.subscribe(($result: any) => {
+					if ($result.error) {
+						console.error('Board creation error:', $result.error);
+						alert('Failed to create board. Please try again.');
+						boardCreationStartTime = null;
+					} else if ($result.data) {
+						console.log('✅ Board mutation succeeded, starting to poll in 3 seconds...');
+						// Give the operation time to commit to state
+						setTimeout(() => {
+							isNewGameCreated = true;
+							console.log('🔄 Now polling for new board...');
+						}, 3000);
+					}
+				});
+			}
+		} catch (error) {
+			console.error('Board creation failed:', error);
+			alert('Failed to create board. Please make sure you are logged in.');
+			boardCreationStartTime = null;
+			isNewGameCreated = false;
+		}
 	};
 
 	$effect(() => {
@@ -97,22 +143,43 @@
 
 	onMount(() => {
 		const interval = setInterval(() => {
+			// Query both board and boards
 			board?.reexecute({ requestPolicy: 'network-only' });
+			boards?.reexecute({ requestPolicy: 'network-only' });
+			
+			if (isNewGameCreated && latestBoard) {
+				console.log('🔍 Checking for new board:', {
+					source: $board?.data?.board ? 'board query' : 'boards query',
+					boardId: latestBoard.boardId,
+					currentBoardIdProp: boardId,
+					createdAt: latestBoard.createdAt,
+					newGameAt: newGameAt,
+					diff: Math.abs(parseInt(latestBoard.createdAt || '0') - newGameAt),
+					leaderboardMatch: latestBoard.leaderboardId === leaderboardId,
+					isDifferentBoard: latestBoard.boardId !== boardId
+				});
+			}
+			
 			if (
 				isNewGameCreated &&
-				$board?.data?.board?.boardId &&
+				latestBoard?.boardId &&
+				latestBoard.boardId !== boardId &&
 				newGameAt &&
-				$board?.data?.board?.createdAt &&
-				Math.abs($board?.data?.board?.createdAt - newGameAt) < 10000 &&
-				$board?.data?.board?.leaderboardId === leaderboardId
+				latestBoard.createdAt &&
+				Math.abs(parseInt(latestBoard.createdAt) - newGameAt) < 10000 &&
+				latestBoard.leaderboardId === leaderboardId
 			) {
+				console.log('✅ NEW GAME FOUND - REDIRECTING');
+				console.log('Old board:', boardId);
+				console.log('New board:', latestBoard.boardId);
 				newGameAt = Date.now();
 				isNewGameCreated = false;
+				boardCreationStartTime = null; // Reset creation time
 				const url = new URL('/game', window.location.origin);
-				url.searchParams.set('boardId', $board?.data?.board?.boardId);
+				url.searchParams.set('boardId', latestBoard.boardId);
 				url.searchParams.set('leaderboardId', leaderboardId);
 
-				setBoardId($board.data?.board?.boardId, leaderboardId);
+				setBoardId(latestBoard.boardId, leaderboardId);
 				goto(url.toString(), { replaceState: false });
 			}
 		}, 1000);
@@ -120,13 +187,7 @@
 		return () => clearInterval(interval);
 	});
 
-	onMount(() => {
-		setTimeout(() => {
-			if (!getBoardId(leaderboardId)) {
-				newSingleGame();
-			}
-		}, 100);
-	});
+	// Auto-create removed - user must manually click "New Game" button
 
 	const shouldShowBestScore = $derived(showBestScore && canStartNewGame);
 	const scoreLabelAlign = $derived(score.toString().length > 3 ? 'left' : 'center');
@@ -139,11 +200,13 @@
 		<div class="flex items-center gap-2">
 			<button
 				onclick={newSingleGame}
-				class="text-md rounded-md border-none bg-[#8f7a66] px-2 py-2 text-center font-bold text-[#f9f6f2] md:px-4 md:text-xl
-				{canStartNewGame ? 'visible' : 'invisible'}"
+				disabled={isCreatingBoard}
+				class="text-md rounded-md border-none px-2 py-2 text-center font-bold text-[#f9f6f2] md:px-4 md:text-xl
+				{canStartNewGame ? 'visible' : 'invisible'}
+				{isCreatingBoard ? 'bg-[#9f8a76] cursor-not-allowed opacity-70' : 'bg-[#8f7a66] hover:bg-[#9f8a76]'}"
 			>
-				{#if showCooldownMessage}
-					<span>Wait a sec!</span>
+				{#if isCreatingBoard}
+					<span class="animate-pulse">Creating...</span>
 				{:else}
 					<span>New Game</span>
 				{/if}

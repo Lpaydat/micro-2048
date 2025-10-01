@@ -41,6 +41,7 @@
 
 	// Board ID Management
 	let localBoardId: string | null = null;
+	let isCreatingNewBoard: boolean = false;
 
 	// GraphQL Definitions
 	const GET_BOARD_STATE = gql`
@@ -53,6 +54,8 @@
 				player
 				leaderboardId
 				chainId
+				shardId
+				createdAt
 				endTime
 			}
 			balance
@@ -64,7 +67,6 @@
 	let state: GameState | undefined;
 	let isInitialized = false;
 	let rendered = false;
-	let blockHeight = 0;
 	let isSynced: boolean = false;
 	let stateHash = '';
 
@@ -76,8 +78,9 @@
 	let consecutiveMismatches = 0; // Track consecutive mismatches
 	let roundFirstMoveTime: number | null = null;
 
-	// Add new state variable
-	let offlineMode = false;
+	// Offline mode disabled for website
+	const offlineMode = false;
+	const toggleOfflineMode = () => {};
 
 	// Add new move processing flag
 	let isProcessingMove = false;
@@ -134,20 +137,7 @@
 		setGameCreationStatus(true);
 	}
 
-	$: bh = $game.data?.board?.reason?.NewBlock?.height;
-	$: if (bh && bh !== blockHeight) {
-		shouldRefetch = true;
-	}
-
-	let shouldRefetch = false;
-	$: if (shouldRefetch) {
-		setTimeout(() => {
-			if ($userStore.username !== $game.data?.board?.player) {
-				shouldRefetch = false;
-				handleGameStateUpdate();
-			}
-		}, 1000);
-	}
+	// Block height tracking removed - reason field no longer exists in new schema
 
 	$: if (
 		$game.data?.board &&
@@ -308,15 +298,10 @@
 	};
 
 	const submitMoves = (boardId: string, force = false) => {
-		// Force online mode if game has ended
-		if (force && offlineMode) {
-			offlineMode = false;
-			localStorage.setItem('offlineModePreference', 'false');
-		}
-
+		// Offline mode disabled for website - always submit moves
 		const moves = flushMoveHistory(boardId);
 		try {
-			if ((moves.length > 0 || force) && !offlineMode) {
+			if ((moves.length > 0 || force)) {
 				makeMoves(client, getMoveBatchForSubmission(moves), boardId);
 				const newTablet = boardToString(state?.tablet);
 				stateHash = newTablet ?? '';
@@ -335,17 +320,7 @@
 		}
 	};
 
-	// Add toggle handler
-	const toggleOfflineMode = () => {
-		offlineMode = !offlineMode;
-		syncStatus = offlineMode ? 'idle' : 'syncing';
-		localStorage.setItem('offlineModePreference', String(offlineMode));
-
-		if (!offlineMode && boardId) {
-			// Submit any stored moves when coming online
-			submitMoves(boardId);
-		}
-	};
+	// Offline mode toggle removed for website
 
 	// Add toggle handler for balance view
 	let dirtyBalance = false;
@@ -378,8 +353,7 @@
 			}
 		}, 500);
 
-		// Initialize from localStorage, default to offline mode
-		offlineMode = localStorage.getItem('offlineModePreference') !== 'false';
+		// Offline mode disabled for website
 
 		return () => {
 			cleanupListeners();
@@ -461,7 +435,8 @@
 			canMakeMove={canMakeMove &&
 				!boardEnded &&
 				$game.data?.board?.player === $userStore.username &&
-				!isFrozen}
+				!isFrozen &&
+				!isCreatingNewBoard}
 			isEnded={boardEnded}
 			{overlayMessage}
 			moveCallback={handleMove}
@@ -470,6 +445,7 @@
 			{#snippet header()}
 				<BoardHeader
 					bind:boardId
+					bind:isCreating={isCreatingNewBoard}
 					{canStartNewGame}
 					{showBestScore}
 					player={$game.data?.board?.player ?? $userStore.username}
@@ -484,7 +460,7 @@
 			class="mt-2 flex flex-col items-center justify-center gap-y-2 text-xs lg:flex-row lg:gap-3 lg:text-sm"
 		>
 			<div
-				class="bg-surface-800/50 border-surface-600/50 flex w-full cursor-pointer flex-wrap items-center gap-x-2 gap-y-2 rounded-lg border px-4 py-2 transition-all lg:w-auto"
+				class="flex w-full cursor-pointer flex-wrap items-center gap-x-2 gap-y-2 rounded-lg border border-surface-600/50 bg-surface-800/50 px-4 py-2 transition-all lg:w-auto"
 			>
 				{#if showBalance}
 					<!-- Balance View -->
@@ -529,12 +505,12 @@
 													? 'text-yellow-400'
 													: 'text-surface-400'}"
 									>
-										{offlineMode ? 'Offline' : syncStatus}
+										{syncStatus}
 									</span>
 								</div>
 							</div>
 
-							<div class="bg-surface-600 h-4 w-px"></div>
+							<div class="h-4 w-px bg-surface-600"></div>
 
 							<div class="flex flex-grow items-center gap-2">
 								<span class="text-surface-400">Pending:</span>
@@ -543,7 +519,7 @@
 						</div>
 
 						{#if lastSyncTime}
-							<div class="bg-surface-600 h-px w-full lg:h-4 lg:w-px"></div>
+							<div class="h-px w-full bg-surface-600 lg:h-4 lg:w-px"></div>
 							<div class="flex w-full items-center gap-2 whitespace-nowrap lg:w-auto">
 								<span class="text-surface-400">Last sync:</span>
 								<span class="font-mono text-purple-400">
@@ -559,15 +535,18 @@
 				{/if}
 			</div>
 
-			<button
-				onclick={toggleOfflineMode}
-				class="bg-surface-800/50 border-surface-600/50 hover:bg-surface-700/50 flex w-full items-center gap-2 rounded-lg border px-4 py-2 transition-colors lg:w-auto"
-			>
-				<div class="h-2 w-2 rounded-full {offlineMode ? 'bg-orange-500' : 'bg-emerald-500'}"></div>
-				<span class="text-surface-400 whitespace-nowrap text-xs lg:text-sm"
-					>{offlineMode ? 'Go Online' : 'Go Offline'}</span
+			<!-- Offline mode toggle hidden for website -->
+			{#if false}
+				<button
+					onclick={toggleOfflineMode}
+					class="flex w-full items-center gap-2 rounded-lg border border-surface-600/50 bg-surface-800/50 px-4 py-2 transition-colors hover:bg-surface-700/50 lg:w-auto"
 				>
-			</button>
+					<div class="h-2 w-2 rounded-full {offlineMode ? 'bg-orange-500' : 'bg-emerald-500'}"></div>
+					<span class="whitespace-nowrap text-xs text-surface-400 lg:text-sm"
+						>{offlineMode ? 'Go Online' : 'Go Offline'}</span
+					>
+				</button>
+			{/if}
 		</div>
 	{/if}
 </div>

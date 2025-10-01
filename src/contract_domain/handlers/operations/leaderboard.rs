@@ -43,6 +43,52 @@ impl LeaderboardOperationHandler {
             .is_mod
             .get();
 
+        // VALIDATE TIMESTAMPS BEFORE CREATING CHAIN (for Create action)
+        if action == LeaderboardAction::Create {
+            // Parse and validate timestamps before creating any chains
+            let start_time = if settings.start_time.is_empty() || settings.start_time == "0" {
+                None
+            } else {
+                match settings.start_time.parse::<u64>() {
+                    Ok(time) => Some(time),
+                    Err(_) => panic!("Invalid start_time format")
+                }
+            };
+
+            let end_time = if settings.end_time.is_empty() || settings.end_time == "0" {
+                None
+            } else {
+                match settings.end_time.parse::<u64>() {
+                    Ok(time) => Some(time),
+                    Err(_) => panic!("Invalid end_time format")
+                }
+            };
+
+            // Validate time ranges
+            if let (Some(start), Some(end)) = (start_time, end_time) {
+                if start >= end {
+                    panic!("Start time must be before end time");
+                }
+            }
+
+            // Validate tournament will be active (same logic as emit_active_tournaments)
+            let current_time = contract.runtime.system_time().micros();
+            let is_active = {
+                let started = start_time.is_none_or(|start| current_time >= start);
+                let not_ended = end_time.is_none_or(|end| current_time < end);
+                started && not_ended
+            };
+
+            if !is_active {
+                panic!("Tournament times are invalid: tournament would not be active (check if times are in the future and in microseconds)");
+            }
+
+            // Validation passed - validate name is not empty
+            if settings.name.is_empty() {
+                panic!("Tournament name cannot be empty");
+            }
+        }
+
         let chain_id = if action == LeaderboardAction::Create {
             let chain_ownership = contract.runtime.chain_ownership();
             let app_id = contract.runtime.application_id().forget_abi();

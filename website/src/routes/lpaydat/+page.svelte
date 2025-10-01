@@ -32,7 +32,7 @@
 </script>
 
 {#if isReady}
-	<div class="bg-surface-800 flex h-screen w-full flex-col items-center justify-center gap-4">
+	<div class="flex h-screen w-full flex-col items-center justify-center gap-4 bg-surface-800">
 		<input type="text" class="p-2" bind:value={username} />
 		<div class="flex gap-2">
 			<button

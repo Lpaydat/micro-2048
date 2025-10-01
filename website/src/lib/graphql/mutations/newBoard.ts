@@ -22,10 +22,10 @@ export const newGame = (client: Client, timestamp: string, leaderboardId: string
 
 	if (!player || !passwordHash) {
 		console.error('Player or password hash not found');
-		return;
+		return null;
 	}
 
-	mutationStore({
+	return mutationStore({
 		client,
 		query: NEW_BOARD,
 		variables: { player, passwordHash, timestamp, leaderboardId }

@@ -311,6 +311,7 @@ impl Game2048Contract {
         player: &str,
         tournament_id: &str,
         timestamp: u64,
+        boards_in_tournament: u32,
     ) {
         EventEmitter::emit_game_creation_event(
             self,
@@ -318,6 +319,7 @@ impl Game2048Contract {
             player,
             tournament_id,
             timestamp,
+            boards_in_tournament,
         )
         .await;
     }

@@ -86,13 +86,21 @@
 	// Format function that converts timestamp to local time
 	const formatLocalTime = (timestamp: string) => {
 		try {
+			const numTimestamp = Number(timestamp);
+			if (!numTimestamp || !isFinite(numTimestamp) || numTimestamp <= 0) {
+				return 'Invalid timestamp';
+			}
+			const date = new Date(numTimestamp);
+			if (!isFinite(date.getTime())) {
+				return 'Invalid timestamp';
+			}
 			return formatInTimeZone(
-				new Date(Number(timestamp)),
+				date,
 				userTimeZone,
 				"MMM d, yyyy 'at' h:mm a (zzz)"
 			);
 		} catch (error) {
-			console.error(error);
+			console.error('Date formatting error:', error);
 			return 'Invalid timestamp';
 		}
 	};
@@ -105,7 +113,7 @@
 				<div class="flex items-center gap-2">
 					<h3 class="text-xl font-bold text-gray-800">{name}</h3>
 					{#if isPinnedAndActive}
-						<span class="badge badge-primary gap-2 px-2 py-1 text-sm"> 📌 Pinned & Active </span>
+						<span class="badge-primary badge gap-2 px-2 py-1 text-sm"> 📌 Pinned & Active </span>
 					{/if}
 				</div>
 			</div>
@@ -122,7 +130,7 @@
 					<span>{formatLocalTime(endTime)}</span>
 				</div>
 				{#if description}
-					<div class="border-surface-200 mt-3 border-t-2 pt-4 text-gray-700">
+					<div class="mt-3 border-t-2 border-surface-200 pt-4 text-gray-700">
 						{description}
 					</div>
 				{/if}

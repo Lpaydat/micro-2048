@@ -43,10 +43,12 @@
 			variables: { usernames: gameLeaderboard?.map((p) => p.username) ?? [] }
 		})
 	);
-	const matches = $derived($page.url.pathname.match(/\/game\/([a-f0-9]+)-([a-f0-9]+)-([^-]+)-(\d+)$/));
+	const matches = $derived(
+		$page.url.pathname.match(/\/game\/([a-f0-9]+)-([a-f0-9]+)-([^-]+)-(\d+)$/)
+	);
 	const otherPlayersBoards = $derived(
 		$players.data?.players.reduce(
-			(acc: Record<string, string>, p: { username: string, chainId: string }) => {
+			(acc: Record<string, string>, p: { username: string; chainId: string }) => {
 				// Extract game ID and round from current URL
 				if (!matches) return acc;
 

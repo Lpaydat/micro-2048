@@ -143,9 +143,35 @@ impl StreamProcessor {
                 activity_updated_players += 1;
             }
 
-            // Update total board and player counts (distributed counting)
-            let total_boards: u32 = player_board_counts.values().sum();
-            let total_players = player_board_counts.len() as u32;
+            // 🚀 MERGE board counts from this shard (accumulate, don't replace)
+            for (player_chain_id, board_count) in player_board_counts.iter() {
+                let current_count = leaderboard
+                    .player_board_counts
+                    .get(player_chain_id)
+                    .await
+                    .unwrap()
+                    .unwrap_or(0);
+                
+                // Take the maximum (shard reports latest count for this player)
+                let new_count = (*board_count).max(current_count);
+                leaderboard
+                    .player_board_counts
+                    .insert(player_chain_id, new_count)
+                    .unwrap();
+            }
+
+            // Calculate total counts from merged board counts
+            let mut total_boards = 0u32;
+            let mut total_players = 0u32;
+            leaderboard
+                .player_board_counts
+                .for_each_index_value(|_player, board_count| {
+                    total_boards += *board_count;
+                    total_players += 1;
+                    Ok(())
+                })
+                .await
+                .unwrap();
 
             leaderboard.total_boards.set(total_boards);
             leaderboard.total_players.set(total_players);

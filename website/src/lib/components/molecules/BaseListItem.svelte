@@ -11,7 +11,7 @@
 </script>
 
 <div
-	class="bg-surface-50-900-token hover:bg-surface-100-800-token hover:border-warning-900 container mx-auto w-full max-w-4xl justify-between rounded-none border-4 p-4 transition-all md:rounded-lg {className}"
+	class="bg-surface-50-900-token container mx-auto w-full max-w-4xl justify-between rounded-none border-4 p-4 transition-all hover:bg-surface-100-800-token hover:border-warning-900 md:rounded-lg {className}"
 >
 	<div class="flex-1">
 		{@render leftContent?.()}

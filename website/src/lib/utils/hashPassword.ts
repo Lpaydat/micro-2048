@@ -3,7 +3,6 @@ export const hashPassword = async (
 	providedSalt?: Uint8Array
 ): Promise<string> => {
 	const encoder = new TextEncoder();
-	// Use provided salt if available, otherwise generate a new one
 	const salt = providedSalt || crypto.getRandomValues(new Uint8Array(16));
 	const keyMaterial = await crypto.subtle.importKey(
 		'raw',
@@ -15,7 +14,7 @@ export const hashPassword = async (
 	const key = await crypto.subtle.deriveKey(
 		{
 			name: 'PBKDF2',
-			salt: salt,
+			salt: salt as BufferSource,
 			iterations: 100000,
 			hash: 'SHA-256'
 		},

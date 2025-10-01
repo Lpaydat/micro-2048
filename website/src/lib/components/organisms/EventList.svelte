@@ -2,23 +2,29 @@
 	import { onMount } from 'svelte';
 	import ArrowSwap from 'lucide-svelte/icons/arrow-left-right';
 	import Star from 'lucide-svelte/icons/star';
-	import type { LeaderboardSettings } from '$lib/graphql/mutations/leaderboardAction.ts';
-	import { getContextClient, gql, queryStore } from '@urql/svelte';
+	import type { LeaderboardState } from '$lib/graphql/mutations/leaderboardAction.ts';
+	import { gql, queryStore } from '@urql/svelte';
 	import EventListItem from '../molecules/EventListItem.svelte';
+	import { getClient } from '$lib/client';
+	import { chainId as mainChainId } from '$lib/constants';
 
-	// TODO: use main chainId
-	const client = getContextClient();
+	const client = getClient(mainChainId, true);
+	console.log('EventList - Using main chain ID:', mainChainId);
 
 	const GET_LEADERBOARDS = gql`
-		query GetLeaderboards {
-			leaderboards {
+		query GetLeaderboards($filter: TournamentFilter) {
+			leaderboards(filter: $filter) {
 				leaderboardId
+				chainId
 				name
 				description
 				host
 				startTime
 				endTime
 				isPinned
+				totalBoards
+				totalPlayers
+				shardIds
 			}
 		}
 	`;
@@ -30,35 +36,53 @@
 			eventGroup === 'active' ? 'upcoming' : eventGroup === 'upcoming' ? 'past' : 'active';
 	};
 
-	const leaderboards = $derived(queryStore({ client, query: GET_LEADERBOARDS }));
+	const leaderboards = $derived(queryStore({ 
+		client, 
+		query: GET_LEADERBOARDS,
+		variables: { filter: 'ALL' }
+	}));
+	
+	$effect(() => {
+		if ($leaderboards?.data) {
+			console.log('EventList - Leaderboards data:', $leaderboards.data);
+			console.log('EventList - Number of leaderboards:', $leaderboards.data.leaderboards?.length);
+		}
+	});
+	
 	const sortedEvents = $derived(
-		$leaderboards?.data?.leaderboards.sort((a: LeaderboardSettings, b: LeaderboardSettings) => {
-			// First sort by start time
-			const startDiff = Number(a.startTime) - Number(b.startTime);
-			// If start times are equal, sort by end time
-			return startDiff !== 0 ? startDiff : Number(a.endTime) - Number(b.endTime);
-		})
+		$leaderboards?.data?.leaderboards
+			.filter((event: LeaderboardState) => {
+				// Filter out only the default main chain leaderboard and truly invalid entries
+				// Allow tournaments with startTime/endTime of 0 (unlimited tournaments)
+				return event.name && event.leaderboardId;
+			})
+			.sort((a: LeaderboardState, b: LeaderboardState) => {
+				// First sort by start time
+				const startDiff = Number(a.startTime) - Number(b.startTime);
+				// If start times are equal, sort by end time
+				return startDiff !== 0 ? startDiff : Number(a.endTime) - Number(b.endTime);
+			})
 	);
 
 	const pinnedEvents = $derived(
 		sortedEvents?.filter(
-			(event: LeaderboardSettings) => event.isPinned && Number(event.endTime) >= Date.now()
+			(event: LeaderboardState) => event.isPinned && Number(event.endTime) >= Date.now()
 		)
 	);
 
 	const activeEvents = $derived(
-		sortedEvents?.filter((event: LeaderboardSettings) => {
+		sortedEvents?.filter((event: LeaderboardState) => {
 			const now = Date.now();
 			return now >= Number(event.startTime) && now < Number(event.endTime);
 		})
 	);
 
 	const upcomingEvents = $derived(
-		sortedEvents?.filter((event: LeaderboardSettings) => Number(event.startTime) >= Date.now())
+		sortedEvents?.filter((event: LeaderboardState) => Number(event.startTime) >= Date.now())
 	);
 
 	const pastEvents = $derived(
-		sortedEvents?.filter((event: LeaderboardSettings) => Number(event.endTime) < Date.now())
+		sortedEvents?.filter((event: LeaderboardState) => Number(event.endTime) < Date.now())
 	);
 
 	const callback = () => {

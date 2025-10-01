@@ -28,20 +28,24 @@ export const getClient = (
 	port = mainPort
 ) => {
 	const urls = getBaseUrl(website, port);
-	let userChainId;
-	userStore.subscribe((value) => {
+	let userChainId: string | null | undefined;
+	const unsubscribe = userStore.subscribe((value) => {
 		userChainId = value.chainId;
-	})();
+	});
+	unsubscribe();
 	chainId = chainId || (useMainChainAsDefault ? mainChainId : userChainId);
 
 	if (!chainId) {
 		throw new Error(`Chain ID is required. Got chainId: ${chainId}`);
 	}
 
+	const clientUrl = `${urls.http}/chains/${chainId}/applications/${applicationId}`;
+	console.log('Creating GraphQL client with URL:', clientUrl);
+
 	// Create basic HTTP client for server-side rendering
 	if (!browser) {
 		return new Client({
-			url: `${urls.http}/chains/${chainId}/applications/${applicationId}`,
+			url: clientUrl,
 			exchanges: [cacheExchange, fetchExchange]
 		});
 	}
@@ -52,7 +56,7 @@ export const getClient = (
 	});
 
 	return new Client({
-		url: `${urls.http}/chains/${chainId}/applications/${applicationId}`,
+		url: clientUrl,
 		fetchOptions: {
 			headers: {
 				'Content-Type': 'application/json'

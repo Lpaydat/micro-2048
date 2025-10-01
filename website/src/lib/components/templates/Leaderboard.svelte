@@ -22,7 +22,7 @@
 	import { getClient } from '$lib/client';
 	import { newGameBoard } from '$lib/game/newGameBoard';
 	import { newShard } from '$lib/graphql/mutations/newShard';
-	import { addShards, getRandomShard, getShards } from '$lib/stores/shards';
+	import { addShards, getShards } from '$lib/stores/shards';
 	import { getBoard } from '$lib/graphql/queries/getBoard';
 	import { requestFaucetMutation } from '$lib/graphql/mutations/requestFaucet';
 
@@ -91,12 +91,11 @@
 		if (isNewGameCreated) return;
 		if (!leaderboardId || !$userStore.username) return;
 
-		const shardId = await getRandomShard(leaderboardId, $userStore.username);
-		if (!shardId) return;
-
+		console.log('Creating new event game - smart contract will auto-select shard');
+		
 		newGameAt = Date.now();
 		isNewGameCreated = true;
-		await newGameBoard(leaderboardId, shardId, newGameAt.toString());
+		await newGameBoard(leaderboardId, newGameAt.toString());
 	};
 
 	const deleteEventGame = () => {

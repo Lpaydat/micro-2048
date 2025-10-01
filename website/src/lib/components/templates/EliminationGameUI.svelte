@@ -20,13 +20,13 @@
 	import MobileUserStats from '../organisms/MobileEliminationStats.svelte';
 	import { getClient } from '$lib/client';
 
-	let boardId = $state<string>($page.params.boardId);
+	let boardId = $state<string>($page.params.boardId || '');
 
-	let unsubscribe: any;
+	let unsubscribe: (() => void) | undefined;
 
 	$effect(() => {
 		unsubscribe = page.subscribe(($page) => {
-			boardId = $page.params.boardId;
+			boardId = $page.params.boardId || '';
 		});
 	});
 
@@ -34,9 +34,11 @@
 		if (unsubscribe) unsubscribe();
 	});
 
-	const [gameId, playerChainId, _username, round] = $derived($page.params.boardId.split('-'));
+	const [gameId, playerChainId, _username, round] = $derived(
+		($page.params.boardId || '').split('-')
+	);
 	const r = $derived(parseInt(round || '0'));
-	const username = $derived($page.params.boardId.split('-')[2] || '');
+	const username = $derived(($page.params.boardId || '').split('-')[2] || '');
 	const isBoardOwner = $derived(username === $userStore.username);
 
 	const client = $derived(getClient(gameId));
