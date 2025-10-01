@@ -59,10 +59,10 @@ const mutation = (
 
 	if (!player || !passwordHash) {
 		console.error('Player or password hash not found');
-		return;
+		return null;
 	}
 
-	mutationStore({
+	return mutationStore({
 		client,
 		query: LEADERBOARD_ACTION,
 		variables: { leaderboardId, action, player, passwordHash, settings }
@@ -70,7 +70,7 @@ const mutation = (
 };
 
 export const createLeaderboard = (client: Client, settings: LeaderboardSettings) => {
-	mutation(client, '', LeaderboardAction.Create, settings);
+	return mutation(client, '', LeaderboardAction.Create, settings);
 };
 
 export const updateLeaderboard = (
