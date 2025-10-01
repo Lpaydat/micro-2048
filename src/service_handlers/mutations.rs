@@ -1,3 +1,4 @@
+use crate::service_handlers::types::millis_to_micros;
 use crate::state::Game2048;
 use crate::Game2048Service;
 use async_graphql::Object;
@@ -31,9 +32,13 @@ impl MutationHandler {
         // Validate player exists and password is correct
         self.validate_player_password(&player, &password_hash).await;
 
+        // Convert timestamp from milliseconds to microseconds
+        let timestamp_micros = millis_to_micros(&timestamp)
+            .expect("Invalid timestamp format");
+
         let operation = Operation::NewBoard {
             player,
-            timestamp: timestamp.parse::<u64>().unwrap(),
+            timestamp: timestamp_micros,
             password_hash,
             leaderboard_id, // Use provided leaderboard ID
         };
@@ -78,10 +83,24 @@ impl MutationHandler {
         // Validate player exists and password is correct
         self.validate_player_password(&player, &password_hash).await;
 
+        // Convert timestamps from milliseconds to microseconds
+        let converted_settings = LeaderboardSettings {
+            name: settings.name,
+            description: settings.description,
+            start_time: millis_to_micros(&settings.start_time)
+                .expect("Invalid start_time")
+                .to_string(),
+            end_time: millis_to_micros(&settings.end_time)
+                .expect("Invalid end_time")
+                .to_string(),
+            shard_number: settings.shard_number,
+            base_triggerer_count: settings.base_triggerer_count,
+        };
+
         let operation = Operation::LeaderboardAction {
             leaderboard_id,
             action,
-            settings,
+            settings: converted_settings,
             player,
             password_hash,
         };

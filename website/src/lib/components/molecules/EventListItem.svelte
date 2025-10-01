@@ -86,13 +86,21 @@
 	// Format function that converts timestamp to local time
 	const formatLocalTime = (timestamp: string) => {
 		try {
+			const numTimestamp = Number(timestamp);
+			if (!numTimestamp || !isFinite(numTimestamp) || numTimestamp <= 0) {
+				return 'Invalid timestamp';
+			}
+			const date = new Date(numTimestamp);
+			if (!isFinite(date.getTime())) {
+				return 'Invalid timestamp';
+			}
 			return formatInTimeZone(
-				new Date(Number(timestamp)),
+				date,
 				userTimeZone,
 				"MMM d, yyyy 'at' h:mm a (zzz)"
 			);
 		} catch (error) {
-			console.error(error);
+			console.error('Date formatting error:', error);
 			return 'Invalid timestamp';
 		}
 	};

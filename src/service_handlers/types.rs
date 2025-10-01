@@ -1,6 +1,27 @@
 use async_graphql::SimpleObject;
 use std::collections::HashMap;
 
+/// Helper function to convert microseconds to milliseconds for GraphQL responses
+pub fn micros_to_millis(micros: u64) -> String {
+    if micros == 0 {
+        "0".to_string()
+    } else {
+        (micros / 1000).to_string()
+    }
+}
+
+/// Helper function to convert milliseconds to microseconds for contract operations
+pub fn millis_to_micros(millis_str: &str) -> Result<u64, String> {
+    if millis_str == "0" || millis_str.is_empty() {
+        Ok(0)
+    } else {
+        millis_str
+            .parse::<u64>()
+            .map(|ms| ms * 1000)
+            .map_err(|_| format!("Invalid timestamp format: {}", millis_str))
+    }
+}
+
 #[derive(SimpleObject)]
 pub struct BoardState {
     pub board_id: String,

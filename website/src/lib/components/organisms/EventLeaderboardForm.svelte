@@ -7,11 +7,14 @@
 		createLeaderboard,
 		type LeaderboardSettings
 	} from '$lib/graphql/mutations/leaderboardAction.ts';
-	import { getContextClient } from '@urql/svelte';
 	import { getModalStore } from '@skeletonlabs/skeleton';
+	import { getClient } from '$lib/client';
+	import { chainId as mainChainId } from '$lib/constants';
 
-	// TODO: use main chainId
-	const client = getContextClient();
+	const client = getClient(mainChainId, true);
+	console.log('EventLeaderboardForm - Using main chain ID:', mainChainId);
+	console.log('EventLeaderboardForm - Client instance:', client);
+	console.log('EventLeaderboardForm - Client URL:', (client as any).url);
 	const modalStore = getModalStore();
 
 	let name = $state('');
@@ -91,6 +94,8 @@
 
 			console.log('Creating tournament with settings:', settings);
 			console.log('User:', username);
+			console.log('Client URL:', (client as any).url);
+			console.log('Expected main chain URL:', `http://localhost:8088/chains/${mainChainId}/applications/988d375aa1348035087f7a7bf7acec0931982df409f228c37781386505593a54`);
 			
 			const result = createLeaderboard(client, settings);
 			
@@ -101,8 +106,10 @@
 			
 			// Subscribe to the result to catch errors
 			result.subscribe(($result: any) => {
+				console.log('Tournament creation result:', $result);
 				if ($result.error) {
 					console.error('Tournament creation error:', $result.error);
+					console.error('Error details:', JSON.stringify($result.error, null, 2));
 					errorMessage = 'Failed to create tournament. Please check your credentials and try again.';
 				} else if ($result.data) {
 					console.log('Tournament created successfully:', $result.data);

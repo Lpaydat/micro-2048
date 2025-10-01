@@ -39,10 +39,13 @@ export const getClient = (
 		throw new Error(`Chain ID is required. Got chainId: ${chainId}`);
 	}
 
+	const clientUrl = `${urls.http}/chains/${chainId}/applications/${applicationId}`;
+	console.log('Creating GraphQL client with URL:', clientUrl);
+
 	// Create basic HTTP client for server-side rendering
 	if (!browser) {
 		return new Client({
-			url: `${urls.http}/chains/${chainId}/applications/${applicationId}`,
+			url: clientUrl,
 			exchanges: [cacheExchange, fetchExchange]
 		});
 	}
@@ -53,7 +56,7 @@ export const getClient = (
 	});
 
 	return new Client({
-		url: `${urls.http}/chains/${chainId}/applications/${applicationId}`,
+		url: clientUrl,
 		fetchOptions: {
 			headers: {
 				'Content-Type': 'application/json'

@@ -122,8 +122,8 @@ impl QueryHandler {
                 chain_id: game.chain_id.get().to_string(),
                 leaderboard_id: game.leaderboard_id.get().to_string(),
                 shard_id: game.shard_id.get().to_string(),
-                created_at: game.created_at.get().to_string(),
-                end_time: game.end_time.get().to_string(),
+                created_at: micros_to_millis(*game.created_at.get()),
+                end_time: micros_to_millis(*game.end_time.get()),
             };
             Some(game_state)
         } else {
@@ -150,8 +150,8 @@ impl QueryHandler {
                     chain_id: board.chain_id.get().to_string(),
                     leaderboard_id: board.leaderboard_id.get().to_string(),
                     shard_id: board.shard_id.get().to_string(),
-                    created_at: board.created_at.get().to_string(),
-                    end_time: board.end_time.get().to_string(),
+                    created_at: micros_to_millis(*board.created_at.get()),
+                    end_time: micros_to_millis(*board.end_time.get()),
                 });
             }
         }
@@ -220,8 +220,8 @@ impl QueryHandler {
                 description: Some(leaderboard.description.get().to_string()),
                 is_pinned: *leaderboard.is_pinned.get(),
                 host: leaderboard.host.get().to_string(),
-                start_time: leaderboard.start_time.get().to_string(),
-                end_time: leaderboard.end_time.get().to_string(),
+                start_time: micros_to_millis(*leaderboard.start_time.get()),
+                end_time: micros_to_millis(*leaderboard.end_time.get()),
                 total_boards: *leaderboard.total_boards.get(),
                 total_players: *leaderboard.total_players.get(),
                 rankers,
@@ -359,8 +359,8 @@ impl QueryHandler {
                         description: Some(leaderboard.description.get().to_string()),
                         is_pinned: *leaderboard.is_pinned.get(),
                         host: leaderboard.host.get().to_string(),
-                        start_time: leaderboard.start_time.get().to_string(),
-                        end_time: leaderboard.end_time.get().to_string(),
+                        start_time: micros_to_millis(*leaderboard.start_time.get()),
+                        end_time: micros_to_millis(*leaderboard.end_time.get()),
                         total_boards: *leaderboard.total_boards.get(),
                         total_players: *leaderboard.total_players.get(),
                         rankers: Vec::new(),

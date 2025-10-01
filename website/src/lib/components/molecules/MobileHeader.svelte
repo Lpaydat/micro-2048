@@ -9,9 +9,9 @@
 		<div class="relative flex-none">
 			<BrandLogo />
 			<span
-				class="font-handwriting text-md absolute -bottom-1 left-8 z-10 -rotate-12 transform text-red-500 opacity-80 drop-shadow-[0_1px_1px_rgba(0,0,0,0.25)]"
+				class="font-handwriting text-md absolute -bottom-1 left-10 z-10 -rotate-12 transform text-red-500 opacity-80 drop-shadow-[0_1px_1px_rgba(0,0,0,0.25)]"
 			>
-				Archimedes
+				Conway
 			</span>
 		</div>
 	</a>

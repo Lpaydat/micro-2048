@@ -10,7 +10,7 @@ enum LeaderboardAction {
 export const LEADERBOARD_ACTION = gql`
 	mutation LeaderboardAction(
 		$leaderboardId: String!
-		$action: LeaderboardAction!
+		$action: String!
 		$settings: LeaderboardSettings!
 		$player: String!
 		$passwordHash: String!
@@ -62,10 +62,23 @@ const mutation = (
 		return null;
 	}
 
+	const variables = { leaderboardId, action, player, passwordHash, settings };
+	
+	console.log('LeaderboardAction mutation:', {
+		action,
+		settings,
+		player,
+		leaderboardId
+	});
+	console.log('Mutation variables (full):', JSON.stringify(variables, null, 2));
+	console.log('Action type:', typeof action, 'Value:', action);
+	console.log('Client being used:', client);
+	console.log('Client URL:', (client as any).url);
+
 	return mutationStore({
 		client,
 		query: LEADERBOARD_ACTION,
-		variables: { leaderboardId, action, player, passwordHash, settings }
+		variables
 	});
 };
 

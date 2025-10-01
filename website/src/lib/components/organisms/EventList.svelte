@@ -3,11 +3,13 @@
 	import ArrowSwap from 'lucide-svelte/icons/arrow-left-right';
 	import Star from 'lucide-svelte/icons/star';
 	import type { LeaderboardState } from '$lib/graphql/mutations/leaderboardAction.ts';
-	import { getContextClient, gql, queryStore } from '@urql/svelte';
+	import { gql, queryStore } from '@urql/svelte';
 	import EventListItem from '../molecules/EventListItem.svelte';
+	import { getClient } from '$lib/client';
+	import { chainId as mainChainId } from '$lib/constants';
 
-	// TODO: use main chainId
-	const client = getContextClient();
+	const client = getClient(mainChainId, true);
+	console.log('EventList - Using main chain ID:', mainChainId);
 
 	const GET_LEADERBOARDS = gql`
 		query GetLeaderboards($filter: TournamentFilter) {
@@ -39,13 +41,27 @@
 		query: GET_LEADERBOARDS,
 		variables: { filter: 'ALL' }
 	}));
+	
+	$effect(() => {
+		if ($leaderboards?.data) {
+			console.log('EventList - Leaderboards data:', $leaderboards.data);
+			console.log('EventList - Number of leaderboards:', $leaderboards.data.leaderboards?.length);
+		}
+	});
+	
 	const sortedEvents = $derived(
-		$leaderboards?.data?.leaderboards.sort((a: LeaderboardState, b: LeaderboardState) => {
-			// First sort by start time
-			const startDiff = Number(a.startTime) - Number(b.startTime);
-			// If start times are equal, sort by end time
-			return startDiff !== 0 ? startDiff : Number(a.endTime) - Number(b.endTime);
-		})
+		$leaderboards?.data?.leaderboards
+			.filter((event: LeaderboardState) => {
+				// Filter out only the default main chain leaderboard and truly invalid entries
+				// Allow tournaments with startTime/endTime of 0 (unlimited tournaments)
+				return event.name && event.leaderboardId;
+			})
+			.sort((a: LeaderboardState, b: LeaderboardState) => {
+				// First sort by start time
+				const startDiff = Number(a.startTime) - Number(b.startTime);
+				// If start times are equal, sort by end time
+				return startDiff !== 0 ? startDiff : Number(a.endTime) - Number(b.endTime);
+			})
 	);
 
 	const pinnedEvents = $derived(

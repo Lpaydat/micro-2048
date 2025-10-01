@@ -24,9 +24,20 @@ impl ShardOperationHandler {
             panic!("Timestamp too large");
         }
 
+        // Auto-convert milliseconds to microseconds if needed
+        // Microseconds have 16 digits (e.g., 1727794800000000)
+        // Milliseconds have 13 digits (e.g., 1727794800000)
+        let timestamp_micros = if timestamp < 10_000_000_000_000 {
+            // This is likely milliseconds (13 digits or less), convert to microseconds
+            timestamp * 1000
+        } else {
+            // Already in microseconds
+            timestamp
+        };
+
         // Apply consistent validation to all chains with optional time limits
         // Keep bypass for system operations (111970) - used for game ending without moves
-        if timestamp != 111970 {
+        if timestamp_micros != 111970 {
             let start_time_raw = *start_time;
             let end_time_raw = *end_time;
 
@@ -44,18 +55,18 @@ impl ShardOperationHandler {
 
             let mut invalid = false;
             if let Some(start) = start_limit {
-                if timestamp < start {
+                if timestamp_micros < start {
                     invalid = true;
                 }
             }
             if let Some(end) = end_limit {
-                if timestamp > end {
+                if timestamp_micros > end {
                     invalid = true;
                 }
             }
 
             if invalid {
-                panic!("Shard is not active for timestamp {}", timestamp);
+                panic!("Shard is not active for timestamp {} (converted to {}μs)", timestamp, timestamp_micros);
             }
         }
 
