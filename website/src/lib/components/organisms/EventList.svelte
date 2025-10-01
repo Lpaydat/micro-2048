@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import ArrowSwap from 'lucide-svelte/icons/arrow-left-right';
 	import Star from 'lucide-svelte/icons/star';
-	import type { LeaderboardSettings } from '$lib/graphql/mutations/leaderboardAction.ts';
+	import type { LeaderboardState } from '$lib/graphql/mutations/leaderboardAction.ts';
 	import { getContextClient, gql, queryStore } from '@urql/svelte';
 	import EventListItem from '../molecules/EventListItem.svelte';
 
@@ -40,7 +40,7 @@
 		variables: { filter: 'ALL' }
 	}));
 	const sortedEvents = $derived(
-		$leaderboards?.data?.leaderboards.sort((a: LeaderboardSettings, b: LeaderboardSettings) => {
+		$leaderboards?.data?.leaderboards.sort((a: LeaderboardState, b: LeaderboardState) => {
 			// First sort by start time
 			const startDiff = Number(a.startTime) - Number(b.startTime);
 			// If start times are equal, sort by end time
@@ -50,23 +50,23 @@
 
 	const pinnedEvents = $derived(
 		sortedEvents?.filter(
-			(event: LeaderboardSettings) => event.isPinned && Number(event.endTime) >= Date.now()
+			(event: LeaderboardState) => event.isPinned && Number(event.endTime) >= Date.now()
 		)
 	);
 
 	const activeEvents = $derived(
-		sortedEvents?.filter((event: LeaderboardSettings) => {
+		sortedEvents?.filter((event: LeaderboardState) => {
 			const now = Date.now();
 			return now >= Number(event.startTime) && now < Number(event.endTime);
 		})
 	);
 
 	const upcomingEvents = $derived(
-		sortedEvents?.filter((event: LeaderboardSettings) => Number(event.startTime) >= Date.now())
+		sortedEvents?.filter((event: LeaderboardState) => Number(event.startTime) >= Date.now())
 	);
 
 	const pastEvents = $derived(
-		sortedEvents?.filter((event: LeaderboardSettings) => Number(event.endTime) < Date.now())
+		sortedEvents?.filter((event: LeaderboardState) => Number(event.endTime) < Date.now())
 	);
 
 	const callback = () => {

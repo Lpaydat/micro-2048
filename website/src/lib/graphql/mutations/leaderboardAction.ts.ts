@@ -14,26 +14,38 @@ export const LEADERBOARD_ACTION = gql`
 		$settings: LeaderboardSettings!
 		$player: String!
 		$passwordHash: String!
-		$timestamp: String!
 	) {
 		leaderboardAction(
-			action: $action
 			leaderboardId: $leaderboardId
+			action: $action
+			settings: $settings
 			player: $player
 			passwordHash: $passwordHash
-			timestamp: $timestamp
-			settings: $settings
 		)
 	}
 `;
 
 export type LeaderboardSettings = {
-	id?: string;
 	name: string;
 	description?: string;
 	startTime: string;
 	endTime: string;
-	isPinned?: boolean;
+	shardNumber?: number;
+	baseTriggererCount?: number;
+};
+
+export type LeaderboardState = {
+	leaderboardId: string;
+	chainId: string;
+	name: string;
+	description?: string;
+	isPinned: boolean;
+	host: string;
+	startTime: string;
+	endTime: string;
+	totalBoards: number;
+	totalPlayers: number;
+	shardIds: string[];
 };
 
 const mutation = (
@@ -50,12 +62,10 @@ const mutation = (
 		return;
 	}
 
-	const timestamp = Date.now().toString();
-
 	mutationStore({
 		client,
 		query: LEADERBOARD_ACTION,
-		variables: { leaderboardId, action, player, passwordHash, settings, timestamp }
+		variables: { leaderboardId, action, player, passwordHash, settings }
 	});
 };
 

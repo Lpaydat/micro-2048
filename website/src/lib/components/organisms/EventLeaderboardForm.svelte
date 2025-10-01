@@ -19,12 +19,23 @@
 	let endTime = $state('');
 	let description = $state('');
 	let loading = $state(false);
+	let errorMessage = $state('');
 
 	const handleSubmit = async () => {
 		loading = true;
+		errorMessage = '';
 		const eventName = name.trim().replace(/\s+/g, ' ');
 
 		try {
+			// Check if user is logged in
+			const username = localStorage.getItem('username');
+			const passwordHash = localStorage.getItem('passwordHash');
+			
+			if (!username || !passwordHash) {
+				alert('You must be logged in to create a tournament. Please register/login first.');
+				return;
+			}
+
 			// Validate inputs
 			if (!eventName) {
 				alert('Name cannot be empty.');
@@ -44,14 +55,32 @@
 				name: eventName,
 				description,
 				startTime: fromZonedTime(new Date(startTime), userTimeZone).getTime().toString(),
-				endTime: fromZonedTime(new Date(endTime), userTimeZone).getTime().toString()
+				endTime: fromZonedTime(new Date(endTime), userTimeZone).getTime().toString(),
+				shardNumber: 4, // Default to 4 shards
+				baseTriggererCount: 2 // Default to 2 triggerers
 			};
 
-			createLeaderboard(client, settings);
+			console.log('Creating tournament with settings:', settings);
+			console.log('User:', username);
+			
+			const result = createLeaderboard(client, settings);
+			
+			// Subscribe to the result to catch errors
+			result.subscribe(($result) => {
+				if ($result.error) {
+					console.error('Tournament creation error:', $result.error);
+					errorMessage = 'Failed to create tournament. Please check your credentials and try again.';
+				} else if ($result.data) {
+					console.log('Tournament created successfully:', $result.data);
+					setTimeout(() => {
+						modalStore.close();
+					}, 1000);
+				}
+			});
 
-			setTimeout(() => {
-				modalStore.close();
-			}, 1000);
+		} catch (error) {
+			console.error('Unexpected error:', error);
+			errorMessage = 'An unexpected error occurred. Please try again.';
 		} finally {
 			loading = false;
 		}
@@ -118,6 +147,13 @@
 				disabled={loading}
 			></textarea>
 		</div>
+
+		<!-- Error Message -->
+		{#if errorMessage}
+			<div class="rounded-md bg-red-100 border border-red-400 text-red-700 px-4 py-3 mb-4">
+				{errorMessage}
+			</div>
+		{/if}
 
 		<!-- Submit Button -->
 		<Button type="submit" variant="primary" {loading} class="w-full" disabled={loading}>
