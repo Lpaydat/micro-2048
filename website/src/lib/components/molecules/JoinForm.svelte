@@ -374,7 +374,8 @@
 		left: 0;
 		right: 0;
 		bottom: 0;
-		background-image: linear-gradient(#cdc1b4 1px, transparent 1px),
+		background-image:
+			linear-gradient(#cdc1b4 1px, transparent 1px),
 			linear-gradient(90deg, #cdc1b4 1px, transparent 1px);
 		background-size: 20px 20px;
 		background-position: -1px -1px;

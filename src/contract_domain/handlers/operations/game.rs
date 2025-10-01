@@ -356,9 +356,9 @@ impl GameOperationHandler {
 
         // 🚀 BOOTSTRAP: Shard chains now handle first-player registration (not player chains)
 
-        // 🚀 NEW: Emit game creation event
+        // 🚀 NEW: Emit game creation event with actual board count
         contract
-            .emit_game_creation_event(&board_id, &player, &leaderboard_id, timestamp)
+            .emit_game_creation_event(&board_id, &player, &leaderboard_id, timestamp, new_board_count)
             .await;
 
         // 🚀 NEW: Track activity for workload statistics

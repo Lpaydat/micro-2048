@@ -113,6 +113,7 @@ impl EventEmitter {
         player: &str,
         tournament_id: &str,
         timestamp: u64,
+        boards_in_tournament: u32,
     ) {
         let score_event = GameEvent::PlayerScoreUpdate {
             player: player.to_string(),
@@ -125,7 +126,7 @@ impl EventEmitter {
             moves_count: 0,
             leaderboard_id: tournament_id.to_string(),
             current_leaderboard_best: 0,
-            boards_in_tournament: 1,
+            boards_in_tournament,
         };
 
         use linera_sdk::linera_base_types::StreamName;

@@ -7,5 +7,5 @@ export const newGameBoard = async (
 	timestamp?: string
 ): Promise<void> => {
 	const client = getClient(shardId ?? leaderboardId);
-	newGame(client, timestamp ?? Date.now().toString());
+	newGame(client, timestamp ?? Date.now().toString(), leaderboardId);
 };

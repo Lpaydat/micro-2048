@@ -16,7 +16,9 @@
 
 	let { rank, name, score, isEliminated, isCurrentPlayer, boardId, boardUrl }: Props = $props();
 
-	const paramsBoardId = $derived($page.url.searchParams.get('boardId') ?? $page.params.boardId ??  '');
+	const paramsBoardId = $derived(
+		$page.url.searchParams.get('boardId') ?? $page.params.boardId ?? ''
+	);
 	const isActiveBoard = $derived(paramsBoardId === boardId);
 	const color = $derived(isEliminated ? 'bg-[#F3F3F3]' : 'bg-[#EEE4DA]');
 	const currentPlayerStyle = $derived(
@@ -36,13 +38,13 @@
 </script>
 
 {#if boardUrl}
-	<a href={boardUrl} class="{commonClasses}" onclick={() => drawerStore.close()}>
+	<a href={boardUrl} class={commonClasses} onclick={() => drawerStore.close()}>
 		<span class="w-8 text-left font-bold text-surface-700">{displayRank}</span>
 		<span class="ml-4 flex-1 truncate text-left text-surface-800">{name}</span>
 		<span class="w-20 text-right font-mono text-surface-600">{score}</span>
 	</a>
 {:else}
-	<div class="{commonClasses}">
+	<div class={commonClasses}>
 		<span class="w-8 text-left font-bold text-surface-700">{displayRank}</span>
 		<span class="ml-4 flex-1 truncate text-left text-surface-800">{name}</span>
 		<span class="w-20 text-right font-mono text-surface-600">{score}</span>

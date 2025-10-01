@@ -53,6 +53,8 @@
 				player
 				leaderboardId
 				chainId
+				shardId
+				createdAt
 				endTime
 			}
 			balance
@@ -64,7 +66,6 @@
 	let state: GameState | undefined;
 	let isInitialized = false;
 	let rendered = false;
-	let blockHeight = 0;
 	let isSynced: boolean = false;
 	let stateHash = '';
 
@@ -134,20 +135,7 @@
 		setGameCreationStatus(true);
 	}
 
-	$: bh = $game.data?.board?.reason?.NewBlock?.height;
-	$: if (bh && bh !== blockHeight) {
-		shouldRefetch = true;
-	}
-
-	let shouldRefetch = false;
-	$: if (shouldRefetch) {
-		setTimeout(() => {
-			if ($userStore.username !== $game.data?.board?.player) {
-				shouldRefetch = false;
-				handleGameStateUpdate();
-			}
-		}, 1000);
-	}
+	// Block height tracking removed - reason field no longer exists in new schema
 
 	$: if (
 		$game.data?.board &&
@@ -484,7 +472,7 @@
 			class="mt-2 flex flex-col items-center justify-center gap-y-2 text-xs lg:flex-row lg:gap-3 lg:text-sm"
 		>
 			<div
-				class="bg-surface-800/50 border-surface-600/50 flex w-full cursor-pointer flex-wrap items-center gap-x-2 gap-y-2 rounded-lg border px-4 py-2 transition-all lg:w-auto"
+				class="flex w-full cursor-pointer flex-wrap items-center gap-x-2 gap-y-2 rounded-lg border border-surface-600/50 bg-surface-800/50 px-4 py-2 transition-all lg:w-auto"
 			>
 				{#if showBalance}
 					<!-- Balance View -->
@@ -534,7 +522,7 @@
 								</div>
 							</div>
 
-							<div class="bg-surface-600 h-4 w-px"></div>
+							<div class="h-4 w-px bg-surface-600"></div>
 
 							<div class="flex flex-grow items-center gap-2">
 								<span class="text-surface-400">Pending:</span>
@@ -543,7 +531,7 @@
 						</div>
 
 						{#if lastSyncTime}
-							<div class="bg-surface-600 h-px w-full lg:h-4 lg:w-px"></div>
+							<div class="h-px w-full bg-surface-600 lg:h-4 lg:w-px"></div>
 							<div class="flex w-full items-center gap-2 whitespace-nowrap lg:w-auto">
 								<span class="text-surface-400">Last sync:</span>
 								<span class="font-mono text-purple-400">
@@ -561,10 +549,10 @@
 
 			<button
 				onclick={toggleOfflineMode}
-				class="bg-surface-800/50 border-surface-600/50 hover:bg-surface-700/50 flex w-full items-center gap-2 rounded-lg border px-4 py-2 transition-colors lg:w-auto"
+				class="flex w-full items-center gap-2 rounded-lg border border-surface-600/50 bg-surface-800/50 px-4 py-2 transition-colors hover:bg-surface-700/50 lg:w-auto"
 			>
 				<div class="h-2 w-2 rounded-full {offlineMode ? 'bg-orange-500' : 'bg-emerald-500'}"></div>
-				<span class="text-surface-400 whitespace-nowrap text-xs lg:text-sm"
+				<span class="whitespace-nowrap text-xs text-surface-400 lg:text-sm"
 					>{offlineMode ? 'Go Online' : 'Go Offline'}</span
 				>
 			</button>

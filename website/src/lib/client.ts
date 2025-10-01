@@ -28,10 +28,11 @@ export const getClient = (
 	port = mainPort
 ) => {
 	const urls = getBaseUrl(website, port);
-	let userChainId;
-	userStore.subscribe((value) => {
+	let userChainId: string | null | undefined;
+	const unsubscribe = userStore.subscribe((value) => {
 		userChainId = value.chainId;
-	})();
+	});
+	unsubscribe();
 	chainId = chainId || (useMainChainAsDefault ? mainChainId : userChainId);
 
 	if (!chainId) {

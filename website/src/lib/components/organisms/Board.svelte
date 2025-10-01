@@ -116,9 +116,9 @@
 {#if isRendered}
 	<div
 		class="relative w-full {$boardSize}"
-		on:touchstart={preventDefault(handleTouchStart)}
-		on:touchmove={preventDefault(handleTouchMove)}
-		on:touchend={preventDefault(handleTouchEnd)}
+		ontouchstart={preventDefault(handleTouchStart)}
+		ontouchmove={preventDefault(handleTouchMove)}
+		ontouchend={preventDefault(handleTouchEnd)}
 	>
 		<GameTablet {tablet} />
 		{#if isEnded}

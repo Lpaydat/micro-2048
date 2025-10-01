@@ -159,7 +159,12 @@ impl QueryHandler {
         boards
     }
 
-    async fn leaderboard(&self, leaderboard_id: Option<String>) -> Option<LeaderboardState> {
+    async fn leaderboard(
+        &self, 
+        leaderboard_id: Option<String>,
+        top: Option<u32>,
+        offset: Option<u32>,
+    ) -> Option<LeaderboardState> {
         let mut players: HashMap<String, Ranker> = HashMap::new();
         let leaderboard_id = leaderboard_id.unwrap_or("".to_string());
 
@@ -195,6 +200,18 @@ impl QueryHandler {
                 .await
                 .unwrap();
 
+            // 🚀 SORT rankers by score descending (highest first)
+            let mut rankers: Vec<Ranker> = players.into_values().collect();
+            rankers.sort_by(|a, b| b.score.cmp(&a.score));
+            
+            // 🚀 PAGINATION: Apply top/offset
+            let top = top.unwrap_or(100) as usize; // Default: top 100
+            let offset = offset.unwrap_or(0) as usize;
+            let rankers: Vec<Ranker> = rankers.into_iter()
+                .skip(offset)
+                .take(top)
+                .collect();
+
             let shard_ids = leaderboard.shard_ids.read_front(100).await.unwrap();
             let leaderboard_state = LeaderboardState {
                 leaderboard_id,
@@ -207,7 +224,7 @@ impl QueryHandler {
                 end_time: leaderboard.end_time.get().to_string(),
                 total_boards: *leaderboard.total_boards.get(),
                 total_players: *leaderboard.total_players.get(),
-                rankers: players.into_values().collect(),
+                rankers,
                 shard_ids,
             };
 

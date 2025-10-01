@@ -84,7 +84,7 @@
 			</div>
 			<Button
 				size="sm"
-				class="btn sm text-black"
+				class="sm btn text-black"
 				variant="primary"
 				onclick={() => requestFaucetMutation(playerClient)}
 				disabled={parseFloat($playerInfo?.data?.balance ?? '0.00') > 0.2}

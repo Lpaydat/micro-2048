@@ -1,0 +1,868 @@
+{
+  "name": "BoardState",
+  "kind": "OBJECT",
+  "fields": [
+    {
+      "name": "boardId",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "String",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "board",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": null,
+          "kind": "LIST"
+        }
+      }
+    },
+    {
+      "name": "isEnded",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "Boolean",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "score",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "Int",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "player",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "String",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "chainId",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "String",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "leaderboardId",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "String",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "shardId",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "String",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "createdAt",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "String",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "endTime",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "String",
+          "kind": "SCALAR"
+        }
+      }
+    }
+  ]
+}
+{
+  "name": "Boolean",
+  "kind": "SCALAR",
+  "fields": null
+}
+{
+  "name": "Float",
+  "kind": "SCALAR",
+  "fields": null
+}
+{
+  "name": "GameEventUpdate",
+  "kind": "OBJECT",
+  "fields": [
+    {
+      "name": "event",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "String",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "chainId",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "String",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "eventIndex",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "Int",
+          "kind": "SCALAR"
+        }
+      }
+    }
+  ]
+}
+{
+  "name": "ID",
+  "kind": "SCALAR",
+  "fields": null
+}
+{
+  "name": "Int",
+  "kind": "SCALAR",
+  "fields": null
+}
+{
+  "name": "JSONObject",
+  "kind": "SCALAR",
+  "fields": null
+}
+{
+  "name": "LeaderboardAction",
+  "kind": "SCALAR",
+  "fields": null
+}
+{
+  "name": "LeaderboardSettings",
+  "kind": "INPUT_OBJECT",
+  "fields": null
+}
+{
+  "name": "LeaderboardState",
+  "kind": "OBJECT",
+  "fields": [
+    {
+      "name": "leaderboardId",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "String",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "chainId",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "String",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "name",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "String",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "description",
+      "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+      }
+    },
+    {
+      "name": "isPinned",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "Boolean",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "host",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "String",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "startTime",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "String",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "endTime",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "String",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "totalBoards",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "Int",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "totalPlayers",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "Int",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "rankers",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": null,
+          "kind": "LIST"
+        }
+      }
+    },
+    {
+      "name": "shardIds",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": null,
+          "kind": "LIST"
+        }
+      }
+    }
+  ]
+}
+{
+  "name": "MutationHandler",
+  "kind": "OBJECT",
+  "fields": [
+    {
+      "name": "registerPlayer",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": null,
+          "kind": "LIST"
+        }
+      }
+    },
+    {
+      "name": "newBoard",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": null,
+          "kind": "LIST"
+        }
+      }
+    },
+    {
+      "name": "newShard",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": null,
+          "kind": "LIST"
+        }
+      }
+    },
+    {
+      "name": "makeMoves",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": null,
+          "kind": "LIST"
+        }
+      }
+    },
+    {
+      "name": "leaderboardAction",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": null,
+          "kind": "LIST"
+        }
+      }
+    },
+    {
+      "name": "toggleMod",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": null,
+          "kind": "LIST"
+        }
+      }
+    },
+    {
+      "name": "faucet",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": null,
+          "kind": "LIST"
+        }
+      }
+    },
+    {
+      "name": "closeChain",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": null,
+          "kind": "LIST"
+        }
+      }
+    },
+    {
+      "name": "aggregateScores",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": null,
+          "kind": "LIST"
+        }
+      }
+    },
+    {
+      "name": "updateLeaderboard",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": null,
+          "kind": "LIST"
+        }
+      }
+    },
+    {
+      "name": "updateActiveTournaments",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": null,
+          "kind": "LIST"
+        }
+      }
+    },
+    {
+      "name": "requestAggregation",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": null,
+          "kind": "LIST"
+        }
+      }
+    },
+    {
+      "name": "configureTriggererCount",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": null,
+          "kind": "LIST"
+        }
+      }
+    }
+  ]
+}
+{
+  "name": "Player",
+  "kind": "OBJECT",
+  "fields": [
+    {
+      "name": "username",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "String",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "chainId",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "String",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "isMod",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "Boolean",
+          "kind": "SCALAR"
+        }
+      }
+    }
+  ]
+}
+{
+  "name": "QueryHandler",
+  "kind": "OBJECT",
+  "fields": [
+    {
+      "name": "balance",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "String",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "isAuthorizedTriggerer",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "Boolean",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "getTriggererPool",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "TriggererPool",
+          "kind": "OBJECT"
+        }
+      }
+    },
+    {
+      "name": "player",
+      "type": {
+        "name": "Player",
+        "kind": "OBJECT",
+        "ofType": null
+      }
+    },
+    {
+      "name": "players",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": null,
+          "kind": "LIST"
+        }
+      }
+    },
+    {
+      "name": "checkPlayer",
+      "type": {
+        "name": "Boolean",
+        "kind": "SCALAR",
+        "ofType": null
+      }
+    },
+    {
+      "name": "board",
+      "type": {
+        "name": "BoardState",
+        "kind": "OBJECT",
+        "ofType": null
+      }
+    },
+    {
+      "name": "boards",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": null,
+          "kind": "LIST"
+        }
+      }
+    },
+    {
+      "name": "leaderboard",
+      "type": {
+        "name": "LeaderboardState",
+        "kind": "OBJECT",
+        "ofType": null
+      }
+    },
+    {
+      "name": "leaderboards",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": null,
+          "kind": "LIST"
+        }
+      }
+    },
+    {
+      "name": "tournamentsByStatus",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": null,
+          "kind": "LIST"
+        }
+      }
+    },
+    {
+      "name": "shards",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "Shard",
+          "kind": "OBJECT"
+        }
+      }
+    }
+  ]
+}
+{
+  "name": "Ranker",
+  "kind": "OBJECT",
+  "fields": [
+    {
+      "name": "username",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "String",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "score",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "Int",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "boardId",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "String",
+          "kind": "SCALAR"
+        }
+      }
+    }
+  ]
+}
+{
+  "name": "Shard",
+  "kind": "OBJECT",
+  "fields": [
+    {
+      "name": "shardId",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "String",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "leaderboardId",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "String",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "chainId",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "String",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "startTime",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "String",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "scores",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "JSONObject",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "boardIds",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "JSONObject",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "endTime",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "String",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "counter",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "Int",
+          "kind": "SCALAR"
+        }
+      }
+    }
+  ]
+}
+{
+  "name": "String",
+  "kind": "SCALAR",
+  "fields": null
+}
+{
+  "name": "SubscriptionHandler",
+  "kind": "OBJECT",
+  "fields": [
+    {
+      "name": "gameEvents",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "GameEventUpdate",
+          "kind": "OBJECT"
+        }
+      }
+    },
+    {
+      "name": "gameEventsFromChain",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "GameEventUpdate",
+          "kind": "OBJECT"
+        }
+      }
+    },
+    {
+      "name": "playerEvents",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "GameEventUpdate",
+          "kind": "OBJECT"
+        }
+      }
+    }
+  ]
+}
+{
+  "name": "TournamentFilter",
+  "kind": "ENUM",
+  "fields": null
+}
+{
+  "name": "TriggererPool",
+  "kind": "OBJECT",
+  "fields": [
+    {
+      "name": "primary",
+      "type": {
+        "name": "String",
+        "kind": "SCALAR",
+        "ofType": null
+      }
+    },
+    {
+      "name": "backups",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": null,
+          "kind": "LIST"
+        }
+      }
+    },
+    {
+      "name": "lastTriggerTime",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "Int",
+          "kind": "SCALAR"
+        }
+      }
+    },
+    {
+      "name": "cooldownUntil",
+      "type": {
+        "name": null,
+        "kind": "NON_NULL",
+        "ofType": {
+          "name": "Int",
+          "kind": "SCALAR"
+        }
+      }
+    }
+  ]
+}

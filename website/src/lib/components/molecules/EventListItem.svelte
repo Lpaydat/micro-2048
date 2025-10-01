@@ -105,7 +105,7 @@
 				<div class="flex items-center gap-2">
 					<h3 class="text-xl font-bold text-gray-800">{name}</h3>
 					{#if isPinnedAndActive}
-						<span class="badge badge-primary gap-2 px-2 py-1 text-sm"> 📌 Pinned & Active </span>
+						<span class="badge-primary badge gap-2 px-2 py-1 text-sm"> 📌 Pinned & Active </span>
 					{/if}
 				</div>
 			</div>
@@ -122,7 +122,7 @@
 					<span>{formatLocalTime(endTime)}</span>
 				</div>
 				{#if description}
-					<div class="border-surface-200 mt-3 border-t-2 pt-4 text-gray-700">
+					<div class="mt-3 border-t-2 border-surface-200 pt-4 text-gray-700">
 						{description}
 					</div>
 				{/if}

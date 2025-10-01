@@ -10,15 +10,19 @@
 	const client = getContextClient();
 
 	const GET_LEADERBOARDS = gql`
-		query GetLeaderboards {
-			leaderboards {
+		query GetLeaderboards($filter: TournamentFilter) {
+			leaderboards(filter: $filter) {
 				leaderboardId
+				chainId
 				name
 				description
 				host
 				startTime
 				endTime
 				isPinned
+				totalBoards
+				totalPlayers
+				shardIds
 			}
 		}
 	`;
@@ -30,7 +34,11 @@
 			eventGroup === 'active' ? 'upcoming' : eventGroup === 'upcoming' ? 'past' : 'active';
 	};
 
-	const leaderboards = $derived(queryStore({ client, query: GET_LEADERBOARDS }));
+	const leaderboards = $derived(queryStore({ 
+		client, 
+		query: GET_LEADERBOARDS,
+		variables: { filter: 'ALL' }
+	}));
 	const sortedEvents = $derived(
 		$leaderboards?.data?.leaderboards.sort((a: LeaderboardSettings, b: LeaderboardSettings) => {
 			// First sort by start time

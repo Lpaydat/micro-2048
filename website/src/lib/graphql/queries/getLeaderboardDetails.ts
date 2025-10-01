@@ -5,7 +5,10 @@ export const GET_LEADERBOARD_DETAILS = gql`
 	query GetLeaderboardDetails {
 		leaderboard {
 			leaderboardId
+			chainId
 			name
+			description
+			isPinned
 			host
 			startTime
 			endTime
@@ -16,6 +19,7 @@ export const GET_LEADERBOARD_DETAILS = gql`
 				score
 				boardId
 			}
+			shardIds
 		}
 	}
 `;
