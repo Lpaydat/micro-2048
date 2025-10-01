@@ -2,6 +2,13 @@ use game2048::{Direction, Game};
 
 pub struct GameMoveProcessor;
 
+pub struct ProcessedMove {
+    pub direction: Direction,
+    pub timestamp: u64,
+    pub board_after: u64,
+    pub score_after: u64,
+}
+
 impl GameMoveProcessor {
     pub fn process_moves(
         board_id: &str,
@@ -15,6 +22,7 @@ impl GameMoveProcessor {
         let mut any_change = false;
         let mut latest_timestamp = 0;
         let mut is_ended = false;
+        let mut move_history: Vec<ProcessedMove> = Vec::new();
 
         for (direction, timestamp) in moves.iter() {
             if is_ended {
@@ -51,6 +59,16 @@ impl GameMoveProcessor {
 
             any_change = true;
             current_board = new_board;
+            let current_score = Game::score(current_board);
+            
+            // Store this move in history
+            move_history.push(ProcessedMove {
+                direction: *direction,
+                timestamp: *timestamp,
+                board_after: current_board,
+                score_after: current_score,
+            });
+
             is_ended = Game::is_ended(current_board);
 
             if is_ended {
@@ -72,6 +90,7 @@ impl GameMoveProcessor {
             initial_highest_tile,
             is_ended,
             latest_timestamp,
+            move_history,
         }
     }
 }
@@ -84,6 +103,7 @@ pub enum GameMoveResult {
         initial_highest_tile: u64,
         is_ended: bool,
         latest_timestamp: u64,
+        move_history: Vec<ProcessedMove>,
     },
     Error(String),
 }

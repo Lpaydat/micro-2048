@@ -383,4 +383,47 @@ impl QueryHandler {
 
         tournament_games
     }
+
+    /// 🎮 NEW: Get complete move history for a board (for replay feature)
+    async fn board_move_history(
+        &self, 
+        board_id: String,
+        limit: Option<u32>,
+    ) -> Option<BoardMoveHistory> {
+        if let Ok(Some(board)) = self.state.boards.try_load_entry(&board_id).await {
+            let total_moves = *board.move_count.get();
+            let limit = limit.unwrap_or(1000).min(total_moves); // Default 1000, max = total_moves
+            
+            let mut moves: Vec<MoveHistoryRecord> = Vec::new();
+            
+            // Load move records
+            for i in 0..limit {
+                if let Ok(Some(move_record)) = board.move_history.try_load_entry(&i).await {
+                    let direction_str = match *move_record.direction.get() {
+                        0 => "Up",
+                        1 => "Down",
+                        2 => "Left",
+                        3 => "Right",
+                        _ => "Unknown",
+                    };
+                    
+                    moves.push(MoveHistoryRecord {
+                        direction: direction_str.to_string(),
+                        timestamp: micros_to_millis(*move_record.timestamp.get()),
+                        board_after: Game::convert_to_matrix(*move_record.board_after.get()),
+                        score_after: *move_record.score_after.get(),
+                    });
+                }
+            }
+            
+            Some(BoardMoveHistory {
+                board_id,
+                player: board.player.get().to_string(),
+                total_moves,
+                moves,
+            })
+        } else {
+            None
+        }
+    }
 }

@@ -92,3 +92,21 @@ pub struct TriggererPool {
     pub last_trigger_time: u64,
     pub cooldown_until: u64,
 }
+
+/// 🎮 NEW: Move history record for replay feature
+#[derive(SimpleObject)]
+pub struct MoveHistoryRecord {
+    pub direction: String, // "Up", "Down", "Left", "Right"
+    pub timestamp: String, // milliseconds
+    pub board_after: [[u16; 4]; 4],
+    pub score_after: u64,
+}
+
+/// 🎮 NEW: Complete move history for a board
+#[derive(SimpleObject)]
+pub struct BoardMoveHistory {
+    pub board_id: String,
+    pub player: String,
+    pub total_moves: u32,
+    pub moves: Vec<MoveHistoryRecord>,
+}
