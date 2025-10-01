@@ -187,13 +187,7 @@
 		return () => clearInterval(interval);
 	});
 
-	onMount(() => {
-		setTimeout(() => {
-			if (!getBoardId(leaderboardId)) {
-				newSingleGame();
-			}
-		}, 100);
-	});
+	// Auto-create removed - user must manually click "New Game" button
 
 	const shouldShowBestScore = $derived(showBestScore && canStartNewGame);
 	const scoreLabelAlign = $derived(score.toString().length > 3 ? 'left' : 'center');
