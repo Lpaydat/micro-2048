@@ -440,6 +440,9 @@
 			isEnded={boardEnded}
 			{overlayMessage}
 			moveCallback={handleMove}
+			{boardId}
+			{chainId}
+			showReplayButton={true}
 		>
 			<!-- {#snippet header(size)} -->
 			{#snippet header()}

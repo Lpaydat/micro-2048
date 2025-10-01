@@ -66,7 +66,7 @@
 		const allBoards = $boards?.data?.boards || [];
 		if (allBoards.length === 0) return null;
 		
-		return allBoards.sort((a, b) => {
+		return allBoards.sort((a: any, b: any) => {
 			return parseInt(b.createdAt || '0') - parseInt(a.createdAt || '0');
 		})[0];
 	});
@@ -86,12 +86,12 @@
 	// Check if button should be disabled (creating board OR within 5 seconds of last creation)
 	const isCreatingBoard = $derived(
 		isNewGameCreated || 
-		(boardCreationStartTime && Date.now() - boardCreationStartTime < 5000)
+		!!(boardCreationStartTime && Date.now() - boardCreationStartTime < 5000)
 	);
 	
 	// Update parent's isCreating binding
 	$effect(() => {
-		isCreating = isCreatingBoard;
+		isCreating = !!isCreatingBoard;
 	});
 
 	// Mutation functions
