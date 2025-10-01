@@ -5,7 +5,6 @@ import { get } from 'svelte/store';
 
 export const newGameBoard = async (
 	leaderboardId: string,
-	shardId?: string,
 	timestamp?: string
 ) => {
 	// Get the player's chainId from userStore first
@@ -24,8 +23,9 @@ export const newGameBoard = async (
 	
 	console.log('Creating board on player chain:', playerChainId);
 	console.log('For leaderboard:', leaderboardId);
+	console.log('Smart contract will auto-select shard');
 	
-	// Create board on the player's chain (not the leaderboard/shard chain)
+	// Create board on the player's chain - smart contract will auto-select shard
 	const client = getClient(playerChainId);
 	const result = newGame(client, timestamp ?? Date.now().toString(), leaderboardId);
 	

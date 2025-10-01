@@ -7,7 +7,7 @@
 	import { userStore } from '$lib/stores/userStore';
 	import UsernameBadge from '../atoms/UsernameBadge.svelte';
 	import { newGameBoard } from '$lib/game/newGameBoard';
-	import { addShards, getRandomShard, getShards } from '$lib/stores/shards';
+	import { addShards, getShards } from '$lib/stores/shards';
 	import { gql } from 'urql';
 	import { getClient } from '$lib/client';
 	import { queryStore } from '@urql/svelte';
@@ -79,14 +79,12 @@
 		}
 		if (!canStartNewGame || !leaderboardId || !$userStore.username) return;
 
-		const shardId = await getRandomShard(leaderboardId, $userStore.username);
-		if (!shardId) return;
-
 		try {
 			console.log('Creating new board for leaderboard:', leaderboardId);
 			console.log('Player chainId:', $userStore.chainId);
+			console.log('Smart contract will auto-select shard');
 			
-			const result = await newGameBoard(leaderboardId, shardId, newGameAt.toString());
+			const result = await newGameBoard(leaderboardId, newGameAt.toString());
 			
 			if (result) {
 				result.subscribe(($result: any) => {
