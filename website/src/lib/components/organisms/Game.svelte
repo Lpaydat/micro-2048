@@ -213,8 +213,11 @@
 		$game.data?.board &&
 		boardId &&
 		player &&
-		(!isInitialized || $isNewGameCreated || $game.data?.board?.isEnded) &&
-		!isInspectorMode // Don't auto-update in inspector mode
+		!isInspectorMode && // Don't auto-update in inspector mode
+		(
+			!isInitialized || // Initial load
+			($game.data?.board?.isEnded && !boardEnded) // Game just ended
+		)
 	) {
 		handleGameStateUpdate();
 	}
