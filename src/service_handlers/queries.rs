@@ -113,6 +113,29 @@ impl QueryHandler {
     async fn board(&self, board_id: Option<String>) -> Option<BoardState> {
         let board_id = board_id.unwrap_or(self.state.latest_board_id.get().to_string());
         if let Ok(Some(game)) = self.state.boards.try_load_entry(&board_id).await {
+            // Load move history
+            let total_moves = *game.move_count.get();
+            let mut move_history: Vec<MoveHistoryRecord> = Vec::new();
+            
+            for i in 0..total_moves {
+                if let Ok(Some(move_record)) = game.move_history.try_load_entry(&i).await {
+                    let direction_str = match *move_record.direction.get() {
+                        0 => "Up",
+                        1 => "Down",
+                        2 => "Left",
+                        3 => "Right",
+                        _ => "Unknown",
+                    };
+                    
+                    move_history.push(MoveHistoryRecord {
+                        direction: direction_str.to_string(),
+                        timestamp: move_record.timestamp.get().to_string(), // Already in milliseconds, no conversion
+                        board_after: Game::convert_to_matrix(*move_record.board_after.get()),
+                        score_after: *move_record.score_after.get(),
+                    });
+                }
+            }
+
             let game_state = BoardState {
                 board_id: game.board_id.get().to_string(),
                 board: Game::convert_to_matrix(*game.board.get()),
@@ -124,6 +147,8 @@ impl QueryHandler {
                 shard_id: game.shard_id.get().to_string(),
                 created_at: micros_to_millis(*game.created_at.get()),
                 end_time: micros_to_millis(*game.end_time.get()),
+                move_history,
+                total_moves,
             };
             Some(game_state)
         } else {
@@ -145,6 +170,7 @@ impl QueryHandler {
 
         for board_id in board_ids_to_query {
             if let Ok(Some(board)) = self.state.boards.try_load_entry(&board_id).await {
+                // Don't load full move history for list queries (performance)
                 boards.push(BoardState {
                     board_id,
                     board: Game::convert_to_matrix(*board.board.get()),
@@ -156,6 +182,8 @@ impl QueryHandler {
                     shard_id: board.shard_id.get().to_string(),
                     created_at: micros_to_millis(*board.created_at.get()),
                     end_time: micros_to_millis(*board.end_time.get()),
+                    move_history: Vec::new(), // Empty for list queries
+                    total_moves: *board.move_count.get(),
                 });
             }
         }
@@ -384,46 +412,4 @@ impl QueryHandler {
         tournament_games
     }
 
-    /// 🎮 NEW: Get complete move history for a board (for replay feature)
-    async fn board_move_history(
-        &self, 
-        board_id: String,
-        limit: Option<u32>,
-    ) -> Option<BoardMoveHistory> {
-        if let Ok(Some(board)) = self.state.boards.try_load_entry(&board_id).await {
-            let total_moves = *board.move_count.get();
-            let limit = limit.unwrap_or(1000).min(total_moves); // Default 1000, max = total_moves
-            
-            let mut moves: Vec<MoveHistoryRecord> = Vec::new();
-            
-            // Load move records
-            for i in 0..limit {
-                if let Ok(Some(move_record)) = board.move_history.try_load_entry(&i).await {
-                    let direction_str = match *move_record.direction.get() {
-                        0 => "Up",
-                        1 => "Down",
-                        2 => "Left",
-                        3 => "Right",
-                        _ => "Unknown",
-                    };
-                    
-                    moves.push(MoveHistoryRecord {
-                        direction: direction_str.to_string(),
-                        timestamp: micros_to_millis(*move_record.timestamp.get()),
-                        board_after: Game::convert_to_matrix(*move_record.board_after.get()),
-                        score_after: *move_record.score_after.get(),
-                    });
-                }
-            }
-            
-            Some(BoardMoveHistory {
-                board_id,
-                player: board.player.get().to_string(),
-                total_moves,
-                moves,
-            })
-        } else {
-            None
-        }
-    }
 }

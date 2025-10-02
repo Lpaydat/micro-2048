@@ -11,6 +11,13 @@ export const GET_BOARD = gql`
 			isEnded
 			board
 			createdAt
+			totalMoves
+			moveHistory {
+				direction
+				timestamp
+				boardAfter
+				scoreAfter
+			}
 		}
 	}
 `;

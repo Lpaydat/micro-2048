@@ -30,8 +30,9 @@ impl GameMoveProcessor {
             }
 
             // Only validate end_time if it's set (Some value)
+            // NOTE: timestamp is in milliseconds (from frontend), end_time is in microseconds
             if let Some(end_time_value) = end_time {
-                if *timestamp > end_time_value {
+                if *timestamp * 1000 > end_time_value {  // Convert ms to μs for comparison
                     is_ended = true;
                     break;
                 }

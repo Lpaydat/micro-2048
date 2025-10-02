@@ -57,6 +57,13 @@
 				shardId
 				createdAt
 				endTime
+				totalMoves
+				moveHistory {
+					direction
+					timestamp
+					boardAfter
+					scoreAfter
+				}
 			}
 			balance
 		}
@@ -88,6 +95,13 @@
 	// Add new balance view state
 	let showBalance = false;
 
+	// 🔍 Inspector Mode: viewing someone else's board
+	let isInspectorMode = false;
+	let inspectorMoveHistory: any[] = [];
+	let inspectorCurrentMoveIndex = 0;
+	let isInspectorPlaying = false;
+	let inspectorPlayTimeout: NodeJS.Timeout | null = null;
+
 	// GraphQL Queries and Subscriptions
 	$: game = queryStore({
 		client,
@@ -98,6 +112,22 @@
 
 	// Reactive Statements
 	$: score = $game.data?.board?.score || 0;
+
+	// 🔍 Check if inspector mode (viewing someone else's board)
+	$: {
+		const boardPlayer = $game.data?.board?.player;
+		const currentUser = $userStore.username;
+		if (boardPlayer && currentUser && boardPlayer !== currentUser) {
+			isInspectorMode = true;
+			inspectorMoveHistory = $game.data?.board?.moveHistory || [];
+			// Auto-advance to latest move
+			if (inspectorCurrentMoveIndex === 0 && inspectorMoveHistory.length > 0) {
+				inspectorCurrentMoveIndex = inspectorMoveHistory.length;
+			}
+		} else {
+			isInspectorMode = false;
+		}
+	}
 
 	$: if (isMultiplayer && $game.data?.board === null) {
 		goto('/error');
@@ -177,10 +207,23 @@
 
 	const handleGameStateUpdate = () => {
 		if (!boardId) return;
-		state = createState($game.data?.board?.board, 4, boardId, player);
+		
+		// 🔍 In inspector mode, use move history to show board state
+		if (isInspectorMode && inspectorMoveHistory.length > 0) {
+			// Show the latest move's board state (or specific move if user navigated)
+			const moveIndex = Math.min(inspectorCurrentMoveIndex - 1, inspectorMoveHistory.length - 1);
+			if (moveIndex >= 0) {
+				const moveData = inspectorMoveHistory[moveIndex];
+				state = createState(moveData.boardAfter, 4, boardId, player);
+			}
+		} else {
+			// Normal mode: use current board state
+			state = createState($game.data?.board?.board, 4, boardId, player);
+		}
+		
 		isInitialized = true;
 
-		if (state?.finished) {
+		if (state?.finished && !isInspectorMode) {
 			dispatch('end', {
 				score: state.score,
 				bestScore: Math.max(state.score, bestScore)
@@ -413,8 +456,57 @@
 		};
 	});
 
+	// 🔍 Inspector Auto-Play Functions
+	const playInspectorMoves = () => {
+		if (inspectorCurrentMoveIndex >= inspectorMoveHistory.length) {
+			inspectorCurrentMoveIndex = 0;
+		}
+		isInspectorPlaying = true;
+		playNextInspectorMove();
+	};
+
+	const playNextInspectorMove = () => {
+		if (!isInspectorPlaying || inspectorCurrentMoveIndex >= inspectorMoveHistory.length) {
+			stopInspectorPlay();
+			return;
+		}
+
+		const currentMove = inspectorMoveHistory[inspectorCurrentMoveIndex];
+		const nextMove = inspectorMoveHistory[inspectorCurrentMoveIndex + 1];
+
+		// Calculate delay based on timestamp difference
+		let delay = 500; // Default 500ms
+		if (nextMove) {
+			const currentTime = parseInt(currentMove.timestamp);
+			const nextTime = parseInt(nextMove.timestamp);
+			delay = Math.min(nextTime - currentTime, 2000); // Cap at 2 seconds
+		}
+
+		inspectorCurrentMoveIndex++;
+		handleGameStateUpdate();
+
+		inspectorPlayTimeout = setTimeout(() => {
+			playNextInspectorMove();
+		}, delay);
+	};
+
+	const stopInspectorPlay = () => {
+		isInspectorPlaying = false;
+		if (inspectorPlayTimeout) {
+			clearTimeout(inspectorPlayTimeout);
+			inspectorPlayTimeout = null;
+		}
+	};
+
+	const restartInspector = () => {
+		stopInspectorPlay();
+		inspectorCurrentMoveIndex = 0;
+		handleGameStateUpdate();
+	};
+
 	onDestroy(() => {
 		setGameCreationStatus(false);
+		stopInspectorPlay();
 	});
 
 	$: overlayMessage =
@@ -432,7 +524,8 @@
 	<div class="game-board">
 		<Board
 			tablet={state?.tablet}
-			canMakeMove={canMakeMove &&
+			canMakeMove={!isInspectorMode &&
+				canMakeMove &&
 				!boardEnded &&
 				$game.data?.board?.player === $userStore.username &&
 				!isFrozen &&
@@ -552,9 +645,111 @@
 			{/if}
 		</div>
 	{/if}
+
+	<!-- 🔍 Inspector Mode Controls -->
+	{#if isInspectorMode && inspectorMoveHistory.length > 0}
+		<div class="mt-4 rounded-lg border border-purple-500/50 bg-purple-900/20 p-4">
+			<div class="mb-2 flex items-center justify-between">
+				<div class="flex items-center gap-2">
+					<div class="h-2 w-2 rounded-full bg-purple-500"></div>
+					<span class="text-sm font-bold text-purple-400">Inspector Mode</span>
+				</div>
+				<div class="text-xs text-surface-400">
+					Move {inspectorCurrentMoveIndex} / {inspectorMoveHistory.length}
+				</div>
+			</div>
+
+			<!-- Progress Slider -->
+			<input
+				type="range"
+				min="0"
+				max={inspectorMoveHistory.length}
+				bind:value={inspectorCurrentMoveIndex}
+				oninput={() => {
+					stopInspectorPlay();
+					handleGameStateUpdate();
+				}}
+				class="inspector-slider w-full"
+			/>
+
+			<!-- Playback Controls -->
+			<div class="mt-3 flex items-center justify-center gap-2">
+				<button
+					onclick={restartInspector}
+					class="rounded-md bg-surface-700 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-surface-600"
+				>
+					⏮ Restart
+				</button>
+
+				{#if isInspectorPlaying}
+					<button
+						onclick={stopInspectorPlay}
+						class="rounded-md bg-orange-500 px-4 py-1.5 text-xs font-bold text-white transition-colors hover:bg-orange-600"
+					>
+						⏸ Pause
+					</button>
+				{:else}
+					<button
+						onclick={playInspectorMoves}
+						class="rounded-md bg-emerald-500 px-4 py-1.5 text-xs font-bold text-white transition-colors hover:bg-emerald-600"
+					>
+						▶ Auto-Play
+					</button>
+				{/if}
+
+				<button
+					onclick={() => {
+						if (inspectorCurrentMoveIndex < inspectorMoveHistory.length) {
+							inspectorCurrentMoveIndex++;
+							handleGameStateUpdate();
+						}
+					}}
+					disabled={inspectorCurrentMoveIndex >= inspectorMoveHistory.length}
+					class="rounded-md bg-surface-700 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-surface-600 disabled:opacity-50"
+				>
+					Step →
+				</button>
+			</div>
+
+			<div class="mt-2 flex items-center justify-center gap-2 text-xs text-surface-500">
+				<span>Viewing {$game.data?.board?.player}'s game</span>
+				{#if isInspectorPlaying}
+					<span class="animate-pulse text-emerald-400">• Playing with original timing</span>
+				{/if}
+			</div>
+		</div>
+	{/if}
 </div>
 
 <style>
+	.inspector-slider {
+		-webkit-appearance: none;
+		appearance: none;
+		background: #3a3a3c;
+		height: 6px;
+		border-radius: 3px;
+		outline: none;
+	}
+
+	.inspector-slider::-webkit-slider-thumb {
+		-webkit-appearance: none;
+		appearance: none;
+		width: 16px;
+		height: 16px;
+		background: #a855f7;
+		cursor: pointer;
+		border-radius: 50%;
+	}
+
+	.inspector-slider::-moz-range-thumb {
+		width: 16px;
+		height: 16px;
+		background: #a855f7;
+		cursor: pointer;
+		border-radius: 50%;
+		border: none;
+	}
+
 	.game-container {
 		margin: 0 auto;
 		text-align: center;
