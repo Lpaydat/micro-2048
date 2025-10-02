@@ -97,7 +97,10 @@
 	
 	let stateHistory: StateSnapshot[] = [];
 	let totalMovesApplied = 0;
-	let lastSyncedMoveCount = 0;
+	let lastConfirmedMoveCount = 0; // Track last confirmed by backend
+	
+	// 🔄 Background Sync: Submitted moves tracking
+	let submittedMoveHistory: StateSnapshot[] = []; // Moves submitted to backend, waiting for confirmation
 	
 	// 🔄 Background Sync: Activity Tracking
 	let recentMoves: number[] = [];
@@ -110,11 +113,12 @@
 	const LOW_ACTIVITY_THRESHOLD = 2; // moves per second
 	
 	// Hash function for quick board comparison
-	const hashBoard = (board: number[][]) => {
+	const hashBoard = (board: any) => {
 		let hash = 2166136261;
 		for (const row of board) {
 			for (const cell of row) {
-				hash ^= cell;
+				const value = typeof cell === 'number' ? cell : (cell?.value ?? 0);
+				hash ^= value;
 				hash = (hash * 16777619) >>> 0; // Keep as 32-bit unsigned
 			}
 		}
@@ -131,10 +135,12 @@
 	const getMovesPerSecond = () => recentMoves.length;
 	
 	// Add state to history
-	const addStateSnapshot = (tablet: number[][] | undefined) => {
+	const addStateSnapshot = (tablet: any) => {
 		if (!tablet) return;
 		
 		const boardStr = boardToString(tablet);
+		if (!boardStr) return; // Skip if conversion failed
+		
 		const snapshot: StateSnapshot = {
 			hash: hashBoard(tablet),
 			boardString: boardStr,
@@ -146,11 +152,11 @@
 		stateHistory.push(snapshot);
 	};
 	
-	// Clear history up to last synced point
+	// Clear history up to last confirmed point
 	const trimStateHistory = () => {
-		const syncedIndex = stateHistory.findIndex(s => s.moveCount === lastSyncedMoveCount);
-		if (syncedIndex >= 0) {
-			stateHistory = stateHistory.slice(syncedIndex);
+		const confirmedIndex = stateHistory.findIndex(s => s.moveCount === lastConfirmedMoveCount);
+		if (confirmedIndex >= 0) {
+			stateHistory = stateHistory.slice(confirmedIndex);
 		}
 	};
 
@@ -172,6 +178,7 @@
 	let inspectorPlayTimeout: NodeJS.Timeout | null = null;
 	let autoPlayEnabled = false; // Toggle state for auto-play
 	let previousMoveHistoryLength = 0; // Track previous length to detect new moves
+	let hideInspectorOverlay = false; // Control inspector overlay visibility
 
 	// GraphQL Queries and Subscriptions
 	$: game = queryStore({
@@ -293,8 +300,9 @@
 		if (boardId !== lastBoardId) {
 			isInitialized = false;
 			stateHistory = [];
+			submittedMoveHistory = [];
 			totalMovesApplied = 0;
-			lastSyncedMoveCount = 0;
+			lastConfirmedMoveCount = 0;
 			pendingMoveCount = 0;
 			syncStatus = 'idle';
 			consecutiveMismatches = 0;
@@ -377,7 +385,10 @@
 			addStateSnapshot(state?.tablet);
 
 			// Add move to local history instead of immediate submission
-			syncStatus = 'idle';
+			// Don't reset syncStatus if currently syncing
+			if (syncStatus !== 'syncing-bg' && syncStatus !== 'syncing') {
+				syncStatus = 'idle';
+			}
 			pendingMoveCount++;
 			addMoveToHistory({
 				direction,
@@ -494,16 +505,7 @@
 	const backgroundSync = async (boardId: string) => {
 		if (syncStatus === 'syncing' || syncStatus === 'syncing-bg') return;
 		
-		// Capture pre-submit snapshot
-		const preSubmitSnapshot: StateSnapshot | undefined = state?.tablet ? {
-			hash: hashBoard(state.tablet),
-			boardString: boardToString(state.tablet),
-			moveCount: totalMovesApplied,
-			timestamp: Date.now(),
-			pendingAtTime: pendingMoveCount
-		} : undefined;
-		
-		// Get moves to submit (but don't flush yet - keep for validation)
+		// Get moves to submit
 		const movesToSubmit = $moveHistoryStore.get(boardId) || [];
 		if (movesToSubmit.length === 0) return;
 		
@@ -512,13 +514,16 @@
 		const moveBatch = getMoveBatchForSubmission(movesToSubmit);
 		
 		try {
-			makeMoves(client, moveBatch, boardId);
-			// Clear submitted moves from history
+			// Move current state history to submitted history
+			submittedMoveHistory = [...stateHistory];
+			
+			// Flush pending moves now that we've submitted them
 			flushMoveHistory(boardId);
 			pendingMoveCount = 0;
-			lastSyncTime = Date.now();
 			
-			// Validation will happen passively in sync interval - no need to force it here
+			// Submit to backend
+			makeMoves(client, moveBatch, boardId);
+			lastSyncTime = Date.now();
 		} catch (error) {
 			console.error('Background sync failed:', error);
 			syncStatus = 'failed';
@@ -560,8 +565,9 @@
 				// Full reset to backend state
 				state = createState($game.data.board.board, 4, boardId!, player);
 				stateHistory = [];
+				submittedMoveHistory = [];
 				totalMovesApplied = $game.data.board.totalMoves || 0;
-				lastSyncedMoveCount = totalMovesApplied;
+				lastConfirmedMoveCount = totalMovesApplied;
 			}
 		}
 		
@@ -656,7 +662,7 @@
 			// Continuously poll backend state
 			game.reexecute({ requestPolicy: 'network-only' });
 			
-			// If syncing in background, validate against history
+			// If syncing in background, validate against submitted history
 			if (syncStatus === 'syncing-bg' && state?.tablet) {
 				if (!syncingBackgroundStartTime) {
 					syncingBackgroundStartTime = Date.now();
@@ -666,12 +672,20 @@
 				const backendHash = hashBoard(backendBoard);
 				const backendBoardStr = boardToString(backendBoard);
 				
-				// Check if backend matches any state in our history
-				const matchIndex = stateHistory.findIndex(s => s.hash === backendHash);
+				// Check if backend matches any state in our SUBMITTED history
+				const matchIndex = submittedMoveHistory.findIndex(s => s.hash === backendHash);
 				
-				if (matchIndex >= 0 && stateHistory[matchIndex].boardString === backendBoardStr) {
-					// ✅ Backend caught up to a known state
-					lastSyncedMoveCount = stateHistory[matchIndex].moveCount;
+				if (matchIndex >= 0 && submittedMoveHistory[matchIndex].boardString === backendBoardStr) {
+					// ✅ Backend confirmed submitted moves
+					const confirmedMoveCount = submittedMoveHistory[matchIndex].moveCount;
+					
+					// Clear submitted history - backend has processed these moves
+					submittedMoveHistory = [];
+					lastConfirmedMoveCount = confirmedMoveCount;
+					
+					// Don't recalculate pendingMoveCount - it's already tracking new moves correctly
+					// pendingMoveCount is incremented on each move and was reset to 0 when we submitted
+					
 					trimStateHistory();
 					syncStatus = 'synced';
 					isFrozen = false;
@@ -682,7 +696,7 @@
 					const syncWaitTime = Date.now() - syncingBackgroundStartTime;
 					
 					// Only trigger desync if we've waited > 5 seconds without finding a match
-					if (syncWaitTime > 5000) {
+					if (syncWaitTime > 5000 && backendBoardStr) {
 						console.warn('Background sync timeout - no history match found');
 						syncingBackgroundStartTime = null;
 						handleDesync(backendBoardStr);
@@ -701,7 +715,7 @@
 				if (backendBoardStr !== localBoardStr) {
 					consecutiveMismatches++;
 					
-					if (consecutiveMismatches >= 5) {
+					if (consecutiveMismatches >= 5 && backendBoardStr) {
 						// Persistent mismatch - force reconciliation
 						handleDesync(backendBoardStr);
 					}
@@ -732,6 +746,8 @@
 			// Stop playing when disabled
 			stopInspectorPlay();
 		}
+		
+		dismissOverlay();
 	};
 
 	const playInspectorMoves = () => {
@@ -745,6 +761,10 @@
 	const playNextInspectorMove = () => {
 		if (!isInspectorPlaying || inspectorCurrentMoveIndex >= inspectorMoveHistory.length) {
 			stopInspectorPlay();
+			// Show overlay and disable auto-play when replay ends
+			if (inspectorCurrentMoveIndex >= inspectorMoveHistory.length) {
+				showOverlayAtEnd();
+			}
 			return;
 		}
 
@@ -779,6 +799,18 @@
 		stopInspectorPlay();
 		inspectorCurrentMoveIndex = 1; // Start at first move
 		handleGameStateUpdate();
+		dismissOverlay();
+	};
+	
+	const dismissOverlay = () => {
+		if (isInspectorMode) {
+			hideInspectorOverlay = true;
+		}
+	};
+	
+	const showOverlayAtEnd = () => {
+		hideInspectorOverlay = false;
+		autoPlayEnabled = false;
 	};
 
 	const handleReplayClick = () => {
@@ -793,10 +825,11 @@
 		stopInspectorPlay();
 	});
 
-	$: overlayMessage =
-		$game.data?.board?.player === $userStore.username
+	$: overlayMessage = hideInspectorOverlay
+		? undefined
+		: ($game.data?.board?.player === $userStore.username
 			? getOverlayMessage($game.data?.board?.board)
-			: $game.data?.board?.player;
+			: $game.data?.board?.player);
 
 	// $: if (!$game.fetching && parseFloat($game.data?.balance ?? '0.00') <= 0.2 && !dirtyBalance) {
 	// 	showBalance = true;
@@ -821,6 +854,7 @@
 			{chainId}
 			showReplayButton={true}
 			onReplayClick={handleReplayClick}
+			hideOverlay={hideInspectorOverlay}
 		>
 			<!-- {#snippet header(size)} -->
 			{#snippet header()}
@@ -937,13 +971,13 @@
 
 	<!-- 🔍 Inspector Mode Controls -->
 	{#if isInspectorMode && inspectorMoveHistory.length > 0}
-		<div class="mt-2 rounded-lg border border-purple-500/20 bg-purple-950/20 px-3 py-2">
-			<div class="mb-1.5 flex items-center justify-between">
-				<div class="flex items-center gap-1.5">
-					<div class="h-1.5 w-1.5 rounded-full bg-purple-400"></div>
-					<span class="text-xs text-purple-400">Inspector</span>
+		<div class="mt-2 rounded-lg border border-purple-500/20 bg-purple-950/20 px-4 py-3">
+			<div class="mb-2 flex items-center justify-between">
+				<div class="flex items-center gap-2">
+					<div class="h-2 w-2 rounded-full bg-purple-400"></div>
+					<span class="text-sm font-medium text-purple-400">Inspector</span>
 				</div>
-				<div class="text-xs text-surface-400">
+				<div class="text-sm font-medium text-surface-300">
 					{inspectorCurrentMoveIndex} / {inspectorMoveHistory.length}
 				</div>
 			</div>
@@ -957,57 +991,75 @@
 				oninput={() => {
 					stopInspectorPlay();
 					handleGameStateUpdate();
+					
+					// Show overlay if at end, hide otherwise
+					if (inspectorCurrentMoveIndex >= inspectorMoveHistory.length) {
+						showOverlayAtEnd();
+					} else {
+						dismissOverlay();
+					}
 				}}
 				class="inspector-slider w-full"
 			/>
 
-			<!-- Playback Controls -->
-			<div class="mt-1.5 flex items-center justify-center gap-2">
-				<button
-					onclick={restartInspector}
-					class="rounded bg-surface-700 px-2.5 py-1 text-xs text-white transition-colors hover:bg-surface-600"
-				>
-					Restart
-				</button>
+			<!-- Playback Controls and Status -->
+			<div class="mt-2 flex items-center justify-between gap-3">
+				<!-- Buttons -->
+				<div class="flex items-center gap-2">
+					<button
+						onclick={restartInspector}
+						class="rounded bg-surface-700 px-3 py-1.5 text-sm text-white transition-colors hover:bg-surface-600"
+					>
+						Restart
+					</button>
 
-				<button
-					onclick={toggleAutoPlay}
-					class="flex items-center gap-1.5 rounded px-2.5 py-1 text-xs transition-all {autoPlayEnabled
-						? 'auto-play-active bg-surface-700 hover:bg-surface-600'
-						: 'bg-surface-700 hover:bg-surface-600'}"
-				>
-					<div class="h-1.5 w-1.5 rounded-full {autoPlayEnabled ? 'bg-emerald-400' : 'bg-surface-400'}"></div>
-					<span class="text-white">Auto-Play</span>
-				</button>
+					<button
+						onclick={toggleAutoPlay}
+						class="flex items-center gap-1.5 rounded text-sm transition-all {autoPlayEnabled
+							? 'auto-play-active px-[9px] py-[3px] hover:bg-surface-600'
+							: 'border-[3px] border-surface-700 bg-surface-700 px-[9px] py-[3px] hover:bg-surface-600'}"
+					>
+						<div class="h-1.5 w-1.5 rounded-full {autoPlayEnabled ? 'bg-emerald-400' : 'bg-surface-400'}"></div>
+						<span class="text-white">Auto-Play</span>
+					</button>
 
-				<button
-					onclick={() => {
-						if (inspectorCurrentMoveIndex < inspectorMoveHistory.length) {
-							inspectorCurrentMoveIndex++;
-							handleGameStateUpdate();
-						}
-					}}
-					disabled={inspectorCurrentMoveIndex >= inspectorMoveHistory.length}
-					class="rounded bg-surface-700 px-2.5 py-1 text-xs text-white transition-colors hover:bg-surface-600 disabled:opacity-50"
-				>
-					Next
-				</button>
-			</div>
+					<button
+						onclick={() => {
+							if (inspectorCurrentMoveIndex < inspectorMoveHistory.length) {
+								inspectorCurrentMoveIndex++;
+								handleGameStateUpdate();
+								
+								// Show overlay if reached end, hide otherwise
+								if (inspectorCurrentMoveIndex >= inspectorMoveHistory.length) {
+									showOverlayAtEnd();
+								} else {
+									dismissOverlay();
+								}
+							}
+						}}
+						disabled={inspectorCurrentMoveIndex >= inspectorMoveHistory.length}
+						class="rounded bg-surface-700 px-3 py-1.5 text-sm text-white transition-colors hover:bg-surface-600 disabled:opacity-50"
+					>
+						Next
+					</button>
+				</div>
 
-			{#if autoPlayEnabled}
-				<div class="mt-1 flex items-center justify-center gap-1.5 text-xs">
-					<span class="text-surface-300">
+				<!-- Status -->
+				{#if autoPlayEnabled}
+					<div class="flex items-center gap-1.5 text-sm">
+						<span class="text-surface-300">
+							{$game.data?.board?.player === $userStore.username ? 'Replay' : `Viewing ${$game.data?.board?.player}`}
+						</span>
+						<span class="animate-pulse text-purple-400">
+							• {inspectorCurrentMoveIndex >= inspectorMoveHistory.length ? 'Ended' : isInspectorPlaying ? 'Playing' : 'Waiting'}
+						</span>
+					</div>
+				{:else}
+					<div class="text-sm text-surface-300">
 						{$game.data?.board?.player === $userStore.username ? 'Replay mode' : `Viewing ${$game.data?.board?.player}'s game`}
-					</span>
-					<span class="animate-pulse text-purple-400">
-						• {isInspectorPlaying ? 'Playing' : 'Waiting'}
-					</span>
-				</div>
-			{:else}
-				<div class="mt-1 text-center text-xs text-surface-300">
-					{$game.data?.board?.player === $userStore.username ? 'Replay mode' : `Viewing ${$game.data?.board?.player}'s game`}
-				</div>
-			{/if}
+					</div>
+				{/if}
+			</div>
 		</div>
 	{/if}
 </div>
@@ -1042,15 +1094,17 @@
 	}
 
 	.auto-play-active {
-		animation: subtle-glow 2s ease-in-out infinite;
+		border: 3px solid;
+		background-color: rgb(52 52 55); /* surface-700 */
+		animation: border-pulse 2s ease-in-out infinite;
 	}
 
-	@keyframes subtle-glow {
+	@keyframes border-pulse {
 		0%, 100% {
-			box-shadow: 0 0 0 0 rgba(52, 211, 153, 0);
+			border-color: rgb(16 185 129); /* emerald-500 */
 		}
 		50% {
-			box-shadow: 0 0 8px 2px rgba(52, 211, 153, 0.4);
+			border-color: rgb(52 52 55); /* surface-700 */
 		}
 	}
 

@@ -16,15 +16,25 @@
 		chainId?: string;
 		showReplayButton?: boolean;
 		onReplayClick?: () => void;
+		hideOverlay?: boolean;
 	}
 
-	let { tablet, canMakeMove, header, isEnded, overlayMessage, moveCallback, boardId, chainId, showReplayButton = false, onReplayClick }: Props = $props();
+	let { tablet, canMakeMove, header, isEnded, overlayMessage, moveCallback, boardId, chainId, showReplayButton = false, onReplayClick, hideOverlay = false }: Props = $props();
 	
 	let showOverlay = $state(true);
 	
 	// Reset overlay when game ends
 	$effect(() => {
 		if (isEnded) {
+			showOverlay = true;
+		}
+	});
+	
+	// Control overlay visibility based on hideOverlay prop
+	$effect(() => {
+		if (hideOverlay) {
+			showOverlay = false;
+		} else if (isEnded) {
 			showOverlay = true;
 		}
 	});
