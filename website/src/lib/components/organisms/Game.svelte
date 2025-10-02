@@ -76,6 +76,7 @@
 	let rendered = false;
 	let isSynced: boolean = false;
 	let stateHash = '';
+	let lastBoardId: string | undefined = undefined; // Track board changes
 
 	// Add new sync status tracking
 	let syncStatus: 'idle' | 'syncing' | 'syncing-bg' | 'synced' | 'failed' | 'desynced' = 'idle';
@@ -284,9 +285,21 @@
 		!isInspectorMode && // Don't auto-update in inspector mode
 		(
 			!isInitialized || // Initial load
-			($game.data?.board?.isEnded && !boardEnded) // Game just ended
+			($game.data?.board?.isEnded && !boardEnded) || // Game just ended
+			(boardId !== lastBoardId) // New board created
 		)
 	) {
+		// Reset state for new board
+		if (boardId !== lastBoardId) {
+			isInitialized = false;
+			stateHistory = [];
+			totalMovesApplied = 0;
+			lastSyncedMoveCount = 0;
+			pendingMoveCount = 0;
+			syncStatus = 'idle';
+			consecutiveMismatches = 0;
+			lastBoardId = boardId;
+		}
 		handleGameStateUpdate();
 	}
 
