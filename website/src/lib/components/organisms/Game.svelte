@@ -149,6 +149,22 @@
 		}
 	}
 
+	// 🔍 Reactive statement for inspector mode board state and score updates
+	// Only updates when inspectorCurrentMoveIndex changes, not on every poll
+	$: if (isInspectorMode && inspectorMoveHistory.length > 0 && inspectorCurrentMoveIndex > 0 && boardId) {
+		const moveIndex = inspectorCurrentMoveIndex;
+		if (moveIndex >= 1 && moveIndex <= inspectorMoveHistory.length) {
+			// Show board state and score after the selected move
+			const moveData = inspectorMoveHistory[moveIndex - 1];
+			state = createState(moveData.boardAfter, 4, boardId, player);
+			score = moveData.scoreAfter;
+		} else {
+			// Show current/final board state and score
+			state = createState($game.data?.board?.board, 4, boardId, player);
+			score = $game.data?.board?.score || 0;
+		}
+	}
+
 	$: if (isMultiplayer && $game.data?.board === null) {
 		goto('/error');
 	}
@@ -229,22 +245,8 @@
 	const handleGameStateUpdate = () => {
 		if (!boardId) return;
 		
-		// 🔍 In inspector mode, use move history to show board state
-		if (isInspectorMode && inspectorMoveHistory.length > 0) {
-			// inspectorCurrentMoveIndex: 1 = after move 1, 2 = after move 2, etc.
-			const moveIndex = inspectorCurrentMoveIndex;
-			if (moveIndex >= 1 && moveIndex <= inspectorMoveHistory.length) {
-				// Show board state after the selected move
-				const moveData = inspectorMoveHistory[moveIndex - 1];
-				state = createState(moveData.boardAfter, 4, boardId, player);
-			} else {
-				// Show current/final board state
-				state = createState($game.data?.board?.board, 4, boardId, player);
-			}
-		} else {
-			// Normal mode: use current board state
-			state = createState($game.data?.board?.board, 4, boardId, player);
-		}
+		// Normal mode: use current board state
+		state = createState($game.data?.board?.board, 4, boardId, player)
 		
 		isInitialized = true;
 
@@ -590,7 +592,7 @@
 			{/snippet}
 		</Board>
 	</div>
-	{#if $userStore.username}
+	{#if $userStore.username && !isInspectorMode}
 		<div
 			class="mt-2 flex flex-col items-center justify-center gap-y-2 text-xs lg:flex-row lg:gap-3 lg:text-sm"
 		>
@@ -687,14 +689,14 @@
 
 	<!-- 🔍 Inspector Mode Controls -->
 	{#if isInspectorMode && inspectorMoveHistory.length > 0}
-		<div class="mt-4 rounded-lg border border-purple-500/50 bg-purple-900/20 p-4">
-			<div class="mb-2 flex items-center justify-between">
-				<div class="flex items-center gap-2">
-					<div class="h-2 w-2 rounded-full bg-purple-500"></div>
-					<span class="text-sm font-bold text-purple-400">Inspector Mode</span>
+		<div class="mt-2 rounded-lg border border-purple-500/20 bg-purple-950/20 px-3 py-2">
+			<div class="mb-1.5 flex items-center justify-between">
+				<div class="flex items-center gap-1.5">
+					<div class="h-1.5 w-1.5 rounded-full bg-purple-400"></div>
+					<span class="text-xs text-purple-400">Inspector</span>
 				</div>
 				<div class="text-xs text-surface-400">
-					Move {inspectorCurrentMoveIndex} / {inspectorMoveHistory.length}
+					{inspectorCurrentMoveIndex} / {inspectorMoveHistory.length}
 				</div>
 			</div>
 
@@ -712,25 +714,22 @@
 			/>
 
 			<!-- Playback Controls -->
-			<div class="mt-3 flex items-center justify-center gap-2">
+			<div class="mt-1.5 flex items-center justify-center gap-2">
 				<button
 					onclick={restartInspector}
-					class="rounded-md bg-surface-700 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-surface-600"
+					class="rounded bg-surface-700 px-2.5 py-1 text-xs text-white transition-colors hover:bg-surface-600"
 				>
-					⏮ Restart
+					Restart
 				</button>
 
 				<button
 					onclick={toggleAutoPlay}
-					class="rounded-md px-4 py-1.5 text-xs font-bold text-white transition-colors {autoPlayEnabled
-						? 'bg-orange-500 hover:bg-orange-600'
-						: 'bg-emerald-500 hover:bg-emerald-600'}"
+					class="flex items-center gap-1.5 rounded px-2.5 py-1 text-xs transition-all {autoPlayEnabled
+						? 'auto-play-active bg-surface-700 hover:bg-surface-600'
+						: 'bg-surface-700 hover:bg-surface-600'}"
 				>
-					{#if autoPlayEnabled}
-						⏸ Auto-Play ON
-					{:else}
-						▶ Auto-Play OFF
-					{/if}
+					<div class="h-1.5 w-1.5 rounded-full {autoPlayEnabled ? 'bg-emerald-400' : 'bg-surface-400'}"></div>
+					<span class="text-white">Auto-Play</span>
 				</button>
 
 				<button
@@ -741,20 +740,24 @@
 						}
 					}}
 					disabled={inspectorCurrentMoveIndex >= inspectorMoveHistory.length}
-					class="rounded-md bg-surface-700 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-surface-600 disabled:opacity-50"
+					class="rounded bg-surface-700 px-2.5 py-1 text-xs text-white transition-colors hover:bg-surface-600 disabled:opacity-50"
 				>
-					Step →
+					Next
 				</button>
 			</div>
 
-			<div class="mt-2 flex items-center justify-center gap-2 text-xs text-surface-500">
-				<span>Viewing {$game.data?.board?.player}'s game</span>
-				{#if autoPlayEnabled}
-					<span class="animate-pulse text-emerald-400">
-						• Auto-Play {isInspectorPlaying ? 'Active' : 'Waiting for moves'}
+			{#if autoPlayEnabled}
+				<div class="mt-1 flex items-center justify-center gap-1.5 text-xs">
+					<span class="text-surface-300">Viewing {$game.data?.board?.player}'s game</span>
+					<span class="animate-pulse text-purple-400">
+						• {isInspectorPlaying ? 'Playing' : 'Waiting'}
 					</span>
-				{/if}
-			</div>
+				</div>
+			{:else}
+				<div class="mt-1 text-center text-xs text-surface-300">
+					Viewing {$game.data?.board?.player}'s game
+				</div>
+			{/if}
 		</div>
 	{/if}
 </div>
@@ -764,28 +767,41 @@
 		-webkit-appearance: none;
 		appearance: none;
 		background: #3a3a3c;
-		height: 6px;
-		border-radius: 3px;
+		height: 4px;
+		border-radius: 2px;
 		outline: none;
 	}
 
 	.inspector-slider::-webkit-slider-thumb {
 		-webkit-appearance: none;
 		appearance: none;
-		width: 16px;
-		height: 16px;
-		background: #a855f7;
+		width: 12px;
+		height: 12px;
+		background: #c084fc;
 		cursor: pointer;
 		border-radius: 50%;
 	}
 
 	.inspector-slider::-moz-range-thumb {
-		width: 16px;
-		height: 16px;
-		background: #a855f7;
+		width: 12px;
+		height: 12px;
+		background: #c084fc;
 		cursor: pointer;
 		border-radius: 50%;
 		border: none;
+	}
+
+	.auto-play-active {
+		animation: subtle-glow 2s ease-in-out infinite;
+	}
+
+	@keyframes subtle-glow {
+		0%, 100% {
+			box-shadow: 0 0 0 0 rgba(52, 211, 153, 0);
+		}
+		50% {
+			box-shadow: 0 0 8px 2px rgba(52, 211, 153, 0.4);
+		}
 	}
 
 	.game-container {
