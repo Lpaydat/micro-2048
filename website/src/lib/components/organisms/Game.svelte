@@ -115,11 +115,15 @@
 	// Reactive Statements
 	$: score = $game.data?.board?.score || 0;
 
-	// 🔍 Check if inspector mode (viewing someone else's board)
+	// 🔍 Check if inspector mode (viewing someone else's board OR own ended game)
 	$: {
 		const boardPlayer = $game.data?.board?.player;
 		const currentUser = $userStore.username;
-		if (boardPlayer && currentUser && boardPlayer !== currentUser) {
+		const gameEnded = $game.data?.board?.isEnded;
+		const isOtherPlayer = boardPlayer && currentUser && boardPlayer !== currentUser;
+		const isOwnEndedGame = boardPlayer === currentUser && gameEnded;
+		
+		if (isOtherPlayer || isOwnEndedGame) {
 			const wasInspectorMode = isInspectorMode;
 			isInspectorMode = true;
 			const newMoveHistory = $game.data?.board?.moveHistory || [];
@@ -748,14 +752,16 @@
 
 			{#if autoPlayEnabled}
 				<div class="mt-1 flex items-center justify-center gap-1.5 text-xs">
-					<span class="text-surface-300">Viewing {$game.data?.board?.player}'s game</span>
+					<span class="text-surface-300">
+						{$game.data?.board?.player === $userStore.username ? 'Replay mode' : `Viewing ${$game.data?.board?.player}'s game`}
+					</span>
 					<span class="animate-pulse text-purple-400">
 						• {isInspectorPlaying ? 'Playing' : 'Waiting'}
 					</span>
 				</div>
 			{:else}
 				<div class="mt-1 text-center text-xs text-surface-300">
-					Viewing {$game.data?.board?.player}'s game
+					{$game.data?.board?.player === $userStore.username ? 'Replay mode' : `Viewing ${$game.data?.board?.player}'s game`}
 				</div>
 			{/if}
 		</div>
