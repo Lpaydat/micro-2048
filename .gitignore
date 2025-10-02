@@ -1,6 +1,18 @@
-/target
+target/
 /db
 todo.md
+
+# Archive directory
+.archive/
+
+# BMAD and Claude directories
+.bmad-core/
+.claude/
+AGENTS.md
+
+# OpenCode config
+opencode.json
+opencode.jsonc
 
 # Stress test results
 stress_test_results/
