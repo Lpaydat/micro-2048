@@ -500,44 +500,13 @@
 			flushMoveHistory(boardId);
 			pendingMoveCount = 0;
 			lastSyncTime = Date.now();
+			
+			// Validation will happen passively in sync interval - no need to force it here
 		} catch (error) {
 			console.error('Background sync failed:', error);
 			syncStatus = 'failed';
 			return;
 		}
-		
-		// Schedule validation after backend has time to process
-		setTimeout(() => {
-			if (preSubmitSnapshot) {
-				validateBackendState(preSubmitSnapshot, movesToSubmit.length);
-			}
-		}, 500);
-	};
-	
-	// 🔄 Background Sync: Validate backend state against history
-	const validateBackendState = async (preSubmitSnapshot: StateSnapshot, submittedMoveCount: number) => {
-		if (!$game.data?.board?.board) return;
-		
-		const backendBoard = $game.data.board.board;
-		const backendHash = hashBoard(backendBoard);
-		const backendBoardStr = boardToString(backendBoard);
-		
-		// Try to find matching state in history
-		const matchIndex = stateHistory.findIndex(s => s.hash === backendHash);
-		
-		if (matchIndex >= 0) {
-			// Verify with full string comparison (hash collision check)
-			if (stateHistory[matchIndex].boardString === backendBoardStr) {
-				// ✅ MATCH FOUND - Backend is at a known state
-				lastSyncedMoveCount = stateHistory[matchIndex].moveCount;
-				trimStateHistory();
-				syncStatus = 'synced';
-				return;
-			}
-		}
-		
-		// ❌ NO MATCH - Desync detected
-		await handleDesync(backendBoardStr);
 	};
 	
 	// 🔄 Background Sync: Handle desync with overlay warning
@@ -660,6 +629,8 @@
 	});
 
 	let syncIntervalId: NodeJS.Timeout;
+	let syncingBackgroundStartTime: number | null = null;
+	
 	onMount(() => {
 		syncIntervalId = setInterval(() => {
 			if (offlineMode || isInspectorMode) return;
@@ -670,6 +641,10 @@
 			
 			// If syncing in background, validate against history
 			if (syncStatus === 'syncing-bg' && state?.tablet) {
+				if (!syncingBackgroundStartTime) {
+					syncingBackgroundStartTime = Date.now();
+				}
+				
 				const backendBoard = $game.data.board.board;
 				const backendHash = hashBoard(backendBoard);
 				const backendBoardStr = boardToString(backendBoard);
@@ -684,7 +659,21 @@
 					syncStatus = 'synced';
 					isFrozen = false;
 					consecutiveMismatches = 0;
+					syncingBackgroundStartTime = null;
+				} else {
+					// No match yet - check if we've been waiting too long
+					const syncWaitTime = Date.now() - syncingBackgroundStartTime;
+					
+					// Only trigger desync if we've waited > 5 seconds without finding a match
+					if (syncWaitTime > 5000) {
+						console.warn('Background sync timeout - no history match found');
+						syncingBackgroundStartTime = null;
+						handleDesync(backendBoardStr);
+					}
 				}
+			} else {
+				// Reset sync timer when not syncing
+				syncingBackgroundStartTime = null;
 			}
 			
 			// If not syncing and no pending moves, verify state matches
