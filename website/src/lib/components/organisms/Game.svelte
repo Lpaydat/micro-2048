@@ -549,6 +549,13 @@
 		handleGameStateUpdate();
 	};
 
+	const handleReplayClick = () => {
+		// Enable auto-play when replay button is clicked
+		if (!autoPlayEnabled) {
+			toggleAutoPlay();
+		}
+	};
+
 	onDestroy(() => {
 		setGameCreationStatus(false);
 		stopInspectorPlay();
@@ -581,6 +588,7 @@
 			{boardId}
 			{chainId}
 			showReplayButton={true}
+			onReplayClick={handleReplayClick}
 		>
 			<!-- {#snippet header(size)} -->
 			{#snippet header()}
