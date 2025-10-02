@@ -57,6 +57,13 @@
 				shardId
 				createdAt
 				endTime
+				totalMoves
+				moveHistory {
+					direction
+					timestamp
+					boardAfter
+					scoreAfter
+				}
 			}
 			balance
 		}
@@ -88,6 +95,15 @@
 	// Add new balance view state
 	let showBalance = false;
 
+	// 🔍 Inspector Mode: viewing someone else's board
+	let isInspectorMode = false;
+	let inspectorMoveHistory: any[] = [];
+	let inspectorCurrentMoveIndex = 0;
+	let isInspectorPlaying = false;
+	let inspectorPlayTimeout: NodeJS.Timeout | null = null;
+	let autoPlayEnabled = false; // Toggle state for auto-play
+	let previousMoveHistoryLength = 0; // Track previous length to detect new moves
+
 	// GraphQL Queries and Subscriptions
 	$: game = queryStore({
 		client,
@@ -98,6 +114,60 @@
 
 	// Reactive Statements
 	$: score = $game.data?.board?.score || 0;
+
+	// 🔍 Check if inspector mode (viewing someone else's board OR own ended game)
+	$: {
+		const boardPlayer = $game.data?.board?.player;
+		const currentUser = $userStore.username;
+		const gameEnded = $game.data?.board?.isEnded;
+		const isOtherPlayer = boardPlayer && currentUser && boardPlayer !== currentUser;
+		const isOwnEndedGame = boardPlayer === currentUser && gameEnded;
+		
+		if (isOtherPlayer || isOwnEndedGame) {
+			const wasInspectorMode = isInspectorMode;
+			isInspectorMode = true;
+			const newMoveHistory = $game.data?.board?.moveHistory || [];
+			const newMovesAdded = newMoveHistory.length > previousMoveHistoryLength && previousMoveHistoryLength > 0;
+			const wasAtEnd = inspectorCurrentMoveIndex === previousMoveHistoryLength;
+			
+			// Update move history without triggering state update
+			inspectorMoveHistory = newMoveHistory;
+			
+			// Auto-advance to latest move on first load
+			if (!wasInspectorMode && inspectorCurrentMoveIndex === 0 && inspectorMoveHistory.length > 0) {
+				inspectorCurrentMoveIndex = inspectorMoveHistory.length;
+				previousMoveHistoryLength = inspectorMoveHistory.length;
+				handleGameStateUpdate(); // Only update on initial load
+			}
+			// If auto-play is enabled and new moves were added while we were at the end
+			else if (autoPlayEnabled && newMovesAdded && wasAtEnd && !isInspectorPlaying) {
+				// Don't update inspectorCurrentMoveIndex here - let playInspectorMoves handle it
+				previousMoveHistoryLength = newMoveHistory.length;
+				playInspectorMoves();
+			} else {
+				// Just update the length, don't trigger state update
+				previousMoveHistoryLength = newMoveHistory.length;
+			}
+		} else {
+			isInspectorMode = false;
+		}
+	}
+
+	// 🔍 Reactive statement for inspector mode board state and score updates
+	// Only updates when inspectorCurrentMoveIndex changes, not on every poll
+	$: if (isInspectorMode && inspectorMoveHistory.length > 0 && inspectorCurrentMoveIndex > 0 && boardId) {
+		const moveIndex = inspectorCurrentMoveIndex;
+		if (moveIndex >= 1 && moveIndex <= inspectorMoveHistory.length) {
+			// Show board state and score after the selected move
+			const moveData = inspectorMoveHistory[moveIndex - 1];
+			state = createState(moveData.boardAfter, 4, boardId, player);
+			score = moveData.scoreAfter;
+		} else {
+			// Show current/final board state and score
+			state = createState($game.data?.board?.board, 4, boardId, player);
+			score = $game.data?.board?.score || 0;
+		}
+	}
 
 	$: if (isMultiplayer && $game.data?.board === null) {
 		goto('/error');
@@ -143,7 +213,8 @@
 		$game.data?.board &&
 		boardId &&
 		player &&
-		(!isInitialized || $isNewGameCreated || $game.data?.board?.isEnded)
+		(!isInitialized || $isNewGameCreated || $game.data?.board?.isEnded) &&
+		!isInspectorMode // Don't auto-update in inspector mode
 	) {
 		handleGameStateUpdate();
 	}
@@ -177,10 +248,13 @@
 
 	const handleGameStateUpdate = () => {
 		if (!boardId) return;
-		state = createState($game.data?.board?.board, 4, boardId, player);
+		
+		// Normal mode: use current board state
+		state = createState($game.data?.board?.board, 4, boardId, player)
+		
 		isInitialized = true;
 
-		if (state?.finished) {
+		if (state?.finished && !isInspectorMode) {
 			dispatch('end', {
 				score: state.score,
 				bestScore: Math.max(state.score, bestScore)
@@ -413,8 +487,78 @@
 		};
 	});
 
+	// 🔍 Inspector Auto-Play Functions
+	const toggleAutoPlay = () => {
+		autoPlayEnabled = !autoPlayEnabled;
+		
+		if (autoPlayEnabled) {
+			// Start playing if not already playing
+			if (!isInspectorPlaying) {
+				playInspectorMoves();
+			}
+		} else {
+			// Stop playing when disabled
+			stopInspectorPlay();
+		}
+	};
+
+	const playInspectorMoves = () => {
+		if (inspectorCurrentMoveIndex >= inspectorMoveHistory.length) {
+			inspectorCurrentMoveIndex = 0;
+		}
+		isInspectorPlaying = true;
+		playNextInspectorMove();
+	};
+
+	const playNextInspectorMove = () => {
+		if (!isInspectorPlaying || inspectorCurrentMoveIndex >= inspectorMoveHistory.length) {
+			stopInspectorPlay();
+			return;
+		}
+
+		const currentMove = inspectorMoveHistory[inspectorCurrentMoveIndex];
+		const nextMove = inspectorMoveHistory[inspectorCurrentMoveIndex + 1];
+
+		// Calculate delay based on timestamp difference
+		let delay = 500; // Default 500ms
+		if (nextMove) {
+			const currentTime = parseInt(currentMove.timestamp);
+			const nextTime = parseInt(nextMove.timestamp);
+			delay = Math.min(nextTime - currentTime, 2000); // Cap at 2 seconds
+		}
+
+		inspectorCurrentMoveIndex++;
+		handleGameStateUpdate();
+
+		inspectorPlayTimeout = setTimeout(() => {
+			playNextInspectorMove();
+		}, delay);
+	};
+
+	const stopInspectorPlay = () => {
+		isInspectorPlaying = false;
+		if (inspectorPlayTimeout) {
+			clearTimeout(inspectorPlayTimeout);
+			inspectorPlayTimeout = null;
+		}
+	};
+
+	const restartInspector = () => {
+		stopInspectorPlay();
+		inspectorCurrentMoveIndex = 1; // Start at first move
+		handleGameStateUpdate();
+	};
+
+	const handleReplayClick = () => {
+		// Enable auto-play when replay button is clicked
+		if (!autoPlayEnabled) {
+			toggleAutoPlay();
+		}
+	};
+
 	onDestroy(() => {
 		setGameCreationStatus(false);
+		stopInspectorPlay();
 	});
 
 	$: overlayMessage =
@@ -432,7 +576,8 @@
 	<div class="game-board">
 		<Board
 			tablet={state?.tablet}
-			canMakeMove={canMakeMove &&
+			canMakeMove={!isInspectorMode &&
+				canMakeMove &&
 				!boardEnded &&
 				$game.data?.board?.player === $userStore.username &&
 				!isFrozen &&
@@ -440,6 +585,10 @@
 			isEnded={boardEnded}
 			{overlayMessage}
 			moveCallback={handleMove}
+			{boardId}
+			{chainId}
+			showReplayButton={true}
+			onReplayClick={handleReplayClick}
 		>
 			<!-- {#snippet header(size)} -->
 			{#snippet header()}
@@ -455,7 +604,7 @@
 			{/snippet}
 		</Board>
 	</div>
-	{#if $userStore.username}
+	{#if $userStore.username && !isInspectorMode}
 		<div
 			class="mt-2 flex flex-col items-center justify-center gap-y-2 text-xs lg:flex-row lg:gap-3 lg:text-sm"
 		>
@@ -549,9 +698,126 @@
 			{/if}
 		</div>
 	{/if}
+
+	<!-- 🔍 Inspector Mode Controls -->
+	{#if isInspectorMode && inspectorMoveHistory.length > 0}
+		<div class="mt-2 rounded-lg border border-purple-500/20 bg-purple-950/20 px-3 py-2">
+			<div class="mb-1.5 flex items-center justify-between">
+				<div class="flex items-center gap-1.5">
+					<div class="h-1.5 w-1.5 rounded-full bg-purple-400"></div>
+					<span class="text-xs text-purple-400">Inspector</span>
+				</div>
+				<div class="text-xs text-surface-400">
+					{inspectorCurrentMoveIndex} / {inspectorMoveHistory.length}
+				</div>
+			</div>
+
+			<!-- Progress Slider -->
+			<input
+				type="range"
+				min="1"
+				max={inspectorMoveHistory.length}
+				bind:value={inspectorCurrentMoveIndex}
+				oninput={() => {
+					stopInspectorPlay();
+					handleGameStateUpdate();
+				}}
+				class="inspector-slider w-full"
+			/>
+
+			<!-- Playback Controls -->
+			<div class="mt-1.5 flex items-center justify-center gap-2">
+				<button
+					onclick={restartInspector}
+					class="rounded bg-surface-700 px-2.5 py-1 text-xs text-white transition-colors hover:bg-surface-600"
+				>
+					Restart
+				</button>
+
+				<button
+					onclick={toggleAutoPlay}
+					class="flex items-center gap-1.5 rounded px-2.5 py-1 text-xs transition-all {autoPlayEnabled
+						? 'auto-play-active bg-surface-700 hover:bg-surface-600'
+						: 'bg-surface-700 hover:bg-surface-600'}"
+				>
+					<div class="h-1.5 w-1.5 rounded-full {autoPlayEnabled ? 'bg-emerald-400' : 'bg-surface-400'}"></div>
+					<span class="text-white">Auto-Play</span>
+				</button>
+
+				<button
+					onclick={() => {
+						if (inspectorCurrentMoveIndex < inspectorMoveHistory.length) {
+							inspectorCurrentMoveIndex++;
+							handleGameStateUpdate();
+						}
+					}}
+					disabled={inspectorCurrentMoveIndex >= inspectorMoveHistory.length}
+					class="rounded bg-surface-700 px-2.5 py-1 text-xs text-white transition-colors hover:bg-surface-600 disabled:opacity-50"
+				>
+					Next
+				</button>
+			</div>
+
+			{#if autoPlayEnabled}
+				<div class="mt-1 flex items-center justify-center gap-1.5 text-xs">
+					<span class="text-surface-300">
+						{$game.data?.board?.player === $userStore.username ? 'Replay mode' : `Viewing ${$game.data?.board?.player}'s game`}
+					</span>
+					<span class="animate-pulse text-purple-400">
+						• {isInspectorPlaying ? 'Playing' : 'Waiting'}
+					</span>
+				</div>
+			{:else}
+				<div class="mt-1 text-center text-xs text-surface-300">
+					{$game.data?.board?.player === $userStore.username ? 'Replay mode' : `Viewing ${$game.data?.board?.player}'s game`}
+				</div>
+			{/if}
+		</div>
+	{/if}
 </div>
 
 <style>
+	.inspector-slider {
+		-webkit-appearance: none;
+		appearance: none;
+		background: #3a3a3c;
+		height: 4px;
+		border-radius: 2px;
+		outline: none;
+	}
+
+	.inspector-slider::-webkit-slider-thumb {
+		-webkit-appearance: none;
+		appearance: none;
+		width: 12px;
+		height: 12px;
+		background: #c084fc;
+		cursor: pointer;
+		border-radius: 50%;
+	}
+
+	.inspector-slider::-moz-range-thumb {
+		width: 12px;
+		height: 12px;
+		background: #c084fc;
+		cursor: pointer;
+		border-radius: 50%;
+		border: none;
+	}
+
+	.auto-play-active {
+		animation: subtle-glow 2s ease-in-out infinite;
+	}
+
+	@keyframes subtle-glow {
+		0%, 100% {
+			box-shadow: 0 0 0 0 rgba(52, 211, 153, 0);
+		}
+		50% {
+			box-shadow: 0 0 8px 2px rgba(52, 211, 153, 0.4);
+		}
+	}
+
 	.game-container {
 		margin: 0 auto;
 		text-align: center;

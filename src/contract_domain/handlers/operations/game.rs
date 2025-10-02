@@ -85,6 +85,7 @@ impl GameOperationHandler {
                     initial_highest_tile,
                     is_ended,
                     latest_timestamp,
+                    move_history,
                 } => {
                     // Update board state
                     board.board.set(final_board);
@@ -92,6 +93,27 @@ impl GameOperationHandler {
                     if is_ended {
                         board.is_ended.set(true);
                     }
+
+                    // 🎮 NEW: Store move history for replay feature
+                    let current_move_count = *board.move_count.get();
+                    for (idx, processed_move) in move_history.iter().enumerate() {
+                        let move_index = current_move_count + idx as u32;
+                        let move_record = board.move_history.load_entry_mut(&move_index).await.unwrap();
+                        
+                        // Convert Direction enum to u8
+                        let direction_u8 = match processed_move.direction {
+                            game2048::Direction::Up => 0,
+                            game2048::Direction::Down => 1,
+                            game2048::Direction::Left => 2,
+                            game2048::Direction::Right => 3,
+                        };
+                        
+                        move_record.direction.set(direction_u8);
+                        move_record.timestamp.set(processed_move.timestamp);
+                        move_record.board_after.set(processed_move.board_after);
+                        move_record.score_after.set(processed_move.score_after);
+                    }
+                    board.move_count.set(current_move_count + move_history.len() as u32);
 
                     // 🚀 NEW: Always emit score update on every score change!
                     let game_status = if is_ended {

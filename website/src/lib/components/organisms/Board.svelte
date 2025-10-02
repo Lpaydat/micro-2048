@@ -12,9 +12,22 @@
 		overlayMessage?: string;
 		header?: Snippet; // Snippet<[BoardSize]>;
 		moveCallback?: (direction: GameKeys, timestamp: string) => void;
+		boardId?: string;
+		chainId?: string;
+		showReplayButton?: boolean;
+		onReplayClick?: () => void;
 	}
 
-	let { tablet, canMakeMove, header, isEnded, overlayMessage, moveCallback }: Props = $props();
+	let { tablet, canMakeMove, header, isEnded, overlayMessage, moveCallback, boardId, chainId, showReplayButton = false, onReplayClick }: Props = $props();
+	
+	let showOverlay = $state(true);
+	
+	// Reset overlay when game ends
+	$effect(() => {
+		if (isEnded) {
+			showOverlay = true;
+		}
+	});
 
 	const SWIPE_THRESHOLD = 50;
 
@@ -121,9 +134,22 @@
 		ontouchend={preventDefault(handleTouchEnd)}
 	>
 		<GameTablet {tablet} />
-		{#if isEnded}
+		{#if isEnded && showOverlay}
 			<div class="overlay {$boardSize}">
-				<p>{overlayMessage}</p>
+				<div class="flex flex-col items-center gap-4">
+					<p>{overlayMessage}</p>
+					{#if showReplayButton && boardId && chainId}
+						<button
+							onclick={() => {
+								showOverlay = false;
+								onReplayClick?.();
+							}}
+							class="rounded-md bg-purple-500 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-purple-600"
+						>
+							🎬 Watch Replay
+						</button>
+					{/if}
+				</div>
 			</div>
 		{/if}
 	</div>

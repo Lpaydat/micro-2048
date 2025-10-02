@@ -6,6 +6,8 @@ pub fn micros_to_millis(micros: u64) -> String {
     if micros == 0 {
         "0".to_string()
     } else {
+        // BUG FIX: Actually convert to milliseconds (was converting to seconds)
+        // Microseconds / 1000 = Milliseconds
         (micros / 1000).to_string()
     }
 }
@@ -34,6 +36,8 @@ pub struct BoardState {
     pub shard_id: String,
     pub created_at: String,
     pub end_time: String,
+    pub move_history: Vec<MoveHistoryRecord>,
+    pub total_moves: u32,
 }
 
 #[derive(SimpleObject)]
@@ -92,3 +96,14 @@ pub struct TriggererPool {
     pub last_trigger_time: u64,
     pub cooldown_until: u64,
 }
+
+/// 🎮 NEW: Move history record for replay feature
+#[derive(SimpleObject)]
+pub struct MoveHistoryRecord {
+    pub direction: String, // "Up", "Down", "Left", "Right"
+    pub timestamp: String, // milliseconds
+    pub board_after: [[u16; 4]; 4],
+    pub score_after: u64,
+}
+
+

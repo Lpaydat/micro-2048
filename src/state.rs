@@ -23,6 +23,15 @@ scalar!(GameMode);
 
 #[derive(View, SimpleObject)]
 #[view(context = ViewStorageContext)]
+pub struct MoveRecord {
+    pub direction: RegisterView<u8>,
+    pub timestamp: RegisterView<u64>,
+    pub board_after: RegisterView<u64>,
+    pub score_after: RegisterView<u64>,
+}
+
+#[derive(View, SimpleObject)]
+#[view(context = ViewStorageContext)]
 pub struct Player {
     pub username: RegisterView<String>,
     pub password_hash: RegisterView<String>,
@@ -44,6 +53,8 @@ pub struct BoardState {
     pub shard_id: RegisterView<String>,
     pub end_time: RegisterView<u64>,
     pub created_at: RegisterView<u64>,
+    pub move_history: CollectionView<u32, MoveRecord>, // move_index -> MoveRecord
+    pub move_count: RegisterView<u32>, // Total number of moves made
 }
 
 #[derive(View, SimpleObject)]
