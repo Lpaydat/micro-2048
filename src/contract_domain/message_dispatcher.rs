@@ -134,12 +134,7 @@ impl MessageDispatcher {
                     // Log error but don't panic - unauthorized triggers are expected
                     eprintln!("Aggregation trigger rejected: {}", e);
                 }
-                // Also trigger self-update
-                LeaderboardOperationHandler::update_leaderboard_from_shard_chains(
-                    contract,
-                    Vec::new(),
-                )
-                .await;
+                // Note: Leaderboard updates happen via streams now, no manual trigger needed
             }
 
             // Shard aggregation trigger from leaderboard

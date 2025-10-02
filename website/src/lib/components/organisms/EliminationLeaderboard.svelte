@@ -112,13 +112,14 @@
 	</header>
 
 	<LeaderboardRankers {rankers}>
-		{#snippet item(rank, username, score, boardId, isEliminated)}
+		{#snippet item(rank, username, score, boardId, isEliminated, isEnded)}
 			<ListItem
 				{rank}
 				name={username}
 				isCurrentPlayer={username === $userStore.username}
 				{score}
 				{isEliminated}
+				{isEnded}
 				boardId={otherPlayersBoards[username]}
 				boardUrl={`/game/${otherPlayersBoards[username]}`}
 			/>

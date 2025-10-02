@@ -46,11 +46,12 @@
 				totalBoards
 				totalPlayers
 				isPinned
-				rankers {
-					username
-					score
-					boardId
-				}
+			rankers {
+				username
+				score
+				boardId
+				isEnded
+			}
 				shardIds
 			}
 			balance

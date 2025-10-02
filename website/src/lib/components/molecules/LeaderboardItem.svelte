@@ -10,28 +10,38 @@
 		score: number;
 		isEliminated?: boolean;
 		isCurrentPlayer?: boolean;
+		isEnded?: boolean;
 		boardId: string;
 		boardUrl: string;
 	}
 
-	let { rank, name, score, isEliminated, isCurrentPlayer, boardId, boardUrl }: Props = $props();
+	let { rank, name, score, isEliminated, isCurrentPlayer, isEnded, boardId, boardUrl }: Props = $props();
 
 	const paramsBoardId = $derived(
 		$page.url.searchParams.get('boardId') ?? $page.params.boardId ?? ''
 	);
 	const isActiveBoard = $derived(paramsBoardId === boardId);
-	const color = $derived(isEliminated ? 'bg-[#F3F3F3]' : 'bg-[#EEE4DA]');
+	const color = $derived(
+		isEliminated 
+			? 'bg-[#F3F3F3]' 
+			: isEnded 
+				? 'bg-[#E8E8E8]' 
+				: 'bg-[#EEE4DA]'
+	);
 	const currentPlayerStyle = $derived(
 		isCurrentPlayer
 			? isEliminated
 				? '!border-l-[#E57373] font-bold bg-[#FFCDD2]'
-				: '!border-l-blue-500 font-bold bg-[#FFD700]'
+				: isEnded
+					? '!border-l-gray-500 font-bold bg-[#D3D3D3]'
+					: '!border-l-blue-500 font-bold bg-[#FFD700]'
 			: ''
 	);
 	const selectedPlayerStyle = $derived(isActiveBoard ? '!border-l-orange-500 bg-teal-500/20' : '');
 	const specStyle = $derived(currentPlayerStyle || selectedPlayerStyle);
+	const endedOpacity = $derived(isEnded && !isCurrentPlayer && !isEliminated ? 'opacity-60' : '');
 	const commonClasses = $derived(
-		`flex justify-between snap-start items-center p-3 pl-2 w-full ${color} rounded-sm shadow-md relative border-l-4 border-transparent ${specStyle}`
+		`flex justify-between snap-start items-center p-3 pl-2 w-full ${color} rounded-sm shadow-md relative border-l-4 border-transparent ${specStyle} ${endedOpacity}`
 	);
 
 	const displayRank = $derived(rank === 1 ? `👑` : rank);

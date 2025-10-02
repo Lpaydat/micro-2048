@@ -18,6 +18,7 @@ export const GET_LEADERBOARD_DETAILS = gql`
 				username
 				score
 				boardId
+				isEnded
 			}
 			shardIds
 		}

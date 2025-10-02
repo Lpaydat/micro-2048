@@ -10,67 +10,12 @@ use std::str::FromStr;
 pub struct ShardOperationHandler;
 
 impl ShardOperationHandler {
-    /// Check if shard is active for the given timestamp
+    /// Get shard (always active - no timestamp validation)
     pub async fn is_shard_active(
         contract: &mut crate::Game2048Contract,
-        timestamp: u64,
+        _timestamp: u64,
     ) -> &mut LeaderboardShard {
-        let shard = contract.state.shards.load_entry_mut("").await.unwrap();
-        let start_time = shard.start_time.get();
-        let end_time = shard.end_time.get();
-
-        // Basic bounds checking: prevent obviously invalid timestamps
-        if timestamp > u64::MAX / 2 {
-            panic!("Timestamp too large");
-        }
-
-        // Auto-convert milliseconds to microseconds if needed
-        // Microseconds have 16 digits (e.g., 1727794800000000)
-        // Milliseconds have 13 digits (e.g., 1727794800000)
-        let timestamp_micros = if timestamp < 10_000_000_000_000 {
-            // This is likely milliseconds (13 digits or less), convert to microseconds
-            timestamp * 1000
-        } else {
-            // Already in microseconds
-            timestamp
-        };
-
-        // Apply consistent validation to all chains with optional time limits
-        // Keep bypass for system operations (111970) - used for game ending without moves
-        if timestamp_micros != 111970 {
-            let start_time_raw = *start_time;
-            let end_time_raw = *end_time;
-
-            // Only validate if times are set (non-zero)
-            let start_limit = if start_time_raw == 0 {
-                None
-            } else {
-                Some(start_time_raw)
-            };
-            let end_limit = if end_time_raw == 0 {
-                None
-            } else {
-                Some(end_time_raw)
-            };
-
-            let mut invalid = false;
-            if let Some(start) = start_limit {
-                if timestamp_micros < start {
-                    invalid = true;
-                }
-            }
-            if let Some(end) = end_limit {
-                if timestamp_micros > end {
-                    invalid = true;
-                }
-            }
-
-            if invalid {
-                panic!("Shard is not active for timestamp {} (converted to {}μs)", timestamp, timestamp_micros);
-            }
-        }
-
-        shard
+        contract.state.shards.load_entry_mut("").await.unwrap()
     }
 
     /// Update shard score for a player
@@ -88,10 +33,19 @@ impl ShardOperationHandler {
     ) {
         let shard = Self::is_shard_active(contract, timestamp).await;
         let player_shard_score = shard.score.get(player).await.unwrap();
+        let is_ended = matches!(game_status, GameStatus::Ended(_));
 
-        if player_shard_score.is_none() || player_shard_score < Some(score) {
+        // Update if: new player, better score, OR same score but game ended
+        let should_update = if let Some(current_score) = player_shard_score {
+            score > current_score || (score == current_score && is_ended)
+        } else {
+            true // New player
+        };
+
+        if should_update {
             shard.score.insert(player, score).unwrap();
-            shard.board_ids.insert(player, board_id).unwrap();
+            shard.board_ids.insert(player, board_id.clone()).unwrap();
+            shard.is_ended.insert(player, is_ended).unwrap();
             shard.highest_tiles.insert(player, highest_tile).unwrap();
             shard.game_statuses.insert(player, game_status).unwrap();
             shard.counter.set(*shard.counter.get() + 1);

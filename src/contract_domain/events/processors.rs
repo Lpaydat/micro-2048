@@ -121,6 +121,8 @@ impl StreamProcessor {
 
                 // Update if better score or equal score with newer timestamp
                 if summary.best_score >= current_score {
+                    let is_ended = matches!(summary.game_status, game2048::GameStatus::Ended(_));
+                    
                     leaderboard
                         .score
                         .insert(player, summary.best_score)
@@ -128,6 +130,10 @@ impl StreamProcessor {
                     leaderboard
                         .board_ids
                         .insert(player, summary.board_id.clone())
+                        .unwrap();
+                    leaderboard
+                        .is_ended
+                        .insert(player, is_ended)
                         .unwrap();
                 }
             }

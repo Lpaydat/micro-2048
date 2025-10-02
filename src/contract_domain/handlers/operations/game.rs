@@ -206,6 +206,9 @@ impl GameOperationHandler {
         } else if moves.is_empty() {
             let score = Game::score(*board.board.get());
 
+            // 🚀 MARK GAME AS ENDED
+            board.is_ended.set(true);
+
             // 🚀 NEW: Emit player score update for tournament end
             // This case handles when tournament time expires and game ends
             let leaderboard = contract
@@ -413,8 +416,12 @@ impl GameOperationHandler {
             .await;
     }
 
-    /// 🚀 IMPROVED: Handle leaderboard update using registered shard chains from leaderboard state
+    /// 🚀 IMPROVED: Handle leaderboard update by triggering shard aggregation
     pub async fn handle_update_leaderboard(contract: &mut crate::Game2048Contract) {
+        use game2048::Message;
+        
+        let current_time = contract.runtime.system_time().micros();
+        
         // Get registered shard chain IDs from leaderboard state
         let leaderboard = contract
             .state
@@ -422,38 +429,24 @@ impl GameOperationHandler {
             .load_entry_mut("")
             .await
             .unwrap();
-        let mut shard_chain_ids = Vec::new();
-
-        // 🚀 FIXED: Collect ALL registered shard chain IDs (no limit)
-        let mut read_count = 0;
-        #[allow(clippy::while_let_loop)]
-        loop {
-            match leaderboard.shard_ids.read_front(1000).await {
-                // Large batch size
-                Ok(shard_id_strings) => {
-                    if shard_id_strings.is_empty() {
-                        break; // No more shards to read
-                    }
-
-                    for shard_id_str in shard_id_strings {
-                        if let Ok(chain_id) = ChainId::from_str(&shard_id_str) {
-                            shard_chain_ids.push(chain_id);
-                        }
-                    }
-                    read_count += 1;
-
-                    // Safety valve - prevent infinite loops
-                    if read_count > 100 {
-                        break;
-                    }
-                }
-                Err(_) => break, // Error or end of queue
-            }
+        
+        // Get all shard IDs
+        let shard_ids = leaderboard.shard_ids.read_front(100).await.unwrap_or_default();
+        
+        if shard_ids.is_empty() {
+            return;
         }
 
-        // Update leaderboard from registered shard chains
-        contract
-            .update_leaderboard_from_shard_chains(shard_chain_ids)
-            .await;
+        // Send trigger message to ALL shards (mimics handle_trigger_update)
+        for shard_id in shard_ids.iter() {
+            if let Ok(shard_chain_id) = ChainId::from_str(shard_id) {
+                contract
+                    .runtime
+                    .prepare_message(Message::TriggerShardAggregation {
+                        timestamp: current_time,
+                    })
+                    .send_to(shard_chain_id);
+            }
+        }
     }
 }

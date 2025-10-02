@@ -74,6 +74,7 @@ pub struct Ranker {
     pub username: String,
     pub score: u64,
     pub board_id: String,
+    pub is_ended: bool,
 }
 
 #[derive(SimpleObject)]

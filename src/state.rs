@@ -68,6 +68,7 @@ pub struct LeaderboardShard {
 
     pub score: MapView<String, u64>,               // username, score
     pub board_ids: MapView<String, String>,        // username, board_id
+    pub is_ended: MapView<String, bool>,           // username, is_ended (for best board)
     pub player_chain_ids: MapView<String, String>, // username -> chain_id mapping
     pub highest_tiles: MapView<String, u64>,       // username -> highest_tile
     #[graphql(skip)]
@@ -115,6 +116,7 @@ pub struct Leaderboard {
 
     pub score: MapView<String, u64>,        // username, score
     pub board_ids: MapView<String, String>, // username, board_id
+    pub is_ended: MapView<String, bool>,    // username, is_ended (for best board)
     
     // 🚀 NEW: Distributed board counting (player_chain_id -> total_boards_in_tournament)
     pub player_board_counts: MapView<String, u32>, // Merged from all shards

@@ -13,11 +13,12 @@
 		endTime?: string;
 		totalBoards?: number;
 		totalPlayers?: number;
-		rankers?: { username: string; score: number; boardId: string }[];
+		rankers?: { username: string; score: number; boardId: string; isEnded?: boolean }[];
 		endCallback?: () => void;
+		forceAllEnded?: boolean; // TEST: Force all boards to show as ended
 	}
 
-	let { isFullScreen, leaderboardId, rankers = [], endCallback, ...rest }: Props = $props();
+	let { isFullScreen, leaderboardId, rankers = [], endCallback, forceAllEnded = false, ...rest }: Props = $props();
 
 	const player = $derived($userStore.username);
 	const customClass = isFullScreen ? 'w-full h-full' : 'p-6 w-80 max-h-full max-w-md mx-auto';
@@ -43,7 +44,7 @@
 		</header>
 
 		<LeaderboardRankers {rankers}>
-			{#snippet item(rank, username, score, boardId)}
+			{#snippet item(rank, username, score, boardId, isEliminated, isEnded)}
 				<ListItem
 					{rank}
 					name={username}
@@ -51,6 +52,7 @@
 					{score}
 					{boardId}
 					boardUrl={getBoardUrl(boardId)}
+					isEnded={forceAllEnded ? true : isEnded}
 				/>
 			{/snippet}
 		</LeaderboardRankers>

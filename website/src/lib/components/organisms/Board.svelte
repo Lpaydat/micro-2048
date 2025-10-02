@@ -23,18 +23,13 @@
 	
 	let showOverlay = $state(true);
 	
-	// Reset overlay when game ends
-	$effect(() => {
-		if (isEnded) {
-			showOverlay = true;
-		}
-	});
-	
-	// Control overlay visibility based on hideOverlay prop
+	// Control overlay visibility
 	$effect(() => {
 		if (hideOverlay) {
+			// hideOverlay prop takes precedence (for inspector mode)
 			showOverlay = false;
 		} else if (isEnded) {
+			// Show overlay for ended games (when not hidden by hideOverlay)
 			showOverlay = true;
 		}
 	});

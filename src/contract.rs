@@ -241,11 +241,7 @@ impl Game2048Contract {
         ShardOperationHandler::aggregate_scores_from_player_chains(self, player_chain_ids).await;
     }
 
-    /// Leaderboard chain functionality - aggregates scores from multiple shard chains with proper index tracking
-    pub async fn update_leaderboard_from_shard_chains(&mut self, shard_chain_ids: Vec<ChainId>) {
-        LeaderboardOperationHandler::update_leaderboard_from_shard_chains(self, shard_chain_ids)
-            .await;
-    }
+
 
     /// Emit current active tournaments (for leaderboard chains)
     pub async fn emit_active_tournaments(&mut self) {

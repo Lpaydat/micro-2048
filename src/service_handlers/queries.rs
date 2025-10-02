@@ -222,6 +222,7 @@ impl QueryHandler {
                             username,
                             score: *score,
                             board_id: leaderboard_id.clone(),
+                            is_ended: false, // Will be updated later
                         },
                     );
                     Ok(())
@@ -233,6 +234,18 @@ impl QueryHandler {
                 .for_each_index_value(|username, board_id| {
                     if let Some(ranker) = players.get_mut(&username) {
                         ranker.board_id = board_id.to_string();
+                    }
+                    Ok(())
+                })
+                .await
+                .unwrap();
+
+            // 🚀 POPULATE is_ended status from leaderboard state
+            leaderboard
+                .is_ended
+                .for_each_index_value(|username, is_ended| {
+                    if let Some(ranker) = players.get_mut(&username) {
+                        ranker.is_ended = *is_ended;
                     }
                     Ok(())
                 })
