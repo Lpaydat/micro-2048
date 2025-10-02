@@ -101,6 +101,8 @@
 	let inspectorCurrentMoveIndex = 0;
 	let isInspectorPlaying = false;
 	let inspectorPlayTimeout: NodeJS.Timeout | null = null;
+	let autoPlayEnabled = false; // Toggle state for auto-play
+	let previousMoveHistoryLength = 0; // Track previous length to detect new moves
 
 	// GraphQL Queries and Subscriptions
 	$: game = queryStore({
@@ -119,10 +121,26 @@
 		const currentUser = $userStore.username;
 		if (boardPlayer && currentUser && boardPlayer !== currentUser) {
 			isInspectorMode = true;
-			inspectorMoveHistory = $game.data?.board?.moveHistory || [];
-			// Auto-advance to latest move
+			const newMoveHistory = $game.data?.board?.moveHistory || [];
+			const newMovesAdded = newMoveHistory.length > previousMoveHistoryLength && previousMoveHistoryLength > 0;
+			const wasAtEnd = inspectorCurrentMoveIndex === previousMoveHistoryLength;
+			
+			// Store old length before updating
+			const oldLength = inspectorMoveHistory.length;
+			inspectorMoveHistory = newMoveHistory;
+			
+			// Auto-advance to latest move on first load
 			if (inspectorCurrentMoveIndex === 0 && inspectorMoveHistory.length > 0) {
 				inspectorCurrentMoveIndex = inspectorMoveHistory.length;
+				previousMoveHistoryLength = inspectorMoveHistory.length;
+			}
+			// If auto-play is enabled and new moves were added while we were at the end
+			else if (autoPlayEnabled && newMovesAdded && wasAtEnd && !isInspectorPlaying) {
+				// Don't update inspectorCurrentMoveIndex here - let playInspectorMoves handle it
+				previousMoveHistoryLength = newMoveHistory.length;
+				playInspectorMoves();
+			} else {
+				previousMoveHistoryLength = newMoveHistory.length;
 			}
 		} else {
 			isInspectorMode = false;
@@ -210,11 +228,15 @@
 		
 		// 🔍 In inspector mode, use move history to show board state
 		if (isInspectorMode && inspectorMoveHistory.length > 0) {
-			// Show the latest move's board state (or specific move if user navigated)
-			const moveIndex = Math.min(inspectorCurrentMoveIndex - 1, inspectorMoveHistory.length - 1);
-			if (moveIndex >= 0) {
-				const moveData = inspectorMoveHistory[moveIndex];
+			// inspectorCurrentMoveIndex: 1 = after move 1, 2 = after move 2, etc.
+			const moveIndex = inspectorCurrentMoveIndex;
+			if (moveIndex >= 1 && moveIndex <= inspectorMoveHistory.length) {
+				// Show board state after the selected move
+				const moveData = inspectorMoveHistory[moveIndex - 1];
 				state = createState(moveData.boardAfter, 4, boardId, player);
+			} else {
+				// Show current/final board state
+				state = createState($game.data?.board?.board, 4, boardId, player);
 			}
 		} else {
 			// Normal mode: use current board state
@@ -457,6 +479,20 @@
 	});
 
 	// 🔍 Inspector Auto-Play Functions
+	const toggleAutoPlay = () => {
+		autoPlayEnabled = !autoPlayEnabled;
+		
+		if (autoPlayEnabled) {
+			// Start playing if not already playing
+			if (!isInspectorPlaying) {
+				playInspectorMoves();
+			}
+		} else {
+			// Stop playing when disabled
+			stopInspectorPlay();
+		}
+	};
+
 	const playInspectorMoves = () => {
 		if (inspectorCurrentMoveIndex >= inspectorMoveHistory.length) {
 			inspectorCurrentMoveIndex = 0;
@@ -500,7 +536,7 @@
 
 	const restartInspector = () => {
 		stopInspectorPlay();
-		inspectorCurrentMoveIndex = 0;
+		inspectorCurrentMoveIndex = 1; // Start at first move
 		handleGameStateUpdate();
 	};
 
@@ -662,7 +698,7 @@
 			<!-- Progress Slider -->
 			<input
 				type="range"
-				min="0"
+				min="1"
 				max={inspectorMoveHistory.length}
 				bind:value={inspectorCurrentMoveIndex}
 				oninput={() => {
@@ -681,21 +717,18 @@
 					⏮ Restart
 				</button>
 
-				{#if isInspectorPlaying}
-					<button
-						onclick={stopInspectorPlay}
-						class="rounded-md bg-orange-500 px-4 py-1.5 text-xs font-bold text-white transition-colors hover:bg-orange-600"
-					>
-						⏸ Pause
-					</button>
-				{:else}
-					<button
-						onclick={playInspectorMoves}
-						class="rounded-md bg-emerald-500 px-4 py-1.5 text-xs font-bold text-white transition-colors hover:bg-emerald-600"
-					>
-						▶ Auto-Play
-					</button>
-				{/if}
+				<button
+					onclick={toggleAutoPlay}
+					class="rounded-md px-4 py-1.5 text-xs font-bold text-white transition-colors {autoPlayEnabled
+						? 'bg-orange-500 hover:bg-orange-600'
+						: 'bg-emerald-500 hover:bg-emerald-600'}"
+				>
+					{#if autoPlayEnabled}
+						⏸ Auto-Play ON
+					{:else}
+						▶ Auto-Play OFF
+					{/if}
+				</button>
 
 				<button
 					onclick={() => {
@@ -713,8 +746,10 @@
 
 			<div class="mt-2 flex items-center justify-center gap-2 text-xs text-surface-500">
 				<span>Viewing {$game.data?.board?.player}'s game</span>
-				{#if isInspectorPlaying}
-					<span class="animate-pulse text-emerald-400">• Playing with original timing</span>
+				{#if autoPlayEnabled}
+					<span class="animate-pulse text-emerald-400">
+						• Auto-Play {isInspectorPlaying ? 'Active' : 'Waiting for moves'}
+					</span>
 				{/if}
 			</div>
 		</div>
