@@ -39,6 +39,7 @@
 	<div class="text-center {customClass} rounded-lg bg-[#FAF8EF] shadow-md">
 		<header class="mb-4 flex flex-col items-center">
 			<h1 class="mb-2 text-2xl font-bold text-[#776E65]">Leaderboard</h1>
+			<p class="text-xs text-[#8F7A66]/60">Tap any player to watch their game</p>
 		</header>
 
 		<LeaderboardRankers {rankers}>
