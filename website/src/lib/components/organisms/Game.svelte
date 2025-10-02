@@ -120,19 +120,20 @@
 		const boardPlayer = $game.data?.board?.player;
 		const currentUser = $userStore.username;
 		if (boardPlayer && currentUser && boardPlayer !== currentUser) {
+			const wasInspectorMode = isInspectorMode;
 			isInspectorMode = true;
 			const newMoveHistory = $game.data?.board?.moveHistory || [];
 			const newMovesAdded = newMoveHistory.length > previousMoveHistoryLength && previousMoveHistoryLength > 0;
 			const wasAtEnd = inspectorCurrentMoveIndex === previousMoveHistoryLength;
 			
-			// Store old length before updating
-			const oldLength = inspectorMoveHistory.length;
+			// Update move history without triggering state update
 			inspectorMoveHistory = newMoveHistory;
 			
 			// Auto-advance to latest move on first load
-			if (inspectorCurrentMoveIndex === 0 && inspectorMoveHistory.length > 0) {
+			if (!wasInspectorMode && inspectorCurrentMoveIndex === 0 && inspectorMoveHistory.length > 0) {
 				inspectorCurrentMoveIndex = inspectorMoveHistory.length;
 				previousMoveHistoryLength = inspectorMoveHistory.length;
+				handleGameStateUpdate(); // Only update on initial load
 			}
 			// If auto-play is enabled and new moves were added while we were at the end
 			else if (autoPlayEnabled && newMovesAdded && wasAtEnd && !isInspectorPlaying) {
@@ -140,6 +141,7 @@
 				previousMoveHistoryLength = newMoveHistory.length;
 				playInspectorMoves();
 			} else {
+				// Just update the length, don't trigger state update
 				previousMoveHistoryLength = newMoveHistory.length;
 			}
 		} else {
@@ -191,7 +193,8 @@
 		$game.data?.board &&
 		boardId &&
 		player &&
-		(!isInitialized || $isNewGameCreated || $game.data?.board?.isEnded)
+		(!isInitialized || $isNewGameCreated || $game.data?.board?.isEnded) &&
+		!isInspectorMode // Don't auto-update in inspector mode
 	) {
 		handleGameStateUpdate();
 	}
