@@ -9,8 +9,6 @@
 	import { chainId as mainChainId } from '$lib/constants';
 
 	const client = getClient(mainChainId, true);
-	console.log('EventList - Using main chain ID:', mainChainId);
-
 	const GET_LEADERBOARDS = gql`
 		query GetLeaderboards($filter: TournamentFilter) {
 			leaderboards(filter: $filter) {
@@ -36,19 +34,14 @@
 			eventGroup === 'active' ? 'upcoming' : eventGroup === 'upcoming' ? 'past' : 'active';
 	};
 
-	const leaderboards = $derived(queryStore({ 
-		client, 
-		query: GET_LEADERBOARDS,
-		variables: { filter: 'ALL' }
-	}));
-	
-	$effect(() => {
-		if ($leaderboards?.data) {
-			console.log('EventList - Leaderboards data:', $leaderboards.data);
-			console.log('EventList - Number of leaderboards:', $leaderboards.data.leaderboards?.length);
-		}
-	});
-	
+	const leaderboards = $derived(
+		queryStore({
+			client,
+			query: GET_LEADERBOARDS,
+			variables: { filter: 'ALL' }
+		})
+	);
+
 	const sortedEvents = $derived(
 		$leaderboards?.data?.leaderboards
 			.filter((event: LeaderboardState) => {

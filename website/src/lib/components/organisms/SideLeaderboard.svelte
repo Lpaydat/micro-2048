@@ -31,31 +31,33 @@
 	};
 </script>
 
-<div class="mx-auto flex max-w-sm flex-col gap-4 {containerClass} overflow-hidden">
+<div class="mx-auto flex max-w-sm flex-col gap-4 {containerClass} h-full max-h-screen">
 	{#if leaderboardId}
-		<div class="me-auto flex">
+		<div class="me-auto flex flex-none">
 			<LeaderboardDetails {leaderboardId} {...rest} {endCallback} />
 		</div>
 	{/if}
-	<div class="text-center {customClass} rounded-lg bg-[#FAF8EF] shadow-md">
-		<header class="mb-4 flex flex-col items-center">
+	<div class="text-center {customClass} rounded-lg bg-[#FAF8EF] shadow-md flex flex-col overflow-hidden flex-1 min-h-0">
+		<header class="mb-4 flex flex-col items-center flex-none">
 			<h1 class="mb-2 text-2xl font-bold text-[#776E65]">Leaderboard</h1>
 			<p class="text-xs text-[#8F7A66]/60">Tap any player to watch their game</p>
 		</header>
 
-		<LeaderboardRankers {rankers}>
-			{#snippet item(rank, username, score, boardId, isEliminated, isEnded)}
-				<ListItem
-					{rank}
-					name={username}
-					isCurrentPlayer={username === player}
-					{score}
-					{boardId}
-					boardUrl={getBoardUrl(boardId)}
-					isEnded={forceAllEnded ? true : isEnded}
-				/>
-			{/snippet}
-		</LeaderboardRankers>
+		<div class="flex-1 min-h-0">
+			<LeaderboardRankers {rankers}>
+				{#snippet item(rank, username, score, boardId, isEliminated, isEnded)}
+					<ListItem
+						{rank}
+						name={username}
+						isCurrentPlayer={username === player}
+						{score}
+						{boardId}
+						boardUrl={getBoardUrl(boardId)}
+						isEnded={forceAllEnded ? true : isEnded}
+					/>
+				{/snippet}
+			</LeaderboardRankers>
+		</div>
 	</div>
 </div>
 
@@ -70,11 +72,5 @@
 
 	.border-sm {
 		border-radius: 6px !important;
-	}
-
-	.list-container {
-		max-height: calc(100vh - 10rem); /* Adjust the height as needed */
-		overflow-y: auto;
-		scroll-snap-type: y mandatory; /* Enable vertical snapping */
 	}
 </style>

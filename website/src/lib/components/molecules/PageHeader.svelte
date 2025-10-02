@@ -42,7 +42,7 @@
 
 	let size = $state('md');
 	const displayTitle = $derived(
-		size === 'sm' && title.length > smTitle ? `${title.slice(0, smTitle)}...` : title
+		title && size === 'sm' && title.length > smTitle ? `${title.slice(0, smTitle)}...` : (title || '')
 	);
 	const paddingStart = $derived(prevPage || icon ? 'ps-0' : 'ps-2');
 

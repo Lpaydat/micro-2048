@@ -12,9 +12,6 @@
 	import { chainId as mainChainId } from '$lib/constants';
 
 	const client = getClient(mainChainId, true);
-	console.log('EventLeaderboardForm - Using main chain ID:', mainChainId);
-	console.log('EventLeaderboardForm - Client instance:', client);
-	console.log('EventLeaderboardForm - Client URL:', (client as any).url);
 	const modalStore = getModalStore();
 
 	let name = $state('');
@@ -31,7 +28,7 @@
 		const now = new Date();
 		const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
 		const oneDayLater = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-		
+
 		startTime = oneHourLater.toISOString().slice(0, 16);
 		endTime = oneDayLater.toISOString().slice(0, 16);
 	};
@@ -50,7 +47,7 @@
 			// Check if user is logged in
 			const username = localStorage.getItem('username');
 			const passwordHash = localStorage.getItem('passwordHash');
-			
+
 			if (!username || !passwordHash) {
 				alert('You must be logged in to create a tournament. Please register/login first.');
 				return;
@@ -92,31 +89,24 @@
 				baseTriggererCount: baseTriggererCount
 			};
 
-			console.log('Creating tournament with settings:', settings);
-			console.log('User:', username);
-			console.log('Client URL:', (client as any).url);
-			console.log('Expected main chain URL:', `http://localhost:8088/chains/${mainChainId}/applications/988d375aa1348035087f7a7bf7acec0931982df409f228c37781386505593a54`);
-			
 			const result = createLeaderboard(client, settings);
-			
+
 			if (!result) {
 				errorMessage = 'Authentication failed. Please make sure you are logged in.';
 				return;
 			}
-			
+
 			// Subscribe to the result to catch errors
 			result.subscribe(($result: any) => {
-				console.log('Tournament creation result:', $result);
 				if ($result.error) {
 					console.error('Tournament creation error:', $result.error);
 					console.error('Error details:', JSON.stringify($result.error, null, 2));
-					errorMessage = 'Failed to create tournament. Please check your credentials and try again.';
+					errorMessage =
+						'Failed to create tournament. Please check your credentials and try again.';
 				} else if ($result.data) {
-					console.log('Tournament created successfully:', $result.data);
 					modalStore.close();
 				}
 			});
-
 		} catch (error) {
 			console.error('Unexpected error:', error);
 			errorMessage = 'An unexpected error occurred. Please try again.';
@@ -174,7 +164,7 @@
 			<button
 				type="button"
 				onclick={setDefaultTimes}
-				class="mt-2 text-xs text-blue-600 hover:text-blue-800 underline"
+				class="mt-2 text-xs text-blue-600 underline hover:text-blue-800"
 				disabled={loading}
 			>
 				Reset to default times
@@ -193,7 +183,7 @@
 				max="20"
 				disabled={loading}
 			/>
-			<p class="text-xs text-gray-600 mt-1">
+			<p class="mt-1 text-xs text-gray-600">
 				Number of parallel game chains. More shards = higher capacity but increased complexity.
 			</p>
 		</div>
@@ -210,7 +200,7 @@
 				max="10"
 				disabled={loading}
 			/>
-			<p class="text-xs text-gray-600 mt-1">
+			<p class="mt-1 text-xs text-gray-600">
 				Number of chains authorized to trigger score aggregation. Higher count = more redundancy.
 			</p>
 		</div>
@@ -229,7 +219,7 @@
 
 		<!-- Error Message -->
 		{#if errorMessage}
-			<div class="rounded-md bg-red-100 border border-red-400 text-red-700 px-4 py-3 mb-4">
+			<div class="mb-4 rounded-md border border-red-400 bg-red-100 px-4 py-3 text-red-700">
 				{errorMessage}
 			</div>
 		{/if}

@@ -57,15 +57,15 @@
 
 	const board = $derived(getBoard(playerClient));
 	const boards = $derived(getBoards(playerClient, 5)); // Only fetch last 5 boards
-	
+
 	// If board query returns null, find latest board from boards array
 	const latestBoard = $derived.by(() => {
 		if ($board?.data?.board) return $board.data.board;
-		
+
 		// Fallback: find most recent board from boards array
 		const allBoards = $boards?.data?.boards || [];
 		if (allBoards.length === 0) return null;
-		
+
 		return allBoards.sort((a: any, b: any) => {
 			return parseInt(b.createdAt || '0') - parseInt(a.createdAt || '0');
 		})[0];
@@ -85,10 +85,9 @@
 
 	// Check if button should be disabled (creating board OR within 5 seconds of last creation)
 	const isCreatingBoard = $derived(
-		isNewGameCreated || 
-		!!(boardCreationStartTime && Date.now() - boardCreationStartTime < 5000)
+		isNewGameCreated || !!(boardCreationStartTime && Date.now() - boardCreationStartTime < 5000)
 	);
-	
+
 	// Update parent's isCreating binding
 	$effect(() => {
 		isCreating = !!isCreatingBoard;
@@ -100,13 +99,11 @@
 		if (isCreatingBoard) return; // Prevent multiple clicks
 
 		try {
-			console.log('Creating new board for leaderboard:', leaderboardId);
-			
 			boardCreationStartTime = Date.now();
 			newGameAt = Date.now();
-			
+
 			const result = await newGameBoard(leaderboardId, newGameAt.toString());
-			
+
 			// Wait for operation to complete before starting to poll
 			if (result) {
 				result.subscribe(($result: any) => {
@@ -115,11 +112,9 @@
 						alert('Failed to create board. Please try again.');
 						boardCreationStartTime = null;
 					} else if ($result.data) {
-						console.log('✅ Board mutation succeeded, starting to poll in 3 seconds...');
 						// Give the operation time to commit to state
 						setTimeout(() => {
 							isNewGameCreated = true;
-							console.log('🔄 Now polling for new board...');
 						}, 3000);
 					}
 				});
@@ -146,20 +141,7 @@
 			// Query both board and boards
 			board?.reexecute({ requestPolicy: 'network-only' });
 			boards?.reexecute({ requestPolicy: 'network-only' });
-			
-			if (isNewGameCreated && latestBoard) {
-				console.log('🔍 Checking for new board:', {
-					source: $board?.data?.board ? 'board query' : 'boards query',
-					boardId: latestBoard.boardId,
-					currentBoardIdProp: boardId,
-					createdAt: latestBoard.createdAt,
-					newGameAt: newGameAt,
-					diff: Math.abs(parseInt(latestBoard.createdAt || '0') - newGameAt),
-					leaderboardMatch: latestBoard.leaderboardId === leaderboardId,
-					isDifferentBoard: latestBoard.boardId !== boardId
-				});
-			}
-			
+
 			if (
 				isNewGameCreated &&
 				latestBoard?.boardId &&
@@ -169,9 +151,6 @@
 				Math.abs(parseInt(latestBoard.createdAt) - newGameAt) < 10000 &&
 				latestBoard.leaderboardId === leaderboardId
 			) {
-				console.log('✅ NEW GAME FOUND - REDIRECTING');
-				console.log('Old board:', boardId);
-				console.log('New board:', latestBoard.boardId);
 				newGameAt = Date.now();
 				isNewGameCreated = false;
 				boardCreationStartTime = null; // Reset creation time
@@ -203,7 +182,9 @@
 				disabled={isCreatingBoard}
 				class="text-md rounded-md border-none px-2 py-2 text-center font-bold text-[#f9f6f2] md:px-4 md:text-xl
 				{canStartNewGame ? 'visible' : 'invisible'}
-				{isCreatingBoard ? 'bg-[#9f8a76] cursor-not-allowed opacity-70' : 'bg-[#8f7a66] hover:bg-[#9f8a76]'}"
+				{isCreatingBoard
+					? 'cursor-not-allowed bg-[#9f8a76] opacity-70'
+					: 'bg-[#8f7a66] hover:bg-[#9f8a76]'}"
 			>
 				{#if isCreatingBoard}
 					<span class="animate-pulse">Creating...</span>

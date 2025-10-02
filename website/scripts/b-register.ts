@@ -23,7 +23,6 @@ export async function browserTest() {
 
 	const randomUsername = Math.random().toString(36).substring(2, 8);
 	const randomPassword = Math.random().toString(36).substring(2, 10);
-	console.log('Testing with credentials:', { username: randomUsername, password: randomPassword });
 	await page.fill('#username', randomUsername);
 	await page.fill('#password', randomPassword);
 	await page.click('#join-now');

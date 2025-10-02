@@ -46,12 +46,12 @@
 				totalBoards
 				totalPlayers
 				isPinned
-			rankers {
-				username
-				score
-				boardId
-				isEnded
-			}
+				rankers {
+					username
+					score
+					boardId
+					isEnded
+				}
 				shardIds
 			}
 			balance
@@ -92,8 +92,6 @@
 		if (isNewGameCreated) return;
 		if (!leaderboardId || !$userStore.username) return;
 
-		console.log('Creating new event game - smart contract will auto-select shard');
-		
 		newGameAt = Date.now();
 		isNewGameCreated = true;
 		await newGameBoard(leaderboardId, newGameAt.toString());
@@ -162,7 +160,6 @@
 				Math.abs($board?.data?.board?.createdAt - newGameAt) < 10000 &&
 				$board?.data?.board?.leaderboardId === leaderboardId
 			) {
-				console.log('new game found');
 				newGameAt = 0;
 				const url = new URL('/game', window.location.origin);
 				url.searchParams.set('boardId', $board?.data?.board?.boardId);
@@ -258,6 +255,7 @@
 				{balance}
 				hasSubHeader
 				{...$leaderboard.data?.leaderboard}
+				{leaderboardId}
 			/>
 		{/if}
 	{/snippet}

@@ -40,7 +40,6 @@ export const getClient = (
 	}
 
 	const clientUrl = `${urls.http}/chains/${chainId}/applications/${applicationId}`;
-	console.log('Creating GraphQL client with URL:', clientUrl);
 
 	// Create basic HTTP client for server-side rendering
 	if (!browser) {
