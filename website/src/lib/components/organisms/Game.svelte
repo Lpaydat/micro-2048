@@ -372,12 +372,16 @@
 				boardId
 			});
 			
-			// 🔄 Check if we should trigger background sync
-			checkBackgroundSyncTriggers();
-
 			// Dispatch game over event if state changed to finished
 			if (state?.finished) {
 				dispatch('end', { score, bestScore });
+				// Immediately sync when game ends to submit final score
+				if (pendingMoveCount > 0) {
+					submitMoves(boardId, true);
+				}
+			} else {
+				// 🔄 Check if we should trigger background sync (only during active play)
+				checkBackgroundSyncTriggers();
 			}
 		} finally {
 			isProcessingMove = false;
