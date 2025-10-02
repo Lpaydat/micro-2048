@@ -78,12 +78,80 @@
 	let stateHash = '';
 
 	// Add new sync status tracking
-	let syncStatus: 'idle' | 'syncing' | 'synced' | 'failed' = 'idle';
+	let syncStatus: 'idle' | 'syncing' | 'syncing-bg' | 'synced' | 'failed' | 'desynced' = 'idle';
 	let lastSyncTime: number | null = null;
 	let pendingMoveCount = 0;
 	let isFrozen = false;
 	let consecutiveMismatches = 0; // Track consecutive mismatches
 	let roundFirstMoveTime: number | null = null;
+	
+	// 🔄 Background Sync: State History Tracking
+	type StateSnapshot = {
+		hash: number;
+		boardString: string;
+		moveCount: number;
+		timestamp: number;
+		pendingAtTime: number;
+	};
+	
+	let stateHistory: StateSnapshot[] = [];
+	let totalMovesApplied = 0;
+	let lastSyncedMoveCount = 0;
+	
+	// 🔄 Background Sync: Activity Tracking
+	let recentMoves: number[] = [];
+	const ACTIVITY_WINDOW = 1000; // 1 second
+	
+	// 🔄 Background Sync: Config
+	const HIGH_ACTIVITY_THRESHOLD = 5; // moves per second
+	const HIGH_ACTIVITY_SYNC_INTERVAL = 8000; // 8 seconds
+	const LOW_ACTIVITY_PENDING_LIMIT = 15; // moves
+	const LOW_ACTIVITY_THRESHOLD = 2; // moves per second
+	
+	// Hash function for quick board comparison
+	const hashBoard = (board: number[][]) => {
+		let hash = 2166136261;
+		for (const row of board) {
+			for (const cell of row) {
+				hash ^= cell;
+				hash = (hash * 16777619) >>> 0; // Keep as 32-bit unsigned
+			}
+		}
+		return hash;
+	};
+	
+	// Track move activity
+	const trackMoveActivity = () => {
+		const now = Date.now();
+		recentMoves.push(now);
+		recentMoves = recentMoves.filter(t => now - t < ACTIVITY_WINDOW);
+	};
+	
+	const getMovesPerSecond = () => recentMoves.length;
+	
+	// Add state to history
+	const addStateSnapshot = (tablet: number[][] | undefined) => {
+		if (!tablet) return;
+		
+		const boardStr = boardToString(tablet);
+		const snapshot: StateSnapshot = {
+			hash: hashBoard(tablet),
+			boardString: boardStr,
+			moveCount: totalMovesApplied,
+			timestamp: Date.now(),
+			pendingAtTime: pendingMoveCount
+		};
+		
+		stateHistory.push(snapshot);
+	};
+	
+	// Clear history up to last synced point
+	const trimStateHistory = () => {
+		const syncedIndex = stateHistory.findIndex(s => s.moveCount === lastSyncedMoveCount);
+		if (syncedIndex >= 0) {
+			stateHistory = stateHistory.slice(syncedIndex);
+		}
+	};
 
 	// Offline mode disabled for website
 	const offlineMode = false;
@@ -288,6 +356,13 @@
 				roundFirstMoveTime = Date.now();
 			}
 
+			// 🔄 Track move activity for background sync
+			trackMoveActivity();
+			totalMovesApplied++;
+			
+			// 🔄 Add state snapshot to history
+			addStateSnapshot(state?.tablet);
+
 			// Add move to local history instead of immediate submission
 			syncStatus = 'idle';
 			pendingMoveCount++;
@@ -296,6 +371,9 @@
 				timestamp,
 				boardId
 			});
+			
+			// 🔄 Check if we should trigger background sync
+			checkBackgroundSyncTriggers();
 
 			// Dispatch game over event if state changed to finished
 			if (state?.finished) {
@@ -373,18 +451,153 @@
 
 		submitMoves(boardId);
 	};
+	
+	// 🔄 Background Sync: Check if we should trigger sync
+	const checkBackgroundSyncTriggers = () => {
+		if (!boardId || pendingMoveCount === 0) return;
+		
+		const movesPerSec = getMovesPerSecond();
+		const timeSinceLastSync = lastSyncTime ? Date.now() - lastSyncTime : Infinity;
+		const isLowActivity = movesPerSec <= LOW_ACTIVITY_THRESHOLD;
+		
+		// Condition 2: High Activity Sync
+		if (movesPerSec > HIGH_ACTIVITY_THRESHOLD && timeSinceLastSync > HIGH_ACTIVITY_SYNC_INTERVAL) {
+			backgroundSync(boardId);
+			return;
+		}
+		
+		// Condition 3: Pending Count Sync (low activity only)
+		if (isLowActivity && pendingMoveCount >= LOW_ACTIVITY_PENDING_LIMIT) {
+			backgroundSync(boardId);
+			return;
+		}
+	};
+	
+	// 🔄 Background Sync: Non-blocking sync
+	const backgroundSync = async (boardId: string) => {
+		if (syncStatus === 'syncing' || syncStatus === 'syncing-bg') return;
+		
+		// Capture pre-submit snapshot
+		const preSubmitSnapshot: StateSnapshot | undefined = state?.tablet ? {
+			hash: hashBoard(state.tablet),
+			boardString: boardToString(state.tablet),
+			moveCount: totalMovesApplied,
+			timestamp: Date.now(),
+			pendingAtTime: pendingMoveCount
+		} : undefined;
+		
+		// Get moves to submit (but don't flush yet - keep for validation)
+		const movesToSubmit = $moveHistoryStore.get(boardId) || [];
+		if (movesToSubmit.length === 0) return;
+		
+		// Submit moves without blocking
+		syncStatus = 'syncing-bg';
+		const moveBatch = getMoveBatchForSubmission(movesToSubmit);
+		
+		try {
+			makeMoves(client, moveBatch, boardId);
+			// Clear submitted moves from history
+			flushMoveHistory(boardId);
+			pendingMoveCount = 0;
+			lastSyncTime = Date.now();
+		} catch (error) {
+			console.error('Background sync failed:', error);
+			syncStatus = 'failed';
+			return;
+		}
+		
+		// Schedule validation after backend has time to process
+		setTimeout(() => {
+			if (preSubmitSnapshot) {
+				validateBackendState(preSubmitSnapshot, movesToSubmit.length);
+			}
+		}, 500);
+	};
+	
+	// 🔄 Background Sync: Validate backend state against history
+	const validateBackendState = async (preSubmitSnapshot: StateSnapshot, submittedMoveCount: number) => {
+		if (!$game.data?.board?.board) return;
+		
+		const backendBoard = $game.data.board.board;
+		const backendHash = hashBoard(backendBoard);
+		const backendBoardStr = boardToString(backendBoard);
+		
+		// Try to find matching state in history
+		const matchIndex = stateHistory.findIndex(s => s.hash === backendHash);
+		
+		if (matchIndex >= 0) {
+			// Verify with full string comparison (hash collision check)
+			if (stateHistory[matchIndex].boardString === backendBoardStr) {
+				// ✅ MATCH FOUND - Backend is at a known state
+				lastSyncedMoveCount = stateHistory[matchIndex].moveCount;
+				trimStateHistory();
+				syncStatus = 'synced';
+				return;
+			}
+		}
+		
+		// ❌ NO MATCH - Desync detected
+		await handleDesync(backendBoardStr);
+	};
+	
+	// 🔄 Background Sync: Handle desync with overlay warning
+	const handleDesync = async (backendBoardStr: string) => {
+		console.warn('Desync detected - initiating full sync');
+		
+		// Pause game and show warning
+		isFrozen = true;
+		syncStatus = 'desynced';
+		overlayMessage = 'Syncing with server... Please wait.';
+		
+		// Submit ALL pending moves
+		const allPending = flushMoveHistory(boardId!);
+		if (allPending.length > 0) {
+			try {
+				await makeMoves(client, getMoveBatchForSubmission(allPending), boardId!);
+			} catch (error) {
+				console.error('Failed to submit pending moves during desync:', error);
+			}
+		}
+		
+		// Wait for backend to process
+		await new Promise(resolve => setTimeout(resolve, 1500));
+		
+		// Fetch fresh state
+		await game.reexecute({ requestPolicy: 'network-only' });
+		
+		// Force reconciliation
+		if ($game.data?.board?.board) {
+			const finalBackendState = boardToString($game.data.board.board);
+			const currentLocalState = boardToString(state?.tablet);
+			
+			if (finalBackendState !== currentLocalState) {
+				// Full reset to backend state
+				state = createState($game.data.board.board, 4, boardId!, player);
+				stateHistory = [];
+				totalMovesApplied = $game.data.board.totalMoves || 0;
+				lastSyncedMoveCount = totalMovesApplied;
+			}
+		}
+		
+		// Resume game
+		isFrozen = false;
+		syncStatus = 'synced';
+		pendingMoveCount = 0;
+		overlayMessage = undefined;
+	};
 
+	// Legacy submit function (used for idle sync and game end)
 	const submitMoves = (boardId: string, force = false) => {
-		// Offline mode disabled for website - always submit moves
 		const moves = flushMoveHistory(boardId);
 		try {
 			if ((moves.length > 0 || force)) {
 				makeMoves(client, getMoveBatchForSubmission(moves), boardId);
 				const newTablet = boardToString(state?.tablet);
 				stateHash = newTablet ?? '';
-				isFrozen = true;
-				syncStatus = 'syncing';
+				// Don't freeze UI during background sync
+				syncStatus = 'syncing-bg';
 				pendingMoveCount = 0;
+				lastSyncTime = Date.now();
 			}
 		} catch (error) {
 			syncStatus = 'failed';
@@ -449,41 +662,51 @@
 	let syncIntervalId: NodeJS.Timeout;
 	onMount(() => {
 		syncIntervalId = setInterval(() => {
-			if (offlineMode) return; // Skip sync checks in offline mode
-			if (boardId && (pendingMoveCount === 0 || syncStatus === 'syncing')) {
-				// // Force check threshold conditions periodically
-				game.reexecute({ requestPolicy: 'network-only' });
-				if ($game.data?.board) {
-					const backendBoardStr = boardToString($game.data.board.board);
-					const localBoardStr = boardToString(state?.tablet);
-
-					// State comparison logic with retry mechanism
-					if (backendBoardStr !== localBoardStr) {
-						consecutiveMismatches++;
-
-						if (consecutiveMismatches >= 5) {
-							// Confirm persistent mismatch, reset local state
-							state = createState($game.data.board.board, 4, boardId, player);
-							isFrozen = false;
-							syncStatus = 'synced';
-							roundFirstMoveTime = null;
-							lastSyncTime = Date.now();
-							consecutiveMismatches = 0; // Reset counter after resolution
-						}
-					} else {
-						// States match, reset mismatch counter
-						consecutiveMismatches = 0;
-
-						if (syncStatus === 'syncing' && backendBoardStr === stateHash) {
-							lastSyncTime = Date.now();
-							isFrozen = false;
-							roundFirstMoveTime = null;
-							syncStatus = 'synced';
-						}
+			if (offlineMode || isInspectorMode) return;
+			if (!boardId || !$game.data?.board) return;
+			
+			// Continuously poll backend state
+			game.reexecute({ requestPolicy: 'network-only' });
+			
+			// If syncing in background, validate against history
+			if (syncStatus === 'syncing-bg' && state?.tablet) {
+				const backendBoard = $game.data.board.board;
+				const backendHash = hashBoard(backendBoard);
+				const backendBoardStr = boardToString(backendBoard);
+				
+				// Check if backend matches any state in our history
+				const matchIndex = stateHistory.findIndex(s => s.hash === backendHash);
+				
+				if (matchIndex >= 0 && stateHistory[matchIndex].boardString === backendBoardStr) {
+					// ✅ Backend caught up to a known state
+					lastSyncedMoveCount = stateHistory[matchIndex].moveCount;
+					trimStateHistory();
+					syncStatus = 'synced';
+					isFrozen = false;
+					consecutiveMismatches = 0;
+				}
+			}
+			
+			// If not syncing and no pending moves, verify state matches
+			if (pendingMoveCount === 0 && syncStatus !== 'syncing-bg' && state?.tablet) {
+				const backendBoardStr = boardToString($game.data.board.board);
+				const localBoardStr = boardToString(state.tablet);
+				
+				if (backendBoardStr !== localBoardStr) {
+					consecutiveMismatches++;
+					
+					if (consecutiveMismatches >= 5) {
+						// Persistent mismatch - force reconciliation
+						handleDesync(backendBoardStr);
+					}
+				} else {
+					consecutiveMismatches = 0;
+					if (syncStatus !== 'synced') {
+						syncStatus = 'synced';
 					}
 				}
 			}
-		}, 1000); // Check every second, 3 attempts = 3 seconds verification
+		}, 1000); // Check every second
 
 		return () => {
 			clearInterval(syncIntervalId);
@@ -643,9 +866,11 @@
 											? 'animate-pulse bg-emerald-500'
 											: syncStatus === 'failed'
 												? 'bg-red-500'
-												: syncStatus === 'syncing'
-													? 'animate-pulse bg-yellow-500'
-													: 'bg-surface-400'}"
+												: syncStatus === 'desynced'
+													? 'animate-pulse bg-red-500'
+													: syncStatus === 'syncing-bg' || syncStatus === 'syncing'
+														? 'animate-pulse bg-yellow-500'
+														: 'bg-surface-400'}"
 									></div>
 									<span
 										class="text-xs capitalize lg:text-sm
@@ -653,11 +878,13 @@
 											? 'text-emerald-400'
 											: syncStatus === 'failed'
 												? 'text-red-400'
-												: syncStatus === 'syncing'
-													? 'text-yellow-400'
-													: 'text-surface-400'}"
+												: syncStatus === 'desynced'
+													? 'text-red-400'
+													: syncStatus === 'syncing-bg' || syncStatus === 'syncing'
+														? 'text-yellow-400'
+														: 'text-surface-400'}"
 									>
-										{syncStatus}
+										{syncStatus === 'syncing-bg' ? 'syncing' : syncStatus}
 									</span>
 								</div>
 							</div>
