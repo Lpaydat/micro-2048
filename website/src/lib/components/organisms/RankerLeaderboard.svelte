@@ -51,6 +51,12 @@
 
 	const sortedRankers = $derived(rankers.slice().sort((a: any, b: any) => b.score - a.score));
 
+	const isTournamentEnded = $derived.by(() => {
+		const end = Number(rest.endTime ?? '0');
+		if (end === 0) return false;
+		return end <= Date.now();
+	});
+
 	let isDescriptionExpanded = $state(false);
 </script>
 
@@ -115,7 +121,7 @@
 					</div>
 					<div class="flex-1 snap-y space-y-4 overflow-y-auto overflow-x-hidden pt-4">
 						{#each sortedRankers as player, index}
-							<RankerCard {player} rank={index + 1} />
+							<RankerCard {player} rank={index + 1} {isTournamentEnded} />
 						{/each}
 					</div>
 				</div>
