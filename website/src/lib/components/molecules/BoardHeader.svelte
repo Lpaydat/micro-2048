@@ -104,7 +104,6 @@
 
 			const result = await newGameBoard(leaderboardId, newGameAt.toString());
 
-			// Wait for operation to complete before starting to poll
 			if (result) {
 				result.subscribe(($result: any) => {
 					if ($result.error) {
@@ -112,7 +111,7 @@
 						alert('Failed to create board. Please try again.');
 						boardCreationStartTime = null;
 					} else if ($result.data) {
-						// Give the operation time to commit to state
+						// Wait 3 seconds before starting to poll
 						setTimeout(() => {
 							isNewGameCreated = true;
 						}, 3000);
@@ -138,28 +137,29 @@
 
 	onMount(() => {
 		const interval = setInterval(() => {
-			// Query both board and boards
-			board?.reexecute({ requestPolicy: 'network-only' });
-			boards?.reexecute({ requestPolicy: 'network-only' });
+			// Only poll when actively waiting for new board
+			if (isNewGameCreated) {
+				board?.reexecute({ requestPolicy: 'network-only' });
+				boards?.reexecute({ requestPolicy: 'network-only' });
 
-			if (
-				isNewGameCreated &&
-				latestBoard?.boardId &&
-				latestBoard.boardId !== boardId &&
-				newGameAt &&
-				latestBoard.createdAt &&
-				Math.abs(parseInt(latestBoard.createdAt) - newGameAt) < 10000 &&
-				latestBoard.leaderboardId === leaderboardId
-			) {
-				newGameAt = Date.now();
-				isNewGameCreated = false;
-				boardCreationStartTime = null; // Reset creation time
-				const url = new URL('/game', window.location.origin);
-				url.searchParams.set('boardId', latestBoard.boardId);
-				url.searchParams.set('leaderboardId', leaderboardId);
+				if (
+					latestBoard?.boardId &&
+					latestBoard.boardId !== boardId &&
+					newGameAt &&
+					latestBoard.createdAt &&
+					Math.abs(parseInt(latestBoard.createdAt) - newGameAt) < 10000 &&
+					latestBoard.leaderboardId === leaderboardId
+				) {
+					newGameAt = Date.now();
+					isNewGameCreated = false;
+					boardCreationStartTime = null;
+					const url = new URL('/game', window.location.origin);
+					url.searchParams.set('boardId', latestBoard.boardId);
+					url.searchParams.set('leaderboardId', leaderboardId);
 
-				setBoardId(latestBoard.boardId, leaderboardId);
-				goto(url.toString(), { replaceState: false });
+					setBoardId(latestBoard.boardId, leaderboardId);
+					goto(url.toString(), { replaceState: false });
+				}
 			}
 		}, 1000);
 
