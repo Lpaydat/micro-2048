@@ -4,8 +4,7 @@
 
 use crate::state::Leaderboard;
 use game2048::{
-    GameEvent, GameStatus, LeaderboardAction, LeaderboardSettings, Message, PlayerScoreSummary,
-    RegistrationCheck, TournamentInfo,
+    LeaderboardAction, LeaderboardSettings, Message, RegistrationCheck, TournamentInfo,
 };
 use linera_sdk::linera_base_types::{Amount, ApplicationPermissions, ChainId};
 use std::str::FromStr;
@@ -51,7 +50,7 @@ impl LeaderboardOperationHandler {
             } else {
                 match settings.start_time.parse::<u64>() {
                     Ok(time) => Some(time),
-                    Err(_) => panic!("Invalid start_time format")
+                    Err(_) => panic!("Invalid start_time format"),
                 }
             };
 
@@ -60,7 +59,7 @@ impl LeaderboardOperationHandler {
             } else {
                 match settings.end_time.parse::<u64>() {
                     Ok(time) => Some(time),
-                    Err(_) => panic!("Invalid end_time format")
+                    Err(_) => panic!("Invalid end_time format"),
                 }
             };
 
@@ -139,7 +138,8 @@ impl LeaderboardOperationHandler {
                         Ok(time) => Some(time),
                         Err(_) => {
                             // Use current time + 1 year if parsing fails
-                            Some(contract.runtime.system_time().micros() + 31_536_000_000_000) // +1 year
+                            Some(contract.runtime.system_time().micros() + 31_536_000_000_000)
+                            // +1 year
                         }
                     }
                 };
@@ -174,10 +174,12 @@ impl LeaderboardOperationHandler {
                     leaderboard.leaderboard_id.set(chain_id_str.clone());
                     leaderboard.chain_id.set(chain_id_str);
                     leaderboard.host.set(player.clone());
-                    
+
                     // Set base triggerer count from settings (default: 5)
                     let base_triggerer_count = settings.base_triggerer_count.unwrap_or(5);
-                    leaderboard.admin_base_triggerer_count.set(base_triggerer_count);
+                    leaderboard
+                        .admin_base_triggerer_count
+                        .set(base_triggerer_count);
 
                     // Create shard chains from main chain (ONLY on creation)
                     let shard_number = settings.shard_number.unwrap_or(1);
@@ -355,12 +357,8 @@ impl LeaderboardOperationHandler {
         leaderboard
     }
 
-
-
     /// Emit current active tournaments (for leaderboard chains)
     pub async fn emit_active_tournaments(contract: &mut crate::Game2048Contract) {
-
-
         let is_main_chain = contract.is_main_chain();
         let mut tournaments = Vec::new();
         let current_time = contract.runtime.system_time().micros();
@@ -484,11 +482,7 @@ impl LeaderboardOperationHandler {
         if !tournaments.is_empty() {
             use crate::contract_domain::events::emitters::EventEmitter;
             let timestamp = contract.runtime.system_time().micros();
-            EventEmitter::emit_active_tournaments(
-                contract,
-                tournaments.clone(),
-                timestamp,
-            ).await;
+            EventEmitter::emit_active_tournaments(contract, tournaments.clone(), timestamp).await;
 
             // Log tournament details available in cache
         }

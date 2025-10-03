@@ -98,7 +98,8 @@ impl GameMessageHandler {
             leaderboard_id.clone(),
             current_best,
             current_board_count,
-        ).await;
+        )
+        .await;
 
         // increment player and board count
         let leaderboard_chain_id = ChainId::from_str(&leaderboard_id).unwrap();

@@ -17,6 +17,5 @@ pub use operation_dispatcher::OperationDispatcher;
 #[allow(unused_imports)]
 pub use handlers::operations::{
     GameOperationHandler, LeaderboardOperationHandler, PlayerOperationHandler,
-    ShardOperationHandler, SystemOperationHandler,
-    TournamentOperationHandler,
+    ShardOperationHandler, SystemOperationHandler, TournamentOperationHandler,
 };

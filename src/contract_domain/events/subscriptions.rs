@@ -64,6 +64,4 @@ impl SubscriptionManager {
             .runtime
             .subscribe_to_events(chain_id, application_id, stream_name);
     }
-
-
 }

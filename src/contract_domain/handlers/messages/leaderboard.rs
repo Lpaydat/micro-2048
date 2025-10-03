@@ -317,8 +317,13 @@ impl LeaderboardMessageHandler {
 
         // Get tournament configuration
         let base_triggerer_count = *leaderboard.admin_base_triggerer_count.get();
-        let shard_count = leaderboard.shard_ids.read_front(100).await.unwrap_or_default().len() as u32;
-        
+        let shard_count = leaderboard
+            .shard_ids
+            .read_front(100)
+            .await
+            .unwrap_or_default()
+            .len() as u32;
+
         if shard_count == 0 {
             return;
         }
@@ -326,7 +331,7 @@ impl LeaderboardMessageHandler {
         // Calculate how many players THIS shard should contribute as triggerers
         // triggerers_per_shard = ceil(base_triggerer_count / shard_count)
         let triggerers_per_shard = ((base_triggerer_count + shard_count - 1) / shard_count).max(1);
-        
+
         // Select first N players from this shard (they register in order)
         let selected_players: Vec<String> = player_chain_ids
             .into_iter()
@@ -357,7 +362,13 @@ impl LeaderboardMessageHandler {
             }
 
             // Add to activity scores (initial score of 1)
-            if leaderboard.player_activity_scores.get(player_chain_id).await.unwrap().is_none() {
+            if leaderboard
+                .player_activity_scores
+                .get(player_chain_id)
+                .await
+                .unwrap()
+                .is_none()
+            {
                 leaderboard
                     .player_activity_scores
                     .insert(player_chain_id, 1)
@@ -389,8 +400,6 @@ impl LeaderboardMessageHandler {
         tournament_id: &str,
         all_players_activity: Vec<(String, u32)>,
     ) {
-
-
         let current_time = contract.runtime.system_time().micros();
 
         // STRESS TEST: Reduced threshold: 5 seconds between triggers (for high-frequency testing)
@@ -404,7 +413,8 @@ impl LeaderboardMessageHandler {
             current_time,
             threshold_config,
             all_players_activity.len() as u32,
-        ).await;
+        )
+        .await;
     }
 
     /// Handle trigger update request from player chain with simple global cooldown
@@ -437,15 +447,19 @@ impl LeaderboardMessageHandler {
 
         // 🚀 GLOBAL COOLDOWN CHECK - Only first triggerer per window succeeds
         let cooldown_until = *leaderboard.trigger_cooldown_until.get();
-        
+
         if timestamp < cooldown_until {
             // Leaderboard is in cooldown - ignore this trigger silently
             return;
         }
 
         // Get all shard IDs
-        let shard_ids = leaderboard.shard_ids.read_front(100).await.unwrap_or_default();
-        
+        let shard_ids = leaderboard
+            .shard_ids
+            .read_front(100)
+            .await
+            .unwrap_or_default();
+
         if shard_ids.is_empty() {
             return;
         }
@@ -455,7 +469,7 @@ impl LeaderboardMessageHandler {
         leaderboard
             .trigger_cooldown_until
             .set(timestamp + cooldown_duration);
-        
+
         // Update trigger tracking
         leaderboard.last_trigger_time.set(timestamp);
         leaderboard.last_trigger_by.set(triggerer_chain_id);
@@ -464,14 +478,12 @@ impl LeaderboardMessageHandler {
         use game2048::Message;
         use linera_sdk::linera_base_types::ChainId;
         use std::str::FromStr;
-        
+
         for shard_id in shard_ids.iter() {
             if let Ok(shard_chain_id) = ChainId::from_str(shard_id) {
                 contract
                     .runtime
-                    .prepare_message(Message::TriggerShardAggregation {
-                        timestamp,
-                    })
+                    .prepare_message(Message::TriggerShardAggregation { timestamp })
                     .send_to(shard_chain_id);
             }
         }

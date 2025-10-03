@@ -172,11 +172,12 @@ impl ShardOperationHandler {
                 chain_id,
                 player_summaries.clone(),
                 std::collections::HashMap::new(), // Empty for MVP simplicity
-                player_board_counts, // Board counts for distributed counting
+                player_board_counts,              // Board counts for distributed counting
                 timestamp,
                 player_summaries.len() as u32,
                 leaderboard_id,
-            ).await;
+            )
+            .await;
         }
 
         // Update local shard state with comprehensive tracking
@@ -245,7 +246,7 @@ impl ShardOperationHandler {
             shard.last_activity.set(current_time);
 
             let player_count = *shard.active_players_count.get();
-            
+
             // Get all registered players for this shard
             let registered_players = shard
                 .monitored_player_chains
@@ -269,7 +270,7 @@ impl ShardOperationHandler {
             let shard = contract.state.shards.load_entry_mut("").await.unwrap();
             let base_count = *shard.base_triggerer_count.get();
             let shard_count = *shard.total_shard_count.get();
-            
+
             // If config not yet set (race condition: player registers before CreateLeaderboard processed)
             // Use safe default: 20 (covers 5 triggerers * 4 backup ratio)
             if base_count == 0 || shard_count == 0 {
@@ -278,13 +279,13 @@ impl ShardOperationHandler {
                 ((base_count + shard_count - 1) / shard_count).max(1) // Ceiling division
             }
         };
-        
+
         if let Ok(leaderboard_chain_id) = ChainId::from_str(&tournament_id) {
             // Send updates only until we reach triggerers_per_shard
             // This is dynamic based on base_triggerer_count / total_shard_count
             if player_count <= triggerers_per_shard {
                 let shard_chain_id = contract.runtime.chain_id().to_string();
-                
+
                 // Send ALL registered players so far
                 // Leaderboard calculates triggerers_per_shard and selects top N
                 contract

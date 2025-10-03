@@ -32,7 +32,8 @@ impl GameMoveProcessor {
             // Only validate end_time if it's set (Some value)
             // NOTE: timestamp is in milliseconds (from frontend), end_time is in microseconds
             if let Some(end_time_value) = end_time {
-                if *timestamp * 1000 > end_time_value {  // Convert ms to μs for comparison
+                if *timestamp * 1000 > end_time_value {
+                    // Convert ms to μs for comparison
                     is_ended = true;
                     break;
                 }
@@ -61,7 +62,7 @@ impl GameMoveProcessor {
             any_change = true;
             current_board = new_board;
             let current_score = Game::score(current_board);
-            
+
             // Store this move in history
             move_history.push(ProcessedMove {
                 direction: *direction,

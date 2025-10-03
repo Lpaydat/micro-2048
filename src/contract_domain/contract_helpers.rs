@@ -28,7 +28,9 @@ impl ContractHelpers {
             chain_id: destination,
             owner: AccountOwner::CHAIN,
         };
-        contract.runtime.transfer(AccountOwner::CHAIN, account, amount);
+        contract
+            .runtime
+            .transfer(AccountOwner::CHAIN, account, amount);
     }
 
     /// Auto-faucet if balance is too low

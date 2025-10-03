@@ -33,8 +33,7 @@ impl MutationHandler {
         self.validate_player_password(&player, &password_hash).await;
 
         // Convert timestamp from milliseconds to microseconds
-        let timestamp_micros = millis_to_micros(&timestamp)
-            .expect("Invalid timestamp format");
+        let timestamp_micros = millis_to_micros(&timestamp).expect("Invalid timestamp format");
 
         let operation = Operation::NewBoard {
             player,
@@ -218,10 +217,10 @@ impl MutationHandler {
 
     /// 🚀 ADMIN: Configure base triggerer count
     async fn configure_triggerer_count(
-        &self, 
+        &self,
         admin_username: String,
         password_hash: String,
-        base_triggerer_count: u32
+        base_triggerer_count: u32,
     ) -> [u8; 0] {
         let operation = Operation::ConfigureTriggererCount {
             admin_username,

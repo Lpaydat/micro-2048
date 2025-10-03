@@ -12,12 +12,11 @@ use linera_sdk::{
 use state::Leaderboard;
 
 use self::state::Game2048;
-use contract_domain::{
-    ContractHelpers, EventReader, StreamProcessor, SubscriptionManager,
-    LeaderboardOperationHandler, PlayerOperationHandler, ShardOperationHandler,
-    TournamentOperationHandler,
-};
 use contract_domain::events::emitters::EventEmitter;
+use contract_domain::{
+    ContractHelpers, EventReader, LeaderboardOperationHandler, PlayerOperationHandler,
+    ShardOperationHandler, StreamProcessor, SubscriptionManager, TournamentOperationHandler,
+};
 use game2048::{GameEvent, Message, Operation, RegistrationCheck};
 
 pub struct Game2048Contract {
@@ -59,7 +58,7 @@ impl Contract for Game2048Contract {
         leaderboard.description.set("".to_string());
         leaderboard.total_boards.set(0);
         leaderboard.total_players.set(0);
-        
+
         leaderboard.admin_base_triggerer_count.set(5); // Default to 5 triggerers
     }
 
@@ -129,7 +128,7 @@ impl Game2048Contract {
                 end_time,
                 shard_ids: vec![], // Default empty, filled by operations handler
                 base_triggerer_count: 5, // Default value
-                total_shard_count: 1,    // Default value
+                total_shard_count: 1, // Default value
             })
             .send_to(send_to.unwrap_or(chain_id));
     }
@@ -241,8 +240,6 @@ impl Game2048Contract {
         ShardOperationHandler::aggregate_scores_from_player_chains(self, player_chain_ids).await;
     }
 
-
-
     /// Emit current active tournaments (for leaderboard chains)
     pub async fn emit_active_tournaments(&mut self) {
         LeaderboardOperationHandler::emit_active_tournaments(self).await;
@@ -324,8 +321,6 @@ impl Game2048Contract {
     // TOURNAMENT CACHE MANAGEMENT (STREAMING)
     // ========================================
 
-
-
     /// Get cached tournament info (avoids cross-chain reads)
     pub async fn get_cached_tournament(
         &mut self,
@@ -386,8 +381,4 @@ impl Game2048Contract {
     ) -> Option<game2048::GameEvent> {
         EventReader::read_leaderboard_update_event_from_chain(self, chain_id, event_index)
     }
-
-
-
-
 }

@@ -97,7 +97,7 @@ impl SystemOperationHandler {
         contract
             .validate_player_password(&admin_username, &password_hash)
             .await;
-        
+
         // Check if user is admin/mod
         let player = contract
             .state
@@ -105,7 +105,7 @@ impl SystemOperationHandler {
             .load_entry_or_insert(&admin_username)
             .await
             .unwrap();
-        
+
         if !player.is_mod.get() {
             panic!("Only admins can configure triggerer count");
         }
@@ -116,11 +116,16 @@ impl SystemOperationHandler {
         }
 
         // Update configuration
-        contract.state.admin_base_triggerer_count.set(base_triggerer_count);
-        
+        contract
+            .state
+            .admin_base_triggerer_count
+            .set(base_triggerer_count);
+
         // Also update leaderboard if it exists
         if let Ok(leaderboard) = contract.state.leaderboards.load_entry_mut("").await {
-            leaderboard.admin_base_triggerer_count.set(base_triggerer_count);
+            leaderboard
+                .admin_base_triggerer_count
+                .set(base_triggerer_count);
         }
     }
 }

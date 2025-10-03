@@ -2,8 +2,8 @@
 //!
 //! Logic for processing incoming stream updates and events.
 
-use crate::contract_domain::events::EventReader;
 use crate::contract_domain::contract_helpers::CollectionHelpers;
+use crate::contract_domain::events::EventReader;
 use linera_sdk::linera_base_types::{ChainId, StreamUpdate};
 use std::str::FromStr;
 
@@ -72,7 +72,8 @@ impl StreamProcessor {
             leaderboard_id,
             boards_in_tournament,
             ..
-        }) = EventReader::read_player_score_event_from_chain(contract, update.chain_id, event_index)
+        }) =
+            EventReader::read_player_score_event_from_chain(contract, update.chain_id, event_index)
         {
             // Update shard state with the received player score
             let player_chain_id = update.chain_id.to_string();
@@ -106,23 +107,24 @@ impl StreamProcessor {
             player_board_counts,
             leaderboard_id,
             ..
-        }) = EventReader::read_shard_score_event_from_chain(contract, update.chain_id, event_index)
+        }) =
+            EventReader::read_shard_score_event_from_chain(contract, update.chain_id, event_index)
         {
             // Update leaderboard state with smart merging (real-time stream processing)
-            let leaderboard = contract.state.leaderboards.load_entry_mut("").await.unwrap();
+            let leaderboard = contract
+                .state
+                .leaderboards
+                .load_entry_mut("")
+                .await
+                .unwrap();
 
             for (player, summary) in player_scores.iter() {
-                let current_score = leaderboard
-                    .score
-                    .get(player)
-                    .await
-                    .unwrap()
-                    .unwrap_or(0);
+                let current_score = leaderboard.score.get(player).await.unwrap().unwrap_or(0);
 
                 // Update if better score or equal score with newer timestamp
                 if summary.best_score >= current_score {
                     let is_ended = matches!(summary.game_status, game2048::GameStatus::Ended(_));
-                    
+
                     leaderboard
                         .score
                         .insert(player, summary.best_score)
@@ -131,10 +133,7 @@ impl StreamProcessor {
                         .board_ids
                         .insert(player, summary.board_id.clone())
                         .unwrap();
-                    leaderboard
-                        .is_ended
-                        .insert(player, is_ended)
-                        .unwrap();
+                    leaderboard.is_ended.insert(player, is_ended).unwrap();
                 }
             }
 
@@ -157,7 +156,7 @@ impl StreamProcessor {
                     .await
                     .unwrap()
                     .unwrap_or(0);
-                
+
                 // Take the maximum (shard reports latest count for this player)
                 let new_count = (*board_count).max(current_count);
                 leaderboard
@@ -242,10 +241,14 @@ impl StreamProcessor {
 
             // FIXED: Add chain type guard - only player chains should process triggers
             // Use simpler detection: player chains have triggerer_list populated by leaderboard updates
-            let triggerer_count = contract.state.triggerer_list.read_front(1).await
+            let triggerer_count = contract
+                .state
+                .triggerer_list
+                .read_front(1)
+                .await
                 .map(|items| items.len())
                 .unwrap_or(0);
-            
+
             if triggerer_count > 0 {
                 // This is a player chain that has received triggerer list - check if should send trigger
                 Self::check_and_send_trigger_if_needed(contract, update.chain_id).await;
@@ -260,7 +263,7 @@ impl StreamProcessor {
         // Check if this chain has shard state (non-empty leaderboard_id indicates shard chain)
         let shard = contract.state.shards.load_entry_mut("").await.unwrap();
         let leaderboard_id = shard.leaderboard_id.get();
-        
+
         // Guard: Only proceed if this is actually a shard chain
         if leaderboard_id.is_empty() {
             // This is a player chain, not a shard chain - skip aggregation
@@ -332,11 +335,15 @@ impl StreamProcessor {
     ) {
         // Clear existing triggerer list and activity scores
         let _ = CollectionHelpers::clear_string_queue(&mut contract.state.triggerer_list).await;
-        let _ = CollectionHelpers::clear_u32_queue(&mut contract.state.triggerer_activity_scores).await;
+        let _ =
+            CollectionHelpers::clear_u32_queue(&mut contract.state.triggerer_activity_scores).await;
 
         // Add new triggerer list (activity-sorted)
         for (triggerer_id, activity_score) in &triggerer_list {
-            contract.state.triggerer_list.push_back(triggerer_id.clone());
+            contract
+                .state
+                .triggerer_list
+                .push_back(triggerer_id.clone());
             contract
                 .state
                 .triggerer_activity_scores
@@ -348,7 +355,10 @@ impl StreamProcessor {
             .state
             .triggerer_list_timestamp
             .set(last_update_timestamp);
-        contract.state.trigger_threshold_config.set(threshold_config);
+        contract
+            .state
+            .trigger_threshold_config
+            .set(threshold_config);
         contract
             .state
             .total_registered_players
@@ -367,8 +377,11 @@ impl StreamProcessor {
         let threshold = match *contract.state.trigger_threshold_config.get() {
             0 => {
                 // FIXED: Initialize with safe default if never set (30 seconds)
-                let default_threshold = 5_000_000; // 5 seconds in microseconds (stress test)  
-                contract.state.trigger_threshold_config.set(default_threshold);
+                let default_threshold = 5_000_000; // 5 seconds in microseconds (stress test)
+                contract
+                    .state
+                    .trigger_threshold_config
+                    .set(default_threshold);
                 default_threshold
             }
             value => value,

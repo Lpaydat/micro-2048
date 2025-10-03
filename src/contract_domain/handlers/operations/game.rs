@@ -55,7 +55,8 @@ impl GameOperationHandler {
                 match ts.parse::<u64>() {
                     Ok(timestamp) => {
                         // Additional validation: ensure timestamp is reasonable
-                        if timestamp > 0 && timestamp < 1_000_000_000_000_000 { // Max ~31 years in microseconds
+                        if timestamp > 0 && timestamp < 1_000_000_000_000_000 {
+                            // Max ~31 years in microseconds
                             moves_u64.push((dir, timestamp));
                         } else {
                             // Use current time if timestamp is invalid
@@ -98,8 +99,12 @@ impl GameOperationHandler {
                     let current_move_count = *board.move_count.get();
                     for (idx, processed_move) in move_history.iter().enumerate() {
                         let move_index = current_move_count + idx as u32;
-                        let move_record = board.move_history.load_entry_mut(&move_index).await.unwrap();
-                        
+                        let move_record = board
+                            .move_history
+                            .load_entry_mut(&move_index)
+                            .await
+                            .unwrap();
+
                         // Convert Direction enum to u8
                         let direction_u8 = match processed_move.direction {
                             game2048::Direction::Up => 0,
@@ -107,13 +112,15 @@ impl GameOperationHandler {
                             game2048::Direction::Left => 2,
                             game2048::Direction::Right => 3,
                         };
-                        
+
                         move_record.direction.set(direction_u8);
                         move_record.timestamp.set(processed_move.timestamp);
                         move_record.board_after.set(processed_move.board_after);
                         move_record.score_after.set(processed_move.score_after);
                     }
-                    board.move_count.set(current_move_count + move_history.len() as u32);
+                    board
+                        .move_count
+                        .set(current_move_count + move_history.len() as u32);
 
                     // 🚀 NEW: Always emit score update on every score change!
                     let game_status = if is_ended {
@@ -164,7 +171,8 @@ impl GameOperationHandler {
                         leaderboard_id.clone(),
                         current_best,
                         current_board_count,
-                    ).await;
+                    )
+                    .await;
 
                     // 🚀 NEW: Update shard workload when scores change significantly
                     let score_improvement = final_score.saturating_sub(current_best);
@@ -252,7 +260,8 @@ impl GameOperationHandler {
                 leaderboard_id.clone(),
                 current_best,
                 current_board_count,
-            ).await;
+            )
+            .await;
         } else {
             panic!("Game is ended");
         }
@@ -383,7 +392,13 @@ impl GameOperationHandler {
 
         // 🚀 NEW: Emit game creation event with actual board count
         contract
-            .emit_game_creation_event(&board_id, &player, &leaderboard_id, timestamp, new_board_count)
+            .emit_game_creation_event(
+                &board_id,
+                &player,
+                &leaderboard_id,
+                timestamp,
+                new_board_count,
+            )
             .await;
 
         // 🚀 NEW: Track activity for workload statistics
@@ -419,9 +434,9 @@ impl GameOperationHandler {
     /// 🚀 IMPROVED: Handle leaderboard update by triggering shard aggregation
     pub async fn handle_update_leaderboard(contract: &mut crate::Game2048Contract) {
         use game2048::Message;
-        
+
         let current_time = contract.runtime.system_time().micros();
-        
+
         // Get registered shard chain IDs from leaderboard state
         let leaderboard = contract
             .state
@@ -429,10 +444,14 @@ impl GameOperationHandler {
             .load_entry_mut("")
             .await
             .unwrap();
-        
+
         // Get all shard IDs
-        let shard_ids = leaderboard.shard_ids.read_front(100).await.unwrap_or_default();
-        
+        let shard_ids = leaderboard
+            .shard_ids
+            .read_front(100)
+            .await
+            .unwrap_or_default();
+
         if shard_ids.is_empty() {
             return;
         }

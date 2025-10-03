@@ -54,7 +54,7 @@ pub struct BoardState {
     pub end_time: RegisterView<u64>,
     pub created_at: RegisterView<u64>,
     pub move_history: CollectionView<u32, MoveRecord>, // move_index -> MoveRecord
-    pub move_count: RegisterView<u32>, // Total number of moves made
+    pub move_count: RegisterView<u32>,                 // Total number of moves made
 }
 
 #[derive(View, SimpleObject)]
@@ -91,13 +91,13 @@ pub struct LeaderboardShard {
 
     // 🚀 NEW: Activity-based triggerer tracking (rolling window)
     pub current_round_updates: MapView<String, u32>, // player_chain_id -> update_count_this_round
-    
+
     // 🚀 NEW: Tournament configuration for dynamic triggerer calculation
-    pub base_triggerer_count: RegisterView<u32>,    // Tournament's configured triggerer count
-    pub total_shard_count: RegisterView<u32>,       // Total shards in this tournament
-    pub round_history: QueueView<String>,            // JSON of past round data (last N rounds)
-    pub round_counter: RegisterView<u32>,            // Current aggregation round number
-    pub round_start_time: RegisterView<u64>,         // When current round started
+    pub base_triggerer_count: RegisterView<u32>, // Tournament's configured triggerer count
+    pub total_shard_count: RegisterView<u32>,    // Total shards in this tournament
+    pub round_history: QueueView<String>,        // JSON of past round data (last N rounds)
+    pub round_counter: RegisterView<u32>,        // Current aggregation round number
+    pub round_start_time: RegisterView<u64>,     // When current round started
 }
 
 #[derive(View, SimpleObject)]
@@ -117,7 +117,7 @@ pub struct Leaderboard {
     pub score: MapView<String, u64>,        // username, score
     pub board_ids: MapView<String, String>, // username, board_id
     pub is_ended: MapView<String, bool>,    // username, is_ended (for best board)
-    
+
     // 🚀 NEW: Distributed board counting (player_chain_id -> total_boards_in_tournament)
     pub player_board_counts: MapView<String, u32>, // Merged from all shards
 
@@ -135,7 +135,7 @@ pub struct Leaderboard {
     // 🚀 NEW: Activity-based triggerer ranking
     pub player_activity_scores: MapView<String, u32>, // player_chain_id -> weighted_activity_score
     pub last_successful_update: RegisterView<u64>, // Last time leaderboard was successfully updated
-    
+
     pub admin_base_triggerer_count: RegisterView<u32>, // Admin-configurable base triggerer count
 }
 

@@ -116,7 +116,7 @@ impl QueryHandler {
             // Load move history
             let total_moves = *game.move_count.get();
             let mut move_history: Vec<MoveHistoryRecord> = Vec::new();
-            
+
             for i in 0..total_moves {
                 if let Ok(Some(move_record)) = game.move_history.try_load_entry(&i).await {
                     let direction_str = match *move_record.direction.get() {
@@ -126,7 +126,7 @@ impl QueryHandler {
                         3 => "Right",
                         _ => "Unknown",
                     };
-                    
+
                     move_history.push(MoveHistoryRecord {
                         direction: direction_str.to_string(),
                         timestamp: move_record.timestamp.get().to_string(), // Already in milliseconds, no conversion
@@ -199,7 +199,7 @@ impl QueryHandler {
     }
 
     async fn leaderboard(
-        &self, 
+        &self,
         leaderboard_id: Option<String>,
         top: Option<u32>,
         offset: Option<u32>,
@@ -255,14 +255,11 @@ impl QueryHandler {
             // 🚀 SORT rankers by score descending (highest first)
             let mut rankers: Vec<Ranker> = players.into_values().collect();
             rankers.sort_by(|a, b| b.score.cmp(&a.score));
-            
+
             // 🚀 PAGINATION: Apply top/offset
             let top = top.unwrap_or(100) as usize; // Default: top 100
             let offset = offset.unwrap_or(0) as usize;
-            let rankers: Vec<Ranker> = rankers.into_iter()
-                .skip(offset)
-                .take(top)
-                .collect();
+            let rankers: Vec<Ranker> = rankers.into_iter().skip(offset).take(top).collect();
 
             let shard_ids = leaderboard.shard_ids.read_front(100).await.unwrap();
             let leaderboard_state = LeaderboardState {
@@ -424,5 +421,4 @@ impl QueryHandler {
 
         tournament_games
     }
-
 }

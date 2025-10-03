@@ -106,5 +106,3 @@ pub struct MoveHistoryRecord {
     pub board_after: [[u16; 4]; 4],
     pub score_after: u64,
 }
-
-
