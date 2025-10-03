@@ -79,7 +79,14 @@
 	let lastBoardId: string | undefined = undefined; // Track board changes
 
 	// Add new sync status tracking
-	let syncStatus: 'ready' | 'pending' | 'syncing' | 'syncing-bg' | 'synced' | 'failed' | 'desynced' = 'ready';
+	let syncStatus:
+		| 'ready'
+		| 'pending'
+		| 'syncing'
+		| 'syncing-bg'
+		| 'synced'
+		| 'failed'
+		| 'desynced' = 'ready';
 	let lastSyncTime: number | null = null;
 	let pendingMoveCount = 0;
 	let isFrozen = false;
@@ -284,12 +291,12 @@
 
 	$: if (boardEnded) {
 		moveQueue = [];
-		
+
 		deleteBoardId(leaderboardId);
 		if (offlineMode) {
 			toggleOfflineMode();
 		}
-		
+
 		const endTime = parseInt($game.data?.board?.endTime);
 		const isLeaderboardEnded = endTime > 0 && endTime <= Date.now();
 		if (!isSetFinalScore && isLeaderboardEnded) {
@@ -302,15 +309,15 @@
 	const updateLeaderboardScore = () => {
 		if (!boardId || !$game.data?.board?.chainId) return;
 		if ($game.data?.board?.player !== $userStore.username) return;
-		
+
 		if (pendingMoveCount > 0) {
 			submitMoves(boardId, true);
 		}
-		
+
 		const chainId = $game.data?.board?.chainId;
 		const client = getClient(chainId);
 		const finalBoardId = boardId;
-		
+
 		setTimeout(() => {
 			if (finalBoardId) {
 				makeMoves(client, '[]', finalBoardId);
@@ -346,13 +353,7 @@
 	}
 
 	// Handle tournament ending while player was offline
-	$: if (
-		$game.data?.board &&
-		boardId &&
-		player &&
-		!isInspectorMode &&
-		isInitialized
-	) {
+	$: if ($game.data?.board && boardId && player && !isInspectorMode && isInitialized) {
 		const tournamentEndTime = parseInt($game.data?.board?.endTime || '0');
 		const boardIsActive = !$game.data?.board?.isEnded;
 		const tournamentEnded = tournamentEndTime > 0 && tournamentEndTime <= Date.now();
@@ -418,12 +419,12 @@
 	// Movement Functions
 	const move = async (boardId: string, direction: GameKeys) => {
 		if (!canMakeMove || boardEnded || !state || isProcessingMove) return;
-		
+
 		const tournamentEndTime = parseInt($game.data?.board?.endTime || '0');
 		if (tournamentEndTime > 0 && tournamentEndTime <= Date.now()) {
 			return;
 		}
-		
+
 		isProcessingMove = true;
 
 		try {
@@ -494,7 +495,7 @@
 		lastMoveTime = now;
 
 		if (!boardId) return;
-		
+
 		const tournamentEndTime = parseInt($game.data?.board?.endTime || '0');
 		if (tournamentEndTime > 0 && tournamentEndTime <= Date.now()) {
 			return;
@@ -773,7 +774,7 @@
 					// Backend processed our moves successfully
 					const localHash = state?.tablet ? hashBoard(state.tablet) : null;
 					const backendMatchesLatest = localHash && backendHash === localHash;
-					
+
 					if (backendMatchesLatest && pendingMoveCount === 0) {
 						syncStatus = 'ready';
 					} else {
@@ -816,12 +817,16 @@
 					// ✅ Backend state is valid - reset mismatch tracking
 					const localHash = hashBoard(state.tablet);
 					const backendMatchesLatest = backendHash === localHash;
-					
+
 					if (backendMatchesLatest && pendingMoveCount === 0) {
 						if (syncStatus !== 'ready') {
 							syncStatus = 'ready';
 						}
-					} else if (syncStatus !== 'syncing-bg' && syncStatus !== 'syncing' && syncStatus !== 'synced') {
+					} else if (
+						syncStatus !== 'syncing-bg' &&
+						syncStatus !== 'syncing' &&
+						syncStatus !== 'synced'
+					) {
 						syncStatus = pendingMoveCount > 0 ? 'pending' : 'ready';
 					}
 					lastHashMismatchTime = null;

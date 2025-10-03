@@ -15,7 +15,9 @@
 	import { getClient } from '$lib/client';
 
 	let boardId = $state<string>($page.url.searchParams.get('boardId') ?? '');
-	let leaderboardId = $state<string | undefined>($page.url.searchParams.get('leaderboardId') ?? undefined);
+	let leaderboardId = $state<string | undefined>(
+		$page.url.searchParams.get('leaderboardId') ?? undefined
+	);
 	let chainId = $derived(boardId.split('.')[0] ?? $userStore.chainId);
 
 	let unsubscribe: any;
@@ -38,12 +40,12 @@
 	const canStartNewGame = $derived(!!$userStore.username && !isEnded);
 	const canMakeMove = $derived.by(() => {
 		if (!$userStore.username || !canStartNewGame) return false;
-		
+
 		const endTime = Number($leaderboard?.data?.leaderboard?.endTime ?? '0');
 		if (endTime > 0 && endTime <= Date.now()) {
 			return false;
 		}
-		
+
 		return true;
 	});
 

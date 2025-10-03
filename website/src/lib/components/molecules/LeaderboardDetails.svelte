@@ -157,7 +157,13 @@
 				<span class="font-semibold text-surface-400">{label}:</span>
 			{/if}
 			{#if remainingTime}
-				<span class="game-details font-bold {remainingTime === 'Ended' ? 'text-orange-600' : remainingTime === 'Unlimited' ? 'text-cyan-600' : 'text-green-600'}">{remainingTime}</span>
+				<span
+					class="game-details font-bold {remainingTime === 'Ended'
+						? 'text-orange-600'
+						: remainingTime === 'Unlimited'
+							? 'text-cyan-600'
+							: 'text-green-600'}">{remainingTime}</span
+				>
 			{/if}
 		</div>
 	{/if}

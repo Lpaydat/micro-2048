@@ -12,7 +12,7 @@
 	const leaderboardId = $derived($page.params.leaderboardId);
 	const extraParams = $derived(leaderboardId ? `&leaderboardId=${leaderboardId}` : '');
 	const boardId = player.boardId.split('.')[1];
-	
+
 	const bgClass = $derived(isTournamentEnded ? 'bg-gray-200' : 'bg-white');
 	const borderClass = $derived(isTournamentEnded ? 'border-gray-400' : 'border-white');
 </script>
