@@ -87,14 +87,23 @@
 
 	let newGameAt = $state(Date.now());
 	let isNewGameCreated = $state(false);
+	let isCreatingNewGame = $state(false);
 
 	const newEventGame = async () => {
-		if (isNewGameCreated) return;
+		if (isNewGameCreated || isCreatingNewGame) return;
 		if (!leaderboardId || !$userStore.username) return;
 
+		isCreatingNewGame = true;
 		newGameAt = Date.now();
 		isNewGameCreated = true;
-		await newGameBoard(leaderboardId, newGameAt.toString());
+
+		try {
+			await newGameBoard(leaderboardId, newGameAt.toString());
+		} catch (error) {
+			console.error('Failed to create new game:', error);
+			isCreatingNewGame = false;
+			isNewGameCreated = false;
+		}
 	};
 
 	const deleteEventGame = () => {
@@ -160,13 +169,29 @@
 				Math.abs($board?.data?.board?.createdAt - newGameAt) < 10000 &&
 				$board?.data?.board?.leaderboardId === leaderboardId
 			) {
+				// Check if board data is valid and ready
+				const boardData = $board?.data?.board;
+				const hasValidBoard =
+					boardData?.board && Array.isArray(boardData?.board) && boardData?.board.length > 0;
+
+				// Reset states
+				isCreatingNewGame = false;
 				newGameAt = 0;
+
 				const url = new URL('/game', window.location.origin);
 				url.searchParams.set('boardId', $board?.data?.board?.boardId);
 				url.searchParams.set('leaderboardId', leaderboardId);
 
 				setBoardId($board.data?.board?.boardId, leaderboardId);
-				goto(url.toString(), { replaceState: false });
+
+				// Conditional reload: force reload if board data isn't valid
+				if (hasValidBoard) {
+					// Normal redirect - board data is ready
+					goto(url.toString(), { replaceState: false });
+				} else {
+					// Force reload to ensure fresh data fetch
+					goto(url.toString(), { replaceState: false, invalidateAll: true });
+				}
 			}
 		}, 1000);
 
@@ -246,7 +271,11 @@
 								</ActionButton>
 							</a>
 						{/if}
-						<ActionButton label="NEW GAME" onclick={newEventGame} disabled={isNewGameCreated} />
+						<ActionButton
+							label={isCreatingNewGame ? 'CREATING...' : 'NEW GAME'}
+							onclick={newEventGame}
+							disabled={isCreatingNewGame || isNewGameCreated}
+						/>
 					{/if}
 				{/snippet}
 			</PageHeader>
