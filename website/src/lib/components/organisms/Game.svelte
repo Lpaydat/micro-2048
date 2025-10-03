@@ -710,8 +710,40 @@
 		requestFaucetMutation(client);
 	};
 
+	// Reactive polling: Restart polling when boardId changes
+	let initGameIntervalId: NodeJS.Timeout | null = null;
+	let lastPolledBoardId: string | undefined = undefined;
+	
+	$: if (boardId !== lastPolledBoardId) {
+		// Clear existing interval when boardId changes
+		if (initGameIntervalId) {
+			clearInterval(initGameIntervalId);
+			initGameIntervalId = null;
+		}
+		
+		lastPolledBoardId = boardId;
+		
+		// Only start polling if we have a boardId
+		if (boardId) {
+			// Initial fetch
+			game.reexecute({ requestPolicy: 'network-only' });
+			
+			// Start polling interval
+			initGameIntervalId = setInterval(() => {
+				if (boardId && !$game.data?.board) {
+					game.reexecute({ requestPolicy: 'network-only' });
+				} else if ($game.data?.board) {
+					// Board found, stop polling
+					if (initGameIntervalId) {
+						clearInterval(initGameIntervalId);
+						initGameIntervalId = null;
+					}
+				}
+			}, 500); // Poll every 500ms
+		}
+	}
+
 	// Lifecycle Hooks
-	let initGameIntervalId: NodeJS.Timeout;
 	onMount(() => {
 		localBoardId = getBoardId(leaderboardId);
 		if (!isMultiplayer && localBoardId && boardId === undefined) {
@@ -720,21 +752,13 @@
 
 		const cleanupListeners = setupIdleListener();
 
-		// Try to get the board state
-		game.reexecute({ requestPolicy: 'network-only' });
-		initGameIntervalId = setInterval(() => {
-			if (boardId && !$game.data?.board) {
-				game.reexecute({ requestPolicy: 'network-only' });
-			} else if ($game.data?.board) {
-				clearInterval(initGameIntervalId);
-			}
-		}, 500);
-
 		// Offline mode disabled for website
 
 		return () => {
 			cleanupListeners();
-			clearInterval(initGameIntervalId);
+			if (initGameIntervalId) {
+				clearInterval(initGameIntervalId);
+			}
 			clearTimeout(idleTimeout);
 			// Submit any remaining moves when unmounting
 			if (boardId) {
