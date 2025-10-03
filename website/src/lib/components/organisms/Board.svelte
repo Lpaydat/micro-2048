@@ -60,23 +60,17 @@
 	});
 
 	const handleTouchStart = (event: TouchEvent) => {
-		if (event.target instanceof Element && event.target.closest('.game-board')) {
-			event.preventDefault();
-		}
+		event.preventDefault();
 		touchStartX = event.touches[0].clientX;
 		touchStartY = event.touches[0].clientY;
 	};
 
 	const handleTouchMove = (event: TouchEvent) => {
-		if (event.target instanceof Element && event.target.closest('.game-board')) {
-			event.preventDefault();
-		}
+		event.preventDefault();
 	};
 
 	const handleTouchEnd = async (event: TouchEvent) => {
-		if (event.target instanceof Element && event.target.closest('.game-board')) {
-			event.preventDefault();
-		}
+		event.preventDefault();
 		if (!touchStartX || !touchStartY || !canMakeMove || isEnded) return;
 
 		const touchEndX = event.changedTouches[0].clientX;
@@ -142,13 +136,13 @@
 
 <!-- {@render header?.(size)} -->
 {@render header?.()}
-<!-- TODO: svelte5 onevent not preventing default for touch events -->
 {#if isRendered}
 	<div
 		class="relative w-full {$boardSize}"
-		ontouchstart={preventDefault(handleTouchStart)}
-		ontouchmove={preventDefault(handleTouchMove)}
-		ontouchend={preventDefault(handleTouchEnd)}
+		style="touch-action: none;"
+		ontouchstart={handleTouchStart}
+		ontouchmove={handleTouchMove}
+		ontouchend={handleTouchEnd}
 	>
 		<GameTablet {tablet} />
 		{#if isEnded && showOverlay}
