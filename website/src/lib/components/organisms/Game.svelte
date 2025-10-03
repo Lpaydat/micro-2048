@@ -283,27 +283,38 @@
 	$: boardEnded = isEnded || $game.data?.board?.isEnded || state?.finished;
 
 	$: if (boardEnded) {
+		moveQueue = [];
+		
 		deleteBoardId(leaderboardId);
 		if (offlineMode) {
 			toggleOfflineMode();
 		}
-		setTimeout(() => {
-			const isLeaderboardEnded = parseInt($game.data?.board?.endTime) <= Date.now();
-			if (!isSetFinalScore && isLeaderboardEnded) {
-				isSetFinalScore = true;
-				updateLeaderboardScore();
-			}
-		}, 2000);
+		
+		const isLeaderboardEnded = parseInt($game.data?.board?.endTime) <= Date.now();
+		if (!isSetFinalScore && isLeaderboardEnded) {
+			isSetFinalScore = true;
+			updateLeaderboardScore();
+		}
 	}
 
 	let isSetFinalScore = false;
 	const updateLeaderboardScore = () => {
 		if (!boardId || !$game.data?.board?.chainId) return;
-		if (score <= bestScore) return;
 		if ($game.data?.board?.player !== $userStore.username) return;
+		
+		if (pendingMoveCount > 0) {
+			submitMoves(boardId, true);
+		}
+		
 		const chainId = $game.data?.board?.chainId;
 		const client = getClient(chainId);
-		makeMoves(client, '[]', boardId);
+		const finalBoardId = boardId;
+		
+		setTimeout(() => {
+			if (finalBoardId) {
+				makeMoves(client, '[]', finalBoardId);
+			}
+		}, 500);
 	};
 
 	$: if (boardId) {
@@ -387,6 +398,12 @@
 	// Movement Functions
 	const move = async (boardId: string, direction: GameKeys) => {
 		if (!canMakeMove || boardEnded || !state || isProcessingMove) return;
+		
+		const tournamentEndTime = parseInt($game.data?.board?.endTime || '0');
+		if (tournamentEndTime > 0 && tournamentEndTime <= Date.now()) {
+			return;
+		}
+		
 		isProcessingMove = true;
 
 		try {
@@ -457,6 +474,11 @@
 		lastMoveTime = now;
 
 		if (!boardId) return;
+		
+		const tournamentEndTime = parseInt($game.data?.board?.endTime || '0');
+		if (tournamentEndTime > 0 && tournamentEndTime <= Date.now()) {
+			return;
+		}
 
 		// Queue move if currently processing, otherwise execute immediately
 		if (isProcessingMove) {

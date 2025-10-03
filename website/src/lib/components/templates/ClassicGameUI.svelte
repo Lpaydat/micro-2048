@@ -36,7 +36,16 @@
 
 	const overlayMessage = $derived(leaderboardId ? 'Game Over!' : undefined);
 	const canStartNewGame = $derived(!!$userStore.username && !isEnded);
-	const canMakeMove = $derived(!!$userStore.username && canStartNewGame);
+	const canMakeMove = $derived.by(() => {
+		if (!$userStore.username || !canStartNewGame) return false;
+		
+		const endTime = Number($leaderboard?.data?.leaderboard?.endTime ?? '0');
+		if (endTime > 0 && endTime <= Date.now()) {
+			return false;
+		}
+		
+		return true;
+	});
 
 	const endCallback = () => {
 		isEnded = true;
