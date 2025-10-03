@@ -344,6 +344,25 @@
 		handleGameStateUpdate();
 	}
 
+	// Handle tournament ending while player was offline
+	$: if (
+		$game.data?.board &&
+		boardId &&
+		player &&
+		!isInspectorMode &&
+		isInitialized
+	) {
+		const tournamentEndTime = parseInt($game.data?.board?.endTime || '0');
+		const boardIsActive = !$game.data?.board?.isEnded;
+		const tournamentEnded = tournamentEndTime > 0 && tournamentEndTime <= Date.now();
+		const isOwnBoard = $game.data?.board?.player === player;
+
+		if (tournamentEnded && boardIsActive && !isSetFinalScore && isOwnBoard) {
+			isSetFinalScore = true;
+			updateLeaderboardScore();
+		}
+	}
+
 	let isLeaderboardIdSet = false;
 	$: {
 		const gameLeaderboardId = $game.data?.board?.leaderboardId;
