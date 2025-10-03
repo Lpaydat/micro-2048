@@ -25,9 +25,14 @@ export const GET_LEADERBOARD_DETAILS = gql`
 	}
 `;
 
-export const getLeaderboardDetails = (client: Client, leaderboardId?: string, top?: number, offset?: number) => {
-	return queryStore({ 
-		client, 
+export const getLeaderboardDetails = (
+	client: Client,
+	leaderboardId?: string,
+	top?: number,
+	offset?: number
+) => {
+	return queryStore({
+		client,
 		query: GET_LEADERBOARD_DETAILS,
 		variables: { leaderboardId, top, offset }
 	});

@@ -85,10 +85,10 @@
 	let isFrozen = false;
 	let lastHashMismatchTime: number | null = null; // Track when hash mismatch started
 	let roundFirstMoveTime: number | null = null;
-	
+
 	// 🔄 Background Sync: Valid board states tracking (hash-based validation)
 	let validBoardHashes: Set<number> = new Set(); // All board states we've seen locally
-	
+
 	// 🔄 Background Sync: Activity Tracking (improved for mixed play styles)
 	let recentMoves: number[] = [];
 	const ACTIVITY_WINDOW = 10000; // 10 seconds - longer window for better pattern detection
@@ -100,7 +100,7 @@
 	const SUSTAINED_PENDING_LIMIT = 25; // 25 moves for steady players
 	const LOW_ACTIVITY_PENDING_LIMIT = 15; // moves for slow players
 	const VERY_LOW_ACTIVITY_THRESHOLD = 0.5; // moves per second (very slow play)
-	
+
 	// Hash function for quick board comparison
 	const hashBoard = (board: any) => {
 		let hash = 2166136261;
@@ -113,12 +113,12 @@
 		}
 		return hash;
 	};
-	
+
 	// Track move activity with better pattern detection
 	const trackMoveActivity = () => {
 		const now = Date.now();
 		recentMoves.push(now);
-		recentMoves = recentMoves.filter(t => now - t < ACTIVITY_WINDOW);
+		recentMoves = recentMoves.filter((t) => now - t < ACTIVITY_WINDOW);
 	};
 
 	// Calculate sustained activity over the full window
@@ -131,7 +131,7 @@
 	// Calculate recent burst activity (last 2 seconds)
 	const getBurstActivity = () => {
 		const now = Date.now();
-		const recentBurst = recentMoves.filter(t => now - t < 2000); // last 2 seconds
+		const recentBurst = recentMoves.filter((t) => now - t < 2000); // last 2 seconds
 		return recentBurst.length / 2; // moves per second in recent burst
 	};
 
@@ -145,7 +145,7 @@
 		if (sustained >= VERY_LOW_ACTIVITY_THRESHOLD) return 'moderate'; // Moderate activity
 		return 'low'; // Very slow or paused
 	};
-	
+
 	// Add board state to valid hashes set
 	const addValidBoardHash = (tablet: any) => {
 		if (!tablet) return;
@@ -194,26 +194,27 @@
 		const currentBoardId = $game.data?.board?.boardId;
 		const isOtherPlayer = boardPlayer && currentUser && boardPlayer !== currentUser;
 		const isOwnEndedGame = boardPlayer === currentUser && gameEnded;
-		
+
 		if (isOtherPlayer || isOwnEndedGame) {
 			const wasInspectorMode = isInspectorMode;
 			const isBoardChanged = currentBoardId && currentBoardId !== lastInspectedBoardId;
-			
+
 			isInspectorMode = true;
 			const newMoveHistory = $game.data?.board?.moveHistory || [];
-			const newMovesAdded = newMoveHistory.length > previousMoveHistoryLength && previousMoveHistoryLength > 0;
+			const newMovesAdded =
+				newMoveHistory.length > previousMoveHistoryLength && previousMoveHistoryLength > 0;
 			const wasAtEnd = inspectorCurrentMoveIndex === previousMoveHistoryLength;
-			
+
 			// Update move history without triggering state update
 			inspectorMoveHistory = newMoveHistory;
-			
+
 			// Reset to latest move when switching to a different board
 			if (isBoardChanged) {
 				lastInspectedBoardId = currentBoardId;
 				inspectorCurrentMoveIndex = inspectorMoveHistory.length;
 				previousMoveHistoryLength = inspectorMoveHistory.length;
 				handleGameStateUpdate();
-				
+
 				// Show overlay if at end and game ended
 				if (gameEnded && inspectorCurrentMoveIndex >= inspectorMoveHistory.length) {
 					hideInspectorOverlay = false;
@@ -227,7 +228,7 @@
 				inspectorCurrentMoveIndex = inspectorMoveHistory.length;
 				previousMoveHistoryLength = inspectorMoveHistory.length;
 				handleGameStateUpdate();
-				
+
 				// Show overlay if at end and game ended
 				if (gameEnded && inspectorCurrentMoveIndex >= inspectorMoveHistory.length) {
 					hideInspectorOverlay = false;
@@ -252,7 +253,12 @@
 
 	// 🔍 Reactive statement for inspector mode board state and score updates
 	// Only updates when inspectorCurrentMoveIndex changes, not on every poll
-	$: if (isInspectorMode && inspectorMoveHistory.length > 0 && inspectorCurrentMoveIndex > 0 && boardId) {
+	$: if (
+		isInspectorMode &&
+		inspectorMoveHistory.length > 0 &&
+		inspectorCurrentMoveIndex > 0 &&
+		boardId
+	) {
 		const moveIndex = inspectorCurrentMoveIndex;
 		if (moveIndex >= 1 && moveIndex <= inspectorMoveHistory.length) {
 			// Show board state and score after the selected move
@@ -311,11 +317,9 @@
 		boardId &&
 		player &&
 		!isInspectorMode && // Don't auto-update in inspector mode
-		(
-			!isInitialized || // Initial load
+		(!isInitialized || // Initial load
 			($game.data?.board?.isEnded && !boardEnded) || // Game just ended
-			(boardId !== lastBoardId) // New board created
-		)
+			boardId !== lastBoardId) // New board created
 	) {
 		// Reset state for new board
 		if (boardId !== lastBoardId) {
@@ -358,10 +362,10 @@
 
 	const handleGameStateUpdate = () => {
 		if (!boardId) return;
-		
+
 		// Normal mode: use current board state
-		state = createState($game.data?.board?.board, 4, boardId, player)
-		
+		state = createState($game.data?.board?.board, 4, boardId, player);
+
 		isInitialized = true;
 
 		if (state?.finished && !isInspectorMode) {
@@ -412,7 +416,7 @@
 				timestamp,
 				boardId
 			});
-			
+
 			// Dispatch game over event if state changed to finished
 			if (state?.finished) {
 				dispatch('end', { score, bestScore });
@@ -434,7 +438,7 @@
 	// Process queued moves sequentially
 	const processQueuedMoves = async (boardId: string) => {
 		if (moveQueue.length === 0 || isProcessingMove) return;
-		
+
 		const nextMove = moveQueue.shift();
 		if (nextMove && !boardEnded) {
 			await move(boardId, nextMove.direction);
@@ -450,14 +454,14 @@
 		lastMoveTime = now;
 
 		if (!boardId) return;
-		
+
 		// Queue move if currently processing, otherwise execute immediately
 		if (isProcessingMove) {
 			moveQueue.push({ direction, timestamp });
 		} else {
 			move(boardId, direction);
 		}
-		
+
 		dispatch('move', { direction, timestamp });
 	};
 
@@ -515,7 +519,7 @@
 
 		submitMoves(boardId);
 	};
-	
+
 	// 🔄 Background Sync: Check if we should trigger sync (optimized for batching)
 	const checkBackgroundSyncTriggers = () => {
 		if (!boardId || pendingMoveCount === 0) return;
@@ -547,7 +551,7 @@
 			return;
 		}
 	};
-	
+
 	// 🔄 Background Sync: Non-blocking sync
 	const backgroundSync = async (boardId: string) => {
 		if (syncStatus === 'syncing' || syncStatus === 'syncing-bg') return;
@@ -568,7 +572,6 @@
 			// ✅ Immediately flush moves - hash validation will confirm success
 			flushMoveHistory(boardId);
 			pendingMoveCount = 0;
-
 		} catch (error) {
 			console.error('Background sync failed:', error);
 			syncStatus = 'failed';
@@ -576,16 +579,16 @@
 			return;
 		}
 	};
-	
+
 	// 🔄 Background Sync: Handle desync with overlay warning
 	const handleDesync = async (backendBoardStr: string) => {
 		console.warn('Desync detected - initiating full sync');
-		
+
 		// Pause game and show warning
 		isFrozen = true;
 		syncStatus = 'desynced';
 		overlayMessage = 'Syncing with server... Please wait.';
-		
+
 		// Submit ALL pending moves
 		const allPending = flushMoveHistory(boardId!);
 		if (allPending.length > 0) {
@@ -595,18 +598,18 @@
 				console.error('Failed to submit pending moves during desync:', error);
 			}
 		}
-		
+
 		// Wait for backend to process
-		await new Promise(resolve => setTimeout(resolve, 1500));
-		
+		await new Promise((resolve) => setTimeout(resolve, 1500));
+
 		// Fetch fresh state
 		await game.reexecute({ requestPolicy: 'network-only' });
-		
+
 		// Force reconciliation
 		if ($game.data?.board?.board) {
 			const finalBackendState = boardToString($game.data.board.board);
 			const currentLocalState = boardToString(state?.tablet);
-			
+
 			if (finalBackendState !== currentLocalState) {
 				// Full reset to backend state
 				state = createState($game.data.board.board, 4, boardId!, player);
@@ -616,7 +619,7 @@
 				lastHashMismatchTime = null;
 			}
 		}
-		
+
 		// Resume game
 		isFrozen = false;
 		syncStatus = 'synced';
@@ -628,7 +631,7 @@
 	const submitMoves = (boardId: string, force = false) => {
 		const moves = flushMoveHistory(boardId);
 		try {
-			if ((moves.length > 0 || force)) {
+			if (moves.length > 0 || force) {
 				makeMoves(client, getMoveBatchForSubmission(moves), boardId);
 				const newTablet = boardToString(state?.tablet);
 				stateHash = newTablet ?? '';
@@ -699,18 +702,18 @@
 
 	let syncIntervalId: NodeJS.Timeout;
 	let syncingBackgroundStartTime: number | null = null;
-	
+
 	onMount(() => {
 		syncIntervalId = setInterval(() => {
 			if (offlineMode) return;
 			if (!boardId || !$game.data?.board) return;
-			
+
 			// Continuously poll backend state (including inspector mode for live updates)
 			game.reexecute({ requestPolicy: 'network-only' });
-			
+
 			// Skip sync validation in inspector mode (no moves to sync)
 			if (isInspectorMode) return;
-			
+
 			// If syncing in background, validate using hash lookup
 			if (syncStatus === 'syncing-bg' && state?.tablet) {
 				if (!syncingBackgroundStartTime) {
@@ -745,7 +748,7 @@
 				// Reset sync timer when not syncing
 				syncingBackgroundStartTime = null;
 			}
-			
+
 			// Simple hash validation: Check if backend state matches any valid state we've seen
 			if (state?.tablet) {
 				const backendHash = hashBoard($game.data.board.board);
@@ -760,8 +763,11 @@
 					// ❌ Backend state not in our valid hash set
 					if (lastHashMismatchTime === null) {
 						lastHashMismatchTime = Date.now();
-					} else if (Date.now() - lastHashMismatchTime > 15000) { // 15 seconds of mismatch
-						console.warn('Backend state not found in valid hashes for 15+ seconds - desync detected');
+					} else if (Date.now() - lastHashMismatchTime > 15000) {
+						// 15 seconds of mismatch
+						console.warn(
+							'Backend state not found in valid hashes for 15+ seconds - desync detected'
+						);
 						const backendBoardStr = boardToString($game.data.board.board);
 						if (backendBoardStr) {
 							handleDesync(backendBoardStr);
@@ -779,7 +785,7 @@
 	// 🔍 Inspector Auto-Play Functions
 	const toggleAutoPlay = () => {
 		autoPlayEnabled = !autoPlayEnabled;
-		
+
 		if (autoPlayEnabled) {
 			// Start playing if not already playing
 			if (!isInspectorPlaying) {
@@ -789,7 +795,7 @@
 			// Stop playing when disabled
 			stopInspectorPlay();
 		}
-		
+
 		dismissOverlay();
 	};
 
@@ -805,7 +811,7 @@
 		// Check if we've reached the end of available moves
 		if (!isInspectorPlaying || inspectorCurrentMoveIndex >= inspectorMoveHistory.length) {
 			stopInspectorPlay();
-			
+
 			// Only show overlay and disable auto-play if the game has actually ended
 			const isGameEnded = $game.data?.board?.isEnded;
 			if (isGameEnded && inspectorCurrentMoveIndex >= inspectorMoveHistory.length) {
@@ -847,13 +853,13 @@
 		handleGameStateUpdate();
 		dismissOverlay();
 	};
-	
+
 	const dismissOverlay = () => {
 		if (isInspectorMode) {
 			hideInspectorOverlay = true;
 		}
 	};
-	
+
 	const showOverlayAtEnd = () => {
 		hideInspectorOverlay = false;
 		autoPlayEnabled = false;
@@ -873,9 +879,9 @@
 
 	$: overlayMessage = hideInspectorOverlay
 		? undefined
-		: ($game.data?.board?.player === $userStore.username
+		: $game.data?.board?.player === $userStore.username
 			? getOverlayMessage($game.data?.board?.board)
-			: $game.data?.board?.player);
+			: $game.data?.board?.player;
 
 	// $: if (!$game.fetching && parseFloat($game.data?.balance ?? '0.00') <= 0.2 && !dirtyBalance) {
 	// 	showBalance = true;
@@ -1006,7 +1012,9 @@
 					onclick={toggleOfflineMode}
 					class="flex w-full items-center gap-2 rounded-lg border border-surface-600/50 bg-surface-800/50 px-4 py-2 transition-colors hover:bg-surface-700/50 lg:w-auto"
 				>
-					<div class="h-2 w-2 rounded-full {offlineMode ? 'bg-orange-500' : 'bg-emerald-500'}"></div>
+					<div
+						class="h-2 w-2 rounded-full {offlineMode ? 'bg-orange-500' : 'bg-emerald-500'}"
+					></div>
 					<span class="whitespace-nowrap text-xs text-surface-400 lg:text-sm"
 						>{offlineMode ? 'Go Online' : 'Go Offline'}</span
 					>
@@ -1037,7 +1045,7 @@
 				oninput={() => {
 					stopInspectorPlay();
 					handleGameStateUpdate();
-					
+
 					// Show overlay only if at end AND game has ended
 					const isGameEnded = $game.data?.board?.isEnded;
 					if (inspectorCurrentMoveIndex >= inspectorMoveHistory.length && isGameEnded) {
@@ -1051,62 +1059,73 @@
 
 			<!-- Playback Controls and Status -->
 			<div class="mt-2 flex items-center justify-between gap-3">
-			<!-- Buttons -->
-			<div class="flex items-center gap-1 sm:gap-2">
-				<button
-					onclick={restartInspector}
-					class="rounded bg-surface-700 px-2 py-1 text-xs sm:px-3 sm:py-1.5 sm:text-sm text-white transition-colors hover:bg-surface-600"
-				>
-					Restart
-				</button>
+				<!-- Buttons -->
+				<div class="flex items-center gap-1 sm:gap-2">
+					<button
+						onclick={restartInspector}
+						class="rounded bg-surface-700 px-2 py-1 text-xs text-white transition-colors hover:bg-surface-600 sm:px-3 sm:py-1.5 sm:text-sm"
+					>
+						Restart
+					</button>
 
-				<button
-					onclick={toggleAutoPlay}
-					class="flex items-center gap-1 sm:gap-1.5 rounded text-xs sm:text-sm transition-all {autoPlayEnabled
-						? 'auto-play-active px-[7px] sm:px-[9px] py-[2px] sm:py-[3px] hover:bg-surface-600'
-						: 'border-2 sm:border-[3px] border-surface-700 bg-surface-700 px-[7px] sm:px-[9px] py-[2px] sm:py-[3px] hover:bg-surface-600'}"
-				>
-					<div class="h-1 w-1 sm:h-1.5 sm:w-1.5 rounded-full {autoPlayEnabled ? 'bg-emerald-400' : 'bg-surface-400'}"></div>
-					<span class="text-white">Auto-Play</span>
-				</button>
+					<button
+						onclick={toggleAutoPlay}
+						class="flex items-center gap-1 rounded text-xs transition-all sm:gap-1.5 sm:text-sm {autoPlayEnabled
+							? 'auto-play-active px-[7px] py-[2px] hover:bg-surface-600 sm:px-[9px] sm:py-[3px]'
+							: 'border-2 border-surface-700 bg-surface-700 px-[7px] py-[2px] hover:bg-surface-600 sm:border-[3px] sm:px-[9px] sm:py-[3px]'}"
+					>
+						<div
+							class="h-1 w-1 rounded-full sm:h-1.5 sm:w-1.5 {autoPlayEnabled
+								? 'bg-emerald-400'
+								: 'bg-surface-400'}"
+						></div>
+						<span class="text-white">Auto-Play</span>
+					</button>
 
-			<button
-				onclick={() => {
-					if (inspectorCurrentMoveIndex < inspectorMoveHistory.length) {
-						inspectorCurrentMoveIndex++;
-						handleGameStateUpdate();
-						
-						// Show overlay only if reached end AND game has ended
-						const isGameEnded = $game.data?.board?.isEnded;
-						if (inspectorCurrentMoveIndex >= inspectorMoveHistory.length && isGameEnded) {
-							showOverlayAtEnd();
-						} else {
-							dismissOverlay();
-						}
-					}
-				}}
-				disabled={inspectorCurrentMoveIndex >= inspectorMoveHistory.length}
-				class="rounded bg-surface-700 px-2 py-1 text-xs sm:px-3 sm:py-1.5 sm:text-sm text-white transition-colors hover:bg-surface-600 disabled:opacity-50"
-			>
-				Next
-			</button>
-			</div>
+					<button
+						onclick={() => {
+							if (inspectorCurrentMoveIndex < inspectorMoveHistory.length) {
+								inspectorCurrentMoveIndex++;
+								handleGameStateUpdate();
 
-		<!-- Status -->
-		{#if autoPlayEnabled}
-			<div class="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm">
-				<span class="text-surface-300">
-					{$game.data?.board?.isEnded ? 'Replay' : 'Live'}
-				</span>
-				<span class="animate-pulse text-purple-400">
-					• {inspectorCurrentMoveIndex >= inspectorMoveHistory.length && $game.data?.board?.isEnded ? 'Ended' : isInspectorPlaying ? 'Playing' : 'Waiting'}
-				</span>
-			</div>
-		{:else}
-			<div class="truncate text-xs sm:text-sm text-surface-300">
-				{$game.data?.board?.player === $userStore.username ? 'Replay mode' : `Viewing ${$game.data?.board?.player}'s game`}
-			</div>
-		{/if}
+								// Show overlay only if reached end AND game has ended
+								const isGameEnded = $game.data?.board?.isEnded;
+								if (inspectorCurrentMoveIndex >= inspectorMoveHistory.length && isGameEnded) {
+									showOverlayAtEnd();
+								} else {
+									dismissOverlay();
+								}
+							}
+						}}
+						disabled={inspectorCurrentMoveIndex >= inspectorMoveHistory.length}
+						class="rounded bg-surface-700 px-2 py-1 text-xs text-white transition-colors hover:bg-surface-600 disabled:opacity-50 sm:px-3 sm:py-1.5 sm:text-sm"
+					>
+						Next
+					</button>
+				</div>
+
+				<!-- Status -->
+				{#if autoPlayEnabled}
+					<div class="flex items-center gap-1 text-xs sm:gap-1.5 sm:text-sm">
+						<span class="text-surface-300">
+							{$game.data?.board?.isEnded ? 'Replay' : 'Live'}
+						</span>
+						<span class="animate-pulse text-purple-400">
+							• {inspectorCurrentMoveIndex >= inspectorMoveHistory.length &&
+							$game.data?.board?.isEnded
+								? 'Ended'
+								: isInspectorPlaying
+									? 'Playing'
+									: 'Waiting'}
+						</span>
+					</div>
+				{:else}
+					<div class="truncate text-xs text-surface-300 sm:text-sm">
+						{$game.data?.board?.player === $userStore.username
+							? 'Replay mode'
+							: `Viewing ${$game.data?.board?.player}'s game`}
+					</div>
+				{/if}
 			</div>
 		</div>
 	{/if}
@@ -1148,7 +1167,8 @@
 	}
 
 	@keyframes border-pulse {
-		0%, 100% {
+		0%,
+		100% {
 			border-color: rgb(16 185 129); /* emerald-500 */
 		}
 		50% {

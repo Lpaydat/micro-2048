@@ -11,7 +11,7 @@
 					on <span class="font-semibold text-[#cc9900]">microchains</span>
 				</h2>
 				<span
-					class="font-handwriting absolute right-6 -top-12 z-10 -rotate-12 transform text-2xl text-red-500 opacity-80 drop-shadow-[0_1px_1px_rgba(0,0,0,0.25)]"
+					class="font-handwriting absolute -top-12 right-6 z-10 -rotate-12 transform text-2xl text-red-500 opacity-80 drop-shadow-[0_1px_1px_rgba(0,0,0,0.25)]"
 				>
 					Conway
 					<!-- Beta -->

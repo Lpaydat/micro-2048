@@ -18,7 +18,14 @@
 		forceAllEnded?: boolean; // TEST: Force all boards to show as ended
 	}
 
-	let { isFullScreen, leaderboardId, rankers = [], endCallback, forceAllEnded = false, ...rest }: Props = $props();
+	let {
+		isFullScreen,
+		leaderboardId,
+		rankers = [],
+		endCallback,
+		forceAllEnded = false,
+		...rest
+	}: Props = $props();
 
 	const player = $derived($userStore.username);
 	const customClass = isFullScreen ? 'w-full h-full' : 'p-6 w-80 max-h-full max-w-md mx-auto';
@@ -37,13 +44,15 @@
 			<LeaderboardDetails {leaderboardId} {...rest} {endCallback} />
 		</div>
 	{/if}
-	<div class="text-center {customClass} rounded-lg bg-[#FAF8EF] shadow-md flex flex-col overflow-hidden flex-1 min-h-0">
-		<header class="mb-4 flex flex-col items-center flex-none">
+	<div
+		class="text-center {customClass} flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg bg-[#FAF8EF] shadow-md"
+	>
+		<header class="mb-4 flex flex-none flex-col items-center">
 			<h1 class="mb-2 text-2xl font-bold text-[#776E65]">Leaderboard</h1>
 			<p class="text-xs text-[#8F7A66]/60">Tap any player to watch their game</p>
 		</header>
 
-		<div class="flex-1 min-h-0">
+		<div class="min-h-0 flex-1">
 			<LeaderboardRankers {rankers}>
 				{#snippet item(rank, username, score, boardId, isEliminated, isEnded)}
 					<ListItem

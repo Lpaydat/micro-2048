@@ -19,10 +19,22 @@
 		hideOverlay?: boolean;
 	}
 
-	let { tablet, canMakeMove, header, isEnded, overlayMessage, moveCallback, boardId, chainId, showReplayButton = false, onReplayClick, hideOverlay = false }: Props = $props();
-	
+	let {
+		tablet,
+		canMakeMove,
+		header,
+		isEnded,
+		overlayMessage,
+		moveCallback,
+		boardId,
+		chainId,
+		showReplayButton = false,
+		onReplayClick,
+		hideOverlay = false
+	}: Props = $props();
+
 	let showOverlay = $state(true);
-	
+
 	// Control overlay visibility
 	$effect(() => {
 		if (hideOverlay) {

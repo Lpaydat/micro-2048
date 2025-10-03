@@ -46,10 +46,19 @@
 	const intervalId = setInterval(() => (now = Date.now()), 1000);
 	onDestroy(() => clearInterval(intervalId));
 
-	const isCurrentlyActive = $derived(now > Number(startTime) && now < Number(endTime));
-	const isPinnedAndActive = $derived(isPinned && isCurrentlyActive);
+	const isCurrentlyActive = $derived(() => {
+		const start = Number(startTime);
+		const end = Number(endTime);
+
+		// Unlimited tournaments (both timestamps = 0) are always active
+		if (start === 0 && end === 0) return true;
+
+		// Regular tournaments: check time bounds
+		return now >= start && now < end;
+	});
+	const isPinnedAndActive = $derived(isPinned && isCurrentlyActive());
 	const activeClass = $derived(
-		isPinned && isCurrentlyActive
+		isPinned && isCurrentlyActive()
 			? '!bg-orange-200 !border-2 !border-orange-800 !ring-1 !ring-orange-800 shadow-[0_0_15px_rgba(234,88,12,0.5)]'
 			: ''
 	);
@@ -88,7 +97,7 @@
 		try {
 			const numTimestamp = Number(timestamp);
 			if (numTimestamp === 0) {
-				return 'No time limit (unlimited)';
+				return '-';
 			}
 			if (!numTimestamp || !isFinite(numTimestamp) || numTimestamp < 0) {
 				return 'Invalid timestamp';
@@ -97,11 +106,7 @@
 			if (!isFinite(date.getTime())) {
 				return 'Invalid timestamp';
 			}
-			return formatInTimeZone(
-				date,
-				userTimeZone,
-				"MMM d, yyyy 'at' h:mm a (zzz)"
-			);
+			return formatInTimeZone(date, userTimeZone, "MMM d, yyyy 'at' h:mm a (zzz)");
 		} catch (error) {
 			console.error('Date formatting error:', error);
 			return 'Invalid timestamp';

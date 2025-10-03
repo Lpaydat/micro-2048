@@ -2,7 +2,13 @@
 	import type { Snippet } from 'svelte';
 
 	interface Props {
-		rankers: { username: string; score: number; boardId: string; isEliminated?: boolean; isEnded?: boolean }[];
+		rankers: {
+			username: string;
+			score: number;
+			boardId: string;
+			isEliminated?: boolean;
+			isEnded?: boolean;
+		}[];
 		item: Snippet<[number, string, number, string, boolean | undefined, boolean | undefined]>;
 	}
 

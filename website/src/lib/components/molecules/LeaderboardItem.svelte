@@ -15,19 +15,14 @@
 		boardUrl: string;
 	}
 
-	let { rank, name, score, isEliminated, isCurrentPlayer, isEnded, boardId, boardUrl }: Props = $props();
+	let { rank, name, score, isEliminated, isCurrentPlayer, isEnded, boardId, boardUrl }: Props =
+		$props();
 
 	const paramsBoardId = $derived(
 		$page.url.searchParams.get('boardId') ?? $page.params.boardId ?? ''
 	);
 	const isActiveBoard = $derived(paramsBoardId === boardId);
-	const color = $derived(
-		isEliminated 
-			? 'bg-[#F3F3F3]' 
-			: isEnded 
-				? 'bg-[#E8E8E8]' 
-				: 'bg-[#EEE4DA]'
-	);
+	const color = $derived(isEliminated ? 'bg-[#F3F3F3]' : isEnded ? 'bg-[#E8E8E8]' : 'bg-[#EEE4DA]');
 	const currentPlayerStyle = $derived(
 		isCurrentPlayer
 			? isEliminated

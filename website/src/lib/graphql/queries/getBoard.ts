@@ -42,8 +42,8 @@ export const getBoard = (playerClient: Client) => {
 };
 
 export const getBoards = (playerClient: Client, limit: number = 5) => {
-	return queryStore({ 
-		client: playerClient, 
+	return queryStore({
+		client: playerClient,
 		query: GET_BOARDS,
 		variables: { limit }
 	});

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import ArrowSwap from 'lucide-svelte/icons/arrow-left-right';
+
 	import Star from 'lucide-svelte/icons/star';
 	import type { LeaderboardState } from '$lib/graphql/mutations/leaderboardAction.ts';
 	import { gql, queryStore } from '@urql/svelte';
@@ -58,9 +58,16 @@
 	);
 
 	const pinnedEvents = $derived(
-		sortedEvents?.filter(
-			(event: LeaderboardState) => event.isPinned && Number(event.endTime) >= Date.now()
-		)
+		sortedEvents?.filter((event: LeaderboardState) => {
+			if (!event.isPinned) return false;
+
+			const endTime = Number(event.endTime);
+			// Unlimited tournaments (endTime = 0) are always pinned if marked as such
+			if (endTime === 0) return true;
+
+			// Regular tournaments: only show if not ended yet
+			return endTime >= Date.now();
+		})
 	);
 
 	const activeEvents = $derived(
@@ -99,6 +106,44 @@
 
 			// Regular tournaments: end time in past
 			return endTime < Date.now();
+		})
+	);
+
+	// Sorted versions for better UX
+	const sortedActiveEvents = $derived(
+		activeEvents?.sort((a: LeaderboardState, b: LeaderboardState) => {
+			// Primary: End time ascending (ending soon first)
+			const endDiff = Number(a.endTime) - Number(b.endTime);
+			if (endDiff !== 0) return endDiff;
+
+			// Secondary: Total players descending (most popular first)
+			const playerDiff = b.totalPlayers - a.totalPlayers;
+			if (playerDiff !== 0) return playerDiff;
+
+			// Tertiary: Start time descending (longer running first)
+			return Number(b.startTime) - Number(a.startTime);
+		})
+	);
+
+	const sortedUpcomingEvents = $derived(
+		upcomingEvents?.sort((a: LeaderboardState, b: LeaderboardState) => {
+			// Primary: Start time ascending (starting soon first)
+			const startDiff = Number(a.startTime) - Number(b.startTime);
+			if (startDiff !== 0) return startDiff;
+
+			// Secondary: Total players descending (most anticipated first)
+			return b.totalPlayers - a.totalPlayers;
+		})
+	);
+
+	const sortedPastEvents = $derived(
+		pastEvents?.sort((a: LeaderboardState, b: LeaderboardState) => {
+			// Primary: End time descending (most recent first)
+			const endDiff = Number(b.endTime) - Number(a.endTime);
+			if (endDiff !== 0) return endDiff;
+
+			// Secondary: Total players descending (most participated first)
+			return b.totalPlayers - a.totalPlayers;
 		})
 	);
 
@@ -142,21 +187,36 @@
 			{/each}
 		{/if}
 
-		<button
-			type="button"
-			onclick={loopGroup}
-			class="ms-3 flex flex-row items-center gap-2 py-1 {titleClass} font-bold text-yellow-500 md:ms-0 md:py-2"
-		>
-			{eventGroup === 'active'
-				? 'Active Events'
-				: eventGroup === 'upcoming'
-					? 'Upcoming Events'
-					: 'Past Events'}
-			<ArrowSwap size={20} />
-		</button>
+		<div class="ms-3 flex flex-col gap-1 md:ms-0">
+			<button
+				type="button"
+				onclick={loopGroup}
+				class="flex flex-row items-center gap-2 py-1 {titleClass} cursor-pointer font-bold text-yellow-500 transition-colors hover:text-yellow-400 md:py-2"
+			>
+				{eventGroup === 'active'
+					? 'Active Events'
+					: eventGroup === 'upcoming'
+						? 'Upcoming Events'
+						: 'Completed Events'}
+			</button>
+			<div class="flex items-center gap-1 text-xs text-gray-400">
+				<span>Click to toggle:</span>
+				<span class={eventGroup === 'active' ? 'font-semibold text-yellow-500' : 'text-gray-500'}
+					>Active</span
+				>
+				<span class="text-gray-300">•</span>
+				<span class={eventGroup === 'upcoming' ? 'font-semibold text-yellow-500' : 'text-gray-500'}
+					>Upcoming</span
+				>
+				<span class="text-gray-300">•</span>
+				<span class={eventGroup === 'past' ? 'font-semibold text-yellow-500' : 'text-gray-500'}
+					>Completed</span
+				>
+			</div>
+		</div>
 
-		{#if eventGroup === 'active' && activeEvents?.length > 0}
-			{#each activeEvents as event}
+		{#if eventGroup === 'active' && sortedActiveEvents?.length > 0}
+			{#each sortedActiveEvents as event}
 				{#if event && event.leaderboardId}
 					<EventListItem
 						isActive
@@ -166,8 +226,8 @@
 					/>
 				{/if}
 			{/each}
-		{:else if eventGroup === 'upcoming' && upcomingEvents?.length > 0}
-			{#each upcomingEvents as event}
+		{:else if eventGroup === 'upcoming' && sortedUpcomingEvents?.length > 0}
+			{#each sortedUpcomingEvents as event}
 				{#if event && event.leaderboardId}
 					<EventListItem
 						{...event}
@@ -176,8 +236,8 @@
 					/>
 				{/if}
 			{/each}
-		{:else if eventGroup === 'past' && pastEvents?.length > 0}
-			{#each pastEvents as event}
+		{:else if eventGroup === 'past' && sortedPastEvents?.length > 0}
+			{#each sortedPastEvents as event}
 				{#if event && event.leaderboardId}
 					<EventListItem
 						canDeleteEvent={false}

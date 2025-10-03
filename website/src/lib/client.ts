@@ -14,12 +14,12 @@ import { userStore } from './stores/userStore';
 const getBaseUrl = (website: string, port: string) => {
 	const protocol = website === 'localhost' ? 'ws' : 'wss';
 	const httpProtocol = website === 'localhost' ? 'http' : 'https';
-	
+
 	// Omit standard ports (80 for http, 443 for https)
-	const shouldIncludePort = port && 
-		!((httpProtocol === 'https' && port === '443') || 
-		  (httpProtocol === 'http' && port === '80'));
-	
+	const shouldIncludePort =
+		port &&
+		!((httpProtocol === 'https' && port === '443') || (httpProtocol === 'http' && port === '80'));
+
 	const portSuffix = shouldIncludePort ? `:${port}` : '';
 
 	return {

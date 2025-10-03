@@ -93,8 +93,12 @@
 			const settings: LeaderboardSettings = {
 				name: eventName,
 				description: description || undefined,
-				startTime: noStartLimit ? '0' : fromZonedTime(new Date(startTime), userTimeZone).getTime().toString(),
-				endTime: noEndLimit ? '0' : fromZonedTime(new Date(endTime), userTimeZone).getTime().toString(),
+				startTime: noStartLimit
+					? '0'
+					: fromZonedTime(new Date(startTime), userTimeZone).getTime().toString(),
+				endTime: noEndLimit
+					? '0'
+					: fromZonedTime(new Date(endTime), userTimeZone).getTime().toString(),
 				shardNumber: shardNumber,
 				baseTriggererCount: baseTriggererCount
 			};

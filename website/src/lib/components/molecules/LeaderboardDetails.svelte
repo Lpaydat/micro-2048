@@ -110,14 +110,21 @@
 	{#if name && showName}
 		<div class="flex items-center gap-2 text-lg">
 			<a href={`/events/${leaderboardId}`} class="group inline-flex items-center gap-2">
-				<span class="text-2xl font-bold text-[#F59563] transition-all group-hover:text-[#F67C5F] group-hover:-translate-x-1">«</span>
-				<span class="game-details line-clamp-4 font-bold text-orange-600 transition-colors group-hover:text-orange-700">
+				<span
+					class="text-2xl font-bold text-[#F59563] transition-all group-hover:-translate-x-1 group-hover:text-[#F67C5F]"
+					>«</span
+				>
+				<span
+					class="game-details line-clamp-4 font-bold text-orange-600 transition-colors group-hover:text-orange-700"
+				>
 					{name}
 				</span>
 			</a>
 		</div>
 	{/if}
-	<div class="flex flex-col items-start gap-1 md:flex-row md:items-center md:justify-between md:gap-4">
+	<div
+		class="flex flex-col items-start gap-1 md:flex-row md:items-center md:justify-between md:gap-4"
+	>
 		<div class="flex items-center gap-2 text-surface-200 md:gap-3">
 			[<span class="font-bold text-cyan-600">{host}</span>]
 		</div>
