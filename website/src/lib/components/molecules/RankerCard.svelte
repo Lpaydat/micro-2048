@@ -3,7 +3,7 @@
 
 	interface Props {
 		rank: number;
-		player: { username: string; score: number; boardId: string };
+		player: { username: string; score: number; boardId: string; isEnded?: boolean };
 		isTournamentEnded?: boolean;
 	}
 
@@ -13,8 +13,9 @@
 	const extraParams = $derived(leaderboardId ? `&leaderboardId=${leaderboardId}` : '');
 	const boardId = player.boardId.split('.')[1];
 
-	const bgClass = $derived(isTournamentEnded ? 'bg-gray-200' : 'bg-white');
-	const borderClass = $derived(isTournamentEnded ? 'border-gray-400' : 'border-white');
+	const isEnded = $derived(player.isEnded || isTournamentEnded);
+	const bgClass = $derived(isEnded ? 'bg-gray-200' : 'bg-white');
+	const borderClass = $derived(isEnded ? 'border-gray-400' : 'border-white');
 </script>
 
 <a

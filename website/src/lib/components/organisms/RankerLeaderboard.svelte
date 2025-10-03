@@ -16,11 +16,12 @@
 		totalBoards?: number;
 		totalPlayers?: number;
 		balance?: number;
-		rankers?: {
-			username: string;
-			score: number;
-			boardId: string;
-		}[];
+	rankers?: {
+		username: string;
+		score: number;
+		boardId: string;
+		isEnded?: boolean;
+	}[];
 	}
 
 	let {
