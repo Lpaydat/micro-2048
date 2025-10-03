@@ -16,8 +16,8 @@ pages_build_output_dir = ".svelte-kit/cloudflare"
 # Note: Use secrets to store sensitive data.
 # - https://developers.cloudflare.com/pages/functions/bindings/#secrets
 [vars]
-PUBLIC_CHAIN_ID = "7032637c29149bdc72bdd394e717acbfa2071c2189e898bb8d313ce73a104343"
-PUBLIC_APPLICATION_ID = "f44da1ab0d2f30f8a53a2038aa699c532d7b65c77093da046e4d32d77a6f9881"
+PUBLIC_CHAIN_ID = "d86ce1429033c0c26fc3223dd57f8207a7f5e86a8b4bd6e2afa511b6627b103c"
+PUBLIC_APPLICATION_ID = "9fd5d527fbac9eea7727979a136d5764253c00ef31acaadeda5f91785af37ce9"
 PUBLIC_PORT = "443"
 PUBLIC_WEBSITE = "api.micro2048.xyz"
 
@@ -72,8 +72,8 @@ PUBLIC_WEBSITE = "api.micro2048.xyz"
 ######## PREVIEW environment config ########
 
 [env.preview.vars]
-PUBLIC_CHAIN_ID = "7032637c29149bdc72bdd394e717acbfa2071c2189e898bb8d313ce73a104343"
-PUBLIC_APPLICATION_ID = "f44da1ab0d2f30f8a53a2038aa699c532d7b65c77093da046e4d32d77a6f9881"
+PUBLIC_CHAIN_ID = "d86ce1429033c0c26fc3223dd57f8207a7f5e86a8b4bd6e2afa511b6627b103c"
+PUBLIC_APPLICATION_ID = "9fd5d527fbac9eea7727979a136d5764253c00ef31acaadeda5f91785af37ce9"
 PUBLIC_PORT = "8088"
 PUBLIC_WEBSITE = "localhost"
 
@@ -84,8 +84,8 @@ PUBLIC_WEBSITE = "localhost"
 ######## PRODUCTION environment config ########
 
 [env.production.vars]
-PUBLIC_CHAIN_ID = "7032637c29149bdc72bdd394e717acbfa2071c2189e898bb8d313ce73a104343"
-PUBLIC_APPLICATION_ID = "f44da1ab0d2f30f8a53a2038aa699c532d7b65c77093da046e4d32d77a6f9881"
+PUBLIC_CHAIN_ID = "d86ce1429033c0c26fc3223dd57f8207a7f5e86a8b4bd6e2afa511b6627b103c"
+PUBLIC_APPLICATION_ID = "9fd5d527fbac9eea7727979a136d5764253c00ef31acaadeda5f91785af37ce9"
 PUBLIC_PORT = "443"
 PUBLIC_WEBSITE = "api.micro2048.xyz"
 
