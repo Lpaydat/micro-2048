@@ -70,16 +70,12 @@ impl LeaderboardOperationHandler {
                 }
             }
 
-            // Validate tournament will be active (same logic as emit_active_tournaments)
+            // Validate tournament is not already ended (allow future tournaments)
             let current_time = contract.runtime.system_time().micros();
-            let is_active = {
-                let started = start_time.is_none_or(|start| current_time >= start);
-                let not_ended = end_time.is_none_or(|end| current_time < end);
-                started && not_ended
-            };
+            let not_already_ended = end_time.is_none_or(|end| current_time < end);
 
-            if !is_active {
-                panic!("Tournament times are invalid: tournament would not be active (check if times are in the future and in microseconds)");
+            if !not_already_ended {
+                panic!("Tournament has already ended. Cannot create tournaments in the past.");
             }
 
             // Validation passed - validate name is not empty
