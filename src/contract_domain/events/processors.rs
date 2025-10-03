@@ -363,6 +363,12 @@ impl StreamProcessor {
             .state
             .total_registered_players
             .set(triggerer_list.len() as u32);
+
+        // 🚀 TIER 6: Reset emergency mode state on leaderboard update
+        // (Tier 6 activation and triggering now handled in execute_operation)
+        contract.state.is_in_tier6.set(false);
+        contract.state.operations_since_tier6.set(0);
+        contract.state.tier6_start_time.set(0);
     }
 
     /// Check if this player should send a trigger and send it if needed
@@ -436,6 +442,8 @@ impl StreamProcessor {
             Err(_) => return,
         }
 
+        // Check if I'm an active triggerer (normal tier 1-5 only)
+        // Note: Tier 6 triggering now handled in execute_operation (works without events)
         let am_i_active_triggerer = match my_position {
             Some(pos) => pos < active_triggerer_count,
             None => false,

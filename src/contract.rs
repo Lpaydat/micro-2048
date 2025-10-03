@@ -9,6 +9,7 @@ use linera_sdk::{
     views::{RootView, View},
     Contract, ContractRuntime,
 };
+use std::str::FromStr;
 use state::Leaderboard;
 
 use self::state::Game2048;
@@ -64,6 +65,87 @@ impl Contract for Game2048Contract {
 
     async fn execute_operation(&mut self, operation: Self::Operation) -> Self::Response {
         use crate::contract_domain::OperationDispatcher;
+
+        // 🚀 TIER 6 EMERGENCY MODE: Check and activate if needed (works without events!)
+        let current_time = self.runtime.system_time().micros();
+        let last_update = *self.state.triggerer_list_timestamp.get();
+        let threshold = *self.state.trigger_threshold_config.get();
+        
+        // Only check tier 6 if we have a valid threshold and triggerer list
+        if threshold > 0 && last_update > 0 {
+            let time_since_update = current_time.saturating_sub(last_update);
+            
+            // Calculate tier (1-5) - same logic as event processor
+            let tier = if time_since_update > 0 {
+                std::cmp::min(5, (time_since_update / threshold) + 1)
+            } else {
+                1
+            };
+            
+            // Tier 6 cutpoint: 5 intervals after last update
+            let tier6_cutpoint = last_update + (5 * threshold);
+            let should_enter_tier6 = tier == 5 && current_time >= tier6_cutpoint;
+            
+            // Enter tier 6 mode if conditions met
+            if should_enter_tier6 && !*self.state.is_in_tier6.get() {
+                self.state.is_in_tier6.set(true);
+                self.state.tier6_start_time.set(current_time);
+                self.state.operations_since_tier6.set(0);
+            }
+            
+            // If in tier 6, increment counter and check if should trigger
+            if *self.state.is_in_tier6.get() {
+                let op_count = *self.state.operations_since_tier6.get();
+                self.state.operations_since_tier6.set(op_count + 1);
+                
+                // Simple tier 6 rule: 5 operations = can trigger
+                if op_count + 1 >= 5 {
+                    // Check last trigger time to prevent spam (2 second minimum)
+                    let last_trigger_sent = *self.state.last_trigger_sent.get();
+                    let time_since_last_trigger = current_time.saturating_sub(last_trigger_sent);
+                    let min_threshold = std::cmp::max(threshold, 2_000_000); // At least 2 seconds
+                    
+                    if time_since_last_trigger > min_threshold {
+                        // Get tournament ID and leaderboard chain ID
+                        let mut tournament_id = String::new();
+                        let mut leaderboard_chain_id_str = String::new();
+                        
+                        // Try to get first cached tournament
+                        self.state
+                            .tournaments_cache_json
+                            .for_each_index_value_while(|key, value| {
+                                tournament_id = key;
+                                // Parse tournament JSON to get leaderboard chain
+                                if let Ok(tournament) = serde_json::from_str::<game2048::TournamentInfo>(&value) {
+                                    leaderboard_chain_id_str = tournament.tournament_id;
+                                }
+                                Ok(false) // Stop after first
+                            })
+                            .await
+                            .unwrap();
+                        
+                        // Send trigger if we have valid data
+                        if !tournament_id.is_empty() && !leaderboard_chain_id_str.is_empty() {
+                            if let Ok(leaderboard_chain_id) = ChainId::from_str(&leaderboard_chain_id_str) {
+                                let my_chain_id = self.runtime.chain_id().to_string();
+                                
+                                self.runtime
+                                    .prepare_message(game2048::Message::TriggerUpdate {
+                                        triggerer_chain_id: my_chain_id,
+                                        tournament_id: tournament_id.clone(),
+                                        timestamp: current_time,
+                                    })
+                                    .send_to(leaderboard_chain_id);
+                                
+                                // Update last trigger sent and reset operation counter
+                                self.state.last_trigger_sent.set(current_time);
+                                self.state.operations_since_tier6.set(0);
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         OperationDispatcher::dispatch(self, operation).await;
         ContractHelpers::update_balance(self);

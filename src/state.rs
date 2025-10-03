@@ -182,4 +182,9 @@ pub struct Game2048 {
     pub last_trigger_sent: RegisterView<u64>,      // Last time this player sent a trigger
     pub total_registered_players: RegisterView<u32>, // Total number of registered players
     pub admin_base_triggerer_count: RegisterView<u32>, // Admin-configurable base triggerer count
+
+    // 🚀 TIER 6 EMERGENCY MODE: Operation counting for inactive leaderboard recovery
+    pub operations_since_tier6: RegisterView<u32>, // Count of operations since tier 6 started
+    pub tier6_start_time: RegisterView<u64>,       // When tier 6 began (last_update + 5*threshold)
+    pub is_in_tier6: RegisterView<bool>,           // Flag to track if we're in tier 6 mode
 }
