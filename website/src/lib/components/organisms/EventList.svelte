@@ -112,15 +112,25 @@
 	// Sorted versions for better UX
 	const sortedActiveEvents = $derived(
 		activeEvents?.sort((a: LeaderboardState, b: LeaderboardState) => {
-			// Primary: End time ascending (ending soon first)
-			const endDiff = Number(a.endTime) - Number(b.endTime);
-			if (endDiff !== 0) return endDiff;
+			const aIsUnlimited = Number(a.endTime) === 0;
+			const bIsUnlimited = Number(b.endTime) === 0;
 
-			// Secondary: Total players descending (most popular first)
+			// Put regular tournaments before unlimited ones (time-sensitive first)
+			if (!aIsUnlimited && bIsUnlimited) return -1;
+			if (aIsUnlimited && !bIsUnlimited) return 1;
+
+			// Both are the same type, sort within their group
+			if (!aIsUnlimited && !bIsUnlimited) {
+				// Regular tournaments: end time ascending (ending soon first)
+				const endDiff = Number(a.endTime) - Number(b.endTime);
+				if (endDiff !== 0) return endDiff;
+			}
+
+			// Both unlimited or within unlimited group: sort by popularity
 			const playerDiff = b.totalPlayers - a.totalPlayers;
 			if (playerDiff !== 0) return playerDiff;
 
-			// Tertiary: Start time descending (longer running first)
+			// Final fallback: start time descending (longer running first)
 			return Number(b.startTime) - Number(a.startTime);
 		})
 	);
