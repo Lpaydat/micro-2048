@@ -97,7 +97,7 @@
 		try {
 			const numTimestamp = Number(timestamp);
 			if (numTimestamp === 0) {
-				return '-';
+				return 'Unlimited';
 			}
 			if (!numTimestamp || !isFinite(numTimestamp) || numTimestamp < 0) {
 				return 'Invalid timestamp';
