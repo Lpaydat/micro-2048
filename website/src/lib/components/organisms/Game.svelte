@@ -199,8 +199,11 @@
 		const currentUser = $userStore.username;
 		const gameEnded = $game.data?.board?.isEnded;
 		const currentBoardId = $game.data?.board?.boardId;
-		const isOtherPlayer = boardPlayer && currentUser && boardPlayer !== currentUser;
-		const isOwnEndedGame = boardPlayer === currentUser && gameEnded;
+		
+		// Only check inspector mode if board data matches requested boardId (avoid stale data)
+		const isBoardDataValid = currentBoardId === boardId;
+		const isOtherPlayer = isBoardDataValid && boardPlayer && currentUser && boardPlayer !== currentUser;
+		const isOwnEndedGame = isBoardDataValid && boardPlayer === currentUser && gameEnded;
 
 		if (isOtherPlayer || isOwnEndedGame) {
 			const wasInspectorMode = isInspectorMode;
@@ -1126,7 +1129,7 @@
 	{/if}
 
 	<!-- 🔍 Inspector Mode Controls -->
-	{#if isInspectorMode && inspectorMoveHistory.length > 0}
+	{#if isInspectorMode && $game.data?.board}
 		<div class="mt-2 rounded-lg border border-purple-500/20 bg-purple-950/20 px-4 py-3">
 			<div class="mb-2 flex items-center justify-between">
 				<div class="flex items-center gap-2">
