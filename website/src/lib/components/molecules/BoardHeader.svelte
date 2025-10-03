@@ -95,8 +95,14 @@
 
 	// Mutation functions
 	const newSingleGame = async () => {
-		if (!canStartNewGame || !leaderboardId || !$userStore.username) return;
+		if (!canStartNewGame || !$userStore.username) return;
 		if (isCreatingBoard) return; // Prevent multiple clicks
+
+		// If no leaderboardId, navigate to leaderboard selection page
+		if (!leaderboardId) {
+			goto('/events');
+			return;
+		}
 
 		try {
 			boardCreationStartTime = Date.now();
