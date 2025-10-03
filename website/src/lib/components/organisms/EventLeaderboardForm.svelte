@@ -22,6 +22,8 @@
 	let baseTriggererCount = $state(2);
 	let loading = $state(false);
 	let errorMessage = $state('');
+	let noStartLimit = $state(false);
+	let noEndLimit = $state(false);
 
 	// Set default times (1 hour from now to 24 hours from now)
 	const setDefaultTimes = () => {
@@ -59,12 +61,20 @@
 				return;
 			}
 
-			// Set default times if not provided
-			if (!startTime || !endTime) {
-				setDefaultTimes();
+			// Set default times if not provided and not unlimited
+			if (!noStartLimit && !startTime) {
+				const now = new Date();
+				const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
+				startTime = oneHourLater.toISOString().slice(0, 16);
+			}
+			if (!noEndLimit && !endTime) {
+				const now = new Date();
+				const oneDayLater = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+				endTime = oneDayLater.toISOString().slice(0, 16);
 			}
 
-			if (new Date(startTime) >= new Date(endTime)) {
+			// Validate times only if not unlimited
+			if (!noStartLimit && !noEndLimit && new Date(startTime) >= new Date(endTime)) {
 				errorMessage = 'Start time must be before end time.';
 				return;
 			}
@@ -83,8 +93,8 @@
 			const settings: LeaderboardSettings = {
 				name: eventName,
 				description: description || undefined,
-				startTime: fromZonedTime(new Date(startTime), userTimeZone).getTime().toString(),
-				endTime: fromZonedTime(new Date(endTime), userTimeZone).getTime().toString(),
+				startTime: noStartLimit ? '0' : fromZonedTime(new Date(startTime), userTimeZone).getTime().toString(),
+				endTime: noEndLimit ? '0' : fromZonedTime(new Date(endTime), userTimeZone).getTime().toString(),
 				shardNumber: shardNumber,
 				baseTriggererCount: baseTriggererCount
 			};
@@ -141,34 +151,66 @@
 
 		<!-- Start Time Field -->
 		<div class="form-field">
+			<div class="mb-2 flex items-center gap-2">
+				<input
+					type="checkbox"
+					id="noStartLimit"
+					bind:checked={noStartLimit}
+					disabled={loading}
+					class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+				/>
+				<label for="noStartLimit" class="text-sm font-medium text-gray-700">
+					No start time limit (start immediately)
+				</label>
+			</div>
 			<Input
 				id="startTime"
-				label="Start Time (optional - defaults to 1 hour from now)"
+				label="Start Time"
 				bind:value={startTime}
-				placeholder="Enter start time"
+				placeholder="Select start time"
 				type="datetime-local"
-				disabled={loading}
+				disabled={loading || noStartLimit}
 			/>
+			{#if !noStartLimit}
+				<p class="mt-1 text-xs text-gray-600">Defaults to 1 hour from now if empty</p>
+			{/if}
 		</div>
 
 		<!-- End Time Field -->
 		<div class="form-field">
+			<div class="mb-2 flex items-center gap-2">
+				<input
+					type="checkbox"
+					id="noEndLimit"
+					bind:checked={noEndLimit}
+					disabled={loading}
+					class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+				/>
+				<label for="noEndLimit" class="text-sm font-medium text-gray-700">
+					No end time limit (runs indefinitely)
+				</label>
+			</div>
 			<Input
 				id="endTime"
-				label="End Time (optional - defaults to 24 hours from now)"
+				label="End Time"
 				bind:value={endTime}
-				placeholder="Enter end time"
+				placeholder="Select end time"
 				type="datetime-local"
-				disabled={loading}
+				disabled={loading || noEndLimit}
 			/>
-			<button
-				type="button"
-				onclick={setDefaultTimes}
-				class="mt-2 text-xs text-blue-600 underline hover:text-blue-800"
-				disabled={loading}
-			>
-				Reset to default times
-			</button>
+			{#if !noEndLimit}
+				<p class="mt-1 text-xs text-gray-600">Defaults to 24 hours from now if empty</p>
+			{/if}
+			{#if !noStartLimit && !noEndLimit}
+				<button
+					type="button"
+					onclick={setDefaultTimes}
+					class="mt-2 text-xs text-blue-600 underline hover:text-blue-800"
+					disabled={loading}
+				>
+					Reset to default times
+				</button>
+			{/if}
 		</div>
 
 		<!-- Shard Number Field -->
