@@ -46,7 +46,9 @@
 			[label, remainingTime] = formatTime(diff, 'Time Left');
 		} else {
 			// Event has ended
-			label = 'Event has ended';
+			label = 'Time Left';
+			remainingTime = 'Ended';
+			clearInterval(timer);
 		}
 		isSetRemainingTime = true;
 	};
@@ -94,7 +96,7 @@
 			calculateRemainingTime();
 		}
 
-		const isEnded = !remainingTime || remainingTime === '0 sec';
+		const isEnded = !remainingTime || remainingTime === '0 sec' || remainingTime === 'Ended';
 		if (endCallback && isEnded && !hasFiredCallback && isSetRemainingTime) {
 			hasFiredCallback = true;
 			endCallback();
@@ -143,7 +145,7 @@
 		<div class="flex items-center gap-2 md:text-sm">
 			<span class="font-semibold text-surface-400">{label}:</span>
 			{#if remainingTime}
-				<span class="game-details font-bold text-green-600">{remainingTime}</span>
+				<span class="game-details font-bold {remainingTime === 'Ended' ? 'text-red-600' : 'text-green-600'}">{remainingTime}</span>
 			{/if}
 		</div>
 	{/if}
