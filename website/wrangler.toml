@@ -15,8 +15,11 @@ pages_build_output_dir = ".svelte-kit/cloudflare"
 # - https://developers.cloudflare.com/pages/functions/bindings/#environment-variables
 # Note: Use secrets to store sensitive data.
 # - https://developers.cloudflare.com/pages/functions/bindings/#secrets
-# [vars]
-# MY_VARIABLE = "production_value"
+[vars]
+PUBLIC_CHAIN_ID = "44b8249cbf31338742aa05cbdbd99a4285a163a7d7e1c9bbcffc14ecce49c020"
+PUBLIC_APPLICATION_ID = "76a0ab72002ff1c34b095102041747c3d2054587af9239400ac2c8ca6b50d187"
+PUBLIC_PORT = "443"
+PUBLIC_WEBSITE = "u2048.hopto.org"
 
 # Bind the Workers AI model catalog. Run machine learning models, powered by serverless GPUs, on Cloudflare’s global network
 # Docs: https://developers.cloudflare.com/pages/functions/bindings/#workers-ai
@@ -68,8 +71,11 @@ pages_build_output_dir = ".svelte-kit/cloudflare"
 
 ######## PREVIEW environment config ########
 
-# [env.preview.vars]
-# API_KEY = "xyz789"
+[env.preview.vars]
+PUBLIC_CHAIN_ID = "44b8249cbf31338742aa05cbdbd99a4285a163a7d7e1c9bbcffc14ecce49c020"
+PUBLIC_APPLICATION_ID = "76a0ab72002ff1c34b095102041747c3d2054587af9239400ac2c8ca6b50d187"
+PUBLIC_PORT = "8088"
+PUBLIC_WEBSITE = "localhost"
 
 # [[env.preview.kv_namespaces]]
 # binding = "MY_KV_NAMESPACE"
@@ -77,8 +83,11 @@ pages_build_output_dir = ".svelte-kit/cloudflare"
 
 ######## PRODUCTION environment config ########
 
-# [env.production.vars]
-# API_KEY = "abc123"
+[env.production.vars]
+PUBLIC_CHAIN_ID = "44b8249cbf31338742aa05cbdbd99a4285a163a7d7e1c9bbcffc14ecce49c020"
+PUBLIC_APPLICATION_ID = "76a0ab72002ff1c34b095102041747c3d2054587af9239400ac2c8ca6b50d187"
+PUBLIC_PORT = "443"
+PUBLIC_WEBSITE = "api.u2048.hopto.org"
 
 # [[env.production.kv_namespaces]]
 # binding = "MY_KV_NAMESPACE"

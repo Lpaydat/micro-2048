@@ -52,19 +52,8 @@ localhost:$CADDY_HTTP_PORT, localhost {
     }
 }
 
-# Linera backend endpoint
-localhost:$LINERA_PORT {
-    reverse_proxy localhost:$LINERA_PORT {
-        header_up Host {host}
-        header_up X-Real-IP {remote_host}
-        header_up X-Forwarded-For {remote_host}
-        header_up X-Forwarded-Proto {scheme}
-        
-        # WebSocket support
-        header_up Connection {\$http_connection}
-        header_up Upgrade {\$http_upgrade}
-    }
-}
+# Linera backend endpoint - direct access (no proxy)
+# Backend runs on localhost:$LINERA_PORT and is accessed directly by frontend
 "
 else
     echo "📝 Creating production Caddyfile..."
@@ -99,8 +88,8 @@ api.$DOMAIN {
         header_up X-Forwarded-Proto {scheme}
         
         # WebSocket support for GraphQL subscriptions
-        header_up Connection {\$http_connection}
-        header_up Upgrade {\$http_upgrade}
+        header_up Connection {>Connection}
+        header_up Upgrade {>Upgrade}
     }
 }
 "
