@@ -15,6 +15,7 @@
 	import { getClient } from '$lib/client';
 
 	let boardId = $state<string>($page.url.searchParams.get('boardId') ?? '');
+	let leaderboardId = $state<string | undefined>($page.url.searchParams.get('leaderboardId') ?? undefined);
 	let chainId = $derived(boardId.split('.')[0] ?? $userStore.chainId);
 
 	let unsubscribe: any;
@@ -22,14 +23,13 @@
 	$effect(() => {
 		unsubscribe = page.subscribe(($page) => {
 			boardId = $page.url.searchParams.get('boardId') ?? '';
+			leaderboardId = $page.url.searchParams.get('leaderboardId') ?? undefined;
 		});
 	});
 
 	onDestroy(() => {
 		if (unsubscribe) unsubscribe();
 	});
-
-	let leaderboardId = $state<string | undefined>();
 	let currentPlayerScore = $state<number>(0);
 	let bestScore = $state<number>(0);
 	let isEnded = $state(false);
