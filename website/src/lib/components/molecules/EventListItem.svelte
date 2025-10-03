@@ -87,7 +87,10 @@
 	const formatLocalTime = (timestamp: string) => {
 		try {
 			const numTimestamp = Number(timestamp);
-			if (!numTimestamp || !isFinite(numTimestamp) || numTimestamp <= 0) {
+			if (numTimestamp === 0) {
+				return 'No time limit (unlimited)';
+			}
+			if (!numTimestamp || !isFinite(numTimestamp) || numTimestamp < 0) {
 				return 'Invalid timestamp';
 			}
 			const date = new Date(numTimestamp);

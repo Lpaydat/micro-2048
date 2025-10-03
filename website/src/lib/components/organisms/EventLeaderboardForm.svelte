@@ -252,9 +252,9 @@
 			<textarea
 				id="description"
 				bind:value={description}
-				placeholder="Enter description (max 200 chars)"
+				placeholder="Enter description (max 500 chars)"
 				class="w-full rounded-md border p-2"
-				maxlength="200"
+				maxlength="500"
 				disabled={loading}
 			></textarea>
 		</div>
