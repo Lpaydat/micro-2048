@@ -728,18 +728,21 @@
 			// Initial fetch
 			game.reexecute({ requestPolicy: 'network-only' });
 			
-			// Start polling interval
-			initGameIntervalId = setInterval(() => {
-				if (boardId && !$game.data?.board) {
-					game.reexecute({ requestPolicy: 'network-only' });
-				} else if ($game.data?.board) {
-					// Board found, stop polling
-					if (initGameIntervalId) {
-						clearInterval(initGameIntervalId);
-						initGameIntervalId = null;
-					}
+		// Start polling interval
+		initGameIntervalId = setInterval(() => {
+			if (boardId && !$game.data?.board) {
+				game.reexecute({ requestPolicy: 'network-only' });
+			} else if ($game.data?.board?.boardId === boardId) {
+				// Board found AND matches requested boardId, stop polling
+				if (initGameIntervalId) {
+					clearInterval(initGameIntervalId);
+					initGameIntervalId = null;
 				}
-			}, 500); // Poll every 500ms
+			} else if ($game.data?.board?.boardId !== boardId) {
+				// Wrong board data (stale), keep polling
+				game.reexecute({ requestPolicy: 'network-only' });
+			}
+		}, 500); // Poll every 500ms
 		}
 	}
 
