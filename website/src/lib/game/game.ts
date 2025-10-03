@@ -175,17 +175,17 @@ export const genInitialState = (
 						prevTablet
 					)
 				),
-			ArrowDown: async (state: GameState, timestamp: string, prevTablet?: string) =>
-				nextState(
-					state,
-					await genNewTiles(
-						reposition(transpose(normalize(transpose(state.tablet.reverse()))).reverse()),
-						boardId,
-						username,
-						timestamp,
-						prevTablet
-					)
-				),
+		ArrowDown: async (state: GameState, timestamp: string, prevTablet?: string) =>
+			nextState(
+				state,
+				await genNewTiles(
+					reposition(transpose(normalize(transpose([...state.tablet].reverse()))).reverse()),
+					boardId,
+					username,
+					timestamp,
+					prevTablet
+				)
+			),
 			ArrowLeft: async (state: GameState, timestamp: string, prevTablet?: string) =>
 				nextState(
 					state,

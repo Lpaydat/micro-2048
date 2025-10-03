@@ -83,34 +83,23 @@
 	let lastSyncTime: number | null = null;
 	let pendingMoveCount = 0;
 	let isFrozen = false;
-	let consecutiveMismatches = 0; // Track consecutive mismatches
+	let lastHashMismatchTime: number | null = null; // Track when hash mismatch started
 	let roundFirstMoveTime: number | null = null;
 	
-	// 🔄 Background Sync: State History Tracking
-	type StateSnapshot = {
-		hash: number;
-		boardString: string;
-		moveCount: number;
-		timestamp: number;
-		pendingAtTime: number;
-	};
+	// 🔄 Background Sync: Valid board states tracking (hash-based validation)
+	let validBoardHashes: Set<number> = new Set(); // All board states we've seen locally
 	
-	let stateHistory: StateSnapshot[] = [];
-	let totalMovesApplied = 0;
-	let lastConfirmedMoveCount = 0; // Track last confirmed by backend
-	
-	// 🔄 Background Sync: Submitted moves tracking
-	let submittedMoveHistory: StateSnapshot[] = []; // Moves submitted to backend, waiting for confirmation
-	
-	// 🔄 Background Sync: Activity Tracking
+	// 🔄 Background Sync: Activity Tracking (improved for mixed play styles)
 	let recentMoves: number[] = [];
-	const ACTIVITY_WINDOW = 1000; // 1 second
-	
-	// 🔄 Background Sync: Config
-	const HIGH_ACTIVITY_THRESHOLD = 5; // moves per second
-	const HIGH_ACTIVITY_SYNC_INTERVAL = 8000; // 8 seconds
-	const LOW_ACTIVITY_PENDING_LIMIT = 15; // moves
-	const LOW_ACTIVITY_THRESHOLD = 2; // moves per second
+	const ACTIVITY_WINDOW = 10000; // 10 seconds - longer window for better pattern detection
+
+	// 🔄 Background Sync: Config (optimized for batching to reduce backend load)
+	const BURST_ACTIVITY_THRESHOLD = 3; // moves per second (short burst)
+	const SUSTAINED_ACTIVITY_THRESHOLD = 1.5; // moves per second (over longer period)
+	const BURST_SYNC_INTERVAL = 12000; // 12 seconds (8-15 range for bursts)
+	const SUSTAINED_PENDING_LIMIT = 25; // 25 moves for steady players
+	const LOW_ACTIVITY_PENDING_LIMIT = 15; // moves for slow players
+	const VERY_LOW_ACTIVITY_THRESHOLD = 0.5; // moves per second (very slow play)
 	
 	// Hash function for quick board comparison
 	const hashBoard = (board: any) => {
@@ -125,47 +114,52 @@
 		return hash;
 	};
 	
-	// Track move activity
+	// Track move activity with better pattern detection
 	const trackMoveActivity = () => {
 		const now = Date.now();
 		recentMoves.push(now);
 		recentMoves = recentMoves.filter(t => now - t < ACTIVITY_WINDOW);
 	};
-	
-	const getMovesPerSecond = () => recentMoves.length;
-	
-	// Add state to history
-	const addStateSnapshot = (tablet: any) => {
-		if (!tablet) return;
-		
-		const boardStr = boardToString(tablet);
-		if (!boardStr) return; // Skip if conversion failed
-		
-		const snapshot: StateSnapshot = {
-			hash: hashBoard(tablet),
-			boardString: boardStr,
-			moveCount: totalMovesApplied,
-			timestamp: Date.now(),
-			pendingAtTime: pendingMoveCount
-		};
-		
-		stateHistory.push(snapshot);
+
+	// Calculate sustained activity over the full window
+	const getSustainedActivity = () => {
+		if (recentMoves.length === 0) return 0;
+		const windowSeconds = ACTIVITY_WINDOW / 1000;
+		return recentMoves.length / windowSeconds; // moves per second over full window
+	};
+
+	// Calculate recent burst activity (last 2 seconds)
+	const getBurstActivity = () => {
+		const now = Date.now();
+		const recentBurst = recentMoves.filter(t => now - t < 2000); // last 2 seconds
+		return recentBurst.length / 2; // moves per second in recent burst
+	};
+
+	// Determine activity level based on patterns
+	const getActivityLevel = () => {
+		const sustained = getSustainedActivity();
+		const burst = getBurstActivity();
+
+		if (burst >= BURST_ACTIVITY_THRESHOLD) return 'burst'; // High burst activity
+		if (sustained >= SUSTAINED_ACTIVITY_THRESHOLD) return 'sustained'; // Steady play
+		if (sustained >= VERY_LOW_ACTIVITY_THRESHOLD) return 'moderate'; // Moderate activity
+		return 'low'; // Very slow or paused
 	};
 	
-	// Clear history up to last confirmed point
-	const trimStateHistory = () => {
-		const confirmedIndex = stateHistory.findIndex(s => s.moveCount === lastConfirmedMoveCount);
-		if (confirmedIndex >= 0) {
-			stateHistory = stateHistory.slice(confirmedIndex);
-		}
+	// Add board state to valid hashes set
+	const addValidBoardHash = (tablet: any) => {
+		if (!tablet) return;
+		const hash = hashBoard(tablet);
+		validBoardHashes.add(hash);
 	};
 
 	// Offline mode disabled for website
 	const offlineMode = false;
 	const toggleOfflineMode = () => {};
 
-	// Add new move processing flag
+	// Add new move processing flag and queue
 	let isProcessingMove = false;
+	let moveQueue: Array<{ direction: GameKeys; timestamp: string }> = [];
 
 	// Add new balance view state
 	let showBalance = false;
@@ -326,13 +320,10 @@
 		// Reset state for new board
 		if (boardId !== lastBoardId) {
 			isInitialized = false;
-			stateHistory = [];
-			submittedMoveHistory = [];
-			totalMovesApplied = 0;
-			lastConfirmedMoveCount = 0;
+			validBoardHashes.clear();
 			pendingMoveCount = 0;
 			syncStatus = 'idle';
-			consecutiveMismatches = 0;
+			lastHashMismatchTime = null;
 			lastBoardId = boardId;
 		}
 		handleGameStateUpdate();
@@ -406,10 +397,9 @@
 
 			// 🔄 Track move activity for background sync
 			trackMoveActivity();
-			totalMovesApplied++;
-			
-			// 🔄 Add state snapshot to history
-			addStateSnapshot(state?.tablet);
+
+			// 🔄 Add board state to valid hashes
+			addValidBoardHash(state?.tablet);
 
 			// Add move to local history instead of immediate submission
 			// Don't reset syncStatus if currently syncing
@@ -436,6 +426,18 @@
 			}
 		} finally {
 			isProcessingMove = false;
+			// Process queued moves
+			processQueuedMoves(boardId);
+		}
+	};
+
+	// Process queued moves sequentially
+	const processQueuedMoves = async (boardId: string) => {
+		if (moveQueue.length === 0 || isProcessingMove) return;
+		
+		const nextMove = moveQueue.shift();
+		if (nextMove && !boardEnded) {
+			await move(boardId, nextMove.direction);
 		}
 	};
 
@@ -448,7 +450,14 @@
 		lastMoveTime = now;
 
 		if (!boardId) return;
-		move(boardId, direction);
+		
+		// Queue move if currently processing, otherwise execute immediately
+		if (isProcessingMove) {
+			moveQueue.push({ direction, timestamp });
+		} else {
+			move(boardId, direction);
+		}
+		
 		dispatch('move', { direction, timestamp });
 	};
 
@@ -507,22 +516,33 @@
 		submitMoves(boardId);
 	};
 	
-	// 🔄 Background Sync: Check if we should trigger sync
+	// 🔄 Background Sync: Check if we should trigger sync (optimized for batching)
 	const checkBackgroundSyncTriggers = () => {
 		if (!boardId || pendingMoveCount === 0) return;
-		
-		const movesPerSec = getMovesPerSecond();
+
+		const activityLevel = getActivityLevel();
 		const timeSinceLastSync = lastSyncTime ? Date.now() - lastSyncTime : Infinity;
-		const isLowActivity = movesPerSec <= LOW_ACTIVITY_THRESHOLD;
-		
-		// Condition 2: High Activity Sync
-		if (movesPerSec > HIGH_ACTIVITY_THRESHOLD && timeSinceLastSync > HIGH_ACTIVITY_SYNC_INTERVAL) {
+
+		// Condition 1: BURST Activity - Sync every 12 seconds (larger batches)
+		if (activityLevel === 'burst' && timeSinceLastSync > BURST_SYNC_INTERVAL) {
 			backgroundSync(boardId);
 			return;
 		}
-		
-		// Condition 3: Pending Count Sync (low activity only)
-		if (isLowActivity && pendingMoveCount >= LOW_ACTIVITY_PENDING_LIMIT) {
+
+		// Condition 2: SUSTAINED Activity - Sync every 25 moves (big batches)
+		if (activityLevel === 'sustained' && pendingMoveCount >= SUSTAINED_PENDING_LIMIT) {
+			backgroundSync(boardId);
+			return;
+		}
+
+		// Condition 3: LOW Activity - Sync at 15 moves (cleanup)
+		if (activityLevel === 'low' && pendingMoveCount >= LOW_ACTIVITY_PENDING_LIMIT) {
+			backgroundSync(boardId);
+			return;
+		}
+
+		// Condition 4: MODERATE Activity - Periodic cleanup (reduced frequency)
+		if (activityLevel === 'moderate' && pendingMoveCount >= 20 && timeSinceLastSync > 20000) {
 			backgroundSync(boardId);
 			return;
 		}
@@ -531,29 +551,28 @@
 	// 🔄 Background Sync: Non-blocking sync
 	const backgroundSync = async (boardId: string) => {
 		if (syncStatus === 'syncing' || syncStatus === 'syncing-bg') return;
-		
+
 		// Get moves to submit
 		const movesToSubmit = $moveHistoryStore.get(boardId) || [];
 		if (movesToSubmit.length === 0) return;
-		
+
 		// Submit moves without blocking
 		syncStatus = 'syncing-bg';
 		const moveBatch = getMoveBatchForSubmission(movesToSubmit);
-		
+
 		try {
-			// Move current state history to submitted history
-			submittedMoveHistory = [...stateHistory];
-			
-			// Flush pending moves now that we've submitted them
-			flushMoveHistory(boardId);
-			pendingMoveCount = 0;
-			
-			// Submit to backend
+			// Submit to backend first
 			makeMoves(client, moveBatch, boardId);
 			lastSyncTime = Date.now();
+
+			// ✅ Immediately flush moves - hash validation will confirm success
+			flushMoveHistory(boardId);
+			pendingMoveCount = 0;
+
 		} catch (error) {
 			console.error('Background sync failed:', error);
 			syncStatus = 'failed';
+			// Keep moves in queue for retry
 			return;
 		}
 	};
@@ -591,10 +610,10 @@
 			if (finalBackendState !== currentLocalState) {
 				// Full reset to backend state
 				state = createState($game.data.board.board, 4, boardId!, player);
-				stateHistory = [];
-				submittedMoveHistory = [];
-				totalMovesApplied = $game.data.board.totalMoves || 0;
-				lastConfirmedMoveCount = totalMovesApplied;
+				validBoardHashes.clear();
+				// Add the backend state as valid
+				validBoardHashes.add(hashBoard($game.data.board.board));
+				lastHashMismatchTime = null;
 			}
 		}
 		
@@ -692,44 +711,34 @@
 			// Skip sync validation in inspector mode (no moves to sync)
 			if (isInspectorMode) return;
 			
-			// If syncing in background, validate against submitted history
+			// If syncing in background, validate using hash lookup
 			if (syncStatus === 'syncing-bg' && state?.tablet) {
 				if (!syncingBackgroundStartTime) {
 					syncingBackgroundStartTime = Date.now();
 				}
-				
+
 				const backendBoard = $game.data.board.board;
 				const backendHash = hashBoard(backendBoard);
-				const backendBoardStr = boardToString(backendBoard);
-				
-				// Check if backend matches any state in our SUBMITTED history
-				const matchIndex = submittedMoveHistory.findIndex(s => s.hash === backendHash);
-				
-				if (matchIndex >= 0 && submittedMoveHistory[matchIndex].boardString === backendBoardStr) {
-					// ✅ Backend confirmed submitted moves
-					const confirmedMoveCount = submittedMoveHistory[matchIndex].moveCount;
-					
-					// Clear submitted history - backend has processed these moves
-					submittedMoveHistory = [];
-					lastConfirmedMoveCount = confirmedMoveCount;
-					
-					// Don't recalculate pendingMoveCount - it's already tracking new moves correctly
-					// pendingMoveCount is incremented on each move and was reset to 0 when we submitted
-					
-					trimStateHistory();
+
+				// ✅ Simple hash validation: Has backend reached a state we've seen?
+				if (validBoardHashes.has(backendHash)) {
+					// Backend processed our moves successfully
 					syncStatus = 'synced';
 					isFrozen = false;
-					consecutiveMismatches = 0;
+					lastHashMismatchTime = null;
 					syncingBackgroundStartTime = null;
 				} else {
 					// No match yet - check if we've been waiting too long
 					const syncWaitTime = Date.now() - syncingBackgroundStartTime;
-					
+
 					// Only trigger desync if we've waited > 5 seconds without finding a match
-					if (syncWaitTime > 5000 && backendBoardStr) {
-						console.warn('Background sync timeout - no history match found');
+					if (syncWaitTime > 5000) {
+						console.warn('Background sync timeout - backend state not found in valid hashes');
 						syncingBackgroundStartTime = null;
-						handleDesync(backendBoardStr);
+						const backendBoardStr = boardToString(backendBoard);
+						if (backendBoardStr) {
+							handleDesync(backendBoardStr);
+						}
 					}
 				}
 			} else {
@@ -737,22 +746,26 @@
 				syncingBackgroundStartTime = null;
 			}
 			
-			// If not syncing and no pending moves, verify state matches
-			if (pendingMoveCount === 0 && syncStatus !== 'syncing-bg' && state?.tablet) {
-				const backendBoardStr = boardToString($game.data.board.board);
-				const localBoardStr = boardToString(state.tablet);
-				
-				if (backendBoardStr !== localBoardStr) {
-					consecutiveMismatches++;
-					
-					if (consecutiveMismatches >= 5 && backendBoardStr) {
-						// Persistent mismatch - force reconciliation
-						handleDesync(backendBoardStr);
-					}
-				} else {
-					consecutiveMismatches = 0;
-					if (syncStatus !== 'synced') {
+			// Simple hash validation: Check if backend state matches any valid state we've seen
+			if (state?.tablet) {
+				const backendHash = hashBoard($game.data.board.board);
+
+				if (validBoardHashes.has(backendHash)) {
+					// ✅ Backend state is valid - reset mismatch tracking
+					if (syncStatus !== 'synced' && syncStatus !== 'syncing-bg') {
 						syncStatus = 'synced';
+					}
+					lastHashMismatchTime = null;
+				} else {
+					// ❌ Backend state not in our valid hash set
+					if (lastHashMismatchTime === null) {
+						lastHashMismatchTime = Date.now();
+					} else if (Date.now() - lastHashMismatchTime > 15000) { // 15 seconds of mismatch
+						console.warn('Backend state not found in valid hashes for 15+ seconds - desync detected');
+						const backendBoardStr = boardToString($game.data.board.board);
+						if (backendBoardStr) {
+							handleDesync(backendBoardStr);
+						}
 					}
 				}
 			}
