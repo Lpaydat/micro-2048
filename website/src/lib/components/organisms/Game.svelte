@@ -366,6 +366,9 @@
 		// Normal mode: use current board state
 		state = createState($game.data?.board?.board, 4, boardId, player);
 
+		// Register initial board state as valid to prevent false desync detection
+		addValidBoardHash(state?.tablet);
+
 		isInitialized = true;
 
 		if (state?.finished && !isInspectorMode) {
