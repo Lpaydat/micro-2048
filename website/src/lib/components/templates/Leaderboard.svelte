@@ -71,12 +71,16 @@
 	const currentBoardId = $derived(getBoardId(leaderboardId));
 	const board = $derived(getBoard(playerClient));
 
-	const isEnded = $derived(
-		Number($leaderboard?.data?.leaderboard?.endTime ?? '0') - Date.now() < 0
-	);
-	const isStarted = $derived(
-		Number($leaderboard?.data?.leaderboard?.startTime ?? '0') - Date.now() < 0
-	);
+	const isEnded = $derived.by(() => {
+		const endTime = Number($leaderboard?.data?.leaderboard?.endTime ?? '0');
+		if (endTime === 0) return false;
+		return endTime - Date.now() < 0;
+	});
+	const isStarted = $derived.by(() => {
+		const startTime = Number($leaderboard?.data?.leaderboard?.startTime ?? '0');
+		if (startTime === 0) return true;
+		return startTime - Date.now() < 0;
+	});
 	const canDeleteEvent = $derived(
 		($leaderboard?.data?.leaderboard?.host === $userStore.username || $userStore.isMod) && !isEnded
 	);
