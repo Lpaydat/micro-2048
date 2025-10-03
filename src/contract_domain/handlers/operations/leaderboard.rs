@@ -488,7 +488,7 @@ impl LeaderboardOperationHandler {
         }
     }
 
-    /// Dynamic Triggerer Management - Updates based on actual scores
+    /// Dynamic Triggerer Management - Updates based on actual scores with tier-based pool size
     pub async fn update_triggerer_pool(contract: &mut crate::Game2048Contract) {
         let leaderboard = contract
             .state
@@ -497,10 +497,18 @@ impl LeaderboardOperationHandler {
             .await
             .unwrap();
 
-        // Collect top 5 players by score
+        // 🚀 FIX: Use admin-configured base triggerer count
+        let base_count = *leaderboard.admin_base_triggerer_count.get();
+        let base_count = if base_count > 0 { base_count } else { 5 }; // Default to 5
+
+        // 🚀 FIX: Calculate max pool size for tier 5 (base_count * 5)
+        let max_tier = 5;
+        let max_pool_size = (base_count * max_tier).min(100); // Cap at 100 to prevent excessive storage
+
+        // Collect top N players by score (where N = max pool size)
         let mut top_players: Vec<(String, u64)> = Vec::new();
 
-        // Iterate through all scores to find top 5
+        // Iterate through all scores to find top N
         leaderboard
             .score
             .for_each_index_value(|player, score| {
@@ -513,8 +521,8 @@ impl LeaderboardOperationHandler {
         // Sort by score (descending)
         top_players.sort_by(|a, b| b.1.cmp(&a.1));
 
-        // Take top 5 (or fewer if less players)
-        top_players.truncate(5);
+        // 🚀 FIX: Take top N based on tier-based pool size (not hardcoded 5)
+        top_players.truncate(max_pool_size as usize);
 
         // Update triggerer pool
         if !top_players.is_empty() {
@@ -528,13 +536,13 @@ impl LeaderboardOperationHandler {
                 }
             }
 
-            // Clear and rebuild backup pool with players 2-5
+            // Clear and rebuild backup pool with all tier-based players
             while leaderboard.backup_triggerers.count() > 0 {
                 leaderboard.backup_triggerers.delete_front();
             }
 
-            // Add new backups (positions 2-5)
-            for i in 1..top_players.len().min(5) {
+            // 🚀 FIX: Add ALL top players as backups (not just 4)
+            for i in 1..top_players.len() {
                 if let Some((player, _)) = top_players.get(i) {
                     if let Some(board_id) = leaderboard.board_ids.get(player).await.unwrap() {
                         let chain_id = board_id.split('.').next().unwrap_or(player).to_string();
@@ -566,10 +574,16 @@ impl LeaderboardOperationHandler {
             return true;
         }
 
-        // Check if in backup pool
+        // 🚀 FIX: Read tier-based amount from backup pool (not hardcoded 5)
+        let base_count = *leaderboard.admin_base_triggerer_count.get();
+        let base_count = if base_count > 0 { base_count } else { 5 };
+        let max_tier = 5;
+        let max_pool_size = (base_count * max_tier).min(100); // Cap at 100
+
+        // Check if in backup pool (read up to tier-based max)
         let backup_triggerers = leaderboard
             .backup_triggerers
-            .read_front(5)
+            .read_front(max_pool_size as usize)
             .await
             .unwrap_or_default();
         backup_triggerers.contains(&requester_chain_id.to_string())
