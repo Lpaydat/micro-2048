@@ -145,7 +145,7 @@
 		<div class="flex items-center gap-2 md:text-sm">
 			<span class="font-semibold text-surface-400">{label}:</span>
 			{#if remainingTime}
-				<span class="game-details font-bold {remainingTime === 'Ended' ? 'text-red-600' : 'text-green-600'}">{remainingTime}</span>
+				<span class="game-details font-bold {remainingTime === 'Ended' ? 'text-orange-600' : 'text-green-600'}">{remainingTime}</span>
 			{/if}
 		</div>
 	{/if}
