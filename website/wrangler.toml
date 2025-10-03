@@ -19,7 +19,7 @@ pages_build_output_dir = ".svelte-kit/cloudflare"
 PUBLIC_CHAIN_ID = "44b8249cbf31338742aa05cbdbd99a4285a163a7d7e1c9bbcffc14ecce49c020"
 PUBLIC_APPLICATION_ID = "76a0ab72002ff1c34b095102041747c3d2054587af9239400ac2c8ca6b50d187"
 PUBLIC_PORT = "443"
-PUBLIC_WEBSITE = "u2048.hopto.org"
+PUBLIC_WEBSITE = "api.micro2048.xyz"
 
 # Bind the Workers AI model catalog. Run machine learning models, powered by serverless GPUs, on Cloudflare’s global network
 # Docs: https://developers.cloudflare.com/pages/functions/bindings/#workers-ai
@@ -87,7 +87,7 @@ PUBLIC_WEBSITE = "localhost"
 PUBLIC_CHAIN_ID = "44b8249cbf31338742aa05cbdbd99a4285a163a7d7e1c9bbcffc14ecce49c020"
 PUBLIC_APPLICATION_ID = "76a0ab72002ff1c34b095102041747c3d2054587af9239400ac2c8ca6b50d187"
 PUBLIC_PORT = "443"
-PUBLIC_WEBSITE = "api.u2048.hopto.org"
+PUBLIC_WEBSITE = "api.micro2048.xyz"
 
 # [[env.production.kv_namespaces]]
 # binding = "MY_KV_NAMESPACE"
