@@ -10,6 +10,7 @@
 	import { getModalStore } from '@skeletonlabs/skeleton';
 	import { getClient } from '$lib/client';
 	import { chainId as mainChainId } from '$lib/constants';
+	import { userStore } from '$lib/stores/userStore';
 
 	const client = getClient(mainChainId, true);
 	const modalStore = getModalStore();
@@ -19,11 +20,14 @@
 	let endTime = $state('');
 	let description = $state('');
 	let shardNumber = $state(4);
-	let baseTriggererCount = $state(2);
+	let baseTriggererCount = $state(5); // Changed from 2 to 5
 	let loading = $state(false);
 	let errorMessage = $state('');
 	let noStartLimit = $state(false);
 	let noEndLimit = $state(false);
+
+	// Check if current user is admin
+	const isAdmin = $derived($userStore.isMod === true);
 
 	// Set default times (1 hour from now to 24 hours from now)
 	const setDefaultTimes = () => {
@@ -79,14 +83,17 @@
 				return;
 			}
 
-			if (shardNumber < 1 || shardNumber > 20) {
-				errorMessage = 'Shard number must be between 1 and 20.';
-				return;
-			}
+			// Only validate admin fields if user is admin
+			if (isAdmin) {
+				if (shardNumber < 1 || shardNumber > 20) {
+					errorMessage = 'Shard number must be between 1 and 20.';
+					return;
+				}
 
-			if (baseTriggererCount < 1 || baseTriggererCount > 10) {
-				errorMessage = 'Base triggerer count must be between 1 and 10.';
-				return;
+				if (baseTriggererCount < 1 || baseTriggererCount > 10) {
+					errorMessage = 'Base triggerer count must be between 1 and 10.';
+					return;
+				}
 			}
 
 			const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -99,8 +106,11 @@
 				endTime: noEndLimit
 					? '0'
 					: fromZonedTime(new Date(endTime), userTimeZone).getTime().toString(),
-				shardNumber: shardNumber,
-				baseTriggererCount: baseTriggererCount
+				// Only include admin fields if user is admin
+				...(isAdmin && {
+					shardNumber: shardNumber,
+					baseTriggererCount: baseTriggererCount
+				})
 			};
 
 			const result = createLeaderboard(client, settings);
@@ -217,39 +227,43 @@
 			{/if}
 		</div>
 
-		<!-- Shard Number Field -->
-		<div class="form-field">
-			<Input
-				id="shardNumber"
-				label="Number of Shards (1-20)"
-				bind:value={shardNumber}
-				placeholder="Number of game shards"
-				type="number"
-				min="1"
-				max="20"
-				disabled={loading}
-			/>
-			<p class="mt-1 text-xs text-gray-600">
-				Number of parallel game chains. More shards = higher capacity but increased complexity.
-			</p>
-		</div>
+		<!-- Shard Number Field - Admin Only -->
+		{#if isAdmin}
+			<div class="form-field">
+				<Input
+					id="shardNumber"
+					label="Number of Shards (1-20)"
+					bind:value={shardNumber}
+					placeholder="Number of game shards"
+					type="number"
+					min="1"
+					max="20"
+					disabled={loading}
+				/>
+				<p class="mt-1 text-xs text-gray-600">
+					Number of parallel game chains. More shards = higher capacity but increased complexity.
+				</p>
+			</div>
+		{/if}
 
-		<!-- Base Triggerer Count Field -->
-		<div class="form-field">
-			<Input
-				id="baseTriggererCount"
-				label="Base Triggerer Count (1-10)"
-				bind:value={baseTriggererCount}
-				placeholder="Number of triggerers for aggregation"
-				type="number"
-				min="1"
-				max="10"
-				disabled={loading}
-			/>
-			<p class="mt-1 text-xs text-gray-600">
-				Number of chains authorized to trigger score aggregation. Higher count = more redundancy.
-			</p>
-		</div>
+		<!-- Base Triggerer Count Field - Admin Only -->
+		{#if isAdmin}
+			<div class="form-field">
+				<Input
+					id="baseTriggererCount"
+					label="Base Triggerer Count (1-10)"
+					bind:value={baseTriggererCount}
+					placeholder="Number of triggerers for aggregation"
+					type="number"
+					min="1"
+					max="10"
+					disabled={loading}
+				/>
+				<p class="mt-1 text-xs text-gray-600">
+					Number of chains authorized to trigger score aggregation. Higher count = more redundancy.
+				</p>
+			</div>
+		{/if}
 
 		<!-- Description Field -->
 		<div class="form-field">
