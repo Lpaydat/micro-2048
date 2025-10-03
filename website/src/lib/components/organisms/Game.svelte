@@ -290,7 +290,8 @@
 			toggleOfflineMode();
 		}
 		
-		const isLeaderboardEnded = parseInt($game.data?.board?.endTime) <= Date.now();
+		const endTime = parseInt($game.data?.board?.endTime);
+		const isLeaderboardEnded = endTime > 0 && endTime <= Date.now();
 		if (!isSetFinalScore && isLeaderboardEnded) {
 			isSetFinalScore = true;
 			updateLeaderboardScore();

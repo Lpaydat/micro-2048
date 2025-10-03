@@ -36,6 +36,15 @@
 		const end = Number(endTime);
 		const now = Date.now();
 
+		// Check for unlimited tournament first
+		if (end === 0) {
+			label = '';
+			remainingTime = 'Unlimited';
+			clearInterval(timer);
+			isSetRemainingTime = true;
+			return;
+		}
+
 		if (start > now) {
 			// Event hasn't started yet
 			const diff = start - now;
@@ -97,7 +106,8 @@
 		}
 
 		const isEnded = !remainingTime || remainingTime === '0 sec' || remainingTime === 'Ended';
-		if (endCallback && isEnded && !hasFiredCallback && isSetRemainingTime) {
+		const isUnlimited = remainingTime === 'Unlimited';
+		if (endCallback && isEnded && !hasFiredCallback && isSetRemainingTime && !isUnlimited) {
 			hasFiredCallback = true;
 			endCallback();
 		}
@@ -143,9 +153,11 @@
 	</div>
 	{#if (startTime || endTime) && remainingTime}
 		<div class="flex items-center gap-2 md:text-sm">
-			<span class="font-semibold text-surface-400">{label}:</span>
+			{#if label}
+				<span class="font-semibold text-surface-400">{label}:</span>
+			{/if}
 			{#if remainingTime}
-				<span class="game-details font-bold {remainingTime === 'Ended' ? 'text-orange-600' : 'text-green-600'}">{remainingTime}</span>
+				<span class="game-details font-bold {remainingTime === 'Ended' ? 'text-orange-600' : remainingTime === 'Unlimited' ? 'text-cyan-600' : 'text-green-600'}">{remainingTime}</span>
 			{/if}
 		</div>
 	{/if}
