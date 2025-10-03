@@ -66,16 +66,40 @@
 	const activeEvents = $derived(
 		sortedEvents?.filter((event: LeaderboardState) => {
 			const now = Date.now();
-			return now >= Number(event.startTime) && now < Number(event.endTime);
+			const startTime = Number(event.startTime);
+			const endTime = Number(event.endTime);
+
+			// Unlimited tournaments (timestamp = 0) are always active
+			if (startTime === 0 && endTime === 0) return true;
+
+			// Regular tournaments: check time bounds
+			return now >= startTime && now < endTime;
 		})
 	);
 
 	const upcomingEvents = $derived(
-		sortedEvents?.filter((event: LeaderboardState) => Number(event.startTime) >= Date.now())
+		sortedEvents?.filter((event: LeaderboardState) => {
+			const startTime = Number(event.startTime);
+			const endTime = Number(event.endTime);
+
+			// Unlimited tournaments are not "upcoming" (they're always active)
+			if (startTime === 0 && endTime === 0) return false;
+
+			// Regular tournaments: start time in future
+			return startTime >= Date.now();
+		})
 	);
 
 	const pastEvents = $derived(
-		sortedEvents?.filter((event: LeaderboardState) => Number(event.endTime) < Date.now())
+		sortedEvents?.filter((event: LeaderboardState) => {
+			const endTime = Number(event.endTime);
+
+			// Unlimited tournaments are never "past" (they're always active)
+			if (endTime === 0) return false;
+
+			// Regular tournaments: end time in past
+			return endTime < Date.now();
+		})
 	);
 
 	const callback = () => {
