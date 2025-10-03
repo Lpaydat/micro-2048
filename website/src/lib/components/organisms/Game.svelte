@@ -79,7 +79,7 @@
 	let lastBoardId: string | undefined = undefined; // Track board changes
 
 	// Add new sync status tracking
-	let syncStatus: 'idle' | 'syncing' | 'syncing-bg' | 'synced' | 'failed' | 'desynced' = 'idle';
+	let syncStatus: 'ready' | 'pending' | 'syncing' | 'syncing-bg' | 'synced' | 'failed' | 'desynced' = 'ready';
 	let lastSyncTime: number | null = null;
 	let pendingMoveCount = 0;
 	let isFrozen = false;
@@ -326,7 +326,7 @@
 			isInitialized = false;
 			validBoardHashes.clear();
 			pendingMoveCount = 0;
-			syncStatus = 'idle';
+			syncStatus = 'ready';
 			lastHashMismatchTime = null;
 			lastBoardId = boardId;
 		}
@@ -408,7 +408,7 @@
 			// Add move to local history instead of immediate submission
 			// Don't reset syncStatus if currently syncing
 			if (syncStatus !== 'syncing-bg' && syncStatus !== 'syncing') {
-				syncStatus = 'idle';
+				syncStatus = 'pending';
 			}
 			pendingMoveCount++;
 			addMoveToHistory({
@@ -622,7 +622,7 @@
 
 		// Resume game
 		isFrozen = false;
-		syncStatus = 'synced';
+		syncStatus = 'ready';
 		pendingMoveCount = 0;
 		overlayMessage = undefined;
 	};
@@ -726,7 +726,21 @@
 				// ✅ Simple hash validation: Has backend reached a state we've seen?
 				if (validBoardHashes.has(backendHash)) {
 					// Backend processed our moves successfully
-					syncStatus = 'synced';
+					const localHash = state?.tablet ? hashBoard(state.tablet) : null;
+					const backendMatchesLatest = localHash && backendHash === localHash;
+					
+					if (backendMatchesLatest && pendingMoveCount === 0) {
+						syncStatus = 'ready';
+					} else {
+						syncStatus = 'synced';
+						setTimeout(() => {
+							if (pendingMoveCount === 0 && syncStatus === 'synced') {
+								syncStatus = 'ready';
+							} else if (syncStatus === 'synced') {
+								syncStatus = 'pending';
+							}
+						}, 800);
+					}
 					isFrozen = false;
 					lastHashMismatchTime = null;
 					syncingBackgroundStartTime = null;
@@ -755,8 +769,15 @@
 
 				if (validBoardHashes.has(backendHash)) {
 					// ✅ Backend state is valid - reset mismatch tracking
-					if (syncStatus !== 'synced' && syncStatus !== 'syncing-bg') {
-						syncStatus = 'synced';
+					const localHash = hashBoard(state.tablet);
+					const backendMatchesLatest = backendHash === localHash;
+					
+					if (backendMatchesLatest && pendingMoveCount === 0) {
+						if (syncStatus !== 'ready') {
+							syncStatus = 'ready';
+						}
+					} else if (syncStatus !== 'syncing-bg' && syncStatus !== 'syncing' && syncStatus !== 'synced') {
+						syncStatus = pendingMoveCount > 0 ? 'pending' : 'ready';
 					}
 					lastHashMismatchTime = null;
 				} else {
@@ -954,27 +975,31 @@
 								<div class="flex items-center gap-1.5">
 									<div
 										class="h-2 w-2 rounded-full
-								{syncStatus === 'synced'
+								{syncStatus === 'ready' || syncStatus === 'synced'
 											? 'animate-pulse bg-emerald-500'
-											: syncStatus === 'failed'
-												? 'bg-red-500'
-												: syncStatus === 'desynced'
-													? 'animate-pulse bg-red-500'
-													: syncStatus === 'syncing-bg' || syncStatus === 'syncing'
-														? 'animate-pulse bg-yellow-500'
-														: 'bg-surface-400'}"
+											: syncStatus === 'pending'
+												? 'bg-cyan-400'
+												: syncStatus === 'failed'
+													? 'bg-red-500'
+													: syncStatus === 'desynced'
+														? 'animate-pulse bg-red-500'
+														: syncStatus === 'syncing-bg' || syncStatus === 'syncing'
+															? 'animate-pulse bg-yellow-500'
+															: 'bg-surface-400'}"
 									></div>
 									<span
 										class="text-xs capitalize lg:text-sm
-								{syncStatus === 'synced'
+								{syncStatus === 'ready' || syncStatus === 'synced'
 											? 'text-emerald-400'
-											: syncStatus === 'failed'
-												? 'text-red-400'
-												: syncStatus === 'desynced'
+											: syncStatus === 'pending'
+												? 'text-cyan-400'
+												: syncStatus === 'failed'
 													? 'text-red-400'
-													: syncStatus === 'syncing-bg' || syncStatus === 'syncing'
-														? 'text-yellow-400'
-														: 'text-surface-400'}"
+													: syncStatus === 'desynced'
+														? 'text-red-400'
+														: syncStatus === 'syncing-bg' || syncStatus === 'syncing'
+															? 'text-yellow-400'
+															: 'text-surface-400'}"
 									>
 										{syncStatus === 'syncing-bg' ? 'syncing' : syncStatus}
 									</span>
