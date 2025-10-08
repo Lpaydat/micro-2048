@@ -76,9 +76,6 @@
 	let consecutiveMismatches = 0; // Track consecutive mismatches
 	let roundFirstMoveTime: number | null = null;
 
-	// Add new state variable
-	let offlineMode = false;
-
 	// Add new move processing flag
 	let isProcessingMove = false;
 
@@ -108,9 +105,6 @@
 
 	$: if (boardEnded) {
 		deleteBoardId(leaderboardId);
-		if (offlineMode) {
-			toggleOfflineMode();
-		}
 		setTimeout(() => {
 			const isLeaderboardEnded = parseInt($game.data?.board?.endTime) <= Date.now();
 			if (!isSetFinalScore && isLeaderboardEnded) {
@@ -308,15 +302,9 @@
 	};
 
 	const submitMoves = (boardId: string, force = false) => {
-		// Force online mode if game has ended
-		if (force && offlineMode) {
-			offlineMode = false;
-			localStorage.setItem('offlineModePreference', 'false');
-		}
-
 		const moves = flushMoveHistory(boardId);
 		try {
-			if ((moves.length > 0 || force) && !offlineMode) {
+			if (moves.length > 0 || force) {
 				makeMoves(client, getMoveBatchForSubmission(moves), boardId);
 				const newTablet = boardToString(state?.tablet);
 				stateHash = newTablet ?? '';
@@ -336,16 +324,7 @@
 	};
 
 	// Add toggle handler
-	const toggleOfflineMode = () => {
-		offlineMode = !offlineMode;
-		syncStatus = offlineMode ? 'idle' : 'syncing';
-		localStorage.setItem('offlineModePreference', String(offlineMode));
 
-		if (!offlineMode && boardId) {
-			// Submit any stored moves when coming online
-			submitMoves(boardId);
-		}
-	};
 
 	// Add toggle handler for balance view
 	let dirtyBalance = false;
@@ -378,9 +357,6 @@
 			}
 		}, 500);
 
-		// Initialize from localStorage, default to offline mode
-		offlineMode = localStorage.getItem('offlineModePreference') !== 'false';
-
 		return () => {
 			cleanupListeners();
 			clearInterval(initGameIntervalId);
@@ -398,7 +374,6 @@
 	let syncIntervalId: NodeJS.Timeout;
 	onMount(() => {
 		syncIntervalId = setInterval(() => {
-			if (offlineMode) return; // Skip sync checks in offline mode
 			if (boardId && (pendingMoveCount === 0 || syncStatus === 'syncing')) {
 				// // Force check threshold conditions periodically
 				game.reexecute({ requestPolicy: 'network-only' });
@@ -529,7 +504,7 @@
 													? 'text-yellow-400'
 													: 'text-surface-400'}"
 									>
-										{offlineMode ? 'Offline' : syncStatus}
+										{syncStatus}
 									</span>
 								</div>
 							</div>
@@ -558,16 +533,6 @@
 					</button>
 				{/if}
 			</div>
-
-			<button
-				onclick={toggleOfflineMode}
-				class="bg-surface-800/50 border-surface-600/50 hover:bg-surface-700/50 flex w-full items-center gap-2 rounded-lg border px-4 py-2 transition-colors lg:w-auto"
-			>
-				<div class="h-2 w-2 rounded-full {offlineMode ? 'bg-orange-500' : 'bg-emerald-500'}"></div>
-				<span class="text-surface-400 whitespace-nowrap text-xs lg:text-sm"
-					>{offlineMode ? 'Go Online' : 'Go Offline'}</span
-				>
-			</button>
 		</div>
 	{/if}
 </div>

@@ -45,12 +45,6 @@
 		component: 'how-to-play-2048'
 	};
 
-	const guestModeModal: ModalSettings = {
-		type: 'alert',
-		title: 'Oops! No Sneaking In! 🕵️‍♂️',
-		body: 'Sorry, but our "Play as Guest" feature is still on vacation! Why not join us properly? Create an account - it\'s quick, free, and way more fun than trying to sneak in through the back door! 😉'
-	};
-
 	const player = $derived(getPlayerInfo(client, submittedUsername));
 	const playerOnChain = $derived(
 		queryStore({
@@ -243,13 +237,9 @@
 			</Button>
 
 			<!-- Additional Actions -->
-			<div class="flex items-center justify-between border-t border-[#CDC1B4] pt-4">
+			<div class="flex items-center justify-center border-t border-[#CDC1B4] pt-4">
 				<Button variant="outline" size="sm" onclick={() => modalStore.trigger(howToPlayModal)}>
 					How to Play
-				</Button>
-
-				<Button variant="default" size="sm" onclick={() => modalStore.trigger(guestModeModal)}>
-					Play as Guest
 				</Button>
 			</div>
 		</div>
