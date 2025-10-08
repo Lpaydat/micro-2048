@@ -252,6 +252,26 @@ impl QueryHandler {
                 .await
                 .unwrap();
 
+            // 🚀 Collect active boards currently tracked on the leaderboard
+            let mut active_boards: Vec<ActiveBoard> = Vec::new();
+            leaderboard
+                .active_boards
+                .for_each_index_value(|board_id, board_info| {
+                    if !board_info.is_ended {
+                        active_boards.push(ActiveBoard {
+                            board_id: board_id.clone(),
+                            player: board_info.player.clone(),
+                            score: board_info.score,
+                        });
+                    }
+                    Ok(())
+                })
+                .await
+                .unwrap();
+
+            // Sort active boards by score descending for deterministic output
+            active_boards.sort_by(|a, b| b.score.cmp(&a.score));
+
             // 🚀 SORT rankers by score descending (highest first)
             let mut rankers: Vec<Ranker> = players.into_values().collect();
             rankers.sort_by(|a, b| b.score.cmp(&a.score));
@@ -275,6 +295,7 @@ impl QueryHandler {
                 total_players: *leaderboard.total_players.get(),
                 rankers,
                 shard_ids,
+                active_boards,
             };
 
             Some(leaderboard_state)
@@ -414,6 +435,7 @@ impl QueryHandler {
                         total_players: *leaderboard.total_players.get(),
                         rankers: Vec::new(),
                         shard_ids,
+                        active_boards: Vec::new(),
                     });
                 }
             }

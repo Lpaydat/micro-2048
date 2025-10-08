@@ -2,8 +2,8 @@
 //!
 //! Handles shard-related operations including score aggregation, activity tracking, and workload management.
 
-use crate::state::LeaderboardShard;
-use game2048::{GameStatus, Message, PlayerScoreSummary};
+use crate::state::{ActiveBoardInfo, LeaderboardShard};
+use game2048::{ActiveBoardSummary, GameStatus, Message, PlayerScoreSummary};
 use linera_sdk::linera_base_types::ChainId;
 use std::str::FromStr;
 
@@ -51,6 +51,23 @@ impl ShardOperationHandler {
             shard.counter.set(*shard.counter.get() + 1);
         }
 
+        // Track board-level activity regardless of best-score updates
+        if is_ended {
+            let _ = shard.active_boards.remove(&board_id);
+        } else {
+            shard
+                .active_boards
+                .insert(
+                    &board_id,
+                    ActiveBoardInfo {
+                        player: player.to_string(),
+                        score,
+                        is_ended,
+                    },
+                )
+                .unwrap();
+        }
+
         // Store the player name → chain ID mapping for later aggregation
         shard
             .player_chain_ids
@@ -89,6 +106,27 @@ impl ShardOperationHandler {
             .for_each_index_while(|player| {
                 player_names.push(player);
                 Ok(true)
+            })
+            .await
+            .unwrap();
+
+        // Group active boards per player for summary propagation
+        let mut active_boards_by_player: HashMap<String, Vec<ActiveBoardSummary>> = HashMap::new();
+        shard
+            .active_boards
+            .for_each_index_value(|board_id, info| {
+                if !info.is_ended {
+                    active_boards_by_player
+                        .entry(info.player.clone())
+                        .or_default()
+                        .push(ActiveBoardSummary {
+                            board_id: board_id.clone(),
+                            player: info.player.clone(),
+                            score: info.score,
+                            is_ended: info.is_ended,
+                        });
+                }
+                Ok(())
             })
             .await
             .unwrap();
@@ -134,6 +172,8 @@ impl ShardOperationHandler {
                     .unwrap()
                     .unwrap_or(GameStatus::Active); // Fallback to Active if not stored
 
+                let active_boards = active_boards_by_player.remove(&player).unwrap_or_default();
+
                 // Create summary from cached data
                 let summary = PlayerScoreSummary {
                     player: player.clone(),
@@ -144,6 +184,7 @@ impl ShardOperationHandler {
                     last_update: current_time,
                     game_status,
                     boards_in_tournament: board_count,
+                    active_boards,
                 };
 
                 player_summaries.insert(player.clone(), summary);

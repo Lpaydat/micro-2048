@@ -60,6 +60,7 @@ pub struct LeaderboardState {
     pub total_players: u32,
     pub rankers: Vec<Ranker>,
     pub shard_ids: Vec<String>,
+    pub active_boards: Vec<ActiveBoard>,
 }
 
 #[derive(SimpleObject)]
@@ -75,6 +76,13 @@ pub struct Ranker {
     pub score: u64,
     pub board_id: String,
     pub is_ended: bool,
+}
+
+#[derive(SimpleObject)]
+pub struct ActiveBoard {
+    pub board_id: String,
+    pub player: String,
+    pub score: u64,
 }
 
 #[derive(SimpleObject)]

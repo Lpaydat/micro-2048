@@ -57,6 +57,13 @@ pub struct BoardState {
     pub move_count: RegisterView<u32>,                 // Total number of moves made
 }
 
+#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+pub struct ActiveBoardInfo {
+    pub player: String,
+    pub score: u64,
+    pub is_ended: bool,
+}
+
 #[derive(View, SimpleObject)]
 #[view(context = ViewStorageContext)]
 pub struct LeaderboardShard {
@@ -74,6 +81,9 @@ pub struct LeaderboardShard {
     #[graphql(skip)]
     pub game_statuses: MapView<String, game2048::GameStatus>, // username -> game_status
     pub counter: RegisterView<u16>,                // update count
+
+    #[graphql(skip)]
+    pub active_boards: MapView<String, ActiveBoardInfo>, // board_id -> board summary
 
     // 🚀 NEW: Board counting per tournament (flattened key: "tournament_id:player_chain_id")
     pub tournament_player_board_counts: MapView<String, u32>, // "tournament_id:player_chain_id" -> board_count
@@ -117,6 +127,8 @@ pub struct Leaderboard {
     pub score: MapView<String, u64>,        // username, score
     pub board_ids: MapView<String, String>, // username, board_id
     pub is_ended: MapView<String, bool>,    // username, is_ended (for best board)
+    #[graphql(skip)]
+    pub active_boards: MapView<String, ActiveBoardInfo>, // board_id -> board summary
 
     // 🚀 NEW: Distributed board counting (player_chain_id -> total_boards_in_tournament)
     pub player_board_counts: MapView<String, u32>, // Merged from all shards

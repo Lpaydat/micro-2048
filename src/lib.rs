@@ -265,6 +265,15 @@ pub enum GameStatus {
     Ended(GameEndReason), // Game finished with reason
 }
 
+/// Summary of an active board for leaderboard display
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
+pub struct ActiveBoardSummary {
+    pub board_id: String,
+    pub player: String,
+    pub score: u64,
+    pub is_ended: bool,
+}
+
 /// Player score summary for shard aggregation
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct PlayerScoreSummary {
@@ -277,6 +286,9 @@ pub struct PlayerScoreSummary {
     pub game_status: GameStatus,
     /// 🚀 NEW: Player's total board count in this tournament
     pub boards_in_tournament: u32,
+    /// 🚀 ACTIVE BOARDS: Current active boards tracked for this player
+    #[serde(default)]
+    pub active_boards: Vec<ActiveBoardSummary>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

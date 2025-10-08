@@ -4,7 +4,9 @@
 
 use crate::contract_domain::contract_helpers::CollectionHelpers;
 use crate::contract_domain::events::EventReader;
+use crate::state::ActiveBoardInfo;
 use linera_sdk::linera_base_types::{ChainId, StreamUpdate};
+use std::collections::HashSet;
 use std::str::FromStr;
 
 /// Stream processing utilities
@@ -134,6 +136,45 @@ impl StreamProcessor {
                         .insert(player, summary.board_id.clone())
                         .unwrap();
                     leaderboard.is_ended.insert(player, is_ended).unwrap();
+                }
+            }
+
+            // Track active boards reported by shards (board_id -> player, score)
+            let mut new_active_board_ids = HashSet::new();
+            for summary in player_scores.values() {
+                for active_board in summary.active_boards.iter() {
+                    if active_board.is_ended {
+                        continue;
+                    }
+                    new_active_board_ids.insert(active_board.board_id.clone());
+                    leaderboard
+                        .active_boards
+                        .insert(
+                            &active_board.board_id,
+                            ActiveBoardInfo {
+                                player: active_board.player.clone(),
+                                score: active_board.score,
+                                is_ended: active_board.is_ended,
+                            },
+                        )
+                        .unwrap();
+                }
+            }
+
+            // Remove boards no longer active according to latest shard snapshot
+            let mut existing_active_board_ids = Vec::new();
+            leaderboard
+                .active_boards
+                .for_each_index_while(|board_id| {
+                    existing_active_board_ids.push(board_id);
+                    Ok(true)
+                })
+                .await
+                .unwrap();
+
+            for board_id in existing_active_board_ids {
+                if !new_active_board_ids.contains(&board_id) {
+                    let _ = leaderboard.active_boards.remove(&board_id);
                 }
             }
 
