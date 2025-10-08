@@ -8,7 +8,7 @@ use std::{collections::HashMap, sync::Mutex};
 use self::state::Game2048;
 use async_graphql::{EmptySubscription, Object, Schema, SimpleObject};
 use game2048::{Game, LeaderboardAction, LeaderboardSettings, Operation};
-use linera_sdk::{abi::WithServiceAbi, bcs, views::View, Service, ServiceRuntime};
+use linera_sdk::{abi::WithServiceAbi, views::View, Service, ServiceRuntime};
 
 pub struct Game2048Service {
     state: Arc<Game2048>,
@@ -42,6 +42,7 @@ impl Service for Game2048Service {
             },
             MutationRoot {
                 state: self.state.clone(),
+                runtime: self.runtime.clone(),
             },
             EmptySubscription,
         )
@@ -358,16 +359,18 @@ impl QueryRoot {
 
 struct MutationRoot {
     state: Arc<Game2048>,
+    runtime: Arc<Mutex<ServiceRuntime<Game2048Service>>>,
 }
 
 #[Object]
 impl MutationRoot {
-    async fn register_player(&self, username: String, password_hash: String) -> Vec<u8> {
+    async fn register_player(&self, username: String, password_hash: String) -> [u8; 0] {
         let operation = Operation::RegisterPlayer {
             username,
             password_hash,
         };
-        bcs::to_bytes(&operation).unwrap()
+        self.runtime.lock().unwrap().schedule_operation(&operation);
+        []
     }
 
     async fn new_board(
@@ -376,24 +379,26 @@ impl MutationRoot {
         password_hash: String,
         player_chain_id: String,
         timestamp: String,
-    ) -> Vec<u8> {
+    ) -> [u8; 0] {
         if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
             if *player.password_hash.get() != password_hash {
                 panic!("Invalid password");
             }
         }
 
-        bcs::to_bytes(&Operation::NewBoard {
+        let operation = Operation::NewBoard {
             player,
             player_chain_id,
             timestamp: timestamp.parse::<u64>().unwrap(),
-        })
-        .unwrap()
+        };
+        self.runtime.lock().unwrap().schedule_operation(&operation);
+        []
     }
 
-    async fn new_shard(&self) -> Vec<u8> {
+    async fn new_shard(&self) -> [u8; 0] {
         let operation = Operation::NewShard;
-        bcs::to_bytes(&operation).unwrap()
+        self.runtime.lock().unwrap().schedule_operation(&operation);
+        []
     }
 
     async fn make_moves(
@@ -402,7 +407,7 @@ impl MutationRoot {
         moves: String,
         player: String,
         password_hash: String,
-    ) -> Vec<u8> {
+    ) -> [u8; 0] {
         if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
             if *player.password_hash.get() != password_hash {
                 panic!("Invalid password");
@@ -414,7 +419,8 @@ impl MutationRoot {
             moves,
             player,
         };
-        bcs::to_bytes(&operation).unwrap()
+        self.runtime.lock().unwrap().schedule_operation(&operation);
+        []
     }
 
     async fn leaderboard_action(
@@ -425,7 +431,7 @@ impl MutationRoot {
         player: String,
         password_hash: String,
         timestamp: String,
-    ) -> Vec<u8> {
+    ) -> [u8; 0] {
         if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
             if *player.password_hash.get() != password_hash {
                 panic!("Invalid password");
@@ -439,10 +445,11 @@ impl MutationRoot {
             player,
             timestamp: timestamp.parse::<u64>().unwrap(),
         };
-        bcs::to_bytes(&operation).unwrap()
+        self.runtime.lock().unwrap().schedule_operation(&operation);
+        []
     }
 
-    async fn toggle_mod(&self, player: String, password_hash: String, username: String) -> Vec<u8> {
+    async fn toggle_mod(&self, player: String, password_hash: String, username: String) -> [u8; 0] {
         if let Ok(Some(player)) = self.state.players.try_load_entry(&player).await {
             if *player.password_hash.get() != password_hash {
                 panic!("Invalid password");
@@ -453,16 +460,19 @@ impl MutationRoot {
         }
 
         let operation = Operation::ToggleAdmin { username };
-        bcs::to_bytes(&operation).unwrap()
+        self.runtime.lock().unwrap().schedule_operation(&operation);
+        []
     }
 
-    async fn faucet(&self) -> Vec<u8> {
+    async fn faucet(&self) -> [u8; 0] {
         let operation = Operation::Faucet;
-        bcs::to_bytes(&operation).unwrap()
+        self.runtime.lock().unwrap().schedule_operation(&operation);
+        []
     }
 
-    async fn close_chain(&self, chain_id: String) -> Vec<u8> {
+    async fn close_chain(&self, chain_id: String) -> [u8; 0] {
         let operation = Operation::CloseChain { chain_id };
-        bcs::to_bytes(&operation).unwrap()
+        self.runtime.lock().unwrap().schedule_operation(&operation);
+        []
     }
 }
