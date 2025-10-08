@@ -62,10 +62,19 @@
 	);
 
 	const registerPlayer = async () => {
-		mutationStore({
+		const store = mutationStore({
 			client,
 			query: REGISTER_PLAYER,
 			variables: { username, passwordHash }
+		});
+		
+		return new Promise((resolve) => {
+			const unsubscribe = store.subscribe((result) => {
+				if (!result.fetching) {
+					unsubscribe();
+					resolve(result);
+				}
+			});
 		});
 	};
 
@@ -76,8 +85,7 @@
 
 	let intervalId: NodeJS.Timeout;
 	const handleRegisterPlayer = async () => {
-		registerPlayer();
-		// await new Promise((resolve) => setTimeout(resolve, 2000)); // Simulate API call
+		await registerPlayer();
 		registered = true;
 	};
 

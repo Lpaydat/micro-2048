@@ -1,9 +1,24 @@
-import { env } from '$env/dynamic/public';
+export const chainId = '7b9613d4da9ea6adb4399cb61a4fcc831775ce80fa11372219d323463c4ef130';
 
-export const chainId =
-	env.PUBLIC_CHAIN_ID || '19b926701cf2480afed7b51fd210cce5c53a6cbd508eee8a70bea6253327345a';
-export const applicationId =
-	env.PUBLIC_APPLICATION_ID ||
-	'4c661a15eaf1e565cab3595bc5378c242001daf4ab00ce21d5df8bb5ef00879eee14991aaaadc3a0c816a08d52cfd2274cf7a856c3cc027c65f0562257e97c0c19b926701cf2480afed7b51fd210cce5c53a6cbd508eee8a70bea6253327345a1a0000000000000000000000';
-export const port = env.PUBLIC_PORT || '443';
-export const website = env.PUBLIC_WEBSITE || 'u2048.hopto.org';
+// PROD
+// production app
+// export const applicationId =
+// 	'99822b3483b38c12bb71d00db3a0e1185afb4fbc8d06452d47c771a1bb39a11b79189af31237bb9aa79f94dfba84ab7be1c13f31cafd8d4f4dcd7b94ef0143bbe476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65010000000000000000000000';
+// staging app
+// export const applicationId =
+// 	'3548403fc0a5dbe6d25ead842f9d0226d9ca21155067b802207a9cc5adb3e4826d64c9b9f7acfe3cb249796b8eb5c2dfe2670d0dd87fe2473ea710147f00b355e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65e42e00000000000000000000';
+// export const applicationId =
+// 	'be38a24c05ec60cdc1630c284b6a83ace07cce5e33800525d391f8924afc869b6d64c9b9f7acfe3cb249796b8eb5c2dfe2670d0dd87fe2473ea710147f00b355e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65030000000000000000000000';
+
+export const applicationId = '409c67886ae3881c8d03b41c12f27b6cfe3b28c5ea89385aa9eb126155c9a9c9';
+export const port = '443';
+export const website = 'api.micro2048.xyz';
+
+// Test app
+// 446ade26b25bb55a0a75aa02b9242ae803969f9ae275c6b787f2b547bf81205f18329514a596fe3921987e9b08e371545085eadb3fd3dcc021d2a1c1b02db5b7e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a650b3000000000000000000000
+
+// DEV
+// export const applicationId =
+// 	'4e6d771d3d1a21d04038df2250b1fea5e4f061d2108ee552a2ea1c41fdc86aad600f140ec9832578b8343490a00c6573e02f17407429d3bffcad7ae92badf70dc7ca03c01755334323956b5413e24d9a0404b9292fcc91e60700abe80bd5f7a8030000000000000000000000';
+// export const port = '8080';
+// export const website = 'localhost';
