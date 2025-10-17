@@ -151,6 +151,10 @@ impl Contract for Game2048Contract {
             }
         }
 
+        // 🚀 NORMAL TIER 1-5 TRIGGER LOGIC: Check and send triggers during block production
+        // This replaces the event-based trigger logic to ensure latest state is used
+        self.check_and_send_trigger_if_needed_in_block_production().await;
+
         OperationDispatcher::dispatch(self, operation).await;
         ContractHelpers::update_balance(self);
     }
@@ -464,5 +468,133 @@ impl Game2048Contract {
         event_index: u32,
     ) -> Option<game2048::GameEvent> {
         EventReader::read_leaderboard_update_event_from_chain(self, chain_id, event_index)
+    }
+
+    /// 🚀 BLOCK PRODUCTION TRIGGER LOGIC: Check and send triggers during block production
+    /// This replaces event-based triggering to ensure latest state is always used
+    async fn check_and_send_trigger_if_needed_in_block_production(&mut self) {
+        let current_time = self.runtime.system_time().micros();
+        let my_chain_id = self.runtime.chain_id().to_string();
+
+        // Only player chains should send triggers (check if we have triggerer list)
+        let triggerer_count = match self.state.triggerer_list.read_front(1).await {
+            Ok(items) => items.len(),
+            Err(_) => 0,
+        };
+
+        if triggerer_count == 0 {
+            // This is not a player chain (no triggerer list), skip trigger logic
+            return;
+        }
+
+        // Get configuration with safe default
+        let threshold = match *self.state.trigger_threshold_config.get() {
+            0 => {
+                // Initialize with safe default if never set (5 seconds for stress test)
+                let default_threshold = 5_000_000; // 5 seconds in microseconds
+                self.state.trigger_threshold_config.set(default_threshold);
+                default_threshold
+            }
+            value => value,
+        };
+        
+        let last_update_time = *self.state.triggerer_list_timestamp.get();
+        let last_trigger_sent = *self.state.last_trigger_sent.get();
+        let total_players = *self.state.total_registered_players.get();
+
+        // Check if enough time has passed since last update
+        let time_since_update = current_time.saturating_sub(last_update_time);
+        let time_since_last_trigger = current_time.saturating_sub(last_trigger_sent);
+
+        // Mathematical tier calculation with overflow protection (tiers 1-5 only)
+        let tier = if threshold > 0 && time_since_update > 0 {
+            std::cmp::min(5, (time_since_update / threshold) + 1)
+        } else if threshold == 0 {
+            1 // Minimal tier to prevent infinite triggering
+        } else {
+            1 // No need for escalated triggering if time_since_update is 0
+        };
+
+        // Calculate how many players should be actively triggering
+        let admin_base_count = *self.state.admin_base_triggerer_count.get();
+        let base_triggerer_count = if admin_base_count > 0 {
+            admin_base_count
+        } else {
+            5 // Default to 5 for stress testing
+        };
+        let active_triggerer_count =
+            std::cmp::min(total_players, base_triggerer_count * tier as u32);
+
+        // Find my position in the triggerer list
+        let mut my_position: Option<u32> = None;
+
+        match self
+            .state
+            .triggerer_list
+            .read_front(active_triggerer_count as usize)
+            .await
+        {
+            Ok(triggerers) => {
+                for (i, triggerer_id) in triggerers.iter().enumerate() {
+                    if triggerer_id == &my_chain_id {
+                        my_position = Some(i as u32);
+                        break;
+                    }
+                }
+            }
+            Err(_) => return,
+        }
+
+        // Check if I'm an active triggerer (normal tier 1-5 only)
+        let am_i_active_triggerer = match my_position {
+            Some(pos) => pos < active_triggerer_count,
+            None => false,
+        };
+
+        if !am_i_active_triggerer {
+            return;
+        }
+
+        // Only trigger if enough time has passed since our last trigger
+        let min_threshold = std::cmp::max(threshold, 2_000_000); // At least 2 seconds
+        let should_trigger = time_since_last_trigger > min_threshold;
+
+        if should_trigger {
+            // Get tournament ID from the first cached tournament
+            let mut tournament_id = String::new();
+            let mut leaderboard_chain_id_str = String::new();
+
+            self.state
+                .tournaments_cache_json
+                .for_each_index_value_while(|key, value| {
+                    tournament_id = key;
+                    // Parse tournament JSON to get leaderboard chain
+                    if let Ok(tournament) =
+                        serde_json::from_str::<game2048::TournamentInfo>(&value)
+                    {
+                        leaderboard_chain_id_str = tournament.tournament_id;
+                    }
+                    Ok(false) // Stop after first
+                })
+                .await
+                .unwrap();
+
+            // Send trigger if we have valid data
+            if !tournament_id.is_empty() && !leaderboard_chain_id_str.is_empty() {
+                if let Ok(leaderboard_chain_id) = ChainId::from_str(&leaderboard_chain_id_str) {
+                    // Send trigger message to leaderboard
+                    self.runtime
+                        .prepare_message(game2048::Message::TriggerUpdate {
+                            triggerer_chain_id: my_chain_id,
+                            tournament_id: tournament_id.clone(),
+                            timestamp: current_time,
+                        })
+                        .send_to(leaderboard_chain_id);
+
+                    // Update last trigger sent time
+                    self.state.last_trigger_sent.set(current_time);
+                }
+            }
+        }
     }
 }

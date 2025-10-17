@@ -280,21 +280,9 @@ impl StreamProcessor {
             )
             .await;
 
-            // FIXED: Add chain type guard - only player chains should process triggers
-            // Use simpler detection: player chains have triggerer_list populated by leaderboard updates
-            let triggerer_count = contract
-                .state
-                .triggerer_list
-                .read_front(1)
-                .await
-                .map(|items| items.len())
-                .unwrap_or(0);
-
-            if triggerer_count > 0 {
-                // This is a player chain that has received triggerer list - check if should send trigger
-                Self::check_and_send_trigger_if_needed(contract, update.chain_id).await;
-            }
-            // Shard and leaderboard chains don't have triggerer_list populated
+            // 🚀 MOVED: Trigger logic moved to block production (execute_operation)
+            // This ensures triggers always use the latest state and eliminates race conditions
+            // Player chains now handle triggers in contract.rs during block production
         }
     }
 
@@ -412,120 +400,5 @@ impl StreamProcessor {
         contract.state.tier6_start_time.set(0);
     }
 
-    /// Check if this player should send a trigger and send it if needed
-    async fn check_and_send_trigger_if_needed(
-        contract: &mut crate::Game2048Contract,
-        leaderboard_chain_id: ChainId,
-    ) {
-        let current_time = contract.runtime.system_time().micros();
-        let my_chain_id = contract.runtime.chain_id().to_string();
 
-        // FIXED: Get configuration with safe default
-        let threshold = match *contract.state.trigger_threshold_config.get() {
-            0 => {
-                // FIXED: Initialize with safe default if never set (30 seconds)
-                let default_threshold = 5_000_000; // 5 seconds in microseconds (stress test)
-                contract
-                    .state
-                    .trigger_threshold_config
-                    .set(default_threshold);
-                default_threshold
-            }
-            value => value,
-        };
-        let last_update_time = *contract.state.triggerer_list_timestamp.get();
-        let last_trigger_sent = *contract.state.last_trigger_sent.get();
-        let total_players = *contract.state.total_registered_players.get();
-
-        // Check if enough time has passed since last update
-        let time_since_update = current_time.saturating_sub(last_update_time);
-        let time_since_last_trigger = current_time.saturating_sub(last_trigger_sent);
-
-        // FIXED: Mathematical tier calculation with overflow protection
-        let tier = if threshold > 0 && time_since_update > 0 {
-            std::cmp::min(5, (time_since_update / threshold) + 1)
-        } else if threshold == 0 {
-            // FIXED: If threshold is 0, use minimal tier to prevent infinite triggering
-            1
-        } else {
-            // FIXED: If time_since_update is 0, no need for escalated triggering
-            1
-        };
-
-        // Calculate how many players should be actively triggering
-        // Use admin-configured base count, default to 5 for stress testing
-        let admin_base_count = *contract.state.admin_base_triggerer_count.get();
-        let base_triggerer_count = if admin_base_count > 0 {
-            admin_base_count
-        } else {
-            5 // Default to 5 for stress testing
-        };
-        let active_triggerer_count =
-            std::cmp::min(total_players, base_triggerer_count * tier as u32);
-
-        // Find my position in the triggerer list
-        let mut my_position: Option<u32> = None;
-
-        match contract
-            .state
-            .triggerer_list
-            .read_front(active_triggerer_count as usize)
-            .await
-        {
-            Ok(triggerers) => {
-                for (i, triggerer_id) in triggerers.iter().enumerate() {
-                    if triggerer_id == &my_chain_id {
-                        my_position = Some(i as u32);
-                        break;
-                    }
-                }
-            }
-            Err(_) => return,
-        }
-
-        // Check if I'm an active triggerer (normal tier 1-5 only)
-        // Note: Tier 6 triggering now handled in execute_operation (works without events)
-        let am_i_active_triggerer = match my_position {
-            Some(pos) => pos < active_triggerer_count,
-            None => false,
-        };
-
-        if !am_i_active_triggerer {
-            return;
-        }
-
-        // FIXED: Only trigger if enough time has passed since our last trigger
-        // Add minimum 2 second threshold to prevent excessive triggering (stress test)
-        let min_threshold = std::cmp::max(threshold, 2_000_000); // At least 2 seconds
-        let should_trigger = time_since_last_trigger > min_threshold;
-
-        if should_trigger {
-            // Get tournament ID from the first cached tournament
-            let mut tournament_id = String::new();
-            contract
-                .state
-                .tournaments_cache_json
-                .for_each_index_while(|key| {
-                    tournament_id = key;
-                    Ok(false) // Stop after first tournament
-                })
-                .await
-                .unwrap();
-
-            if !tournament_id.is_empty() {
-                // Send trigger message to leaderboard
-                contract
-                    .runtime
-                    .prepare_message(game2048::Message::TriggerUpdate {
-                        triggerer_chain_id: my_chain_id,
-                        tournament_id: tournament_id.clone(),
-                        timestamp: current_time,
-                    })
-                    .send_to(leaderboard_chain_id);
-
-                // Update last trigger sent time
-                contract.state.last_trigger_sent.set(current_time);
-            }
-        }
-    }
 }
