@@ -62,15 +62,24 @@
 	);
 
 	const registerPlayer = async () => {
+		console.log('👤 Register Player Mutation Variables:', {
+			username,
+			passwordHash: passwordHash.substring(0, 10) + '...'
+		});
+
 		const store = mutationStore({
 			client,
 			query: REGISTER_PLAYER,
 			variables: { username, passwordHash }
 		});
-		
+
 		return new Promise((resolve) => {
 			const unsubscribe = store.subscribe((result) => {
 				if (!result.fetching) {
+					console.log('📋 Register Player Result:', result);
+					if (result.error) {
+						console.error('❌ Register Player Error:', result.error);
+					}
 					unsubscribe();
 					resolve(result);
 				}

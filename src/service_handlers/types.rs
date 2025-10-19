@@ -38,6 +38,10 @@ pub struct BoardState {
     pub end_time: String,
     pub move_history: Vec<MoveHistoryRecord>,
     pub total_moves: u32,
+    // Pagination metadata
+    pub move_offset: u32,
+    pub move_limit: u32,
+    pub has_more_moves: bool,
 }
 
 #[derive(SimpleObject)]

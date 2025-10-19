@@ -74,7 +74,10 @@ const normalize = (tablet: Tablet): Tablet => {
 const checkGameOver = (tablet: Tablet): boolean => {
 	// Check for empty tiles first
 	const hasEmptyTiles = tablet.some((row) => row.some(isEmptyTile));
-	if (hasEmptyTiles) return false;
+	if (hasEmptyTiles) {
+		console.log('🎮 Game not over - has empty tiles');
+		return false;
+	}
 
 	// Check for possible horizontal merges
 	const hasHorizontalMerges = tablet.some((row) =>
@@ -87,7 +90,15 @@ const checkGameOver = (tablet: Tablet): boolean => {
 		column.slice(0, -1).some((tile, i) => tile.value === column[i + 1].value)
 	);
 
-	return !(hasHorizontalMerges || hasVerticalMerges);
+	const isGameOver = !(hasHorizontalMerges || hasVerticalMerges);
+	console.log('🎮 Game over check:', {
+		hasEmptyTiles,
+		hasHorizontalMerges,
+		hasVerticalMerges,
+		isGameOver
+	});
+
+	return isGameOver;
 };
 
 const nextState = (state: GameState, newTablet: Tablet): GameState => ({

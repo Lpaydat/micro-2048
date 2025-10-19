@@ -1,18 +1,15 @@
-export const chainId = '7b9613d4da9ea6adb4399cb61a4fcc831775ce80fa11372219d323463c4ef130';
+// Use new chain and app for testing with local backend
+export const chainId = '1e39c76c6a993a30cbb4f1980d2b833bbd6a53a7bc7ad9eab9a6ec16060daf21';
+export const applicationId = '7625e903bba83e87ee8216722940b9c6db75d4bbc5d3438993d6094331fc83c8';
+export const port = '8088';
+export const website = 'localhost';
 
-// PROD
-// production app
-// export const applicationId =
-// 	'99822b3483b38c12bb71d00db3a0e1185afb4fbc8d06452d47c771a1bb39a11b79189af31237bb9aa79f94dfba84ab7be1c13f31cafd8d4f4dcd7b94ef0143bbe476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65010000000000000000000000';
-// staging app
-// export const applicationId =
-// 	'3548403fc0a5dbe6d25ead842f9d0226d9ca21155067b802207a9cc5adb3e4826d64c9b9f7acfe3cb249796b8eb5c2dfe2670d0dd87fe2473ea710147f00b355e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65e42e00000000000000000000';
-// export const applicationId =
-// 	'be38a24c05ec60cdc1630c284b6a83ace07cce5e33800525d391f8924afc869b6d64c9b9f7acfe3cb249796b8eb5c2dfe2670d0dd87fe2473ea710147f00b355e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65030000000000000000000000';
-
-export const applicationId = '409c67886ae3881c8d03b41c12f27b6cfe3b28c5ea89385aa9eb126155c9a9c9';
-export const port = '443';
-export const website = 'api.micro2048.xyz';
+console.log('🔧 Using Test Configuration:', {
+	chainId,
+	applicationId,
+	port,
+	website
+});
 
 // Test app
 // 446ade26b25bb55a0a75aa02b9242ae803969f9ae275c6b787f2b547bf81205f18329514a596fe3921987e9b08e371545085eadb3fd3dcc021d2a1c1b02db5b7e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a650b3000000000000000000000

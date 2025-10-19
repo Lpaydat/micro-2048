@@ -25,9 +25,26 @@ export const newGame = (client: Client, timestamp: string, leaderboardId: string
 		return null;
 	}
 
-	return mutationStore({
+	console.log('🎮 New Board Mutation Variables:', {
+		player,
+		passwordHash: passwordHash.substring(0, 10) + '...',
+		timestamp,
+		leaderboardId
+	});
+
+	const mutation = mutationStore({
 		client,
 		query: NEW_BOARD,
 		variables: { player, passwordHash, timestamp, leaderboardId }
 	});
+
+	// Log the mutation result
+	mutation.subscribe((result) => {
+		console.log('📊 New Board Mutation Result:', result);
+		if (result.error) {
+			console.error('❌ New Board Mutation Error:', result.error);
+		}
+	});
+
+	return mutation;
 };

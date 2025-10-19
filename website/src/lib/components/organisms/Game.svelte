@@ -7,8 +7,8 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { genInitialState as createState } from '$lib/game/game';
-	import type { GameKeys, GameState } from '$lib/game/models';
-	import { boardSize, isNewGameCreated, setGameCreationStatus } from '$lib/stores/gameStore';
+	import type { GameKeys, GameState, Tablet } from '$lib/game/models';
+	import { boardSize, setGameCreationStatus } from '$lib/stores/gameStore';
 	import { boardToString } from '$lib/game/utils';
 	import Board from './Board.svelte';
 	import { userStore } from '$lib/stores/userStore';
@@ -22,6 +22,13 @@
 	} from '$lib/stores/moveHistories';
 	import { formatBalance } from '$lib/utils/formatBalance';
 	import { requestFaucetMutation } from '$lib/graphql/mutations/requestFaucet';
+	import {
+		getPaginatedMoveHistory,
+		calculateLoadRange,
+		type PaginatedMoveHistoryStore,
+		type MoveHistoryRecord
+	} from '$lib/stores/paginatedMoveHistory';
+	import { getBoardPaginated } from '$lib/graphql/queries/getBoardPaginated';
 
 	// Props
 	export let isMultiplayer: boolean = false;
@@ -73,9 +80,8 @@
 	$: client = getClient(chainId ?? $userStore.chainId);
 	let state: GameState | undefined;
 	let isInitialized = false;
-	let rendered = false;
-	let isSynced: boolean = false;
-	let stateHash = '';
+	let isSynced: boolean = false; // eslint-disable-line @typescript-eslint/no-unused-vars
+	let stateHash = ''; // eslint-disable-line @typescript-eslint/no-unused-vars
 	let lastBoardId: string | undefined = undefined; // Track board changes
 
 	// Add new sync status tracking
@@ -109,11 +115,11 @@
 	const VERY_LOW_ACTIVITY_THRESHOLD = 0.5; // moves per second (very slow play)
 
 	// Hash function for quick board comparison
-	const hashBoard = (board: any) => {
+	const hashBoard = (board: Tablet) => {
 		let hash = 2166136261;
 		for (const row of board) {
 			for (const cell of row) {
-				const value = typeof cell === 'number' ? cell : (cell?.value ?? 0);
+				const value = cell?.value ?? 0;
 				hash ^= value;
 				hash = (hash * 16777619) >>> 0; // Keep as 32-bit unsigned
 			}
@@ -154,9 +160,10 @@
 	};
 
 	// Add board state to valid hashes set
-	const addValidBoardHash = (tablet: any) => {
+	const addValidBoardHash = (tablet: Tablet) => {
 		if (!tablet) return;
 		const hash = hashBoard(tablet);
+		console.log('➕ Adding valid board hash:', hash);
 		validBoardHashes.add(hash);
 	};
 
@@ -173,14 +180,21 @@
 
 	// 🔍 Inspector Mode: viewing someone else's board
 	let isInspectorMode = false;
-	let inspectorMoveHistory: any[] = [];
+	let inspectorMoveHistory: MoveHistoryRecord[] = [];
 	let inspectorCurrentMoveIndex = 0;
 	let isInspectorPlaying = false;
-	let inspectorPlayTimeout: NodeJS.Timeout | null = null;
+	let inspectorPlayTimeout: ReturnType<typeof setTimeout> | null = null;
 	let autoPlayEnabled = false; // Toggle state for auto-play
-	let previousMoveHistoryLength = 0; // Track previous length to detect new moves
+	// let previousMoveHistoryLength = 0; // Track previous length to detect new moves (no longer needed)
 	let hideInspectorOverlay = true; // Control inspector overlay visibility (start hidden)
 	let lastInspectedBoardId: string | undefined = undefined; // Track board changes
+	let isUserControlledReplay = false; // Flag to prevent auto-positioning during user replay
+
+	// 🚀 Pagination System for move history
+	let paginatedHistoryStore: PaginatedMoveHistoryStore | null = null;
+	let totalMoves: number = 0;
+	let isLoadingMoves: boolean = false;
+	let loadingTargetMove: number | undefined = undefined;
 
 	// GraphQL Queries and Subscriptions
 	$: game = queryStore({
@@ -199,86 +213,55 @@
 		const currentUser = $userStore.username;
 		const gameEnded = $game.data?.board?.isEnded;
 		const currentBoardId = $game.data?.board?.boardId;
-		
+
 		// Only check inspector mode if board data matches requested boardId (avoid stale data)
 		const isBoardDataValid = currentBoardId === boardId;
-		const isOtherPlayer = isBoardDataValid && boardPlayer && currentUser && boardPlayer !== currentUser;
+		const isOtherPlayer =
+			isBoardDataValid && boardPlayer && currentUser && boardPlayer !== currentUser;
 		const isOwnEndedGame = isBoardDataValid && boardPlayer === currentUser && gameEnded;
 
 		if (isOtherPlayer || isOwnEndedGame) {
-			const wasInspectorMode = isInspectorMode;
+			// const wasInspectorMode = isInspectorMode; // No longer needed with pagination
 			const isBoardChanged = currentBoardId && currentBoardId !== lastInspectedBoardId;
 
 			isInspectorMode = true;
-			const newMoveHistory = $game.data?.board?.moveHistory || [];
-			const newMovesAdded =
-				newMoveHistory.length > previousMoveHistoryLength && previousMoveHistoryLength > 0;
-			const wasAtEnd = inspectorCurrentMoveIndex === previousMoveHistoryLength;
+			const newTotalMoves = $game.data?.board?.totalMoves || 0;
 
-			// Update move history without triggering state update
-			inspectorMoveHistory = newMoveHistory;
+			// Initialize pagination store for this board
+			if (!paginatedHistoryStore || isBoardChanged) {
+				paginatedHistoryStore = getPaginatedMoveHistory(currentBoardId);
+				paginatedHistoryStore.initialize(newTotalMoves);
+				totalMoves = newTotalMoves;
 
-			// Reset to latest move when switching to a different board
-			if (isBoardChanged) {
+				// Load the final batch (most recent moves)
+				loadMoveRange(newTotalMoves);
+
 				lastInspectedBoardId = currentBoardId;
-				inspectorCurrentMoveIndex = inspectorMoveHistory.length;
-				previousMoveHistoryLength = inspectorMoveHistory.length;
-				handleGameStateUpdate();
-
-				// Show overlay if at end and game ended
-				if (gameEnded && inspectorCurrentMoveIndex >= inspectorMoveHistory.length) {
-					hideInspectorOverlay = false;
-				} else {
-					hideInspectorOverlay = true;
-				}
 			}
-			// Auto-advance to latest move on first load
-			else if (!wasInspectorMode && inspectorMoveHistory.length > 0) {
-				lastInspectedBoardId = currentBoardId;
-				inspectorCurrentMoveIndex = inspectorMoveHistory.length;
-				previousMoveHistoryLength = inspectorMoveHistory.length;
-				handleGameStateUpdate();
 
-				// Show overlay if at end and game ended
-				if (gameEnded && inspectorCurrentMoveIndex >= inspectorMoveHistory.length) {
-					hideInspectorOverlay = false;
-				} else {
-					hideInspectorOverlay = true;
-				}
+			// Update total moves if changed
+			if (newTotalMoves !== totalMoves) {
+				totalMoves = newTotalMoves;
+				paginatedHistoryStore.initialize(newTotalMoves);
 			}
-			// If auto-play is enabled and new moves were added while we were at the end
-			else if (autoPlayEnabled && newMovesAdded && wasAtEnd && !isInspectorPlaying) {
-				// Don't update inspectorCurrentMoveIndex here - let playInspectorMoves handle it
-				previousMoveHistoryLength = newMoveHistory.length;
-				playInspectorMoves();
+
+			// Set inspector to latest move (unless user is controlling replay)
+			if (!isUserControlledReplay) {
+				inspectorCurrentMoveIndex = newTotalMoves;
+			}
+			// No longer tracking previousMoveHistoryLength with pagination
+			handleGameStateUpdate();
+
+			// Show overlay if at end and game ended
+			if (gameEnded && inspectorCurrentMoveIndex >= totalMoves) {
+				hideInspectorOverlay = false;
 			} else {
-				// Just update the length, don't trigger state update
-				previousMoveHistoryLength = newMoveHistory.length;
+				hideInspectorOverlay = true;
 			}
 		} else {
 			isInspectorMode = false;
 			lastInspectedBoardId = undefined;
-		}
-	}
-
-	// 🔍 Reactive statement for inspector mode board state and score updates
-	// Only updates when inspectorCurrentMoveIndex changes, not on every poll
-	$: if (
-		isInspectorMode &&
-		inspectorMoveHistory.length > 0 &&
-		inspectorCurrentMoveIndex > 0 &&
-		boardId
-	) {
-		const moveIndex = inspectorCurrentMoveIndex;
-		if (moveIndex >= 1 && moveIndex <= inspectorMoveHistory.length) {
-			// Show board state and score after the selected move
-			const moveData = inspectorMoveHistory[moveIndex - 1];
-			state = createState(moveData.boardAfter, 4, boardId, player);
-			score = moveData.scoreAfter;
-		} else {
-			// Show current/final board state and score
-			state = createState($game.data?.board?.board, 4, boardId, player);
-			score = $game.data?.board?.score || 0;
+			isUserControlledReplay = false;
 		}
 	}
 
@@ -286,11 +269,18 @@
 		goto('/error');
 	}
 
-	$: if (!$game.fetching && $game.data?.board) {
-		rendered = true;
-	}
-
 	$: boardEnded = isEnded || $game.data?.board?.isEnded || state?.finished;
+
+	// Debug logging for game end state
+	$: if (boardEnded) {
+		console.log('🎮 Game ended detected:', {
+			isEnded,
+			boardIsEnded: $game.data?.board?.isEnded,
+			stateFinished: state?.finished,
+			boardEnded,
+			overlayMessage
+		});
+	}
 
 	$: if (boardEnded) {
 		moveQueue = [];
@@ -398,11 +388,26 @@
 	const handleGameStateUpdate = () => {
 		if (!boardId) return;
 
-		// Normal mode: use current board state
-		state = createState($game.data?.board?.board, 4, boardId, player);
+		// Inspector mode: use move history data
+		if (isInspectorMode && paginatedHistoryStore) {
+			const currentMove = getCurrentMoveData();
+			if (currentMove) {
+				state = createState(currentMove.boardAfter, 4, boardId, player);
+				score = currentMove.scoreAfter;
+			} else if (inspectorCurrentMoveIndex <= 1) {
+				// Show initial board (before any moves) for move 1 or 0
+				state = createState($game.data?.board?.board, 4, boardId, player);
+				score = 0; // Initial score
+			}
+		} else {
+			// Normal mode: use current board state
+			state = createState($game.data?.board?.board, 4, boardId, player);
+		}
 
 		// Register initial board state as valid to prevent false desync detection
-		addValidBoardHash(state?.tablet);
+		if (state?.tablet) {
+			addValidBoardHash(state.tablet);
+		}
 
 		isInitialized = true;
 
@@ -447,7 +452,9 @@
 			trackMoveActivity();
 
 			// 🔄 Add board state to valid hashes
-			addValidBoardHash(state?.tablet);
+			if (state?.tablet) {
+				addValidBoardHash(state.tablet);
+			}
 
 			// Add move to local history instead of immediate submission
 			// Don't reset syncStatus if currently syncing
@@ -514,7 +521,7 @@
 		dispatch('move', { direction, timestamp });
 	};
 
-	let idleTimeout: NodeJS.Timeout;
+	let idleTimeout: ReturnType<typeof setTimeout>;
 	let activityDetected = false;
 
 	const setupIdleListener = () => {
@@ -621,7 +628,7 @@
 			// ✅ Immediately flush moves - hash validation will confirm success
 			flushMoveHistory(boardId);
 			pendingMoveCount = 0;
-		} catch (error) {
+		} catch (error: unknown) {
 			console.error('Background sync failed:', error);
 			syncStatus = 'failed';
 			// Keep moves in queue for retry
@@ -630,7 +637,7 @@
 	};
 
 	// 🔄 Background Sync: Handle desync with overlay warning
-	const handleDesync = async (backendBoardStr: string) => {
+	const handleDesync = async () => {
 		console.warn('Desync detected - initiating full sync');
 
 		// Pause game and show warning
@@ -643,7 +650,7 @@
 		if (allPending.length > 0) {
 			try {
 				await makeMoves(client, getMoveBatchForSubmission(allPending), boardId!);
-			} catch (error) {
+			} catch (error: unknown) {
 				console.error('Failed to submit pending moves during desync:', error);
 			}
 		}
@@ -689,7 +696,8 @@
 				pendingMoveCount = 0;
 				lastSyncTime = Date.now();
 			}
-		} catch (error) {
+		} catch (error: unknown) {
+			console.error('Submit moves failed:', error);
 			syncStatus = 'failed';
 			moveHistoryStore.update((history) => {
 				const boardMoves = history.get(boardId as string) || [];
@@ -703,7 +711,7 @@
 	// Offline mode toggle removed for website
 
 	// Add toggle handler for balance view
-	let dirtyBalance = false;
+	let dirtyBalance = false; // eslint-disable-line @typescript-eslint/no-unused-vars
 	const toggleBalanceView = () => {
 		dirtyBalance = true;
 		showBalance = !showBalance;
@@ -714,38 +722,38 @@
 	};
 
 	// Reactive polling: Restart polling when boardId changes
-	let initGameIntervalId: NodeJS.Timeout | null = null;
+	let initGameIntervalId: ReturnType<typeof setInterval> | null = null;
 	let lastPolledBoardId: string | undefined = undefined;
-	
+
 	$: if (boardId !== lastPolledBoardId) {
 		// Clear existing interval when boardId changes
 		if (initGameIntervalId) {
 			clearInterval(initGameIntervalId);
 			initGameIntervalId = null;
 		}
-		
+
 		lastPolledBoardId = boardId;
-		
+
 		// Only start polling if we have a boardId
 		if (boardId) {
 			// Initial fetch
 			game.reexecute({ requestPolicy: 'network-only' });
-			
-		// Start polling interval
-		initGameIntervalId = setInterval(() => {
-			if (boardId && !$game.data?.board) {
-				game.reexecute({ requestPolicy: 'network-only' });
-			} else if ($game.data?.board?.boardId === boardId) {
-				// Board found AND matches requested boardId, stop polling
-				if (initGameIntervalId) {
-					clearInterval(initGameIntervalId);
-					initGameIntervalId = null;
+
+			// Start polling interval
+			initGameIntervalId = setInterval(() => {
+				if (boardId && !$game.data?.board) {
+					game.reexecute({ requestPolicy: 'network-only' });
+				} else if ($game.data?.board?.boardId === boardId) {
+					// Board found AND matches requested boardId, stop polling
+					if (initGameIntervalId) {
+						clearInterval(initGameIntervalId);
+						initGameIntervalId = null;
+					}
+				} else if ($game.data?.board?.boardId !== boardId) {
+					// Wrong board data (stale), keep polling
+					game.reexecute({ requestPolicy: 'network-only' });
 				}
-			} else if ($game.data?.board?.boardId !== boardId) {
-				// Wrong board data (stale), keep polling
-				game.reexecute({ requestPolicy: 'network-only' });
-			}
-		}, 500); // Poll every 500ms
+			}, 500); // Poll every 500ms
 		}
 	}
 
@@ -776,7 +784,7 @@
 		};
 	});
 
-	let syncIntervalId: NodeJS.Timeout;
+	let syncIntervalId: ReturnType<typeof setInterval>;
 	let syncingBackgroundStartTime: number | null = null;
 
 	onMount(() => {
@@ -828,10 +836,7 @@
 					if (syncWaitTime > 5000) {
 						console.warn('Background sync timeout - backend state not found in valid hashes');
 						syncingBackgroundStartTime = null;
-						const backendBoardStr = boardToString(backendBoard);
-						if (backendBoardStr) {
-							handleDesync(backendBoardStr);
-						}
+						handleDesync();
 					}
 				}
 			} else {
@@ -841,15 +846,28 @@
 
 			// Simple hash validation: Check if backend state matches any valid state we've seen
 			if (state?.tablet) {
-				const backendHash = hashBoard($game.data.board.board);
+				const backendBoard = $game.data.board.board;
+				const backendHash = hashBoard(backendBoard);
+				const localHash = hashBoard(state.tablet);
+
+				console.log('🔄 Sync validation:', {
+					syncStatus,
+					pendingMoveCount,
+					backendHash,
+					localHash,
+					hashesMatch: backendHash === localHash,
+					validHashesCount: validBoardHashes.size,
+					backendHashInValidSet: validBoardHashes.has(backendHash),
+					lastHashMismatchTime: lastHashMismatchTime ? Date.now() - lastHashMismatchTime : null
+				});
 
 				if (validBoardHashes.has(backendHash)) {
 					// ✅ Backend state is valid - reset mismatch tracking
-					const localHash = hashBoard(state.tablet);
 					const backendMatchesLatest = backendHash === localHash;
 
 					if (backendMatchesLatest && pendingMoveCount === 0) {
 						if (syncStatus !== 'ready') {
+							console.log('✅ Sync status changing to ready');
 							syncStatus = 'ready';
 						}
 					} else if (
@@ -864,15 +882,15 @@
 					// ❌ Backend state not in our valid hash set
 					if (lastHashMismatchTime === null) {
 						lastHashMismatchTime = Date.now();
+						console.warn('⚠️ Hash mismatch detected - starting timer');
 					} else if (Date.now() - lastHashMismatchTime > 15000) {
 						// 15 seconds of mismatch
 						console.warn(
 							'Backend state not found in valid hashes for 15+ seconds - desync detected'
 						);
-						const backendBoardStr = boardToString($game.data.board.board);
-						if (backendBoardStr) {
-							handleDesync(backendBoardStr);
-						}
+						console.log('🔍 Valid hashes:', Array.from(validBoardHashes));
+						console.log('🔍 Current backend hash:', backendHash);
+						handleDesync();
 					}
 				}
 			}
@@ -908,25 +926,28 @@
 		playNextInspectorMove();
 	};
 
-	const playNextInspectorMove = () => {
+	const playNextInspectorMove = async () => {
 		// Check if we've reached the end of available moves
-		if (!isInspectorPlaying || inspectorCurrentMoveIndex >= inspectorMoveHistory.length) {
+		if (!isInspectorPlaying || inspectorCurrentMoveIndex >= totalMoves) {
 			stopInspectorPlay();
 
 			// Only show overlay and disable auto-play if the game has actually ended
 			const isGameEnded = $game.data?.board?.isEnded;
-			if (isGameEnded && inspectorCurrentMoveIndex >= inspectorMoveHistory.length) {
+			if (isGameEnded && inspectorCurrentMoveIndex >= totalMoves) {
 				showOverlayAtEnd();
 			}
 			return;
 		}
 
-		const currentMove = inspectorMoveHistory[inspectorCurrentMoveIndex];
-		const nextMove = inspectorMoveHistory[inspectorCurrentMoveIndex + 1];
+		// Ensure the next move is loaded
+		await loadMoveRange(inspectorCurrentMoveIndex + 1);
+
+		const currentMove = getCurrentMoveData();
+		const nextMove = paginatedHistoryStore?.getMove(inspectorCurrentMoveIndex + 1);
 
 		// Calculate delay based on timestamp difference
 		let delay = 500; // Default 500ms
-		if (nextMove) {
+		if (currentMove && nextMove) {
 			const currentTime = parseInt(currentMove.timestamp);
 			const nextTime = parseInt(nextMove.timestamp);
 			delay = Math.min(nextTime - currentTime, 2000); // Cap at 2 seconds
@@ -948,10 +969,11 @@
 		}
 	};
 
-	const restartInspector = () => {
+	const restartInspector = async () => {
 		stopInspectorPlay();
-		inspectorCurrentMoveIndex = 1; // Start at first move
-		handleGameStateUpdate();
+		autoPlayEnabled = false;
+		isUserControlledReplay = true;
+		await handleSliderChange(1); // Start at first move
 		dismissOverlay();
 	};
 
@@ -966,11 +988,118 @@
 		autoPlayEnabled = false;
 	};
 
-	const handleReplayClick = () => {
+	const handleReplayClick = async () => {
+		// Set user controlled flag to prevent auto-positioning
+		isUserControlledReplay = true;
+
+		// Initialize inspector mode if not already active
+		if (!isInspectorMode) {
+			isInspectorMode = true;
+
+			// Initialize pagination store for this board
+			const newTotalMoves = $game.data?.board?.totalMoves || 0;
+			if (!paginatedHistoryStore && boardId) {
+				paginatedHistoryStore = getPaginatedMoveHistory(boardId);
+				paginatedHistoryStore.initialize(newTotalMoves);
+				totalMoves = newTotalMoves;
+				lastInspectedBoardId = boardId;
+			}
+
+			// Load moves if needed
+			if (newTotalMoves > 0) {
+				await loadMoveRange(newTotalMoves);
+			}
+		}
+
+		// Start from the beginning for replay
+		inspectorCurrentMoveIndex = 1;
+		await handleSliderChange(1);
+
 		// Enable auto-play when replay button is clicked
 		if (!autoPlayEnabled) {
 			toggleAutoPlay();
 		}
+	};
+
+	// 🚀 Pagination functions for move history
+	const loadMoveRange = async (targetMove: number) => {
+		if (!paginatedHistoryStore || isLoadingMoves) return;
+
+		// Check if move is already loaded
+		if (paginatedHistoryStore.isMoveLoaded(targetMove)) {
+			return;
+		}
+
+		// Calculate what range to load
+		const { start, limit } = calculateLoadRange(targetMove, totalMoves, 200);
+
+		// Set loading state
+		isLoadingMoves = true;
+		loadingTargetMove = targetMove;
+		paginatedHistoryStore.setLoading(true, targetMove);
+
+		try {
+			const boardQuery = getBoardPaginated(
+				client,
+				boardId,
+				start - 1, // Convert to 0-based offset
+				limit
+			);
+
+			// Wait for the query to complete
+			const result = await new Promise<{
+				data?: { board?: { moveHistory?: MoveHistoryRecord[] } };
+			}>((resolve) => {
+				const unsubscribe = boardQuery.subscribe(resolve);
+				return unsubscribe;
+			});
+
+			if (result?.data?.board?.moveHistory) {
+				const moves = result.data.board.moveHistory;
+				paginatedHistoryStore.addLoadedRange(start, moves);
+			}
+		} catch (error: unknown) {
+			console.error('Failed to load move range:', error);
+		} finally {
+			isLoadingMoves = false;
+			loadingTargetMove = undefined;
+			paginatedHistoryStore.setLoading(false);
+		}
+	};
+
+	const handleSliderChange = async (targetMove: number) => {
+		if (!paginatedHistoryStore) return;
+
+		// Set user controlled flag when manually using slider
+		isUserControlledReplay = true;
+
+		// Ensure targetMove is within valid bounds
+		if (targetMove < 1) targetMove = 1;
+		if (targetMove > totalMoves) targetMove = totalMoves;
+
+		// Load the target range if not already loaded
+		await loadMoveRange(targetMove);
+
+		// Update current move index
+		inspectorCurrentMoveIndex = targetMove;
+		handleGameStateUpdate();
+
+		// Show/hide overlay based on position
+		const isGameEnded = $game.data?.board?.isEnded;
+		if (isGameEnded && targetMove >= totalMoves) {
+			hideInspectorOverlay = false;
+		} else {
+			hideInspectorOverlay = true;
+		}
+	};
+
+	// Get current move data for display
+	const getCurrentMoveData = () => {
+		if (!paginatedHistoryStore || inspectorCurrentMoveIndex === 0) {
+			return null;
+		}
+
+		return paginatedHistoryStore.getMove(inspectorCurrentMoveIndex);
 	};
 
 	onDestroy(() => {
@@ -1137,30 +1266,55 @@
 					<span class="text-sm font-medium text-purple-400">Inspector</span>
 				</div>
 				<div class="text-sm font-medium text-surface-300">
-					{inspectorCurrentMoveIndex} / {inspectorMoveHistory.length}
+					{inspectorCurrentMoveIndex} / {totalMoves}
+					{#if isLoadingMoves}
+						<span class="text-xs text-purple-400">(loading...)</span>
+					{/if}
 				</div>
 			</div>
 
-			<!-- Progress Slider -->
-			<input
-				type="range"
-				min="1"
-				max={inspectorMoveHistory.length}
-				bind:value={inspectorCurrentMoveIndex}
-				oninput={() => {
-					stopInspectorPlay();
-					handleGameStateUpdate();
+			<!-- Progress Slider with Loaded Ranges Indicator -->
+			<div class="relative">
+				<!-- Loaded ranges visual indicator -->
+				<div class="pointer-events-none absolute left-0 top-0 h-1 w-full">
+					{#if paginatedHistoryStore}
+						{@const loadedRanges = paginatedHistoryStore.getLoadedRanges()}
+						{#each loadedRanges as range}
+							<div
+								class="absolute h-full bg-purple-500/30"
+								style="left: {((range.start - 1) / totalMoves) * 100}%; width: {((range.end -
+									range.start +
+									1) /
+									totalMoves) *
+									100}%"
+							></div>
+						{/each}
+					{/if}
+				</div>
 
-					// Show overlay only if at end AND game has ended
-					const isGameEnded = $game.data?.board?.isEnded;
-					if (inspectorCurrentMoveIndex >= inspectorMoveHistory.length && isGameEnded) {
-						showOverlayAtEnd();
-					} else {
-						dismissOverlay();
-					}
-				}}
-				class="inspector-slider w-full"
-			/>
+				<input
+					type="range"
+					min="1"
+					max={totalMoves}
+					value={inspectorCurrentMoveIndex}
+					oninput={(e) => {
+						stopInspectorPlay();
+						const target = e.target as HTMLInputElement;
+						const targetMove = parseInt(target.value);
+						handleSliderChange(targetMove);
+					}}
+					disabled={isLoadingMoves}
+					class="inspector-slider w-full {isLoadingMoves ? 'opacity-50' : ''}"
+				/>
+
+				{#if isLoadingMoves}
+					<div class="pointer-events-none absolute inset-0 flex items-center justify-center">
+						<div class="rounded bg-surface-800/90 px-2 py-1 text-xs text-purple-400">
+							Loading moves {loadingTargetMove || ''}...
+						</div>
+					</div>
+				{/if}
+			</div>
 
 			<!-- Playback Controls and Status -->
 			<div class="mt-2 flex items-center justify-between gap-3">
@@ -1188,21 +1342,26 @@
 					</button>
 
 					<button
-						onclick={() => {
-							if (inspectorCurrentMoveIndex < inspectorMoveHistory.length) {
-								inspectorCurrentMoveIndex++;
-								handleGameStateUpdate();
-
-								// Show overlay only if reached end AND game has ended
-								const isGameEnded = $game.data?.board?.isEnded;
-								if (inspectorCurrentMoveIndex >= inspectorMoveHistory.length && isGameEnded) {
-									showOverlayAtEnd();
-								} else {
-									dismissOverlay();
-								}
+						onclick={async () => {
+							if (inspectorCurrentMoveIndex > 1) {
+								const targetMove = inspectorCurrentMoveIndex - 1;
+								await handleSliderChange(targetMove);
 							}
 						}}
-						disabled={inspectorCurrentMoveIndex >= inspectorMoveHistory.length}
+						disabled={inspectorCurrentMoveIndex <= 1 || isLoadingMoves}
+						class="rounded bg-surface-700 px-2 py-1 text-xs text-white transition-colors hover:bg-surface-600 disabled:opacity-50 sm:px-3 sm:py-1.5 sm:text-sm"
+					>
+						Previous
+					</button>
+
+					<button
+						onclick={async () => {
+							if (inspectorCurrentMoveIndex < totalMoves) {
+								const targetMove = inspectorCurrentMoveIndex + 1;
+								await handleSliderChange(targetMove);
+							}
+						}}
+						disabled={inspectorCurrentMoveIndex >= totalMoves || isLoadingMoves}
 						class="rounded bg-surface-700 px-2 py-1 text-xs text-white transition-colors hover:bg-surface-600 disabled:opacity-50 sm:px-3 sm:py-1.5 sm:text-sm"
 					>
 						Next
@@ -1211,24 +1370,51 @@
 
 				<!-- Status -->
 				{#if autoPlayEnabled}
-					<div class="flex items-center gap-1 text-xs sm:gap-1.5 sm:text-sm">
-						<span class="text-surface-300">
-							{$game.data?.board?.isEnded ? 'Replay' : 'Live'}
-						</span>
-						<span class="animate-pulse text-purple-400">
-							• {inspectorCurrentMoveIndex >= inspectorMoveHistory.length &&
-							$game.data?.board?.isEnded
-								? 'Ended'
-								: isInspectorPlaying
-									? 'Playing'
-									: 'Waiting'}
-						</span>
+					<div class="flex flex-col gap-1 text-xs sm:gap-1.5 sm:text-sm">
+						<div class="flex items-center gap-1">
+							<span class="text-surface-300">
+								{$game.data?.board?.isEnded ? 'Replay' : 'Live'}
+							</span>
+							<span class="animate-pulse text-purple-400">
+								• {inspectorCurrentMoveIndex >= totalMoves && $game.data?.board?.isEnded
+									? 'Ended'
+									: isInspectorPlaying
+										? 'Playing'
+										: isLoadingMoves
+											? 'Loading...'
+											: 'Waiting'}
+							</span>
+						</div>
+						{#if paginatedHistoryStore && totalMoves > 200}
+							{@const loadedRanges = paginatedHistoryStore.getLoadedRanges()}
+							{@const loadedMoves = loadedRanges.reduce(
+								(sum: number, range: { start: number; end: number }) =>
+									sum + (range.end - range.start + 1),
+								0
+							)}
+							<div class="text-xs text-surface-400">
+								{Math.round((loadedMoves / totalMoves) * 100)}% loaded ({loadedMoves}/{totalMoves} moves)
+							</div>
+						{/if}
 					</div>
 				{:else}
-					<div class="truncate text-xs text-surface-300 sm:text-sm">
-						{$game.data?.board?.player === $userStore.username
-							? 'Replay mode'
-							: `Viewing ${$game.data?.board?.player}'s game`}
+					<div class="flex flex-col gap-1">
+						<div class="truncate text-xs text-surface-300 sm:text-sm">
+							{$game.data?.board?.player === $userStore.username
+								? 'Replay mode'
+								: `Viewing ${$game.data?.board?.player}'s game`}
+						</div>
+						{#if paginatedHistoryStore && totalMoves > 200}
+							{@const loadedRanges = paginatedHistoryStore.getLoadedRanges()}
+							{@const loadedMoves = loadedRanges.reduce(
+								(sum: number, range: { start: number; end: number }) =>
+									sum + (range.end - range.start + 1),
+								0
+							)}
+							<div class="text-xs text-surface-400">
+								{Math.round((loadedMoves / totalMoves) * 100)}% loaded
+							</div>
+						{/if}
 					</div>
 				{/if}
 			</div>

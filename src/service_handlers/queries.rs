@@ -110,14 +110,21 @@ impl QueryHandler {
         }
     }
 
-    async fn board(&self, board_id: Option<String>) -> Option<BoardState> {
+    async fn board(&self, board_id: Option<String>, move_offset: Option<u32>, move_limit: Option<u32>) -> Option<BoardState> {
         let board_id = board_id.unwrap_or(self.state.latest_board_id.get().to_string());
         if let Ok(Some(game)) = self.state.boards.try_load_entry(&board_id).await {
-            // Load move history
+            // Load move history with pagination
             let total_moves = *game.move_count.get();
+            let offset = move_offset.unwrap_or(0);
+            let limit = move_limit.unwrap_or(200); // Default 200 moves per load
             let mut move_history: Vec<MoveHistoryRecord> = Vec::new();
 
-            for i in 0..total_moves {
+            // Calculate the range to load
+            let start_index = std::cmp::min(offset, total_moves);
+            let end_index = std::cmp::min(start_index + limit, total_moves);
+
+            // Load only the requested range
+            for i in start_index..end_index {
                 if let Ok(Some(move_record)) = game.move_history.try_load_entry(&i).await {
                     let direction_str = match *move_record.direction.get() {
                         0 => "Up",
@@ -136,6 +143,8 @@ impl QueryHandler {
                 }
             }
 
+            let has_more_moves = end_index < total_moves;
+            
             let game_state = BoardState {
                 board_id: game.board_id.get().to_string(),
                 board: Game::convert_to_matrix(*game.board.get()),
@@ -149,6 +158,9 @@ impl QueryHandler {
                 end_time: micros_to_millis(*game.end_time.get()),
                 move_history,
                 total_moves,
+                move_offset: offset,
+                move_limit: limit,
+                has_more_moves,
             };
             Some(game_state)
         } else {
@@ -184,6 +196,9 @@ impl QueryHandler {
                     end_time: micros_to_millis(*board.end_time.get()),
                     move_history: Vec::new(), // Empty for list queries
                     total_moves: *board.move_count.get(),
+                    move_offset: 0,
+                    move_limit: 0, // 0 indicates no pagination for list queries
+                    has_more_moves: false,
                 });
             }
         }
