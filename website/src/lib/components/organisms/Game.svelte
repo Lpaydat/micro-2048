@@ -282,6 +282,9 @@
 		});
 	}
 
+	// Calculate loaded ranges reactively for visual indicator
+	$: loadedRanges = paginatedHistoryStore ? paginatedHistoryStore.getLoadedRanges() : [];
+
 	$: if (boardEnded) {
 		moveQueue = [];
 
@@ -919,9 +922,8 @@
 	};
 
 	const playInspectorMoves = () => {
-		if (inspectorCurrentMoveIndex >= inspectorMoveHistory.length) {
-			inspectorCurrentMoveIndex = 0;
-		}
+		// Continue from current position - don't reset to 0
+		// The playNextInspectorMove function will handle stopping at the end
 		isInspectorPlaying = true;
 		playNextInspectorMove();
 	};
@@ -1277,19 +1279,16 @@
 			<div class="relative">
 				<!-- Loaded ranges visual indicator -->
 				<div class="pointer-events-none absolute left-0 top-0 h-1 w-full">
-					{#if paginatedHistoryStore}
-						{@const loadedRanges = paginatedHistoryStore.getLoadedRanges()}
-						{#each loadedRanges as range}
-							<div
-								class="absolute h-full bg-purple-500/30"
-								style="left: {((range.start - 1) / totalMoves) * 100}%; width: {((range.end -
-									range.start +
-									1) /
-									totalMoves) *
-									100}%"
-							></div>
-						{/each}
-					{/if}
+					{#each loadedRanges as range}
+						<div
+							class="absolute h-full bg-purple-500/30"
+							style="left: {((range.start - 1) / totalMoves) * 100}%; width: {((range.end -
+								range.start +
+								1) /
+								totalMoves) *
+								100}%"
+						></div>
+					{/each}
 				</div>
 
 				<input
@@ -1385,17 +1384,6 @@
 											: 'Waiting'}
 							</span>
 						</div>
-						{#if paginatedHistoryStore && totalMoves > 200}
-							{@const loadedRanges = paginatedHistoryStore.getLoadedRanges()}
-							{@const loadedMoves = loadedRanges.reduce(
-								(sum: number, range: { start: number; end: number }) =>
-									sum + (range.end - range.start + 1),
-								0
-							)}
-							<div class="text-xs text-surface-400">
-								{Math.round((loadedMoves / totalMoves) * 100)}% loaded ({loadedMoves}/{totalMoves} moves)
-							</div>
-						{/if}
 					</div>
 				{:else}
 					<div class="flex flex-col gap-1">
@@ -1404,17 +1392,6 @@
 								? 'Replay mode'
 								: `Viewing ${$game.data?.board?.player}'s game`}
 						</div>
-						{#if paginatedHistoryStore && totalMoves > 200}
-							{@const loadedRanges = paginatedHistoryStore.getLoadedRanges()}
-							{@const loadedMoves = loadedRanges.reduce(
-								(sum: number, range: { start: number; end: number }) =>
-									sum + (range.end - range.start + 1),
-								0
-							)}
-							<div class="text-xs text-surface-400">
-								{Math.round((loadedMoves / totalMoves) * 100)}% loaded
-							</div>
-						{/if}
 					</div>
 				{/if}
 			</div>
