@@ -29,6 +29,9 @@
 		type MoveHistoryRecord
 	} from '$lib/stores/paginatedMoveHistory';
 	import { getBoardPaginated } from '$lib/graphql/queries/getBoardPaginated';
+	import { RhythmEngine, type RhythmSettings } from '$lib/game/rhythmEngine.js';
+	import RhythmIndicator from '../molecules/RhythmIndicator.svelte';
+	import RhythmScore from '../molecules/RhythmScore.svelte';
 
 	// Props
 	export let isMultiplayer: boolean = false;
@@ -196,6 +199,20 @@
 	let isLoadingMoves: boolean = false;
 	let loadingTargetMove: number | undefined = undefined;
 
+	// 🎵 Rhythm System
+	let rhythmEngine: RhythmEngine | null = null;
+	let rhythmSettings: RhythmSettings | null = null;
+	let showRhythmIndicator = false;
+	
+	// Rhythm scoring
+	let rhythmScore = 0;
+	let rhythmCombo = 0;
+	let maxRhythmCombo = 0;
+	let perfectCount = 0;
+	let goodCount = 0;
+	let missCount = 0;
+	let totalRhythmMoves = 0;
+
 	// GraphQL Queries and Subscriptions
 	$: game = queryStore({
 		client,
@@ -284,6 +301,40 @@
 
 	// Calculate loaded ranges reactively for visual indicator
 	$: loadedRanges = paginatedHistoryStore ? paginatedHistoryStore.getLoadedRanges() : [];
+
+	// 🎵 Initialize Rhythm System when game data loads
+	$: {
+		if ($game.data?.board) {
+			const description = $game.data.board.description || '';
+			const parsedRhythm = RhythmEngine.parseFromDescription(description);
+			
+			if (parsedRhythm) {
+				rhythmSettings = parsedRhythm;
+				if (!rhythmEngine) {
+					rhythmEngine = new RhythmEngine(rhythmSettings);
+					rhythmEngine.initAudio().then(() => {
+						rhythmEngine?.start();
+						showRhythmIndicator = true;
+						console.log('🎵 Rhythm mode activated:', rhythmSettings);
+					}).catch(err => {
+						console.warn('🎵 Audio initialization failed, visual mode only:', err);
+						rhythmEngine?.start();
+						showRhythmIndicator = true;
+					});
+				} else {
+					rhythmEngine.updateSettings(rhythmSettings);
+				}
+			} else {
+				// No rhythm mode, stop engine if running
+				if (rhythmEngine) {
+					rhythmEngine.stop();
+					rhythmEngine = null;
+					showRhythmIndicator = false;
+					rhythmSettings = null;
+				}
+			}
+		}
+	}
 
 	$: if (boardEnded) {
 		moveQueue = [];
@@ -512,6 +563,56 @@
 		const tournamentEndTime = parseInt($game.data?.board?.endTime || '0');
 		if (tournamentEndTime > 0 && tournamentEndTime <= Date.now()) {
 			return;
+		}
+
+		// 🎵 Rhythm Mode Check
+		if (rhythmEngine && rhythmSettings?.enabled) {
+			const rhythmFeedback = rhythmEngine.checkRhythm(now);
+			totalRhythmMoves++;
+			
+			// Show rhythm feedback
+			const rhythmIndicator = document.querySelector('.rhythm-indicator') as any;
+			if (rhythmIndicator && rhythmIndicator.showMoveFeedback) {
+				rhythmIndicator.showMoveFeedback(rhythmFeedback);
+			}
+
+			// Update rhythm scoring
+			if (rhythmFeedback.accuracy === 'perfect') {
+				perfectCount++;
+				rhythmCombo++;
+				rhythmScore += rhythmFeedback.score * (1 + rhythmCombo * 0.1); // Combo bonus
+				console.log(`🎵 PERFECT! (+${rhythmFeedback.score}x${1 + rhythmCombo * 0.1})`);
+			} else if (rhythmFeedback.accuracy === 'good') {
+				goodCount++;
+				rhythmCombo++;
+				rhythmScore += rhythmFeedback.score * (1 + rhythmCombo * 0.05); // Smaller combo bonus
+				console.log(`🎵 GOOD! (+${rhythmFeedback.score}x${1 + rhythmCombo * 0.05})`);
+			} else {
+				missCount++;
+				rhythmCombo = 0; // Reset combo on miss
+				console.log(`❌ ${rhythmFeedback.accuracy.toUpperCase()}! (${Math.abs(rhythmFeedback.timingDiff).toFixed(0)}ms)`);
+			}
+
+			// Update max combo
+			if (rhythmCombo > maxRhythmCombo) {
+				maxRhythmCombo = rhythmCombo;
+			}
+
+			// Trigger score animations
+			const rhythmScoreComponent = document.querySelector('.rhythm-score') as any;
+			if (rhythmScoreComponent) {
+				if (rhythmFeedback.accuracy === 'perfect') {
+					rhythmScoreComponent.showScoreChangeAnimation?.(rhythmFeedback.score, 'perfect');
+				} else if (rhythmFeedback.accuracy === 'good') {
+					rhythmScoreComponent.showScoreChangeAnimation?.(rhythmFeedback.score, 'good');
+				} else {
+					rhythmScoreComponent.showScoreChangeAnimation?.(0, 'miss');
+				}
+
+				if (rhythmCombo > 0 && rhythmFeedback.accuracy !== 'miss') {
+					rhythmScoreComponent.triggerComboAnimation?.();
+				}
+			}
 		}
 
 		// Queue move if currently processing, otherwise execute immediately
@@ -886,10 +987,10 @@
 					if (lastHashMismatchTime === null) {
 						lastHashMismatchTime = Date.now();
 						console.warn('⚠️ Hash mismatch detected - starting timer');
-					} else if (Date.now() - lastHashMismatchTime > 15000) {
-						// 15 seconds of mismatch
+					} else if (Date.now() - lastHashMismatchTime > 30000) {
+						// 30 seconds of mismatch
 						console.warn(
-							'Backend state not found in valid hashes for 15+ seconds - desync detected'
+							'Backend state not found in valid hashes for 30+ seconds - desync detected'
 						);
 						console.log('🔍 Valid hashes:', Array.from(validBoardHashes));
 						console.log('🔍 Current backend hash:', backendHash);
@@ -1142,15 +1243,33 @@
 		>
 			<!-- {#snippet header(size)} -->
 			{#snippet header()}
-				<BoardHeader
-					bind:boardId
-					bind:isCreating={isCreatingNewBoard}
-					{canStartNewGame}
-					{showBestScore}
-					player={$game.data?.board?.player ?? $userStore.username}
-					{score}
-					{bestScore}
-				/>
+				<div class="board-header-content">
+					<BoardHeader
+						bind:boardId
+						bind:isCreating={isCreatingNewBoard}
+						{canStartNewGame}
+						{showBestScore}
+						player={$game.data?.board?.player ?? $userStore.username}
+						{score}
+						{bestScore}
+					/>
+					{#if showRhythmIndicator && rhythmEngine}
+						<div class="rhythm-indicator-wrapper">
+							<RhythmIndicator bind:rhythmEngine />
+						</div>
+						<div class="rhythm-score-wrapper">
+							<RhythmScore 
+								bind:rhythmScore
+								bind:combo={rhythmCombo}
+								bind:maxCombo={maxRhythmCombo}
+								bind:perfectCount
+								bind:goodCount
+								bind:missCount
+								bind:totalMoves={totalRhythmMoves}
+							/>
+						</div>
+					{/if}
+				</div>
 			{/snippet}
 		</Board>
 	</div>
@@ -1466,5 +1585,38 @@
 	.game-board {
 		position: relative;
 		width: 100%;
+	}
+
+	/* Rhythm Indicator Styles */
+	.board-header-content {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		width: 100%;
+	}
+
+	.rhythm-indicator-wrapper {
+		display: flex;
+		justify-content: center;
+		padding: 0.5rem 0;
+		border-top: 1px solid rgba(156, 163, 175, 0.2);
+		margin-top: 0.5rem;
+	}
+
+	.rhythm-score-wrapper {
+		padding: 0.5rem 0;
+		border-top: 1px solid rgba(156, 163, 175, 0.2);
+	}
+
+	/* Responsive adjustments for rhythm indicator */
+	@media (max-width: 640px) {
+		.rhythm-indicator-wrapper {
+			padding: 0.25rem 0;
+			margin-top: 0.25rem;
+		}
+
+		.rhythm-score-wrapper {
+			padding: 0.25rem 0;
+		}
 	}
 </style>

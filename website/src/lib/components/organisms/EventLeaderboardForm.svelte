@@ -25,6 +25,11 @@
 	let errorMessage = $state('');
 	let noStartLimit = $state(false);
 	let noEndLimit = $state(false);
+	
+	// Rhythm mode settings
+	let rhythmMode = $state(false);
+	let rhythmBPM = $state(120);
+	let rhythmTolerance = $state(150); // milliseconds
 
 	// Check if current user is admin
 	const isAdmin = $derived($userStore.isMod === true);
@@ -110,6 +115,10 @@
 				...(isAdmin && {
 					shardNumber: shardNumber,
 					baseTriggererCount: baseTriggererCount
+				}),
+				// Rhythm mode settings (stored in description for now since backend doesn't support them yet)
+				...(rhythmMode && {
+					description: `${description || ''} [RHYTHM_MODE:true,BPM:${rhythmBPM},TOLERANCE:${rhythmTolerance}]`.trim()
 				})
 			};
 
@@ -265,6 +274,79 @@
 			</div>
 		{/if}
 
+		<!-- Rhythm Mode Section -->
+		<div class="form-field">
+			<div class="mb-4 rounded-md bg-purple-50 p-4 border border-purple-200">
+				<div class="mb-3 flex items-center gap-2">
+					<input
+						type="checkbox"
+						id="rhythmMode"
+						bind:checked={rhythmMode}
+						disabled={loading}
+						class="h-4 w-4 rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+					/>
+					<label for="rhythmMode" class="text-sm font-medium text-purple-900 font-semibold">
+						🎵 Rhythm Mode (Crypt of the Necrodancer style)
+					</label>
+				</div>
+				
+				{#if rhythmMode}
+					<div class="space-y-3 ml-6">
+						<p class="text-xs text-purple-700">
+							Players must move on the beat! Moves off-rhythm will have penalties or may not count.
+						</p>
+						
+						<!-- BPM Field -->
+						<div>
+							<label for="rhythmBPM" class="block text-xs font-medium text-purple-900 mb-1">
+								Beats Per Minute (BPM): {rhythmBPM}
+							</label>
+							<input
+								id="rhythmBPM"
+								type="range"
+								min="60"
+								max="200"
+								bind:value={rhythmBPM}
+								disabled={loading}
+								class="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer"
+							/>
+							<div class="flex justify-between text-xs text-purple-600 mt-1">
+								<span>60 (Slow)</span>
+								<span>120 (Default)</span>
+								<span>200 (Fast)</span>
+							</div>
+						</div>
+						
+						<!-- Tolerance Field -->
+						<div>
+							<label for="rhythmTolerance" class="block text-xs font-medium text-purple-900 mb-1">
+								Timing Tolerance: {rhythmTolerance}ms
+							</label>
+							<input
+								id="rhythmTolerance"
+								type="range"
+								min="50"
+								max="500"
+								step="10"
+								bind:value={rhythmTolerance}
+								disabled={loading}
+								class="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer"
+							/>
+							<div class="flex justify-between text-xs text-purple-600 mt-1">
+								<span>50ms (Strict)</span>
+								<span>150ms (Normal)</span>
+								<span>500ms (Relaxed)</span>
+							</div>
+						</div>
+					</div>
+				{:else}
+					<p class="text-xs text-purple-600 ml-6">
+						Enable to require players to move on rhythm for an extra challenge!
+					</p>
+				{/if}
+			</div>
+		</div>
+
 		<!-- Description Field -->
 		<div class="form-field">
 			<textarea
@@ -275,6 +357,11 @@
 				maxlength="500"
 				disabled={loading}
 			></textarea>
+			{#if rhythmMode}
+				<p class="mt-1 text-xs text-purple-600">
+					Note: Rhythm mode settings will be appended to description automatically.
+				</p>
+			{/if}
 		</div>
 
 		<!-- Error Message -->
