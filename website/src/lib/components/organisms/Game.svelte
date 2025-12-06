@@ -9,7 +9,7 @@
 	import { genInitialState as createState } from '$lib/game/game';
 	import type { GameKeys, GameState, Tablet } from '$lib/game/models';
 	import { boardSize, setGameCreationStatus } from '$lib/stores/gameStore';
-	import { boardToString } from '$lib/game/utils';
+	import { boardToString, computeInitialBoard } from '$lib/game/utils';
 	import Board from './Board.svelte';
 	import { userStore } from '$lib/stores/userStore';
 	import { deleteBoardId, getBoardId } from '$lib/stores/boardId';
@@ -198,6 +198,10 @@
 	let totalMoves: number = 0;
 	let isLoadingMoves: boolean = false;
 	let loadingTargetMove: number | undefined = undefined;
+	
+	// 🎮 Initial board cache for inspector mode (position 0)
+	let initialBoardCache: number[][] | null = null;
+	let isLoadingInitialBoard: boolean = false;
 
 	// 🎵 Rhythm System
 	let rhythmEngine: RhythmEngine | null = null;
@@ -233,9 +237,14 @@
 
 		// Only check inspector mode if board data matches requested boardId (avoid stale data)
 		const isBoardDataValid = currentBoardId === boardId;
+		// 🔧 FIX: Also trigger inspector mode for anonymous users viewing any board
+		// OR logged-in users viewing someone else's board
 		const isOtherPlayer =
-			isBoardDataValid && boardPlayer && currentUser && boardPlayer !== currentUser;
-		const isOwnEndedGame = isBoardDataValid && boardPlayer === currentUser && gameEnded;
+			isBoardDataValid && boardPlayer && (
+				!currentUser || // Anonymous user viewing any board
+				boardPlayer !== currentUser // Logged-in user viewing someone else's board
+			);
+		const isOwnEndedGame = isBoardDataValid && currentUser && boardPlayer === currentUser && gameEnded;
 
 		if (isOtherPlayer || isOwnEndedGame) {
 			// const wasInspectorMode = isInspectorMode; // No longer needed with pagination
@@ -249,6 +258,9 @@
 				paginatedHistoryStore = getPaginatedMoveHistory(currentBoardId);
 				paginatedHistoryStore.initialize(newTotalMoves);
 				totalMoves = newTotalMoves;
+				
+				// Reset initial board cache for new board
+				initialBoardCache = null;
 
 				// Load the final batch (most recent moves)
 				loadMoveRange(newTotalMoves);
@@ -444,15 +456,32 @@
 
 		// Inspector mode: use move history data
 		if (isInspectorMode && paginatedHistoryStore) {
-			const currentMove = getCurrentMoveData();
-			if (currentMove) {
-				state = createState(currentMove.boardAfter, 4, boardId, player);
-				score = currentMove.scoreAfter;
-			} else if (inspectorCurrentMoveIndex <= 1) {
-				// Show initial board (before any moves) for move 1 or 0
-				state = createState($game.data?.board?.board, 4, boardId, player);
-				score = 0; // Initial score
+			if (inspectorCurrentMoveIndex === 0) {
+				// 🎮 Position 0: Show initial board (before any moves)
+				if (initialBoardCache) {
+					state = createState(initialBoardCache, 4, boardId, player);
+					score = 0;
+				} else {
+					// Fallback while loading initial board
+					state = createState($game.data?.board?.board, 4, boardId, player);
+					score = $game.data?.board?.score || 0;
+				}
+			} else {
+				const currentMove = getCurrentMoveData();
+				if (currentMove) {
+					state = createState(currentMove.boardAfter, 4, boardId, player);
+					score = currentMove.scoreAfter;
+				} else {
+					// 🔧 FIX: Moves not loaded yet - show current board state as fallback
+					// This prevents blank board while moves are loading
+					state = createState($game.data?.board?.board, 4, boardId, player);
+					score = $game.data?.board?.score || 0;
+				}
 			}
+		} else if (isInspectorMode && !paginatedHistoryStore && $game.data?.board) {
+			// 🔧 FIX: Inspector mode but pagination not initialized yet - show current state
+			state = createState($game.data?.board?.board, 4, boardId, player);
+			score = $game.data?.board?.score || 0;
 		} else {
 			// Normal mode: use current board state
 			state = createState($game.data?.board?.board, 4, boardId, player);
@@ -1076,7 +1105,7 @@
 		stopInspectorPlay();
 		autoPlayEnabled = false;
 		isUserControlledReplay = true;
-		await handleSliderChange(1); // Start at first move
+		await handleSliderChange(0); // Start at initial state (before any moves)
 		dismissOverlay();
 	};
 
@@ -1114,9 +1143,9 @@
 			}
 		}
 
-		// Start from the beginning for replay
-		inspectorCurrentMoveIndex = 1;
-		await handleSliderChange(1);
+		// Start from the beginning for replay (position 0 = initial state)
+		inspectorCurrentMoveIndex = 0;
+		await handleSliderChange(0);
 
 		// Enable auto-play when replay button is clicked
 		if (!autoPlayEnabled) {
@@ -1160,6 +1189,8 @@
 			if (result?.data?.board?.moveHistory) {
 				const moves = result.data.board.moveHistory;
 				paginatedHistoryStore.addLoadedRange(start, moves);
+				// 🔧 FIX: Update game state after moves are loaded
+				handleGameStateUpdate();
 			}
 		} catch (error: unknown) {
 			console.error('Failed to load move range:', error);
@@ -1170,18 +1201,47 @@
 		}
 	};
 
+	// 🎮 Load and cache the initial board (position 0)
+	const loadInitialBoard = async () => {
+		if (initialBoardCache || isLoadingInitialBoard) return;
+		if (!boardId || !$game.data?.board) return;
+		
+		isLoadingInitialBoard = true;
+		try {
+			const boardPlayer = $game.data.board.player;
+			const createdAt = $game.data.board.createdAt;
+			
+			if (boardPlayer && createdAt) {
+				initialBoardCache = await computeInitialBoard(boardId, boardPlayer, createdAt);
+				// Update display if we're at position 0
+				if (inspectorCurrentMoveIndex === 0) {
+					handleGameStateUpdate();
+				}
+			}
+		} catch (error) {
+			console.error('Failed to compute initial board:', error);
+		} finally {
+			isLoadingInitialBoard = false;
+		}
+	};
+
 	const handleSliderChange = async (targetMove: number) => {
 		if (!paginatedHistoryStore) return;
 
 		// Set user controlled flag when manually using slider
 		isUserControlledReplay = true;
 
-		// Ensure targetMove is within valid bounds
-		if (targetMove < 1) targetMove = 1;
+		// Ensure targetMove is within valid bounds (allow 0 for initial state)
+		if (targetMove < 0) targetMove = 0;
 		if (targetMove > totalMoves) targetMove = totalMoves;
 
-		// Load the target range if not already loaded
-		await loadMoveRange(targetMove);
+		// Load the target range if not already loaded (skip for position 0)
+		if (targetMove > 0) {
+			await loadMoveRange(targetMove);
+		} else {
+			// Position 0: load initial board if needed
+			await loadInitialBoard();
+		}
 
 		// Update current move index
 		inspectorCurrentMoveIndex = targetMove;
@@ -1388,7 +1448,9 @@
 				</div>
 				<div class="text-sm font-medium text-surface-300">
 					{inspectorCurrentMoveIndex} / {totalMoves}
-					{#if isLoadingMoves}
+					{#if inspectorCurrentMoveIndex === 0}
+						<span class="text-xs text-green-400">(initial)</span>
+					{:else if isLoadingMoves || isLoadingInitialBoard}
 						<span class="text-xs text-purple-400">(loading...)</span>
 					{/if}
 				</div>
@@ -1412,7 +1474,7 @@
 
 				<input
 					type="range"
-					min="1"
+					min="0"
 					max={totalMoves}
 					value={inspectorCurrentMoveIndex}
 					oninput={(e) => {
@@ -1421,8 +1483,8 @@
 						const targetMove = parseInt(target.value);
 						handleSliderChange(targetMove);
 					}}
-					disabled={isLoadingMoves}
-					class="inspector-slider w-full {isLoadingMoves ? 'opacity-50' : ''}"
+					disabled={isLoadingMoves || isLoadingInitialBoard}
+					class="inspector-slider w-full {isLoadingMoves || isLoadingInitialBoard ? 'opacity-50' : ''}"
 				/>
 
 				{#if isLoadingMoves}
@@ -1461,12 +1523,12 @@
 
 					<button
 						onclick={async () => {
-							if (inspectorCurrentMoveIndex > 1) {
+							if (inspectorCurrentMoveIndex > 0) {
 								const targetMove = inspectorCurrentMoveIndex - 1;
 								await handleSliderChange(targetMove);
 							}
 						}}
-						disabled={inspectorCurrentMoveIndex <= 1 || isLoadingMoves}
+						disabled={inspectorCurrentMoveIndex <= 0 || isLoadingMoves || isLoadingInitialBoard}
 						class="rounded bg-surface-700 px-2 py-1 text-xs text-white transition-colors hover:bg-surface-600 disabled:opacity-50 sm:px-3 sm:py-1.5 sm:text-sm"
 					>
 						Previous
