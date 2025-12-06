@@ -91,26 +91,74 @@ export function getPaginatedMoveHistory(boardId: string): PaginatedMoveHistorySt
 			addLoadedRange(start: number, moves: MoveHistoryRecord[]) {
 				update((state) => {
 					const end = start + moves.length - 1;
-					const newRange: MoveRange = { start, end, moves };
 
-					// Merge overlapping or adjacent ranges
-					const mergedRanges = [...state.loadedRanges, newRange]
-						.sort((a, b) => a.start - b.start)
-						.reduce((acc: MoveRange[], range) => {
-							const last = acc[acc.length - 1];
-							if (last && range.start <= last.end + 1) {
-								// Merge overlapping/adjacent ranges
-								last.end = Math.max(last.end, range.end);
-								last.moves = [...last.moves, ...range.moves];
-							} else {
-								acc.push(range);
+					// Merge all ranges into a single map indexed by move number
+					// This properly handles overlapping ranges by preferring newer data
+					const moveMap = new Map<number, MoveHistoryRecord>();
+					
+					// First, populate from existing ranges (older data)
+					for (const range of state.loadedRanges) {
+						for (let i = range.start; i <= range.end; i++) {
+							const move = range.moves[i - range.start];
+							if (move) {
+								moveMap.set(i, move);
 							}
-							return acc;
-						}, []);
+						}
+					}
+					
+					// Then, overlay with new range (newer data takes precedence)
+					for (let i = start; i <= end; i++) {
+						const move = moves[i - start];
+						if (move) {
+							moveMap.set(i, move);
+						}
+					}
+					
+					// Convert map back to contiguous ranges
+					const sortedIndices = Array.from(moveMap.keys()).sort((a, b) => a - b);
+					if (sortedIndices.length === 0) {
+						return {
+							...state,
+							loadedRanges: [],
+							isLoading: false,
+							loadingTarget: undefined
+						};
+					}
+					
+					// Build ranges from contiguous sequences
+					const newRanges: MoveRange[] = [];
+					let rangeStart = sortedIndices[0];
+					let rangeMoves: MoveHistoryRecord[] = [moveMap.get(sortedIndices[0])!];
+					
+					for (let i = 1; i < sortedIndices.length; i++) {
+						const currentIndex = sortedIndices[i];
+						const previousIndex = sortedIndices[i - 1];
+						
+						if (currentIndex === previousIndex + 1) {
+							// Contiguous - extend current range
+							rangeMoves.push(moveMap.get(currentIndex)!);
+						} else {
+							// Gap - save current range and start new one
+							newRanges.push({
+								start: rangeStart,
+								end: previousIndex,
+								moves: rangeMoves
+							});
+							rangeStart = currentIndex;
+							rangeMoves = [moveMap.get(currentIndex)!];
+						}
+					}
+					
+					// Don't forget the last range
+					newRanges.push({
+						start: rangeStart,
+						end: sortedIndices[sortedIndices.length - 1],
+						moves: rangeMoves
+					});
 
 					return {
 						...state,
-						loadedRanges: mergedRanges,
+						loadedRanges: newRanges,
 						isLoading: false,
 						loadingTarget: undefined
 					};
