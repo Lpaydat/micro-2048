@@ -54,6 +54,7 @@
 	let isCreatingNewBoard: boolean = false;
 
 	// GraphQL Definitions
+	// Optimized query - excludes moveHistory which is fetched via pagination
 	const GET_BOARD_STATE = gql`
 		query BoardState($boardId: String!) {
 			board(boardId: $boardId) {
@@ -68,12 +69,6 @@
 				createdAt
 				endTime
 				totalMoves
-				moveHistory {
-					direction
-					timestamp
-					boardAfter
-					scoreAfter
-				}
 			}
 			balance
 		}
@@ -226,6 +221,7 @@
 	let totalRhythmMoves = 0;
 
 	// GraphQL Queries and Subscriptions
+	// Note: moveHistory is fetched separately via pagination (getBoardPaginated)
 	$: game = queryStore({
 		client,
 		query: GET_BOARD_STATE,
