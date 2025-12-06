@@ -409,6 +409,7 @@
 			syncStatus = 'ready';
 			lastHashMismatchTime = null;
 			lastBoardId = boardId;
+			isLeaderboardIdSet = false; // Reset so leaderboardId updates for new board
 		}
 		handleGameStateUpdate();
 	}
