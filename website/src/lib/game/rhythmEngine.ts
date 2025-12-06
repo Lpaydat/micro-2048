@@ -218,18 +218,24 @@ export class RhythmEngine {
 		const { progress, timeToNext } = this.getCurrentBeat(timestamp);
 		const feedback = this.checkRhythm(timestamp);
 		
-		// Calculate intensity based on how close we are to beat
+		// Calculate intensity based on timing difference (same logic as checkRhythm)
+		// This ensures visual feedback matches actual move validation
+		const maxIntensity = 1;
 		let intensity = 0;
-		if (progress < 0.1 || progress > 0.9) {
-			// Near beat boundaries
-			intensity = Math.min(progress, 1 - progress) * 10;
+		
+		if (feedback.timingDiff <= 50) {
+			intensity = maxIntensity; // Perfect
+		} else if (feedback.timingDiff <= 100) {
+			intensity = 0.7; // Good
+		} else if (feedback.timingDiff <= this.settings.tolerance) {
+			intensity = 0.4; // Early/Late but valid
 		}
 
 		return {
 			isOnBeat: feedback.accuracy !== 'miss',
 			beatProgress: progress,
 			timeToNext,
-			intensity: Math.max(0, Math.min(1, intensity))
+			intensity
 		};
 	}
 }
