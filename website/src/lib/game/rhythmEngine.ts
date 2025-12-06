@@ -20,6 +20,8 @@ export class RhythmEngine {
 	private nextBeatTime: number = 0;
 	private audioContext: AudioContext | null = null;
 	private isRunning: boolean = false;
+	private scheduledBeat: number = -1; // Track which beat we've scheduled sound for
+	private metronomeIntervalId: number | null = null;
 
 	constructor(settings: RhythmSettings) {
 		this.settings = settings;
@@ -47,6 +49,7 @@ export class RhythmEngine {
 		this.lastBeatTime = this.startTime;
 		this.nextBeatTime = this.startTime + this.beatInterval;
 		this.isRunning = true;
+		this.scheduledBeat = -1; // Reset scheduled beat tracking
 		
 		// Start metronome if audio is enabled
 		this.startMetronome();
@@ -55,6 +58,10 @@ export class RhythmEngine {
 	// Stop the rhythm engine
 	stop(): void {
 		this.isRunning = false;
+		if (this.metronomeIntervalId !== null) {
+			clearInterval(this.metronomeIntervalId);
+			this.metronomeIntervalId = null;
+		}
 		if (this.audioContext) {
 			this.audioContext.close();
 			this.audioContext = null;
@@ -143,8 +150,8 @@ export class RhythmEngine {
 		return feedback.accuracy !== 'miss';
 	}
 
-	// Play metronome tick sound
-	private playTick(frequency: number = 800, duration: number = 50): void {
+	// Play metronome tick sound at a specific audio time
+	private playTickAtTime(audioTime: number, frequency: number = 800, duration: number = 0.03): void {
 		if (!this.audioContext) return;
 
 		const oscillator = this.audioContext.createOscillator();
@@ -156,35 +163,61 @@ export class RhythmEngine {
 		oscillator.frequency.value = frequency;
 		oscillator.type = 'sine';
 
-		gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
-		gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration / 1000);
+		gainNode.gain.setValueAtTime(0.3, audioTime);
+		gainNode.gain.exponentialRampToValueAtTime(0.01, audioTime + duration);
 
-		oscillator.start(this.audioContext.currentTime);
-		oscillator.stop(this.audioContext.currentTime + duration / 1000);
+		oscillator.start(audioTime);
+		oscillator.stop(audioTime + duration);
 	}
 
-	// Start metronome ticks
+	// Start metronome ticks with precise audio scheduling
 	private startMetronome(): void {
-		if (!this.settings.enabled || !this.isRunning) return;
+		if (!this.settings.enabled || !this.isRunning || !this.audioContext) return;
 
-		const tick = () => {
-			if (!this.isRunning) return;
+		// Schedule beats ahead of time for precise timing
+		const scheduleAhead = 0.1; // Schedule 100ms ahead
+		const checkInterval = 25; // Check every 25ms
+		
+		const scheduler = () => {
+			if (!this.isRunning || !this.audioContext) return;
 
 			const now = performance.now();
-			const { progress } = this.getCurrentBeat(now);
-
-			// Play tick on each beat
-			if (progress < 0.1) { // Play at the beginning of each beat
+			const audioNow = this.audioContext.currentTime;
+			
+			// Calculate which beat we're on and when the next beats occur
+			const elapsed = now - this.startTime;
+			const currentBeatNum = Math.floor(elapsed / this.beatInterval);
+			
+			// Schedule upcoming beats
+			for (let i = 0; i <= 2; i++) {
+				const beatNum = currentBeatNum + i;
+				
+				// Skip if we've already scheduled this beat
+				if (beatNum <= this.scheduledBeat) continue;
+				
+				// Calculate when this beat should play (in performance.now time)
+				const beatTimePerf = this.startTime + (beatNum * this.beatInterval);
+				const msUntilBeat = beatTimePerf - now;
+				
+				// Only schedule if it's within our lookahead window
+				if (msUntilBeat < 0 || msUntilBeat > scheduleAhead * 1000) continue;
+				
+				// Convert to audio context time
+				const beatTimeAudio = audioNow + (msUntilBeat / 1000);
+				
 				// Different frequency for downbeat (every 4 beats)
-				const frequency = (this.currentBeat % 4 === 0) ? 1000 : 800;
-				this.playTick(frequency, 30);
+				const frequency = (beatNum % 4 === 0) ? 1000 : 800;
+				this.playTickAtTime(beatTimeAudio, frequency, 0.03);
+				
+				this.scheduledBeat = beatNum;
 			}
-
-			// Schedule next tick
-			requestAnimationFrame(tick);
 		};
 
-		tick();
+		// Run scheduler at regular intervals
+		this.metronomeIntervalId = window.setInterval(scheduler, checkInterval);
+		
+		// Initial schedule
+		scheduler();
 	}
 
 	// Parse rhythm settings from description string
