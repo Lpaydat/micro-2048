@@ -33,6 +33,17 @@
 		hideOverlay = false
 	}: Props = $props();
 
+	// 🎵 Rhythm miss effect
+	let showMissEffect = $state(false);
+	
+	// Export function to trigger miss effect from parent
+	export function triggerMissEffect() {
+		showMissEffect = true;
+		setTimeout(() => {
+			showMissEffect = false;
+		}, 300);
+	}
+
 	let showOverlay = $state(true);
 
 	// Control overlay visibility
@@ -138,12 +149,17 @@
 {@render header?.()}
 {#if isRendered}
 	<div
-		class="relative w-full {$boardSize}"
+		class="board-container relative w-full {$boardSize}"
+		class:miss-shake={showMissEffect}
 		style="touch-action: none;"
 		ontouchstart={handleTouchStart}
 		ontouchmove={handleTouchMove}
 		ontouchend={handleTouchEnd}
 	>
+		<!-- Red flash overlay for miss -->
+		{#if showMissEffect}
+			<div class="miss-flash-overlay"></div>
+		{/if}
 		<GameTablet {tablet} />
 		{#if isEnded && showOverlay}
 			<div class="overlay {$boardSize}">
@@ -196,5 +212,46 @@
 
 	.lg.overlay {
 		font-size: 1.5em;
+	}
+
+	/* 🎵 Rhythm miss effect - shake animation */
+	.board-container {
+		position: relative;
+	}
+
+	.miss-shake {
+		animation: boardShake 0.3s ease-out;
+	}
+
+	@keyframes boardShake {
+		0%, 100% { transform: translateX(0); }
+		10% { transform: translateX(-8px); }
+		20% { transform: translateX(8px); }
+		30% { transform: translateX(-6px); }
+		40% { transform: translateX(6px); }
+		50% { transform: translateX(-4px); }
+		60% { transform: translateX(4px); }
+		70% { transform: translateX(-2px); }
+		80% { transform: translateX(2px); }
+		90% { transform: translateX(-1px); }
+	}
+
+	/* Red flash overlay */
+	.miss-flash-overlay {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background-color: rgba(239, 68, 68, 0.4);
+		border-radius: 6px;
+		z-index: 100;
+		pointer-events: none;
+		animation: flashFade 0.3s ease-out forwards;
+	}
+
+	@keyframes flashFade {
+		0% { opacity: 1; }
+		100% { opacity: 0; }
 	}
 </style>
