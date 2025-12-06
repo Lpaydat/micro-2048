@@ -42,11 +42,12 @@ const API_URL = `${protocol}://${config.website}:${config.port}/chains/${config.
 
 const TOURNAMENT_ID = __ENV.TOURNAMENT_ID || ''; // REQUIRED: Set this to your tournament ID
 const NUM_PLAYERS = parseInt(__ENV.NUM_PLAYERS || '20'); // Number of mock players
-const GAMES_PER_CYCLE = parseInt(__ENV.GAMES_PER_CYCLE || '3'); // Games per player per cycle
-const MOVES_PER_BATCH = parseInt(__ENV.MOVES_PER_BATCH || '10'); // Moves in each batch
-const BATCH_INTERVAL = parseInt(__ENV.BATCH_INTERVAL || '5'); // Seconds between batches
+const GAMES_PER_CYCLE = parseInt(__ENV.GAMES_PER_CYCLE || '3'); // Games per player per cycle (not used in infinite mode)
+const MOVES_PER_BATCH = parseInt(__ENV.MOVES_PER_BATCH || '15'); // Moves in each batch (10-20 range)
+const BATCH_INTERVAL = parseFloat(__ENV.BATCH_INTERVAL || '0.5'); // Seconds between batches (0.5s for fast gameplay)
 const BATCHES_PER_GAME = parseInt(__ENV.BATCHES_PER_GAME || '5'); // Number of batches per game
 const REGISTRATION_WAIT = parseInt(__ENV.REGISTRATION_WAIT || '10'); // Wait after registration (seconds)
+const TEST_DURATION = __ENV.TEST_DURATION || '10m'; // Total test duration (e.g., '10m', '1h')
 
 // ========================================
 // K6 OPTIONS
@@ -55,10 +56,9 @@ const REGISTRATION_WAIT = parseInt(__ENV.REGISTRATION_WAIT || '10'); // Wait aft
 export const options = {
 	scenarios: {
 		leaderboard_stress: {
-			executor: 'shared-iterations',
+			executor: 'constant-vus', // Changed from 'shared-iterations' to run continuously
 			vus: NUM_PLAYERS,
-			iterations: NUM_PLAYERS,
-			maxDuration: '10m'
+			duration: TEST_DURATION // Run for specified duration
 		}
 	},
 	thresholds: {
@@ -91,8 +91,9 @@ const generateMoves = (count: number): string => {
 	const moves: [string, string][] = [];
 	for (let i = 0; i < count; i++) {
 		const direction = directions[Math.floor(Math.random() * directions.length)];
-		// Must be integer timestamp - Math.floor to remove decimals
-		const timestamp = Math.floor(baseTimestamp + i * 1000 + Math.random() * 500);
+		// Fast gameplay: 100-200ms per move (average 150ms)
+		// Real fast players can make moves every 100-300ms
+		const timestamp = Math.floor(baseTimestamp + i * 150 + Math.random() * 100);
 		moves.push([direction, timestamp.toString()]);
 	}
 
@@ -300,15 +301,18 @@ export default function () {
 	);
 
 	// ========================================
-	// PHASE 2: GAME CYCLE LOOP
+	// PHASE 2: INFINITE GAME CYCLE LOOP
 	// ========================================
 
 	console.log(
-		`🎮 [${username}] Starting game cycle: ${GAMES_PER_CYCLE} games, ${BATCHES_PER_GAME} batches each`
+		`🎮 [${username}] Starting infinite game cycle until test duration ends`
 	);
+	console.log(`   ${BATCHES_PER_GAME} batches per game, ${MOVES_PER_BATCH} moves per batch`);
 
-	for (let cycle = 1; cycle <= GAMES_PER_CYCLE; cycle++) {
-		console.log(`\n🔄 [${username}] === CYCLE ${cycle}/${GAMES_PER_CYCLE} ===`);
+	let cycle = 1;
+	// Loop infinitely - k6 will stop when duration expires
+	while (true) {
+		console.log(`\n🔄 [${username}] === CYCLE ${cycle} ===`);
 
 		// Create new board
 		console.log(`🆕 [${username}] Creating new board...`);
@@ -392,19 +396,13 @@ export default function () {
 		}
 
 		console.log(`✅ [${username}] Completed cycle ${cycle}`);
+		
+		// Increment cycle counter
+		cycle++;
 
 		// Small delay before starting next cycle
-		if (cycle < GAMES_PER_CYCLE) {
-			sleep(2);
-		}
+		sleep(2);
 	}
 
-	// ========================================
-	// COMPLETION
-	// ========================================
-
-	console.log(`\n🎉 [${username}] Completed all ${GAMES_PER_CYCLE} cycles!`);
-	console.log(`   Total boards created: ${GAMES_PER_CYCLE}`);
-	console.log(`   Total batches: ${GAMES_PER_CYCLE * BATCHES_PER_GAME}`);
-	console.log(`   Total moves: ${GAMES_PER_CYCLE * BATCHES_PER_GAME * MOVES_PER_BATCH}`);
+	// Note: This code is unreachable - k6 will stop the test when duration expires
 }

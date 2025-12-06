@@ -13,8 +13,10 @@ A focused stress testing script specifically designed to test the leaderboard tr
    ↓
 4. Each player plays batches of moves every Y seconds
    ↓
-5. Repeat from step 3 for multiple cycles
+5. Repeat from step 3 INFINITELY until test duration expires
 ```
+
+**Note:** The test now runs continuously until the specified duration ends, simulating sustained player activity.
 
 ## 🚀 Quick Start
 
@@ -49,88 +51,88 @@ k6 run website/scripts/leaderboard-stress-test.ts
 | `ENVIRONMENT` | `production` | `local` or `production` |
 | `TOURNAMENT_ID` | *(required)* | Tournament/leaderboard ID to join |
 | `NUM_PLAYERS` | `20` | Number of mock players to create |
-| `GAMES_PER_CYCLE` | `3` | Games each player creates per cycle |
-| `MOVES_PER_BATCH` | `10` | Number of moves in each batch |
-| `BATCH_INTERVAL` | `5` | Seconds between batches |
+| `MOVES_PER_BATCH` | `15` | Moves per batch (10-20 for fast gameplay) |
+| `BATCH_INTERVAL` | `0.5` | Seconds between batches (0.5s = fast gameplay) |
 | `BATCHES_PER_GAME` | `5` | Number of batches per game |
 | `REGISTRATION_WAIT` | `10` | Seconds to wait after registration |
+| `TEST_DURATION` | `10m` | Total test duration (e.g., '10m', '30m', '1h') |
+
+**Move Timing:** Moves are generated with 100-200ms spacing (average 150ms) to simulate fast, real-world gameplay.
 
 ## 📊 Example Scenarios
 
-### Scenario 1: Light Load (Join & Play Along)
+### Scenario 1: Light Load (Short Test)
 
 ```bash
-# 10 players, slow gameplay
+# 10 players, 5 minute test
 TOURNAMENT_ID="abc123..." \
 NUM_PLAYERS=10 \
-GAMES_PER_CYCLE=2 \
-BATCH_INTERVAL=10 \
+TEST_DURATION=5m \
+BATCH_INTERVAL=1 \
 k6 run website/scripts/leaderboard-stress-test.ts
 ```
 
 **What this does:**
 - 10 concurrent players
-- Each creates 2 boards
-- 5 batches of 10 moves per board
-- 10 seconds between batches
-- Good for playing alongside in UI
+- Runs for 5 minutes
+- Fast gameplay (0.5s between batches, 100-200ms per move)
+- Each player creates multiple boards continuously
+- Good for quick triggerer system validation
 
-### Scenario 2: Medium Load (Test Triggerer System)
+### Scenario 2: Medium Load (Sustained Activity)
 
 ```bash
-# 30 players, moderate speed
+# 30 players, 15 minute sustained test
 TOURNAMENT_ID="abc123..." \
 NUM_PLAYERS=30 \
-GAMES_PER_CYCLE=3 \
-BATCH_INTERVAL=5 \
-BATCHES_PER_GAME=5 \
+TEST_DURATION=15m \
+MOVES_PER_BATCH=15 \
 k6 run website/scripts/leaderboard-stress-test.ts
 ```
 
 **What this does:**
 - 30 concurrent players
-- Each creates 3 boards
-- 5 batches of 10 moves per board (50 moves total)
-- 5 seconds between batches
-- Tests triggerer pool rotation
+- Runs for 15 minutes continuously
+- Fast gameplay (0.5s between batches, 15 moves per batch)
+- Tests triggerer pool rotation under sustained load
+- ~1,350 moves per player during test
 
 ### Scenario 3: High Load (Stress Test)
 
 ```bash
-# 100 players, fast gameplay
+# 100 players, maximum stress
 TOURNAMENT_ID="abc123..." \
 NUM_PLAYERS=100 \
-GAMES_PER_CYCLE=5 \
-BATCH_INTERVAL=3 \
-BATCHES_PER_GAME=10 \
+TEST_DURATION=30m \
 MOVES_PER_BATCH=20 \
+BATCHES_PER_GAME=10 \
 k6 run website/scripts/leaderboard-stress-test.ts
 ```
 
 **What this does:**
 - 100 concurrent players
-- Each creates 5 boards
-- 10 batches of 20 moves per board (200 moves total)
-- 3 seconds between batches
-- Maximum stress on triggerer system
+- Runs for 30 minutes
+- 10 batches of 20 moves per game (200 moves per game)
+- Maximum stress on triggerer system and leaderboard updates
+- Tests tier escalation and emergency recovery
 
 ### Scenario 4: Endurance Test
 
 ```bash
-# Long-running test with many cycles
+# Long-running test (1 hour+)
 TOURNAMENT_ID="abc123..." \
 NUM_PLAYERS=50 \
-GAMES_PER_CYCLE=10 \
-BATCH_INTERVAL=5 \
+TEST_DURATION=1h \
 BATCHES_PER_GAME=8 \
 k6 run website/scripts/leaderboard-stress-test.ts
 ```
 
 **What this does:**
 - 50 concurrent players
-- Each creates 10 boards (long test)
-- 8 batches of 10 moves per board (80 moves total)
-- Tests system stability over time
+- Runs for 1 hour continuously
+- 8 batches per game, ~80 moves per game
+- Tests system stability and memory leaks over extended time
+- Each player creates many boards throughout the test
 
 ## 📈 Monitoring & Metrics
 
