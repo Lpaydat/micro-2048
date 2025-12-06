@@ -603,14 +603,15 @@
 		if (rhythmEngine && rhythmSettings?.enabled) {
 			const rhythmFeedback = rhythmEngine.checkRhythm(now);
 			
-			// Check if move is valid (on beat)
-			const isValidMove = rhythmFeedback.accuracy === 'perfect' || rhythmFeedback.accuracy === 'good';
+			// Check if move is valid (on beat) - allow perfect, good, early, and late
+			// Only 'miss' is blocked (outside tolerance window)
+			const isValidMove = rhythmFeedback.accuracy !== 'miss';
 			
 			if (!isValidMove) {
 				// BLOCK the move - show miss feedback
 				missCount++;
 				rhythmCombo = 0;
-				console.log(`❌ BLOCKED! Move not on beat (${Math.abs(rhythmFeedback.timingDiff).toFixed(0)}ms off)`);
+				console.log(`❌ BLOCKED! Move not on beat (${Math.abs(rhythmFeedback.timingDiff).toFixed(0)}ms off, tolerance: ${rhythmSettings.tolerance}ms)`);
 				
 				// Trigger miss visual feedback
 				beatIndicatorRef?.showMiss();
@@ -626,12 +627,16 @@
 				perfectCount++;
 				rhythmCombo++;
 				rhythmScore += rhythmFeedback.score * (1 + rhythmCombo * 0.1);
-				console.log(`🎵 PERFECT! Combo: ${rhythmCombo}`);
+				console.log(`🎵 PERFECT! Combo: ${rhythmCombo} (${rhythmFeedback.timingDiff.toFixed(0)}ms)`);
 			} else if (rhythmFeedback.accuracy === 'good') {
 				goodCount++;
 				rhythmCombo++;
 				rhythmScore += rhythmFeedback.score * (1 + rhythmCombo * 0.05);
-				console.log(`🎵 GOOD! Combo: ${rhythmCombo}`);
+				console.log(`🎵 GOOD! Combo: ${rhythmCombo} (${rhythmFeedback.timingDiff.toFixed(0)}ms)`);
+			} else {
+				// early or late - still valid but breaks combo
+				console.log(`🎵 ${rhythmFeedback.accuracy.toUpperCase()}! (${rhythmFeedback.timingDiff.toFixed(0)}ms)`);
+				// Don't increment combo for early/late, but don't reset it either
 			}
 
 			if (rhythmCombo > maxRhythmCombo) {
