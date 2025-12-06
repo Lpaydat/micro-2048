@@ -61,6 +61,9 @@
 			(a: { score: number }, b: { score: number }) => b.score - a.score
 		) ?? []
 	);
+	
+	// Get tournament description for rhythm mode detection
+	const tournamentDescription = $derived($leaderboard?.data?.leaderboard?.description ?? '');
 
 	$effect(() => {
 		bestScore =
@@ -127,6 +130,7 @@
 					{canMakeMove}
 					{bestScore}
 					{overlayMessage}
+					{tournamentDescription}
 				/>
 			</div>
 		</div>
