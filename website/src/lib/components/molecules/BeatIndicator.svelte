@@ -9,6 +9,8 @@
 	let animationFrame: number;
 	let showMissFlash = false;
 	let heartScale = 1;
+	let leftArrowPos = 0;
+	let rightArrowPos = 100;
 
 	// Animation loop
 	const animate = () => {
@@ -23,6 +25,19 @@
 				heartScale = 1.3;
 			} else {
 				heartScale = 1 + (0.3 * (1 - Math.min(beatProgress, 1 - beatProgress) * 7));
+			}
+			
+			// Calculate arrow positions - converge to center on beat
+			// Left arrow: 0% -> 45% -> 0%
+			// Right arrow: 100% -> 55% -> 100%
+			if (beatProgress <= 0.5) {
+				// First half: moving toward center
+				leftArrowPos = beatProgress * 90; // 0 -> 45
+				rightArrowPos = 100 - (beatProgress * 90); // 100 -> 55
+			} else {
+				// Second half: moving back from edges
+				leftArrowPos = (1 - beatProgress) * 90; // 45 -> 0
+				rightArrowPos = 100 - ((1 - beatProgress) * 90); // 55 -> 100
 			}
 		}
 		animationFrame = requestAnimationFrame(animate);
@@ -45,36 +60,15 @@
 			cancelAnimationFrame(animationFrame);
 		}
 	});
-
-	// Calculate arrow positions - converge to center on beat
-	function getLeftArrowPosition(): number {
-		// Arrow moves from left edge (0%) to center (45%) on beat
-		if (beatProgress <= 0.5) {
-			// First half: moving toward center
-			return beatProgress * 90; // 0 -> 45
-		} else {
-			// Second half: moving back from center
-			return (1 - beatProgress) * 90; // 45 -> 0
-		}
-	}
-
-	function getRightArrowPosition(): number {
-		// Arrow moves from right edge (100%) to center (55%) on beat
-		if (beatProgress <= 0.5) {
-			return 100 - (beatProgress * 90); // 100 -> 55
-		} else {
-			return 100 - ((1 - beatProgress) * 90); // 55 -> 100
-		}
-	}
 </script>
 
 <div class="beat-indicator" class:miss-flash={showMissFlash}>
 	<!-- Track background -->
 	<div class="beat-track">
-		<!-- Left arrow -->
+		<!-- Left arrow (pointing right →) -->
 		<div 
 			class="beat-arrow left"
-			style="left: {getLeftArrowPosition()}%;"
+			style="left: {leftArrowPos}%;"
 		>
 			<svg viewBox="0 0 24 24" fill="currentColor">
 				<path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
@@ -93,10 +87,10 @@
 			</div>
 		</div>
 
-		<!-- Right arrow -->
+		<!-- Right arrow (pointing left ←) -->
 		<div 
 			class="beat-arrow right"
-			style="left: {getRightArrowPosition()}%;"
+			style="left: {rightArrowPos}%;"
 		>
 			<svg viewBox="0 0 24 24" fill="currentColor">
 				<path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z"/>
