@@ -587,6 +587,8 @@
 
 	// 🎵 Reference to beat indicator for miss feedback
 	let beatIndicatorRef: { showMiss: () => void } | null = null;
+	// 🎵 Reference to board for miss effect (shake + flash)
+	let boardRef: { triggerMissEffect: () => void } | null = null;
 
 	const handleMove = (direction: GameKeys, timestamp: string) => {
 		const now = Date.now();
@@ -614,8 +616,9 @@
 				rhythmCombo = 0;
 				console.log(`❌ BLOCKED! Move not on beat (${Math.abs(rhythmFeedback.timingDiff).toFixed(0)}ms off, tolerance: ${rhythmSettings.tolerance}ms)`);
 				
-				// Trigger miss visual feedback
+				// Trigger miss visual feedback on beat indicator and board
 				beatIndicatorRef?.showMiss();
+				boardRef?.triggerMissEffect();
 				
 				// Don't execute the move
 				return;
@@ -1355,6 +1358,7 @@
 <div class="game-container {$boardSize}">
 	<div class="game-board">
 		<Board
+			bind:this={boardRef}
 			tablet={state?.tablet}
 			canMakeMove={!isInspectorMode &&
 				canMakeMove &&
