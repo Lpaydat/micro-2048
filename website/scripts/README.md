@@ -2,6 +2,12 @@
 
 A comprehensive simulation test suite for the 2048 game that creates realistic bot players to test the system under various load conditions. Perfect for playing alongside bots or stress testing the infrastructure.
 
+## 📁 Test Scripts
+
+- **`simulation.ts`** - General gameplay simulation with bot personalities
+- **`leaderboard-stress-test.ts`** - Focused leaderboard/triggerer system stress test ⭐ NEW
+- **`run-leaderboard-stress-test.sh`** - Easy wrapper for leaderboard tests
+
 ## 🎯 Features
 
 - **Realistic Bot Behavior**: Multiple personality types (aggressive, strategic, casual)
@@ -9,6 +15,7 @@ A comprehensive simulation test suite for the 2048 game that creates realistic b
 - **Tournament Integration**: Auto-discovers active tournaments or uses specific ones
 - **Configurable Load**: From light testing to heavy stress testing
 - **Human-Friendly**: Bots use identifiable names and realistic timing
+- **Leaderboard Testing**: Dedicated stress test for triggerer system ⭐ NEW
 
 ## 🚀 Quick Start
 
@@ -32,6 +39,23 @@ ENVIRONMENT=local BOT_PERSONALITY=mixed GAMES_PER_BOT=2 k6 run --vus 10 --durati
 # Fast-playing aggressive bots
 ENVIRONMENT=production BOT_PERSONALITY=aggressive GAMES_PER_BOT=5 k6 run --vus 30 --duration 15m website/scripts/simulation.ts
 ```
+
+### 🎯 Leaderboard Stress Testing (NEW)
+
+Test the triggerer system and leaderboard updates:
+
+```bash
+# Easy way - using helper script
+./website/scripts/run-leaderboard-stress-test.sh <TOURNAMENT_ID> light
+
+# Available scenarios: light, medium, heavy, stress
+./website/scripts/run-leaderboard-stress-test.sh abc123def456 medium
+
+# Manual way - full control
+TOURNAMENT_ID="abc123..." NUM_PLAYERS=30 k6 run website/scripts/leaderboard-stress-test.ts
+```
+
+**See [LEADERBOARD_STRESS_TEST.md](./LEADERBOARD_STRESS_TEST.md) for detailed documentation.**
 
 ## 📋 Bot Personalities
 

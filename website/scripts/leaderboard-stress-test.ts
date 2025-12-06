@@ -1,0 +1,410 @@
+import http from 'k6/http';
+import { check, sleep } from 'k6';
+
+// ========================================
+// CONFIGURATION
+// ========================================
+
+// Environment configuration
+const ENVIRONMENT = __ENV.ENVIRONMENT || 'production'; // 'local' or 'production'
+
+const CONFIG = {
+	local: {
+		website: 'localhost',
+		port: '8088', // Linera node port (not 5173 which is SvelteKit dev server)
+		chainId: 'c157f8517881c84cd3c581ed1bda2d0d5e284e33260293dbeec927e885708863',
+		applicationId: '85dc87695b0e46d3d568b2e105517dc75fc35e256489ebddbdad36480a740043'
+	},
+	production: {
+		website: 'api.micro2048.xyz',
+		port: '443',
+		chainId: '1e39c76c6a993a30cbb4f1980d2b833bbd6a53a7bc7ad9eab9a6ec16060daf21',
+		applicationId:
+			'7625e903bba83e87ee8216722940b9c6db75d4bbc5d3438993d6094331fc83c8e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a650b3000000000000000000000'
+	}
+};
+
+// Allow environment variables to override config
+const config = {
+	website: __ENV.WEBSITE || CONFIG[ENVIRONMENT].website,
+	port: __ENV.PORT || CONFIG[ENVIRONMENT].port,
+	chainId: __ENV.CHAIN_ID || CONFIG[ENVIRONMENT].chainId,
+	applicationId: __ENV.APPLICATION_ID || CONFIG[ENVIRONMENT].applicationId
+};
+
+// Use http:// for localhost, https:// for others
+const protocol = config.website === 'localhost' ? 'http' : 'https';
+const API_URL = `${protocol}://${config.website}:${config.port}/chains/${config.chainId}/applications/${config.applicationId}`;
+
+// ========================================
+// TEST PARAMETERS (Adjustable)
+// ========================================
+
+const TOURNAMENT_ID = __ENV.TOURNAMENT_ID || ''; // REQUIRED: Set this to your tournament ID
+const NUM_PLAYERS = parseInt(__ENV.NUM_PLAYERS || '20'); // Number of mock players
+const GAMES_PER_CYCLE = parseInt(__ENV.GAMES_PER_CYCLE || '3'); // Games per player per cycle
+const MOVES_PER_BATCH = parseInt(__ENV.MOVES_PER_BATCH || '10'); // Moves in each batch
+const BATCH_INTERVAL = parseInt(__ENV.BATCH_INTERVAL || '5'); // Seconds between batches
+const BATCHES_PER_GAME = parseInt(__ENV.BATCHES_PER_GAME || '5'); // Number of batches per game
+const REGISTRATION_WAIT = parseInt(__ENV.REGISTRATION_WAIT || '10'); // Wait after registration (seconds)
+
+// ========================================
+// K6 OPTIONS
+// ========================================
+
+export const options = {
+	scenarios: {
+		leaderboard_stress: {
+			executor: 'shared-iterations',
+			vus: NUM_PLAYERS,
+			iterations: NUM_PLAYERS,
+			maxDuration: '10m'
+		}
+	},
+	thresholds: {
+		http_req_duration: ['p(95)<5000'], // 95% of requests under 5s
+		http_req_failed: ['rate<0.2'] // Error rate under 20%
+	}
+};
+
+// ========================================
+// UTILITY FUNCTIONS
+// ========================================
+
+const generateRandomString = (length: number): string => {
+	const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+	let result = '';
+	for (let i = 0; i < length; i++) {
+		result += characters.charAt(Math.floor(Math.random() * characters.length));
+	}
+	return result;
+};
+
+const generatePlayerName = (index: number): string => {
+	return `StressPlayer_${index}_${Date.now()}`;
+};
+
+const generateMoves = (count: number): string => {
+	const directions: string[] = ['Up', 'Right', 'Down', 'Left'];
+	const baseTimestamp = Date.now();
+
+	const moves: [string, string][] = [];
+	for (let i = 0; i < count; i++) {
+		const direction = directions[Math.floor(Math.random() * directions.length)];
+		// Must be integer timestamp - Math.floor to remove decimals
+		const timestamp = Math.floor(baseTimestamp + i * 1000 + Math.random() * 500);
+		moves.push([direction, timestamp.toString()]);
+	}
+
+	return JSON.stringify(moves);
+};
+
+// ========================================
+// API FUNCTIONS
+// ========================================
+
+const registerPlayer = (username: string, passwordHash: string) => {
+	const query = `
+    mutation registerPlayer($username: String!, $passwordHash: String!) {
+      registerPlayer(username: $username, passwordHash: $passwordHash)
+    }
+  `;
+
+	const variables = { username, passwordHash };
+
+	return http.post(API_URL, JSON.stringify({ query, variables }), {
+		headers: { 'Content-Type': 'application/json' },
+		timeout: '30s'
+	});
+};
+
+const getPlayerChainId = (username: string) => {
+	const query = `
+    query getPlayerChainId($username: String!) {
+      player(username: $username) {
+        chainId
+      }
+    }
+  `;
+
+	const variables = { username };
+
+	const response = http.post(API_URL, JSON.stringify({ query, variables }), {
+		headers: { 'Content-Type': 'application/json' },
+		timeout: '30s'
+	});
+
+	if (response.status !== 200) {
+		return null;
+	}
+
+	try {
+		const data = JSON.parse(response.body as string);
+		return data.data?.player?.chainId;
+	} catch (error) {
+		console.error('Failed to parse player chain response:', error);
+		return null;
+	}
+};
+
+const createGame = (
+	playerChainId: string,
+	username: string,
+	passwordHash: string,
+	leaderboardId: string
+) => {
+	const playerApiUrl = `${protocol}://${config.website}:${config.port}/chains/${playerChainId}/applications/${config.applicationId}`;
+
+	const query = `
+    mutation newBoard($player: String!, $passwordHash: String!, $timestamp: String!, $leaderboardId: String!) {
+      newBoard(player: $player, passwordHash: $passwordHash, timestamp: $timestamp, leaderboardId: $leaderboardId)
+    }
+  `;
+
+	const timestamp = Date.now().toString();
+	const variables = {
+		player: username,
+		passwordHash,
+		timestamp,
+		leaderboardId
+	};
+
+	console.log(
+		`🕐 Creating board with timestamp: ${timestamp}, leaderboardId: ${leaderboardId.substring(0, 16)}...`
+	);
+
+	return http.post(playerApiUrl, JSON.stringify({ query, variables }), {
+		headers: { 'Content-Type': 'application/json' },
+		timeout: '30s'
+	});
+};
+
+const getBoards = (playerChainId: string) => {
+	const playerApiUrl = `${protocol}://${config.website}:${config.port}/chains/${playerChainId}/applications/${config.applicationId}`;
+
+	const query = `
+    query getBoards {
+      boards {
+        boardId
+        score
+        isEnded
+      }
+    }
+  `;
+
+	const response = http.post(playerApiUrl, JSON.stringify({ query }), {
+		headers: { 'Content-Type': 'application/json' },
+		timeout: '30s'
+	});
+
+	if (response.status !== 200) {
+		console.error(`getBoards failed with status ${response.status}`);
+		console.error(`Response: ${response.body}`);
+		return [];
+	}
+
+	try {
+		const data = JSON.parse(response.body as string);
+		// Debug: show raw response
+		if (!data.data?.boards || data.data.boards.length === 0) {
+			console.log(`getBoards response (no boards):`, JSON.stringify(data));
+		}
+		return data.data?.boards || [];
+	} catch (error) {
+		console.error('Failed to parse boards response:', error);
+		console.error('Raw response:', response.body);
+		return [];
+	}
+};
+
+const makeMoves = (
+	playerChainId: string,
+	boardId: string,
+	username: string,
+	passwordHash: string,
+	moves: string
+) => {
+	const playerApiUrl = `${protocol}://${config.website}:${config.port}/chains/${playerChainId}/applications/${config.applicationId}`;
+
+	const query = `
+    mutation makeMoves($boardId: String!, $player: String!, $passwordHash: String!, $moves: String!) {
+      makeMoves(boardId: $boardId, player: $player, passwordHash: $passwordHash, moves: $moves)
+    }
+  `;
+
+	const variables = {
+		boardId,
+		player: username,
+		passwordHash,
+		moves
+	};
+
+	return http.post(playerApiUrl, JSON.stringify({ query, variables }), {
+		headers: { 'Content-Type': 'application/json' },
+		timeout: '60s'
+	});
+};
+
+// ========================================
+// MAIN TEST FUNCTION
+// ========================================
+
+export default function () {
+	// Validate tournament ID
+	if (!TOURNAMENT_ID) {
+		console.error('❌ ERROR: TOURNAMENT_ID is required. Set it via environment variable.');
+		return;
+	}
+
+	// Get VU index for unique player naming
+	const vuIndex = __VU;
+	const username = generatePlayerName(vuIndex);
+	const passwordHash = generateRandomString(16);
+
+	console.log(`🎯 [Player ${vuIndex}/${NUM_PLAYERS}] Starting leaderboard stress test`);
+	console.log(`   Tournament: ${TOURNAMENT_ID.substring(0, 16)}...`);
+	console.log(`   Username: ${username}`);
+	console.log(`   API URL: ${API_URL.substring(0, 80)}...`);
+
+	// ========================================
+	// PHASE 1: REGISTRATION
+	// ========================================
+
+	console.log(`📝 [${username}] Registering player...`);
+	const registerResponse = registerPlayer(username, passwordHash);
+	check(registerResponse, {
+		'player registration successful': (r) => r.status === 200
+	});
+
+	if (registerResponse.status !== 200) {
+		console.error(`❌ [${username}] Registration failed`);
+		console.error(`   Status: ${registerResponse.status}`);
+		console.error(`   Body: ${registerResponse.body}`);
+		return;
+	}
+
+	console.log(`✅ [${username}] Registered successfully`);
+
+	// Wait for registration to propagate
+	sleep(REGISTRATION_WAIT);
+
+	// Get player chain ID
+	const playerChainId = getPlayerChainId(username);
+	if (!playerChainId) {
+		console.error(`❌ [${username}] Failed to get chain ID`);
+		return;
+	}
+
+	console.log(
+		`✅ [${username}] Successfully got player chain ID: ${playerChainId.substring(0, 16)}...`
+	);
+
+	// ========================================
+	// PHASE 2: GAME CYCLE LOOP
+	// ========================================
+
+	console.log(
+		`🎮 [${username}] Starting game cycle: ${GAMES_PER_CYCLE} games, ${BATCHES_PER_GAME} batches each`
+	);
+
+	for (let cycle = 1; cycle <= GAMES_PER_CYCLE; cycle++) {
+		console.log(`\n🔄 [${username}] === CYCLE ${cycle}/${GAMES_PER_CYCLE} ===`);
+
+		// Create new board
+		console.log(`🆕 [${username}] Creating new board...`);
+		const createResponse = createGame(playerChainId, username, passwordHash, TOURNAMENT_ID);
+		check(createResponse, {
+			[`cycle ${cycle} board creation successful`]: (r) => r.status === 200
+		});
+
+		if (createResponse.status !== 200) {
+			console.error(`❌ [${username}] Failed to create board in cycle ${cycle}`);
+			console.error(`   Response: ${createResponse.body}`);
+			continue; // Skip to next cycle
+		}
+
+		// Check response body for errors
+		try {
+			const createData = JSON.parse(createResponse.body as string);
+			console.log(`✅ [${username}] Board creation response:`, JSON.stringify(createData));
+		} catch (e) {
+			console.log(`✅ [${username}] Board creation request sent (status ${createResponse.status})`);
+		}
+
+		// Wait longer for board creation to propagate
+		console.log(`⏳ [${username}] Waiting for board to be created...`);
+		sleep(5);
+
+		// Get all boards for this player
+		const boards = getBoards(playerChainId);
+
+		console.log(`📋 [${username}] Found ${boards.length} total boards`);
+
+		if (boards.length === 0) {
+			console.error(`❌ [${username}] No boards found after creation in cycle ${cycle}`);
+			console.error(`   This might be a timing issue - board creation may need more time`);
+			continue;
+		}
+
+		// Get the most recently created board (last in array) that isn't ended
+		const activeBoards = boards.filter((b: any) => !b.isEnded);
+
+		if (activeBoards.length === 0) {
+			console.error(`❌ [${username}] All boards are ended in cycle ${cycle}`);
+			continue;
+		}
+
+		const latestBoard = activeBoards[activeBoards.length - 1];
+		const boardId = latestBoard.boardId;
+
+		console.log(
+			`🎲 [${username}] Playing board ${boardId.substring(0, 8)}... (ended: ${latestBoard.isEnded})`
+		);
+		console.log(`   Full board ID: ${boardId}`);
+
+		// Play batches of moves
+		for (let batch = 1; batch <= BATCHES_PER_GAME; batch++) {
+			console.log(
+				`   📊 [${username}] Batch ${batch}/${BATCHES_PER_GAME}: ${MOVES_PER_BATCH} moves`
+			);
+
+			const moves = generateMoves(MOVES_PER_BATCH);
+			console.log(`   Moves being sent: ${moves.substring(0, 100)}...`);
+			const moveResponse = makeMoves(playerChainId, boardId, username, passwordHash, moves);
+
+			check(moveResponse, {
+				[`cycle ${cycle} batch ${batch} successful`]: (r) => r.status === 200
+			});
+
+			if (moveResponse.status !== 200) {
+				console.error(`❌ [${username}] Failed batch ${batch} in cycle ${cycle}`);
+				console.error(`   Status: ${moveResponse.status}`);
+				console.error(`   Response: ${moveResponse.body}`);
+			} else {
+				console.log(`✅ [${username}] Batch ${batch} completed successfully`);
+			}
+
+			// Wait between batches (except after last batch)
+			if (batch < BATCHES_PER_GAME) {
+				console.log(`   ⏳ [${username}] Waiting ${BATCH_INTERVAL}s before next batch...`);
+				sleep(BATCH_INTERVAL);
+			}
+		}
+
+		console.log(`✅ [${username}] Completed cycle ${cycle}`);
+
+		// Small delay before starting next cycle
+		if (cycle < GAMES_PER_CYCLE) {
+			sleep(2);
+		}
+	}
+
+	// ========================================
+	// COMPLETION
+	// ========================================
+
+	console.log(`\n🎉 [${username}] Completed all ${GAMES_PER_CYCLE} cycles!`);
+	console.log(`   Total boards created: ${GAMES_PER_CYCLE}`);
+	console.log(`   Total batches: ${GAMES_PER_CYCLE * BATCHES_PER_GAME}`);
+	console.log(`   Total moves: ${GAMES_PER_CYCLE * BATCHES_PER_GAME * MOVES_PER_BATCH}`);
+}
