@@ -9,8 +9,12 @@
 	let animationFrame: number;
 	let showMissFlash = false;
 	let heartScale = 1;
-	let leftArrowPos = 0;
-	let rightArrowPos = 100;
+	let heartBeat = false;
+	
+	// Track multiple bars (we show bars for current and next few beats)
+	// Each bar position is 0-100 where 50 is center
+	let leftBars: number[] = [];
+	let rightBars: number[] = [];
 
 	// Animation loop
 	const animate = () => {
@@ -19,26 +23,41 @@
 			beatProgress = visual.beatProgress;
 			isOnBeat = visual.isOnBeat;
 			
-			// Heart pulse effect - scale up at beat, scale down between
-			// Beat happens at progress = 0 (or very close to 1)
-			if (beatProgress < 0.15 || beatProgress > 0.85) {
-				heartScale = 1.3;
+			// Heart pulse effect - quick pulse at beat moment
+			if (beatProgress < 0.1) {
+				heartScale = 1.4;
+				heartBeat = true;
+			} else if (beatProgress < 0.2) {
+				heartScale = 1.2;
+				heartBeat = true;
 			} else {
-				heartScale = 1 + (0.3 * (1 - Math.min(beatProgress, 1 - beatProgress) * 7));
+				heartScale = 1;
+				heartBeat = false;
 			}
 			
-			// Calculate arrow positions - converge to center on beat
-			// Left arrow: 0% -> 45% -> 0%
-			// Right arrow: 100% -> 55% -> 100%
-			if (beatProgress <= 0.5) {
-				// First half: moving toward center
-				leftArrowPos = beatProgress * 90; // 0 -> 45
-				rightArrowPos = 100 - (beatProgress * 90); // 100 -> 55
-			} else {
-				// Second half: moving back from edges
-				leftArrowPos = (1 - beatProgress) * 90; // 45 -> 0
-				rightArrowPos = 100 - ((1 - beatProgress) * 90); // 55 -> 100
+			// Calculate bar positions
+			// Bars move from edge (0%) to center (50%) over one beat cycle
+			// We show 3 bars on each side, offset by 1/3 of a beat
+			const barsPerSide = 3;
+			const newLeftBars: number[] = [];
+			const newRightBars: number[] = [];
+			
+			for (let i = 0; i < barsPerSide; i++) {
+				// Each bar is offset by 1/barsPerSide of the beat cycle
+				const offset = i / barsPerSide;
+				let barProgress = (beatProgress + offset) % 1;
+				
+				// Left bar: moves from 0% to 50%
+				const leftPos = barProgress * 50;
+				newLeftBars.push(leftPos);
+				
+				// Right bar: moves from 100% to 50%
+				const rightPos = 100 - (barProgress * 50);
+				newRightBars.push(rightPos);
 			}
+			
+			leftBars = newLeftBars;
+			rightBars = newRightBars;
 		}
 		animationFrame = requestAnimationFrame(animate);
 	};
@@ -65,20 +84,20 @@
 <div class="beat-indicator" class:miss-flash={showMissFlash}>
 	<!-- Track background -->
 	<div class="beat-track">
-		<!-- Left arrow (pointing right →) -->
-		<div 
-			class="beat-arrow left"
-			style="left: {leftArrowPos}%;"
-		>
-			<svg viewBox="0 0 24 24" fill="currentColor">
-				<path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
-			</svg>
-		</div>
+		<!-- Left bars moving right -->
+		{#each leftBars as pos, i}
+			<div 
+				class="beat-bar left"
+				class:approaching={pos > 40}
+				style="left: {pos}%;"
+			></div>
+		{/each}
 
 		<!-- Center heart/target zone -->
 		<div class="beat-center" class:on-beat={isOnBeat}>
 			<div 
 				class="heart"
+				class:beating={heartBeat}
 				style="transform: scale({heartScale});"
 			>
 				<svg viewBox="0 0 24 24" fill="currentColor">
@@ -87,15 +106,14 @@
 			</div>
 		</div>
 
-		<!-- Right arrow (pointing left ←) -->
-		<div 
-			class="beat-arrow right"
-			style="left: {rightArrowPos}%;"
-		>
-			<svg viewBox="0 0 24 24" fill="currentColor">
-				<path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z"/>
-			</svg>
-		</div>
+		<!-- Right bars moving left -->
+		{#each rightBars as pos, i}
+			<div 
+				class="beat-bar right"
+				class:approaching={pos < 60}
+				style="left: {pos}%;"
+			></div>
+		{/each}
 	</div>
 
 	<!-- Beat zone indicator -->
@@ -128,64 +146,80 @@
 
 	.beat-track {
 		position: relative;
-		width: 200px;
+		width: 280px;
 		height: 50px;
 		background: linear-gradient(90deg, 
-			rgba(139, 92, 246, 0.1) 0%, 
-			rgba(139, 92, 246, 0.3) 40%, 
-			rgba(34, 197, 94, 0.4) 45%,
-			rgba(34, 197, 94, 0.4) 55%,
-			rgba(139, 92, 246, 0.3) 60%, 
-			rgba(139, 92, 246, 0.1) 100%
+			rgba(30, 30, 40, 0.9) 0%,
+			rgba(40, 40, 55, 0.9) 35%,
+			rgba(34, 197, 94, 0.3) 45%,
+			rgba(34, 197, 94, 0.3) 55%,
+			rgba(40, 40, 55, 0.9) 65%,
+			rgba(30, 30, 40, 0.9) 100%
 		);
-		border-radius: 25px;
-		overflow: visible;
+		border-radius: 8px;
+		overflow: hidden;
 		border: 2px solid rgba(139, 92, 246, 0.5);
+		box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
 	}
 
-	.beat-arrow {
+	/* Beat bars */
+	.beat-bar {
 		position: absolute;
-		top: 50%;
-		transform: translateY(-50%) translateX(-50%);
-		width: 24px;
-		height: 24px;
-		color: #8b5cf6;
-		transition: left 0.016s linear;
-		filter: drop-shadow(0 0 4px rgba(139, 92, 246, 0.5));
+		top: 10%;
+		height: 80%;
+		width: 6px;
+		background: linear-gradient(180deg, 
+			rgba(139, 92, 246, 0.9) 0%,
+			rgba(168, 85, 247, 1) 50%,
+			rgba(139, 92, 246, 0.9) 100%
+		);
+		border-radius: 3px;
+		transform: translateX(-50%);
+		box-shadow: 0 0 10px rgba(139, 92, 246, 0.6);
+		transition: none;
 	}
 
-	.beat-arrow.left svg {
-		transform: scaleX(1);
+	.beat-bar.approaching {
+		background: linear-gradient(180deg, 
+			rgba(34, 197, 94, 0.9) 0%,
+			rgba(74, 222, 128, 1) 50%,
+			rgba(34, 197, 94, 0.9) 100%
+		);
+		box-shadow: 0 0 15px rgba(34, 197, 94, 0.8);
 	}
 
-	.beat-arrow.right svg {
-		transform: scaleX(1);
-	}
-
+	/* Center target zone */
 	.beat-center {
 		position: absolute;
 		top: 50%;
 		left: 50%;
 		transform: translate(-50%, -50%);
-		width: 40px;
-		height: 40px;
+		width: 50px;
+		height: 50px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		z-index: 10;
+		background: radial-gradient(circle, rgba(0,0,0,0.3) 0%, transparent 70%);
+		border-radius: 50%;
 	}
 
 	.heart {
 		width: 32px;
 		height: 32px;
+		color: #6b7280;
+		transition: transform 0.08s ease-out, color 0.1s ease;
+		filter: drop-shadow(0 0 4px rgba(107, 114, 128, 0.4));
+	}
+
+	.heart.beating {
 		color: #ef4444;
-		transition: transform 0.05s ease-out;
-		filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.6));
+		filter: drop-shadow(0 0 12px rgba(239, 68, 68, 0.8));
 	}
 
 	.beat-center.on-beat .heart {
 		color: #22c55e;
-		filter: drop-shadow(0 0 12px rgba(34, 197, 94, 0.8));
+		filter: drop-shadow(0 0 15px rgba(34, 197, 94, 0.9));
 	}
 
 	.beat-zone-indicator {
@@ -208,13 +242,17 @@
 	/* Responsive */
 	@media (max-width: 640px) {
 		.beat-track {
-			width: 160px;
+			width: 220px;
 			height: 40px;
 		}
 
-		.beat-arrow {
-			width: 20px;
-			height: 20px;
+		.beat-bar {
+			width: 5px;
+		}
+
+		.beat-center {
+			width: 40px;
+			height: 40px;
 		}
 
 		.heart {
