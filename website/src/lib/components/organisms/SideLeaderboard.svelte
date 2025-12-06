@@ -38,7 +38,7 @@
 	};
 </script>
 
-<div class="mx-auto flex max-w-sm flex-col gap-4 {containerClass} h-full max-h-screen">
+<div class="mx-auto flex max-w-sm flex-col gap-4 {containerClass} overflow-hidden" style="max-height: calc(100vh - 2rem);">
 	{#if leaderboardId}
 		<div class="me-auto flex flex-none">
 			<LeaderboardDetails {leaderboardId} {...rest} {endCallback} />
@@ -47,12 +47,12 @@
 	<div
 		class="text-center {customClass} flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg bg-[#FAF8EF] shadow-md"
 	>
-		<header class="mb-4 flex flex-none flex-col items-center">
+		<header class="mb-4 flex flex-none flex-col items-center pt-4">
 			<h1 class="mb-2 text-2xl font-bold text-[#776E65]">Leaderboard</h1>
 			<p class="text-xs text-[#8F7A66]/60">Tap any player to watch their game</p>
 		</header>
 
-		<div class="min-h-0 flex-1">
+		<div class="min-h-0 flex-1 overflow-hidden">
 			<LeaderboardRankers {rankers}>
 				{#snippet item(rank, username, score, boardId, isEliminated, isEnded)}
 					<ListItem
