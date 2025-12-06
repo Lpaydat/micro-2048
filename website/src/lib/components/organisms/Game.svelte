@@ -30,8 +30,7 @@
 	} from '$lib/stores/paginatedMoveHistory';
 	import { getBoardPaginated } from '$lib/graphql/queries/getBoardPaginated';
 	import { RhythmEngine, type RhythmSettings } from '$lib/game/rhythmEngine.js';
-	import RhythmIndicator from '../molecules/RhythmIndicator.svelte';
-	import RhythmScore from '../molecules/RhythmScore.svelte';
+	import BeatIndicator from '../molecules/BeatIndicator.svelte';
 
 	// Props
 	export let isMultiplayer: boolean = false;
@@ -46,6 +45,7 @@
 	export let showBestScore: boolean = true;
 	export let leaderboardId: string | undefined = undefined;
 	export let overlayMessage: string | undefined = undefined;
+	export let tournamentDescription: string = '';
 
 	const dispatch = createEventDispatcher();
 
@@ -318,36 +318,34 @@
 	// Calculate loaded ranges reactively for visual indicator
 	$: loadedRanges = paginatedHistoryStore ? paginatedHistoryStore.getLoadedRanges() : [];
 
-	// 🎵 Initialize Rhythm System when game data loads
+	// 🎵 Initialize Rhythm System from tournament description
 	$: {
-		if ($game.data?.board) {
-			const description = $game.data.board.description || '';
-			const parsedRhythm = RhythmEngine.parseFromDescription(description);
-			
-			if (parsedRhythm) {
-				rhythmSettings = parsedRhythm;
-				if (!rhythmEngine) {
-					rhythmEngine = new RhythmEngine(rhythmSettings);
-					rhythmEngine.initAudio().then(() => {
-						rhythmEngine?.start();
-						showRhythmIndicator = true;
-						console.log('🎵 Rhythm mode activated:', rhythmSettings);
-					}).catch(err => {
-						console.warn('🎵 Audio initialization failed, visual mode only:', err);
-						rhythmEngine?.start();
-						showRhythmIndicator = true;
-					});
-				} else {
-					rhythmEngine.updateSettings(rhythmSettings);
-				}
+		// Use tournament description for rhythm settings (passed from leaderboard)
+		const parsedRhythm = RhythmEngine.parseFromDescription(tournamentDescription);
+		
+		if (parsedRhythm && $game.data?.board && !isInspectorMode) {
+			rhythmSettings = parsedRhythm;
+			if (!rhythmEngine) {
+				rhythmEngine = new RhythmEngine(rhythmSettings);
+				rhythmEngine.initAudio().then(() => {
+					rhythmEngine?.start();
+					showRhythmIndicator = true;
+					console.log('🎵 Rhythm mode activated:', rhythmSettings);
+				}).catch(err => {
+					console.warn('🎵 Audio initialization failed, visual mode only:', err);
+					rhythmEngine?.start();
+					showRhythmIndicator = true;
+				});
 			} else {
-				// No rhythm mode, stop engine if running
-				if (rhythmEngine) {
-					rhythmEngine.stop();
-					rhythmEngine = null;
-					showRhythmIndicator = false;
-					rhythmSettings = null;
-				}
+				rhythmEngine.updateSettings(rhythmSettings);
+			}
+		} else {
+			// No rhythm mode or in inspector mode, stop engine if running
+			if (rhythmEngine) {
+				rhythmEngine.stop();
+				rhythmEngine = null;
+				showRhythmIndicator = false;
+				rhythmSettings = null;
 			}
 		}
 	}
@@ -586,6 +584,9 @@
 	let lastMoveTime = 0;
 	const MOVE_COOLDOWN = 50; // 50ms minimum between moves
 
+	// 🎵 Reference to beat indicator for miss feedback
+	let beatIndicatorRef: { showMiss: () => void } | null = null;
+
 	const handleMove = (direction: GameKeys, timestamp: string) => {
 		const now = Date.now();
 		if (now - lastMoveTime < MOVE_COOLDOWN) return;
@@ -598,53 +599,43 @@
 			return;
 		}
 
-		// 🎵 Rhythm Mode Check
+		// 🎵 Rhythm Mode Check - BLOCK moves if not on beat
 		if (rhythmEngine && rhythmSettings?.enabled) {
 			const rhythmFeedback = rhythmEngine.checkRhythm(now);
+			
+			// Check if move is valid (on beat)
+			const isValidMove = rhythmFeedback.accuracy === 'perfect' || rhythmFeedback.accuracy === 'good';
+			
+			if (!isValidMove) {
+				// BLOCK the move - show miss feedback
+				missCount++;
+				rhythmCombo = 0;
+				console.log(`❌ BLOCKED! Move not on beat (${Math.abs(rhythmFeedback.timingDiff).toFixed(0)}ms off)`);
+				
+				// Trigger miss visual feedback
+				beatIndicatorRef?.showMiss();
+				
+				// Don't execute the move
+				return;
+			}
+			
+			// Valid move - update stats
 			totalRhythmMoves++;
 			
-			// Show rhythm feedback
-			const rhythmIndicator = document.querySelector('.rhythm-indicator') as any;
-			if (rhythmIndicator && rhythmIndicator.showMoveFeedback) {
-				rhythmIndicator.showMoveFeedback(rhythmFeedback);
-			}
-
-			// Update rhythm scoring
 			if (rhythmFeedback.accuracy === 'perfect') {
 				perfectCount++;
 				rhythmCombo++;
-				rhythmScore += rhythmFeedback.score * (1 + rhythmCombo * 0.1); // Combo bonus
-				console.log(`🎵 PERFECT! (+${rhythmFeedback.score}x${1 + rhythmCombo * 0.1})`);
+				rhythmScore += rhythmFeedback.score * (1 + rhythmCombo * 0.1);
+				console.log(`🎵 PERFECT! Combo: ${rhythmCombo}`);
 			} else if (rhythmFeedback.accuracy === 'good') {
 				goodCount++;
 				rhythmCombo++;
-				rhythmScore += rhythmFeedback.score * (1 + rhythmCombo * 0.05); // Smaller combo bonus
-				console.log(`🎵 GOOD! (+${rhythmFeedback.score}x${1 + rhythmCombo * 0.05})`);
-			} else {
-				missCount++;
-				rhythmCombo = 0; // Reset combo on miss
-				console.log(`❌ ${rhythmFeedback.accuracy.toUpperCase()}! (${Math.abs(rhythmFeedback.timingDiff).toFixed(0)}ms)`);
+				rhythmScore += rhythmFeedback.score * (1 + rhythmCombo * 0.05);
+				console.log(`🎵 GOOD! Combo: ${rhythmCombo}`);
 			}
 
-			// Update max combo
 			if (rhythmCombo > maxRhythmCombo) {
 				maxRhythmCombo = rhythmCombo;
-			}
-
-			// Trigger score animations
-			const rhythmScoreComponent = document.querySelector('.rhythm-score') as any;
-			if (rhythmScoreComponent) {
-				if (rhythmFeedback.accuracy === 'perfect') {
-					rhythmScoreComponent.showScoreChangeAnimation?.(rhythmFeedback.score, 'perfect');
-				} else if (rhythmFeedback.accuracy === 'good') {
-					rhythmScoreComponent.showScoreChangeAnimation?.(rhythmFeedback.score, 'good');
-				} else {
-					rhythmScoreComponent.showScoreChangeAnimation?.(0, 'miss');
-				}
-
-				if (rhythmCombo > 0 && rhythmFeedback.accuracy !== 'miss') {
-					rhythmScoreComponent.triggerComboAnimation?.();
-				}
 			}
 		}
 
@@ -1383,18 +1374,24 @@
 					/>
 					{#if showRhythmIndicator && rhythmEngine}
 						<div class="rhythm-indicator-wrapper">
-							<RhythmIndicator bind:rhythmEngine />
-						</div>
-						<div class="rhythm-score-wrapper">
-							<RhythmScore 
-								bind:rhythmScore
-								bind:combo={rhythmCombo}
-								bind:maxCombo={maxRhythmCombo}
-								bind:perfectCount
-								bind:goodCount
-								bind:missCount
-								bind:totalMoves={totalRhythmMoves}
+							<BeatIndicator 
+								{rhythmEngine} 
+								bind:this={beatIndicatorRef}
 							/>
+						</div>
+						<div class="rhythm-stats">
+							<span class="stat">
+								<span class="label">Combo</span>
+								<span class="value text-green-400">{rhythmCombo}</span>
+							</span>
+							<span class="stat">
+								<span class="label">Moves</span>
+								<span class="value text-purple-400">{totalRhythmMoves}</span>
+							</span>
+							<span class="stat">
+								<span class="label">Miss</span>
+								<span class="value text-red-400">{missCount}</span>
+							</span>
 						</div>
 					{/if}
 				</div>
@@ -1728,25 +1725,53 @@
 	.rhythm-indicator-wrapper {
 		display: flex;
 		justify-content: center;
-		padding: 0.5rem 0;
-		border-top: 1px solid rgba(156, 163, 175, 0.2);
+		padding: 0.75rem 0;
+		border-top: 1px solid rgba(139, 92, 246, 0.3);
 		margin-top: 0.5rem;
+		background: linear-gradient(180deg, rgba(139, 92, 246, 0.1) 0%, transparent 100%);
 	}
 
-	.rhythm-score-wrapper {
+	.rhythm-stats {
+		display: flex;
+		justify-content: center;
+		gap: 1.5rem;
 		padding: 0.5rem 0;
-		border-top: 1px solid rgba(156, 163, 175, 0.2);
+		font-size: 0.875rem;
+	}
+
+	.rhythm-stats .stat {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.125rem;
+	}
+
+	.rhythm-stats .label {
+		font-size: 0.625rem;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: #9ca3af;
+	}
+
+	.rhythm-stats .value {
+		font-weight: bold;
+		font-size: 1rem;
 	}
 
 	/* Responsive adjustments for rhythm indicator */
 	@media (max-width: 640px) {
 		.rhythm-indicator-wrapper {
-			padding: 0.25rem 0;
+			padding: 0.5rem 0;
 			margin-top: 0.25rem;
 		}
 
-		.rhythm-score-wrapper {
-			padding: 0.25rem 0;
+		.rhythm-stats {
+			gap: 1rem;
+			font-size: 0.75rem;
+		}
+
+		.rhythm-stats .value {
+			font-size: 0.875rem;
 		}
 	}
 </style>
