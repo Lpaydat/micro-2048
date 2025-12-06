@@ -2,7 +2,7 @@
 	import { queryStore, gql } from '@urql/svelte';
 
 	import BoardHeader from '../molecules/BoardHeader.svelte';
-	import { makeMoves } from '$lib/graphql/mutations/makeMove';
+	import { makeMoves, type MakeMoveResult } from '$lib/graphql/mutations/makeMove';
 	import { onDestroy, onMount, createEventDispatcher } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -104,6 +104,7 @@
 
 	// 🔄 Background Sync: Valid board states tracking (hash-based validation)
 	let validBoardHashes: Set<number> = new Set(); // All board states we've seen locally
+	const MAX_VALID_HASHES = 500; // Limit memory usage - keep only recent states
 
 	// 🔄 Background Sync: Activity Tracking (improved for mixed play styles)
 	let recentMoves: number[] = [];
@@ -162,11 +163,18 @@
 		return 'low'; // Very slow or paused
 	};
 
-	// Add board state to valid hashes set
+	// Add board state to valid hashes set (with memory limit)
 	const addValidBoardHash = (tablet: Tablet) => {
 		if (!tablet) return;
 		const hash = hashBoard(tablet);
-		console.log('➕ Adding valid board hash:', hash);
+		
+		// Limit memory usage - remove oldest entries if over limit
+		if (validBoardHashes.size >= MAX_VALID_HASHES) {
+			// Convert to array, keep last half, convert back to set
+			const hashArray = Array.from(validBoardHashes);
+			validBoardHashes = new Set(hashArray.slice(hashArray.length / 2));
+		}
+		
 		validBoardHashes.add(hash);
 	};
 
@@ -741,50 +749,99 @@
 		}
 	};
 
-	// 🔄 Background Sync: Non-blocking sync
+	// 🔄 Background Sync: Retry tracking
+	let syncRetryCount = 0;
+	const MAX_SYNC_RETRIES = 3;
+	const SYNC_RETRY_DELAY = 2000; // 2 seconds between retries
+
+	// 🔄 Background Sync: Non-blocking sync with confirmation
 	const backgroundSync = async (boardId: string) => {
 		if (syncStatus === 'syncing' || syncStatus === 'syncing-bg') return;
 
-		// Get moves to submit
+		// Get moves to submit (but don't flush yet!)
 		const movesToSubmit = $moveHistoryStore.get(boardId) || [];
 		if (movesToSubmit.length === 0) return;
 
-		// Submit moves without blocking
+		// Mark as syncing
 		syncStatus = 'syncing-bg';
 		const moveBatch = getMoveBatchForSubmission(movesToSubmit);
+		const moveCount = movesToSubmit.length;
+
+		console.log(`🔄 Background sync starting: ${moveCount} moves`);
 
 		try {
-			// Submit to backend first
-			makeMoves(client, moveBatch, boardId);
-			lastSyncTime = Date.now();
+			// Submit to backend and WAIT for confirmation
+			const result: MakeMoveResult = await makeMoves(client, moveBatch, boardId);
 
-			// ✅ Immediately flush moves - hash validation will confirm success
-			flushMoveHistory(boardId);
-			pendingMoveCount = 0;
+			if (result.success) {
+				// ✅ Only flush AFTER confirmed success
+				flushMoveHistory(boardId);
+				pendingMoveCount = Math.max(0, pendingMoveCount - moveCount);
+				lastSyncTime = Date.now();
+				syncRetryCount = 0; // Reset retry counter on success
+				console.log(`✅ Background sync success: ${moveCount} moves synced`);
+				
+				// Don't immediately set to ready - let hash validation confirm
+				// syncStatus will be updated by the sync interval
+			} else {
+				// ❌ Submission failed - keep moves for retry
+				console.error('Background sync failed:', result.error);
+				syncStatus = 'failed';
+				syncRetryCount++;
+				
+				// Schedule retry if under limit
+				if (syncRetryCount < MAX_SYNC_RETRIES) {
+					console.log(`🔄 Will retry sync in ${SYNC_RETRY_DELAY}ms (attempt ${syncRetryCount + 1}/${MAX_SYNC_RETRIES})`);
+					setTimeout(() => {
+						if (syncStatus === 'failed') {
+							backgroundSync(boardId);
+						}
+					}, SYNC_RETRY_DELAY);
+				} else {
+					console.error('❌ Max sync retries exceeded - triggering desync handler');
+					handleDesync();
+				}
+			}
 		} catch (error: unknown) {
-			console.error('Background sync failed:', error);
+			console.error('Background sync exception:', error);
 			syncStatus = 'failed';
-			// Keep moves in queue for retry
-			return;
+			syncRetryCount++;
+			
+			// Schedule retry if under limit
+			if (syncRetryCount < MAX_SYNC_RETRIES) {
+				setTimeout(() => {
+					if (syncStatus === 'failed') {
+						backgroundSync(boardId);
+					}
+				}, SYNC_RETRY_DELAY);
+			}
 		}
 	};
 
 	// 🔄 Background Sync: Handle desync with overlay warning
 	const handleDesync = async () => {
-		console.warn('Desync detected - initiating full sync');
+		console.warn('⚠️ Desync detected - initiating full sync');
 
 		// Pause game and show warning
 		isFrozen = true;
 		syncStatus = 'desynced';
 		overlayMessage = 'Syncing with server... Please wait.';
 
-		// Submit ALL pending moves
-		const allPending = flushMoveHistory(boardId!);
+		// Get ALL pending moves (don't flush yet)
+		const allPending = $moveHistoryStore.get(boardId!) || [];
+		
 		if (allPending.length > 0) {
-			try {
-				await makeMoves(client, getMoveBatchForSubmission(allPending), boardId!);
-			} catch (error: unknown) {
-				console.error('Failed to submit pending moves during desync:', error);
+			console.log(`🔄 Attempting to sync ${allPending.length} pending moves during desync recovery`);
+			const result = await makeMoves(client, getMoveBatchForSubmission(allPending), boardId!);
+			
+			if (result.success) {
+				// Only flush after success
+				flushMoveHistory(boardId!);
+				console.log('✅ Pending moves synced successfully during recovery');
+			} else {
+				console.error('❌ Failed to submit pending moves during desync:', result.error);
+				// Clear the moves anyway to reset state - they're likely invalid
+				flushMoveHistory(boardId!);
 			}
 		}
 
@@ -800,6 +857,7 @@
 			const currentLocalState = boardToString(state?.tablet);
 
 			if (finalBackendState !== currentLocalState) {
+				console.log('🔧 Resetting to backend state');
 				// Full reset to backend state
 				state = createState($game.data.board.board, 4, boardId!, player);
 				validBoardHashes.clear();
@@ -813,29 +871,46 @@
 		isFrozen = false;
 		syncStatus = 'ready';
 		pendingMoveCount = 0;
+		syncRetryCount = 0; // Reset retry counter
 		overlayMessage = undefined;
+		console.log('✅ Desync recovery complete');
 	};
 
-	// Legacy submit function (used for idle sync and game end)
-	const submitMoves = (boardId: string, force = false) => {
-		const moves = flushMoveHistory(boardId);
+	// Submit function (used for idle sync and game end)
+	const submitMoves = async (boardId: string, force = false) => {
+		// Get moves but don't flush yet
+		const moves = $moveHistoryStore.get(boardId) || [];
+		
 		try {
 			if (moves.length > 0 || force) {
-				makeMoves(client, getMoveBatchForSubmission(moves), boardId);
-				const newTablet = boardToString(state?.tablet);
-				stateHash = newTablet ?? '';
-				// Don't freeze UI during background sync
 				syncStatus = 'syncing-bg';
-				pendingMoveCount = 0;
-				lastSyncTime = Date.now();
+				const moveBatch = getMoveBatchForSubmission(moves);
+				const moveCount = moves.length;
+				
+				console.log(`📤 Submitting ${moveCount} moves (force: ${force})`);
+				
+				// Wait for confirmation
+				const result = await makeMoves(client, moveBatch, boardId);
+				
+				if (result.success) {
+					// Only flush after success
+					flushMoveHistory(boardId);
+					const newTablet = boardToString(state?.tablet);
+					stateHash = newTablet ?? '';
+					pendingMoveCount = Math.max(0, pendingMoveCount - moveCount);
+					lastSyncTime = Date.now();
+					syncRetryCount = 0;
+					console.log(`✅ Submit success: ${moveCount} moves`);
+				} else {
+					console.error('Submit moves failed:', result.error);
+					syncStatus = 'failed';
+					// Keep moves for retry - don't restore since we didn't flush
+				}
 			}
 		} catch (error: unknown) {
-			console.error('Submit moves failed:', error);
+			console.error('Submit moves exception:', error);
 			syncStatus = 'failed';
-			moveHistoryStore.update((history) => {
-				const boardMoves = history.get(boardId as string) || [];
-				return history.set(boardId as string, [...moves, ...boardMoves]);
-			});
+			// Keep moves for retry - they're still in the store
 		} finally {
 			activityDetected = false;
 		}
@@ -907,11 +982,20 @@
 				clearInterval(initGameIntervalId);
 			}
 			clearTimeout(idleTimeout);
-			// Submit any remaining moves when unmounting
+			// Submit any remaining moves when unmounting (fire-and-forget since we're leaving)
 			if (boardId) {
-				const moves = flushMoveHistory(boardId);
+				const moves = $moveHistoryStore.get(boardId) || [];
 				if (moves.length > 0) {
-					makeMoves(client, getMoveBatchForSubmission(moves), boardId);
+					const moveBatch = getMoveBatchForSubmission(moves);
+					// Fire and forget on unmount - can't await during cleanup
+					makeMoves(client, moveBatch, boardId)
+						.then((result) => {
+							if (result.success) {
+								flushMoveHistory(boardId!);
+								console.log('✅ Cleanup: moves synced on unmount');
+							}
+						})
+						.catch((err) => console.error('Cleanup sync failed:', err));
 				}
 			}
 		};
@@ -931,22 +1015,24 @@
 			// Skip sync validation in inspector mode (no moves to sync)
 			if (isInspectorMode) return;
 
+			const backendBoard = $game.data.board.board;
+			if (!backendBoard || !state?.tablet) return;
+
+			const backendHash = hashBoard(backendBoard);
+			const localHash = hashBoard(state.tablet);
+			const backendMatchesLocal = backendHash === localHash;
+			const backendInValidSet = validBoardHashes.has(backendHash);
+
 			// If syncing in background, validate using hash lookup
-			if (syncStatus === 'syncing-bg' && state?.tablet) {
+			if (syncStatus === 'syncing-bg') {
 				if (!syncingBackgroundStartTime) {
 					syncingBackgroundStartTime = Date.now();
 				}
 
-				const backendBoard = $game.data.board.board;
-				const backendHash = hashBoard(backendBoard);
-
 				// ✅ Simple hash validation: Has backend reached a state we've seen?
-				if (validBoardHashes.has(backendHash)) {
+				if (backendInValidSet) {
 					// Backend processed our moves successfully
-					const localHash = state?.tablet ? hashBoard(state.tablet) : null;
-					const backendMatchesLatest = localHash && backendHash === localHash;
-
-					if (backendMatchesLatest && pendingMoveCount === 0) {
+					if (backendMatchesLocal && pendingMoveCount === 0) {
 						syncStatus = 'ready';
 					} else {
 						syncStatus = 'synced';
@@ -965,66 +1051,52 @@
 					// No match yet - check if we've been waiting too long
 					const syncWaitTime = Date.now() - syncingBackgroundStartTime;
 
-					// Only trigger desync if we've waited > 5 seconds without finding a match
-					if (syncWaitTime > 5000) {
-						console.warn('Background sync timeout - backend state not found in valid hashes');
+					// Only trigger desync if we've waited > 8 seconds without finding a match
+					// Increased from 5s to give backend more time
+					if (syncWaitTime > 8000) {
+						console.warn('⏱️ Background sync timeout - backend state not found in valid hashes');
 						syncingBackgroundStartTime = null;
 						handleDesync();
 					}
 				}
 			} else {
-				// Reset sync timer when not syncing
+				// Reset sync timer when not actively syncing
 				syncingBackgroundStartTime = null;
 			}
 
-			// Simple hash validation: Check if backend state matches any valid state we've seen
-			if (state?.tablet) {
-				const backendBoard = $game.data.board.board;
-				const backendHash = hashBoard(backendBoard);
-				const localHash = hashBoard(state.tablet);
-
-				console.log('🔄 Sync validation:', {
-					syncStatus,
-					pendingMoveCount,
-					backendHash,
-					localHash,
-					hashesMatch: backendHash === localHash,
-					validHashesCount: validBoardHashes.size,
-					backendHashInValidSet: validBoardHashes.has(backendHash),
-					lastHashMismatchTime: lastHashMismatchTime ? Date.now() - lastHashMismatchTime : null
-				});
-
-				if (validBoardHashes.has(backendHash)) {
-					// ✅ Backend state is valid - reset mismatch tracking
-					const backendMatchesLatest = backendHash === localHash;
-
-					if (backendMatchesLatest && pendingMoveCount === 0) {
-						if (syncStatus !== 'ready') {
-							console.log('✅ Sync status changing to ready');
-							syncStatus = 'ready';
-						}
-					} else if (
-						syncStatus !== 'syncing-bg' &&
-						syncStatus !== 'syncing' &&
-						syncStatus !== 'synced'
-					) {
-						syncStatus = pendingMoveCount > 0 ? 'pending' : 'ready';
+			// Continuous hash validation (less frequent logging)
+			if (backendInValidSet) {
+				// ✅ Backend state is valid - reset mismatch tracking
+				if (backendMatchesLocal && pendingMoveCount === 0) {
+					if (syncStatus !== 'ready' && syncStatus !== 'syncing-bg' && syncStatus !== 'syncing') {
+						syncStatus = 'ready';
 					}
-					lastHashMismatchTime = null;
-				} else {
-					// ❌ Backend state not in our valid hash set
+				} else if (
+					syncStatus !== 'syncing-bg' &&
+					syncStatus !== 'syncing' &&
+					syncStatus !== 'synced'
+				) {
+					syncStatus = pendingMoveCount > 0 ? 'pending' : 'ready';
+				}
+				lastHashMismatchTime = null;
+			} else {
+				// ❌ Backend state not in our valid hash set
+				// Only start tracking if we have pending moves (otherwise backend is just ahead)
+				if (pendingMoveCount > 0 || syncStatus === 'syncing-bg') {
 					if (lastHashMismatchTime === null) {
 						lastHashMismatchTime = Date.now();
-						console.warn('⚠️ Hash mismatch detected - starting timer');
+						console.warn('⚠️ Hash mismatch detected - starting 30s timer');
 					} else if (Date.now() - lastHashMismatchTime > 30000) {
 						// 30 seconds of mismatch
-						console.warn(
-							'Backend state not found in valid hashes for 30+ seconds - desync detected'
-						);
-						console.log('🔍 Valid hashes:', Array.from(validBoardHashes));
-						console.log('🔍 Current backend hash:', backendHash);
+						console.warn('❌ 30+ seconds of hash mismatch - desync detected');
 						handleDesync();
 					}
+				} else {
+					// No pending moves and backend is different - likely backend is ahead
+					// Accept backend state as valid and add to our hash set
+					console.log('📥 Backend ahead - accepting new state');
+					validBoardHashes.add(backendHash);
+					lastHashMismatchTime = null;
 				}
 			}
 		}, 1000); // Check every second
