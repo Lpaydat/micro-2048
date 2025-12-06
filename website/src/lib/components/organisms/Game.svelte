@@ -1327,6 +1327,11 @@
 	onDestroy(() => {
 		setGameCreationStatus(false);
 		stopInspectorPlay();
+		// 🎵 Clean up rhythm engine to stop audio
+		if (rhythmEngine) {
+			rhythmEngine.stop();
+			rhythmEngine = null;
+		}
 	});
 
 	$: overlayMessage = hideInspectorOverlay
