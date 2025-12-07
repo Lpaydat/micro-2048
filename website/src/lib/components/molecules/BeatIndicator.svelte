@@ -121,13 +121,6 @@
 			style="left: {rightBarPos}%;"
 		></div>
 	</div>
-
-	<!-- Beat zone indicator -->
-	<div class="beat-zone-indicator">
-		<span class:active={isOnBeat}>
-			{isOnBeat ? 'GO!' : 'WAIT'}
-		</span>
-	</div>
 </div>
 
 <style>
@@ -228,23 +221,6 @@
 		filter: drop-shadow(0 0 20px rgba(34, 197, 94, 1));
 	}
 
-	.beat-zone-indicator {
-		font-size: 1rem;
-		font-weight: bold;
-		text-transform: uppercase;
-		letter-spacing: 0.15em;
-	}
-
-	.beat-zone-indicator span {
-		color: #6b7280;
-		transition: all 0.1s ease;
-	}
-
-	.beat-zone-indicator span.active {
-		color: #22c55e;
-		text-shadow: 0 0 12px rgba(34, 197, 94, 0.9);
-	}
-
 	/* Responsive */
 	@media (max-width: 640px) {
 		.beat-track {
@@ -265,10 +241,6 @@
 		.heart {
 			width: 30px;
 			height: 30px;
-		}
-
-		.beat-zone-indicator {
-			font-size: 0.875rem;
 		}
 	}
 </style>

@@ -1,23 +1,26 @@
 # Rhythm Mode Music Tracks
 
-Place your music files here. The files should be named:
-- `track1.mp3` - 120 BPM
-- `track2.mp3` - 128 BPM
-- `track3.mp3` - 100 BPM
-- `track4.mp3` - 140 BPM
-- `track5.mp3` - 110 BPM
+Music tracks from Crypt of the NecroDancer OST by Danny Baranowsky.
+
+## Current Tracks
+- `track1.mp3` - Watch Your Step (Training) - 60 BPM
+- `track2.mp3` - Crypteque (1-2) - 65 BPM
+- `track3.mp3` - Tombtorial (Tutorial) - 50 BPM
+
+## How It Works
+- A random track is selected when rhythm mode game starts
+- The same track loops throughout the game session
+- BPM is synced to the selected track automatically
+
+## Adding New Tracks
+1. Add MP3 file as `trackN.mp3`
+2. Update `MUSIC_TRACKS` array in `src/lib/game/rhythmEngine.ts`
+3. Include: name, url, bpm, beatOffset (usually 0)
 
 ## Requirements
 - MP3 format recommended
 - Must have a clear, consistent beat
-- Royalty-free or properly licensed
 - The BPM must match what's configured in `rhythmEngine.ts`
-
-## Recommended Sources for Royalty-Free Music
-- [Pixabay Music](https://pixabay.com/music/)
-- [Free Music Archive](https://freemusicarchive.org/)
-- [Incompetech](https://incompetech.com/)
-- [OpenGameArt](https://opengameart.org/)
 
 ## Tips
 - Choose music with a strong, clear beat

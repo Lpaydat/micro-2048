@@ -210,6 +210,7 @@
 	let rhythmEngine: RhythmEngine | null = null;
 	let rhythmSettings: RhythmSettings | null = null;
 	let showRhythmIndicator = false;
+	let rhythmNeedsStart = false; // True when rhythm mode detected but needs user interaction
 	
 	// Rhythm scoring
 	let rhythmScore = 0;
@@ -326,16 +327,11 @@
 		if (parsedRhythm && $game.data?.board && !isInspectorMode) {
 			rhythmSettings = parsedRhythm;
 			if (!rhythmEngine) {
+				// Create engine but don't start yet - wait for user interaction
 				rhythmEngine = new RhythmEngine(rhythmSettings);
-				rhythmEngine.initAudio().then(() => {
-					rhythmEngine?.start();
-					showRhythmIndicator = true;
-					console.log('🎵 Rhythm mode activated:', rhythmSettings);
-				}).catch(err => {
-					console.warn('🎵 Audio initialization failed, visual mode only:', err);
-					rhythmEngine?.start();
-					showRhythmIndicator = true;
-				});
+				rhythmNeedsStart = true;
+				showRhythmIndicator = true;
+				console.log('🎵 Rhythm mode detected, waiting for user to start:', rhythmSettings);
 			} else {
 				rhythmEngine.updateSettings(rhythmSettings);
 			}
@@ -346,9 +342,26 @@
 				rhythmEngine = null;
 				showRhythmIndicator = false;
 				rhythmSettings = null;
+				rhythmNeedsStart = false;
 			}
 		}
 	}
+
+	// 🎵 Start rhythm engine (called on user interaction)
+	const startRhythmEngine = async () => {
+		if (!rhythmEngine || !rhythmNeedsStart) return;
+		
+		try {
+			await rhythmEngine.initAudio();
+			rhythmEngine.start();
+			rhythmNeedsStart = false;
+			console.log('🎵 Rhythm mode started!');
+		} catch (err) {
+			console.warn('🎵 Audio initialization failed, visual mode only:', err);
+			rhythmEngine.start();
+			rhythmNeedsStart = false;
+		}
+	};
 
 	$: if (boardEnded) {
 		moveQueue = [];
@@ -410,6 +423,15 @@
 			lastHashMismatchTime = null;
 			lastBoardId = boardId;
 			isLeaderboardIdSet = false; // Reset so leaderboardId updates for new board
+			
+			// 🎵 Reset rhythm stats for new board
+			rhythmScore = 0;
+			rhythmCombo = 0;
+			maxRhythmCombo = 0;
+			perfectCount = 0;
+			goodCount = 0;
+			missCount = 0;
+			totalRhythmMoves = 0;
 		}
 		handleGameStateUpdate();
 	}
@@ -600,6 +622,12 @@
 		const tournamentEndTime = parseInt($game.data?.board?.endTime || '0');
 		if (tournamentEndTime > 0 && tournamentEndTime <= Date.now()) {
 			return;
+		}
+
+		// 🎵 Auto-start rhythm engine on first move (fallback if overlay bypassed)
+		if (rhythmNeedsStart && rhythmEngine) {
+			startRhythmEngine();
+			return; // Block this move, let them try again after audio starts
 		}
 
 		// 🎵 Rhythm Mode Check - BLOCK moves if not on beat
@@ -1407,11 +1435,32 @@
 								<span class="label">Miss</span>
 								<span class="value text-red-400">{missCount}</span>
 							</span>
+							{#if rhythmEngine?.isUsingMusic()}
+								<span class="stat">
+									<span class="label">BPM</span>
+									<span class="value text-yellow-400">{rhythmEngine.getDetectedBpm() || '?'}</span>
+								</span>
+							{/if}
 						</div>
 					{/if}
 				</div>
 			{/snippet}
 		</Board>
+		
+		<!-- 🎵 Rhythm Start Overlay - requires user interaction to start audio -->
+		{#if rhythmNeedsStart && !isInspectorMode}
+			<button
+				class="rhythm-start-overlay"
+				onclick={startRhythmEngine}
+				aria-label="Start rhythm mode"
+			>
+				<div class="rhythm-start-content">
+					<div class="rhythm-icon">🎵</div>
+					<div class="rhythm-title">Rhythm Mode</div>
+					<div class="rhythm-subtitle">Tap to Start Music</div>
+				</div>
+			</button>
+		{/if}
 	</div>
 	{#if $userStore.username && !isInspectorMode}
 		<div
@@ -1786,6 +1835,73 @@
 		}
 
 		.rhythm-stats .value {
+			font-size: 0.875rem;
+		}
+	}
+
+	/* 🎵 Rhythm Start Overlay */
+	.rhythm-start-overlay {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: rgba(0, 0, 0, 0.85);
+		backdrop-filter: blur(4px);
+		z-index: 50;
+		cursor: pointer;
+		border: none;
+		border-radius: 8px;
+		animation: rhythm-pulse 2s ease-in-out infinite;
+	}
+
+	.rhythm-start-overlay:hover {
+		background: rgba(0, 0, 0, 0.75);
+	}
+
+	@keyframes rhythm-pulse {
+		0%, 100% { box-shadow: 0 0 20px rgba(139, 92, 246, 0.5); }
+		50% { box-shadow: 0 0 40px rgba(139, 92, 246, 0.8); }
+	}
+
+	.rhythm-start-content {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.rhythm-icon {
+		font-size: 3rem;
+		animation: bounce 1s ease-in-out infinite;
+	}
+
+	@keyframes bounce {
+		0%, 100% { transform: translateY(0); }
+		50% { transform: translateY(-10px); }
+	}
+
+	.rhythm-title {
+		font-size: 1.5rem;
+		font-weight: bold;
+		color: #a78bfa;
+	}
+
+	.rhythm-subtitle {
+		font-size: 1rem;
+		color: #9ca3af;
+	}
+
+	@media (max-width: 640px) {
+		.rhythm-icon {
+			font-size: 2.5rem;
+		}
+
+		.rhythm-title {
+			font-size: 1.25rem;
+		}
+
+		.rhythm-subtitle {
 			font-size: 0.875rem;
 		}
 	}

@@ -1,3 +1,5 @@
+import { guess } from 'web-audio-beat-detector';
+
 export interface RhythmSettings {
 	enabled: boolean;
 	bpm: number;
@@ -12,29 +14,28 @@ export interface RhythmFeedback {
 	score: number;
 }
 
-// Music tracks with their BPM and beat offset
+// Music tracks - BPM and offset will be auto-detected
 export interface MusicTrack {
 	name: string;
 	url: string;
-	bpm: number;
-	beatOffset: number; // Milliseconds from start of file to first beat
+	// These are fallbacks if beat detection fails
+	fallbackBpm: number;
+	fallbackOffset: number;
 }
 
 // Music tracks from Crypt of the NecroDancer OST
-// BPM values from: https://www.tunnelflyer.com/bpm/crypt-of-the-necrodancer
-// Beat offsets (ms from file start to first beat) - set to 0 for now, can be fine-tuned
-// NOTE: When music loops, beat sync may drift. Tracks are long enough this shouldn't
-// matter for typical 2048 game sessions.
+// BPM values are fallbacks - actual BPM will be detected automatically
 export const MUSIC_TRACKS: MusicTrack[] = [
-	{ name: 'Watch Your Step (Training)', url: '/music/track1.mp3', bpm: 110, beatOffset: 0 },
-	{ name: 'Crypteque (1-2)', url: '/music/track2.mp3', bpm: 120, beatOffset: 0 },
+	{ name: 'Watch Your Step (Training)', url: '/music/track1.mp3', fallbackBpm: 110, fallbackOffset: 0 },
+	{ name: 'Crypteque (1-2)', url: '/music/track2.mp3', fallbackBpm: 130, fallbackOffset: 0 },
+	{ name: 'Tombtorial (Tutorial)', url: '/music/track3.mp3', fallbackBpm: 100, fallbackOffset: 0 },
 ];
 
 export class RhythmEngine {
 	private settings: RhythmSettings;
 	private startTime: number = 0;
 	private beatInterval: number = 0;
-	private beatOffset: number = 0; // Offset from music start to first beat
+	private beatOffset: number = 0; // Offset from music start to first beat (in ms)
 	private currentBeat: number = 0;
 	private lastBeatTime: number = 0;
 	private nextBeatTime: number = 0;
@@ -45,8 +46,11 @@ export class RhythmEngine {
 	
 	// Music playback
 	private musicElement: HTMLAudioElement | null = null;
+	private audioBuffer: AudioBuffer | null = null;
 	private currentTrack: MusicTrack | null = null;
 	private musicLoaded: boolean = false;
+	private detectedBpm: number | null = null;
+	private detectedOffset: number | null = null;
 
 	constructor(settings: RhythmSettings) {
 		this.settings = settings;
@@ -63,33 +67,62 @@ export class RhythmEngine {
 			await this.audioContext.resume();
 		}
 
-		// If using music, preload a random track
+		// If using music, preload a random track and detect its BPM
 		if (this.settings.useMusic) {
 			await this.loadRandomTrack();
 		}
 	}
 
-	// Load a random music track
+	// Load a random music track and detect its BPM
 	private async loadRandomTrack(): Promise<void> {
 		// Pick random track
 		const randomIndex = Math.floor(Math.random() * MUSIC_TRACKS.length);
 		this.currentTrack = MUSIC_TRACKS[randomIndex];
 		
-		// Update BPM and beat offset to match track
-		this.settings.bpm = this.currentTrack.bpm;
-		this.beatInterval = (60 / this.settings.bpm) * 1000;
-		this.beatOffset = this.currentTrack.beatOffset;
+		console.log(`🎵 Loading track: ${this.currentTrack.name}...`);
 		
-		// Create audio element
-		this.musicElement = new Audio(this.currentTrack.url);
-		this.musicElement.loop = true;
-		this.musicElement.volume = 0.5;
-		
-		// Preload
 		try {
-			this.musicElement.load();
+			// Fetch audio file as ArrayBuffer for beat detection
+			const response = await fetch(this.currentTrack.url);
+			if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
 			
-			// Wait for canplaythrough event
+			const arrayBuffer = await response.arrayBuffer();
+			
+			// Decode audio for beat detection
+			if (!this.audioContext) {
+				this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+			}
+			
+			this.audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer.slice(0));
+			
+			// Detect BPM and first beat offset using web-audio-beat-detector
+			console.log('🎵 Analyzing beat pattern...');
+			try {
+				// Analyze first 30 seconds for better accuracy
+				const analysisLength = Math.min(30, this.audioBuffer.duration);
+				const result = await guess(this.audioBuffer, 0, analysisLength);
+				
+				this.detectedBpm = result.bpm;
+				this.detectedOffset = result.offset * 1000; // Convert to ms
+				
+				console.log(`🎵 Beat detected: ${result.bpm} BPM, first beat at ${(result.offset * 1000).toFixed(0)}ms`);
+			} catch (detectError) {
+				console.warn('🎵 Beat detection failed, using fallback values:', detectError);
+				this.detectedBpm = this.currentTrack.fallbackBpm;
+				this.detectedOffset = this.currentTrack.fallbackOffset;
+			}
+			
+			// Update engine with detected values
+			this.settings.bpm = this.detectedBpm!;
+			this.beatInterval = (60 / this.settings.bpm) * 1000;
+			this.beatOffset = this.detectedOffset!;
+			
+			// Also create HTML Audio element for playback
+			this.musicElement = new Audio(this.currentTrack.url);
+			this.musicElement.loop = true;
+			this.musicElement.volume = 0.5;
+			
+			// Wait for it to be ready
 			await new Promise<void>((resolve, reject) => {
 				if (!this.musicElement) return reject('No music element');
 				
@@ -107,17 +140,23 @@ export class RhythmEngine {
 				
 				this.musicElement.addEventListener('canplaythrough', onCanPlay);
 				this.musicElement.addEventListener('error', onError);
+				this.musicElement.load();
 				
-				// Timeout after 5 seconds
-				setTimeout(() => reject('Load timeout'), 5000);
+				// Timeout after 10 seconds
+				setTimeout(() => reject('Load timeout'), 10000);
 			});
 			
 			this.musicLoaded = true;
-			console.log(`🎵 Loaded track: ${this.currentTrack.name} (${this.currentTrack.bpm} BPM)`);
+			console.log(`🎵 Ready: ${this.currentTrack.name} @ ${this.settings.bpm} BPM`);
+			
 		} catch (error) {
 			console.warn('🎵 Failed to load music, falling back to metronome:', error);
 			this.settings.useMusic = false;
 			this.musicLoaded = false;
+			
+			// Reset to default BPM if we don't have music
+			this.beatInterval = (60 / this.settings.bpm) * 1000;
+			this.beatOffset = 0;
 		}
 	}
 
@@ -126,16 +165,10 @@ export class RhythmEngine {
 		if (!this.settings.enabled) return;
 		
 		// For music: startTime is when we pressed play, but the first beat
-		// happens at startTime + beatOffset. So we adjust by subtracting the offset
-		// to make elapsed time calculations work correctly.
-		// 
-		// Example: beatOffset = 500ms means first beat is 500ms into the audio.
-		// At timestamp = startTime + 500ms, we want beat 0 (not beat 0.something).
-		// elapsed = timestamp - startTime = 500ms
-		// adjustedElapsed = elapsed - beatOffset = 0ms → beat 0 ✓
+		// happens at startTime + beatOffset.
 		this.startTime = performance.now();
 		this.currentBeat = 0;
-		this.lastBeatTime = this.startTime + this.beatOffset; // First beat time
+		this.lastBeatTime = this.startTime + this.beatOffset;
 		this.nextBeatTime = this.lastBeatTime + this.beatInterval;
 		this.isRunning = true;
 		this.scheduledBeat = -1;
@@ -157,7 +190,7 @@ export class RhythmEngine {
 			this.startMetronome();
 		});
 		
-		console.log(`🎵 Playing: ${this.currentTrack?.name}`);
+		console.log(`🎵 Playing: ${this.currentTrack?.name} (${this.settings.bpm} BPM, offset: ${this.beatOffset.toFixed(0)}ms)`);
 	}
 
 	// Stop the rhythm engine
@@ -203,6 +236,16 @@ export class RhythmEngine {
 		return this.currentTrack;
 	}
 
+	// Get detected BPM
+	getDetectedBpm(): number | null {
+		return this.detectedBpm;
+	}
+
+	// Get detected offset
+	getDetectedOffset(): number | null {
+		return this.detectedOffset;
+	}
+
 	// Check if using music
 	isUsingMusic(): boolean {
 		return this.settings.useMusic === true && this.musicLoaded;
@@ -220,12 +263,10 @@ export class RhythmEngine {
 		}
 
 		// Adjust elapsed time to account for beat offset
-		// First beat occurs at startTime + beatOffset
 		const elapsed = timestamp - this.startTime - this.beatOffset;
 		
-		// Before the first beat, treat as before beat 0
+		// Before the first beat
 		if (elapsed < 0) {
-			// Time until first beat
 			const timeToFirstBeat = -elapsed;
 			return {
 				accuracy: timeToFirstBeat <= this.settings.tolerance ? 'early' : 'miss',
@@ -236,7 +277,6 @@ export class RhythmEngine {
 		}
 		
 		this.currentBeat = Math.floor(elapsed / this.beatInterval);
-		// lastBeatTime and nextBeatTime are in absolute terms (performance.now() space)
 		this.lastBeatTime = this.startTime + this.beatOffset + (this.currentBeat * this.beatInterval);
 		this.nextBeatTime = this.lastBeatTime + this.beatInterval;
 
@@ -275,15 +315,11 @@ export class RhythmEngine {
 			return { beat: 0, progress: 0, timeToNext: 0 };
 		}
 
-		// Adjust for beat offset - first beat is at startTime + beatOffset
 		const elapsed = timestamp - this.startTime - this.beatOffset;
 		
 		// Before first beat
 		if (elapsed < 0) {
-			// Progress is how far we are from beat 0 (negative means before)
-			// Map it to 0-1 range where 1 is right at the beat
 			const timeToFirstBeat = -elapsed;
-			// If within 2 beats before, show progress
 			const twoBeatDuration = this.beatInterval * 2;
 			const progress = timeToFirstBeat < twoBeatDuration 
 				? 1 - (timeToFirstBeat / twoBeatDuration)
@@ -336,7 +372,6 @@ export class RhythmEngine {
 
 			const now = performance.now();
 			const audioNow = this.audioContext.currentTime;
-			// Account for beat offset - first beat at startTime + beatOffset
 			const elapsed = now - this.startTime - this.beatOffset;
 			
 			// Before first beat, check if we need to schedule beat 0
@@ -344,7 +379,7 @@ export class RhythmEngine {
 				const timeToFirstBeat = -elapsed;
 				if (timeToFirstBeat <= scheduleAhead * 1000 && this.scheduledBeat < 0) {
 					const beatTimeAudio = audioNow + (timeToFirstBeat / 1000);
-					this.playTickAtTime(beatTimeAudio, 1000, 0.03); // First beat is accented
+					this.playTickAtTime(beatTimeAudio, 1000, 0.03);
 					this.scheduledBeat = 0;
 				}
 				return;
@@ -357,7 +392,6 @@ export class RhythmEngine {
 				
 				if (beatNum <= this.scheduledBeat) continue;
 				
-				// Beat time in performance.now() space
 				const beatTimePerf = this.startTime + this.beatOffset + (beatNum * this.beatInterval);
 				const msUntilBeat = beatTimePerf - now;
 				
