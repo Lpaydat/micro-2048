@@ -30,6 +30,34 @@ impl LeaderboardMessageHandler {
             .unwrap();
         let shard = contract.state.shards.load_entry_mut("").await.unwrap();
 
+        // 🔒 FIX: Clear old tournament data when creating/updating a tournament
+        // Check if this is a NEW tournament (different leaderboard_id) or fresh chain
+        let current_tournament_id = leaderboard.leaderboard_id.get();
+        let is_new_tournament = current_tournament_id.is_empty() || current_tournament_id != &leaderboard_id;
+        
+        if is_new_tournament && !leaderboard_id.is_empty() {
+            // Clear all old score data from previous tournament
+            leaderboard.score.clear();
+            leaderboard.board_ids.clear();
+            leaderboard.is_ended.clear();
+            leaderboard.active_boards.clear();
+            leaderboard.player_activity_scores.clear();
+            leaderboard.player_board_counts.clear();
+            leaderboard.total_boards.set(0);
+            leaderboard.total_players.set(0);
+            
+            // Clear shard data too
+            shard.score.clear();
+            shard.board_ids.clear();
+            shard.is_ended.clear();
+            shard.active_boards.clear();
+            shard.highest_tiles.clear();
+            shard.game_statuses.clear();
+            shard.player_chain_ids.clear();
+            shard.tournament_player_board_counts.clear();
+            shard.counter.set(0);
+        }
+
         if !name.is_empty() {
             leaderboard.name.set(name.clone());
         }

@@ -131,16 +131,24 @@ impl GameOperationHandler {
                         GameStatus::Active
                     };
 
-                    let leaderboard = contract
+                    // 🔒 FIX: Get tournament ID from the BOARD, not from local leaderboard
+                    // The board knows which tournament it belongs to
+                    let leaderboard_id = board.leaderboard_id.get().clone();
+
+                    // 🔒 FIX: Get current best score for THIS TOURNAMENT from player_records
+                    // This ensures we track per-tournament best scores, not all-time best
+                    let player_record = contract
                         .state
-                        .leaderboards
-                        .load_entry_mut("")
+                        .player_records
+                        .load_entry_mut(&player)
                         .await
                         .unwrap();
-                    let leaderboard_id = leaderboard.leaderboard_id.get().clone();
-
-                    // Get current best score for this player in this leaderboard
-                    let current_best = leaderboard.score.get(&player).await.unwrap().unwrap_or(0);
+                    let current_best = player_record
+                        .best_score
+                        .get(&leaderboard_id)
+                        .await
+                        .unwrap()
+                        .unwrap_or(0);
 
                     // Get player's current board count for this tournament
                     let player_state = contract
@@ -174,36 +182,18 @@ impl GameOperationHandler {
                     )
                     .await;
 
-                    // 🚀 NEW: Update shard workload when scores change significantly
-                    let score_improvement = final_score.saturating_sub(current_best);
-                    if score_improvement > 2000 || is_ended {
-                        // Temporarily commented out to isolate move processing from system_time() issues
-
-                        // 🚀 REMOVED: Dynamic update happens in leaderboard update instead
-                    }
-
-                    // Update player record for significant improvements
+                    // 🔒 FIX: Update player's best score for THIS TOURNAMENT
+                    // Key by leaderboard_id (tournament_id) to keep scores separate per tournament
                     let player_record = contract
                         .state
                         .player_records
                         .load_entry_mut(&player)
                         .await
                         .unwrap();
-                    let prev_score = player_record
-                        .best_score
-                        .get(&shard_id)
-                        .await
-                        .unwrap()
-                        .unwrap_or(0);
-
-                    let score_threshold = prev_score + 1000;
-                    if final_score > score_threshold
-                        || final_highest_tile > initial_highest_tile
-                        || is_ended
-                    {
+                    if final_score > current_best {
                         player_record
                             .best_score
-                            .insert(&shard_id, final_score)
+                            .insert(&leaderboard_id, final_score)
                             .unwrap();
                     }
                 }

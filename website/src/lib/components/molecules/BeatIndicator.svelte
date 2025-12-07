@@ -11,13 +11,10 @@
 	let heartScale = 1;
 	let heartBeat = false;
 	
-	// Multiple bars - each bar takes 2 beats to travel from edge to center
-	// This way we see ~2 bars on each side at any time
-	const BEATS_TO_TRAVEL = 2; // Bar takes 2 beats to go from edge to center
-	
-	// We need to track bars across multiple beats
-	let leftBars: number[] = [];
-	let rightBars: number[] = [];
+	// Track bars moving from edges to center
+	let leftBarPos = 0;
+	let rightBarPos = 100;
+	let barApproaching = false;
 
 	// Animation loop
 	const animate = () => {
@@ -26,49 +23,51 @@
 			beatProgress = visual.beatProgress;
 			isOnBeat = visual.isOnBeat;
 			
-			// Heart pulse effect - quick pulse at beat moment
-			if (beatProgress < 0.08 || beatProgress > 0.95) {
+			// The beat timing works like this:
+			// - progress=0: start of beat interval (beat just happened)
+			// - progress=0.5: middle of beat interval
+			// - progress=1: end of beat interval (about to hit next beat)
+			// 
+			// The tolerance window in checkRhythm() allows hits near BOTH edges:
+			// - progress near 0 = close to last beat (late hit)
+			// - progress near 1 = close to next beat (early hit)
+			//
+			// For the visual, we want bars to converge at center when you should hit.
+			// We'll use a "ping-pong" style where bars reach center at both progress≈0 and progress≈1
+			//
+			// Map progress to position:
+			// - progress 0→0.5: bars move from center (50) to edge (0/100)
+			// - progress 0.5→1: bars move from edge (0/100) back to center (50)
+			//
+			// This creates a "bounce" effect where bars are at center at beat boundaries
+			
+			let normalizedProgress: number;
+			if (beatProgress <= 0.5) {
+				// First half: center to edge (50 → 0)
+				normalizedProgress = beatProgress * 2; // 0→1
+				leftBarPos = 50 * (1 - normalizedProgress); // 50→0
+				rightBarPos = 50 + 50 * normalizedProgress; // 50→100
+			} else {
+				// Second half: edge to center (0 → 50)
+				normalizedProgress = (beatProgress - 0.5) * 2; // 0→1
+				leftBarPos = 50 * normalizedProgress; // 0→50
+				rightBarPos = 100 - 50 * normalizedProgress; // 100→50
+			}
+			
+			// Bar is "approaching" (green) when close to center
+			barApproaching = beatProgress < 0.15 || beatProgress > 0.85;
+			
+			// Heart pulse effect - pulse when bars are at/near center
+			if (beatProgress < 0.1 || beatProgress > 0.9) {
 				heartScale = 1.5;
 				heartBeat = true;
-			} else if (beatProgress < 0.15) {
-				heartScale = 1.3;
+			} else if (beatProgress < 0.2 || beatProgress > 0.8) {
+				heartScale = 1.2;
 				heartBeat = true;
 			} else {
 				heartScale = 1;
 				heartBeat = false;
 			}
-			
-			// Calculate bar positions
-			// Each bar takes BEATS_TO_TRAVEL beats to go from edge (0%) to center (50%)
-			// New bar spawns at edge every beat
-			// So we show BEATS_TO_TRAVEL bars on each side
-			
-			const newLeftBars: number[] = [];
-			const newRightBars: number[] = [];
-			
-			for (let i = 0; i < BEATS_TO_TRAVEL; i++) {
-				// Each bar is offset by 1 beat (i beats behind the current one)
-				// Bar 0 is the one that will arrive at center on this beat
-				// Bar 1 is one beat behind, etc.
-				
-				// Progress through this bar's journey (0 to 1 over BEATS_TO_TRAVEL beats)
-				// Bar i started i beats ago
-				const barProgress = (beatProgress + i) / BEATS_TO_TRAVEL;
-				
-				// Only show bars that are still traveling (progress < 1)
-				if (barProgress < 1) {
-					// Left bar: 0% -> 50%
-					const leftPos = barProgress * 50;
-					newLeftBars.push(leftPos);
-					
-					// Right bar: 100% -> 50%
-					const rightPos = 100 - (barProgress * 50);
-					newRightBars.push(rightPos);
-				}
-			}
-			
-			leftBars = newLeftBars;
-			rightBars = newRightBars;
 		}
 		animationFrame = requestAnimationFrame(animate);
 	};
@@ -95,14 +94,12 @@
 <div class="beat-indicator" class:miss-flash={showMissFlash}>
 	<!-- Track background -->
 	<div class="beat-track">
-		<!-- Left bars moving right -->
-		{#each leftBars as pos}
-			<div 
-				class="beat-bar left"
-				class:approaching={pos > 35}
-				style="left: {pos}%;"
-			></div>
-		{/each}
+		<!-- Left bar moving right -->
+		<div 
+			class="beat-bar left"
+			class:approaching={barApproaching}
+			style="left: {leftBarPos}%;"
+		></div>
 
 		<!-- Center heart/target zone -->
 		<div class="beat-center" class:on-beat={isOnBeat}>
@@ -117,14 +114,12 @@
 			</div>
 		</div>
 
-		<!-- Right bars moving left -->
-		{#each rightBars as pos}
-			<div 
-				class="beat-bar right"
-				class:approaching={pos < 65}
-				style="left: {pos}%;"
-			></div>
-		{/each}
+		<!-- Right bar moving left -->
+		<div 
+			class="beat-bar right"
+			class:approaching={barApproaching}
+			style="left: {rightBarPos}%;"
+		></div>
 	</div>
 
 	<!-- Beat zone indicator -->
@@ -159,7 +154,6 @@
 	.beat-track {
 		position: relative;
 		width: 100%;
-		max-width: 400px;
 		height: 56px;
 		background: linear-gradient(90deg, 
 			rgba(20, 20, 30, 0.95) 0%,
@@ -254,7 +248,6 @@
 	/* Responsive */
 	@media (max-width: 640px) {
 		.beat-track {
-			max-width: 320px;
 			height: 48px;
 		}
 
