@@ -52,10 +52,20 @@ impl StreamProcessor {
             }
         }
 
-        // After processing all streams, emit aggregated shard scores if we processed player updates
-        if processed_player_updates {
-            Self::emit_shard_aggregation_if_needed(contract).await;
-        }
+        // 🚀 DISABLED: Auto-emit ShardScoreUpdate on player score updates
+        // Previously: if processed_player_updates { Self::emit_shard_aggregation_if_needed(contract).await; }
+        // 
+        // Problem: This caused leaderboard auto-updates because:
+        // 1. Player creates board → sends RegisterPlayerWithShard to shard
+        // 2. Shard produces block → process_streams → auto-emits ShardScoreUpdate
+        // 3. Shard sends UpdateShardTriggerCandidates to leaderboard  
+        // 4. Leaderboard produces block → process_streams → processes ShardScoreUpdate → scores update!
+        //
+        // Fix: Shards now ONLY emit ShardScoreUpdate when explicitly triggered via:
+        // - TriggerShardAggregation message (from manual refresh or auto-triggerer)
+        // 
+        // Shard still caches player scores locally via update_shard_score() for aggregation later.
+        let _ = processed_player_updates; // Suppress unused variable warning
     }
 
     /// Process player score update events
@@ -287,6 +297,9 @@ impl StreamProcessor {
     }
 
     /// Emit shard aggregation if player updates were processed
+    /// NOTE: Currently unused - aggregation only happens via TriggerShardAggregation message
+    /// Keeping for potential future use if we need automatic aggregation in specific scenarios
+    #[allow(dead_code)]
     async fn emit_shard_aggregation_if_needed(contract: &mut crate::Game2048Contract) {
         // FIXED: Only run aggregation on SHARD chains, not player chains
         // Check if this chain has shard state (non-empty leaderboard_id indicates shard chain)

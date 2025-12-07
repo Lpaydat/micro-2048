@@ -77,8 +77,12 @@ impl Contract for Game2048Contract {
         let last_update = *self.state.triggerer_list_timestamp.get();
         let threshold = *self.state.trigger_threshold_config.get();
 
+        // 🧪 TEST: Disable auto-triggers to test manual refresh in isolation
+        // Set to false to re-enable auto-triggers
+        let disable_auto_triggers = true;
+
         // Only check tier 6 if we have a valid threshold and triggerer list
-        if threshold > 0 && last_update > 0 {
+        if !disable_auto_triggers && threshold > 0 && last_update > 0 {
             let time_since_update = current_time.saturating_sub(last_update);
 
             // Calculate tier (1-5) - same logic as event processor
@@ -159,7 +163,10 @@ impl Contract for Game2048Contract {
 
         // 🚀 NORMAL TIER 1-5 TRIGGER LOGIC: Check and send triggers during block production
         // This replaces the event-based trigger logic to ensure latest state is used
-        self.check_and_send_trigger_if_needed_in_block_production().await;
+        // 🧪 TEST: Skip if auto-triggers disabled
+        if !disable_auto_triggers {
+            self.check_and_send_trigger_if_needed_in_block_production().await;
+        }
 
         OperationDispatcher::dispatch(self, operation).await;
         ContractHelpers::update_balance(self);

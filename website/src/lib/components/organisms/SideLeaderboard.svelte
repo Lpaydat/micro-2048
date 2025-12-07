@@ -57,11 +57,13 @@
 	});
 
 	// Leaderboard refresh state
-	const playerClient = $derived(getClient($userStore.chainId, true));
+	// 🚀 IMPROVED: Call mutation directly on leaderboard chain (leaderboardId IS the chain ID)
+	// Shared 10s cooldown with backend - manual refresh and auto-triggers share this
+	const leaderboardClient = $derived(leaderboardId ? getClient(leaderboardId, true) : null);
 	let lastRefreshTime = $state(0);
 	let isRefreshing = $state(false);
 	let now = $state(Date.now()); // Reactive time for countdown
-	const REFRESH_COOLDOWN_MS = 10000; // 10 seconds cooldown
+	const REFRESH_COOLDOWN_MS = 10000; // 10 seconds cooldown (matches backend)
 
 	const canRefresh = $derived.by(() => {
 		if (!shouldShowRefreshButton) return false;
@@ -74,13 +76,14 @@
 	});
 
 	const triggerLeaderboardRefresh = async () => {
-		if (!canRefresh || isRefreshing || !leaderboardId) return;
+		if (!canRefresh || isRefreshing || !leaderboardClient) return;
 
 		isRefreshing = true;
 		lastRefreshTime = Date.now();
 
 		try {
-			const result = requestLeaderboardRefresh(playerClient, leaderboardId);
+			// 🚀 Call updateLeaderboard mutation directly on leaderboard chain
+			const result = requestLeaderboardRefresh(leaderboardClient);
 			if (result) {
 				result.subscribe((res) => {
 					if (res.error) {

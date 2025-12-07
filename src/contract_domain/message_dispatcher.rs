@@ -78,14 +78,12 @@ impl MessageDispatcher {
                 .await;
             }
             Message::LeaderboardNewGame {
-                player,
-                board_id,
-                timestamp,
+                player: _,
+                board_id: _,
+                timestamp: _,
             } => {
-                LeaderboardMessageHandler::handle_leaderboard_new_game(
-                    contract, player, board_id, timestamp,
-                )
-                .await;
+                // 🚀 DEPRECATED: No-op - board/player counting now handled by shard aggregation
+                // Keeping handler to process any pending messages in queue
             }
             Message::UpdateScore {
                 player,

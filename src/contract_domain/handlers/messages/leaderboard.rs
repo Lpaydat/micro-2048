@@ -122,6 +122,9 @@ impl LeaderboardMessageHandler {
         contract.emit_active_tournaments().await;
     }
 
+    /// 🚀 DEPRECATED: Board/player counting now handled by shard aggregation
+    /// Keeping for backwards compatibility with any pending messages
+    #[allow(dead_code)]
     pub async fn handle_leaderboard_new_game(
         contract: &mut crate::Game2048Contract,
         player: String,
@@ -445,8 +448,15 @@ impl LeaderboardMessageHandler {
         .await;
     }
 
-    /// Handle trigger update request from player chain with simple global cooldown
-    /// First triggerer wins and sends to ALL shards, then 15s cooldown blocks others
+    /// Handle trigger update request from player chains (auto-trigger system)
+    /// 
+    /// 🚀 IMPROVED: Now accepts triggers from ANY chain (not just authorized triggerers)
+    /// This allows both auto-triggers and manual refresh to work.
+    /// 
+    /// Protection against spam:
+    /// - 10s shared cooldown (both auto-triggerers and manual refresh share this)
+    /// - UI already gates refresh button (only shows when score > leaderboard score)
+    /// - First trigger wins, others are silently ignored until cooldown expires
     pub async fn handle_trigger_update(
         contract: &mut crate::Game2048Contract,
         triggerer_chain_id: String,
@@ -465,15 +475,8 @@ impl LeaderboardMessageHandler {
             return;
         }
 
-        // Check if this chain is authorized to trigger
-        let is_authorized = leaderboard.primary_triggerer.get() == &triggerer_chain_id
-            || Self::is_backup_triggerer(&leaderboard, &triggerer_chain_id).await;
-
-        if !is_authorized {
-            return;
-        }
-
-        // 🚀 GLOBAL COOLDOWN CHECK - Only first triggerer per window succeeds
+        // 🚀 SHARED COOLDOWN CHECK - First trigger wins (auto or manual)
+        // Both authorized triggerers and manual refresh share this cooldown
         let cooldown_until = *leaderboard.trigger_cooldown_until.get();
 
         if timestamp < cooldown_until {
@@ -493,7 +496,8 @@ impl LeaderboardMessageHandler {
         }
 
         // Set global cooldown FIRST (prevents race conditions)
-        let cooldown_duration = 15_000_000; // 15 seconds in microseconds
+        // 🚀 CHANGED: 10 seconds cooldown (down from 15s for better responsiveness)
+        let cooldown_duration = 10_000_000; // 10 seconds in microseconds
         leaderboard
             .trigger_cooldown_until
             .set(timestamp + cooldown_duration);
@@ -518,6 +522,9 @@ impl LeaderboardMessageHandler {
     }
 
     /// Check if a chain ID is in the backup triggerers list
+    /// Note: Currently unused since we allow any chain to trigger (with cooldown protection)
+    /// Keeping for potential future use if we need stricter authorization
+    #[allow(dead_code)]
     async fn is_backup_triggerer(leaderboard: &crate::state::Leaderboard, chain_id: &str) -> bool {
         if let Ok(backups) = leaderboard.backup_triggerers.read_front(10).await {
             backups.iter().any(|backup_id| backup_id == chain_id)

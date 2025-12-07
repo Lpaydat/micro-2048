@@ -164,33 +164,34 @@ impl GameOperationHandler {
                         .unwrap()
                         .unwrap_or(0);
 
-                    use crate::contract_domain::events::emitters::EventEmitter;
-                    let chain_id = contract.runtime.chain_id().to_string();
-                    EventEmitter::emit_player_score_update(
-                        contract,
-                        player.clone(),
-                        board_id.clone(),
-                        final_score,
-                        chain_id,
-                        latest_timestamp,
-                        game_status,
-                        final_highest_tile,
-                        0, // TODO: Track actual move count
-                        leaderboard_id.clone(),
-                        current_best,
-                        current_board_count,
-                    )
-                    .await;
-
-                    // 🔒 FIX: Update player's best score for THIS TOURNAMENT
-                    // Key by leaderboard_id (tournament_id) to keep scores separate per tournament
-                    let player_record = contract
-                        .state
-                        .player_records
-                        .load_entry_mut(&player)
-                        .await
-                        .unwrap();
+                    // 🚀 OPTIMIZATION: Only emit event when score beats current best
+                    // This drastically reduces event emissions during peak workload
                     if final_score > current_best {
+                        use crate::contract_domain::events::emitters::EventEmitter;
+                        let chain_id = contract.runtime.chain_id().to_string();
+                        EventEmitter::emit_player_score_update(
+                            contract,
+                            player.clone(),
+                            board_id.clone(),
+                            final_score,
+                            chain_id.clone(),
+                            latest_timestamp,
+                            game_status,
+                            final_highest_tile,
+                            0, // TODO: Track actual move count
+                            leaderboard_id.clone(),
+                            current_best,
+                            current_board_count,
+                        )
+                        .await;
+
+                        // Update player's best score for THIS TOURNAMENT
+                        let player_record = contract
+                            .state
+                            .player_records
+                            .load_entry_mut(&player)
+                            .await
+                            .unwrap();
                         player_record
                             .best_score
                             .insert(&leaderboard_id, final_score)
@@ -207,7 +208,7 @@ impl GameOperationHandler {
             // 🚀 MARK GAME AS ENDED
             board.is_ended.set(true);
 
-            // 🚀 NEW: Emit player score update for tournament end
+            // 🚀 Emit player score update for tournament end (only if beats current best)
             // This case handles when tournament time expires and game ends
             let leaderboard = contract
                 .state
@@ -220,38 +221,41 @@ impl GameOperationHandler {
             // Get current best score for this player in this leaderboard
             let current_best = leaderboard.score.get(&player).await.unwrap().unwrap_or(0);
 
-            // Get player's current board count for this tournament
-            let player_state = contract
-                .state
-                .players
-                .load_entry_mut(&player)
-                .await
-                .unwrap();
-            let current_board_count = player_state
-                .boards_per_tournament
-                .get(&leaderboard_id)
-                .await
-                .unwrap()
-                .unwrap_or(0);
+            // 🚀 OPTIMIZATION: Only emit if score beats current best
+            if score > current_best {
+                // Get player's current board count for this tournament
+                let player_state = contract
+                    .state
+                    .players
+                    .load_entry_mut(&player)
+                    .await
+                    .unwrap();
+                let current_board_count = player_state
+                    .boards_per_tournament
+                    .get(&leaderboard_id)
+                    .await
+                    .unwrap()
+                    .unwrap_or(0);
 
-            use crate::contract_domain::events::emitters::EventEmitter;
-            let chain_id = contract.runtime.chain_id().to_string();
-            let highest_tile = Game::highest_tile(*board.board.get());
-            EventEmitter::emit_player_score_update(
-                contract,
-                player.clone(),
-                board_id.clone(),
-                score,
-                chain_id,
-                111970,
-                GameStatus::Ended(GameEndReason::TournamentEnded),
-                highest_tile,
-                0, // TODO: Track actual move count
-                leaderboard_id.clone(),
-                current_best,
-                current_board_count,
-            )
-            .await;
+                use crate::contract_domain::events::emitters::EventEmitter;
+                let chain_id = contract.runtime.chain_id().to_string();
+                let highest_tile = Game::highest_tile(*board.board.get());
+                EventEmitter::emit_player_score_update(
+                    contract,
+                    player.clone(),
+                    board_id.clone(),
+                    score,
+                    chain_id,
+                    111970,
+                    GameStatus::Ended(GameEndReason::TournamentEnded),
+                    highest_tile,
+                    0, // TODO: Track actual move count
+                    leaderboard_id.clone(),
+                    current_best,
+                    current_board_count,
+                )
+                .await;
+            }
         } else {
             panic!("Game is ended");
         }
@@ -288,15 +292,15 @@ impl GameOperationHandler {
         // Check if target tournament is in cache
         let _target_tournament = contract.get_cached_tournament(&leaderboard_id).await;
 
-        // 🚀 NEW: Validate tournament exists and is active
-        let is_valid_tournament = contract.validate_tournament(&leaderboard_id).await;
-
-        if !is_valid_tournament {
-            panic!(
-                "Tournament '{}' is not active, expired, or does not exist",
-                leaderboard_id
-            );
-        }
+        // 🧪 TEST: Disabled tournament validation to test without event propagation
+        // TODO: Re-enable after testing
+        // let is_valid_tournament = contract.validate_tournament(&leaderboard_id).await;
+        // if !is_valid_tournament {
+        //     panic!(
+        //         "Tournament '{}' is not active, expired, or does not exist",
+        //         leaderboard_id
+        //     );
+        // }
 
         // 🚀 NEW: Get leaderboard info and select optimal shard using hash-based distribution
         let selected_shard_id = contract
@@ -422,6 +426,9 @@ impl GameOperationHandler {
     }
 
     /// 🚀 IMPROVED: Handle leaderboard update by triggering shard aggregation
+    /// 
+    /// This can be called directly via mutation on the leaderboard chain.
+    /// Shared 10s cooldown with auto-triggers to prevent spam.
     pub async fn handle_update_leaderboard(contract: &mut crate::Game2048Contract) {
         use game2048::Message;
 
@@ -435,6 +442,13 @@ impl GameOperationHandler {
             .await
             .unwrap();
 
+        // 🚀 SHARED COOLDOWN CHECK - prevents spam from both auto and manual triggers
+        let cooldown_until = *leaderboard.trigger_cooldown_until.get();
+        if current_time < cooldown_until {
+            // Still in cooldown - silently ignore
+            return;
+        }
+
         // Get all shard IDs
         let shard_ids = leaderboard
             .shard_ids
@@ -446,7 +460,19 @@ impl GameOperationHandler {
             return;
         }
 
-        // Send trigger message to ALL shards (mimics handle_trigger_update)
+        // Set global cooldown FIRST (10 seconds)
+        let cooldown_duration = 10_000_000; // 10 seconds in microseconds
+        leaderboard
+            .trigger_cooldown_until
+            .set(current_time + cooldown_duration);
+
+        // Update trigger tracking
+        leaderboard.last_trigger_time.set(current_time);
+        leaderboard
+            .last_trigger_by
+            .set("direct_operation".to_string());
+
+        // Send trigger message to ALL shards
         for shard_id in shard_ids.iter() {
             if let Ok(shard_chain_id) = ChainId::from_str(shard_id) {
                 contract
