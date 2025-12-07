@@ -81,10 +81,10 @@
 	});
 	const isPinnedAndActive = $derived(isPinned && isCurrentlyActive());
 	
-	// Rhythm mode styling - purple/violet gradient theme
+	// Rhythm mode styling - purple/violet gradient theme with pulse animation on hover
 	const rhythmClass = $derived(
 		isRhythmMode
-			? '!bg-gradient-to-br !from-violet-100 !to-purple-100 !border-2 !border-violet-400'
+			? 'rhythm-item !bg-gradient-to-br !from-violet-100 !to-purple-100 !border-2 !border-violet-400'
 			: ''
 	);
 	
@@ -149,7 +149,7 @@
 
 <BaseListItem className={itemClass}>
 	{#snippet leftContent()}
-		<a href={`/events/${leaderboardId}`}>
+		<a href={`/events/${leaderboardId}`} class={isRhythmMode ? 'rhythm-link' : ''}>
 			<div class="flex w-full items-center justify-between pb-3">
 				<div class="flex flex-wrap items-center gap-2">
 					<h3 class="text-xl font-bold {isRhythmMode ? 'text-violet-800' : 'text-gray-800'}">{name}</h3>
@@ -216,3 +216,66 @@
 		</div>
 	{/snippet}
 </BaseListItem>
+
+<style>
+	/* Rhythm mode hover effects */
+	:global(.rhythm-item) {
+		transition: all 0.3s ease;
+		position: relative;
+		overflow: hidden;
+	}
+
+	:global(.rhythm-item::before) {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: -100%;
+		width: 100%;
+		height: 100%;
+		background: linear-gradient(
+			90deg,
+			transparent,
+			rgba(139, 92, 246, 0.2),
+			transparent
+		);
+		transition: left 0.5s ease;
+		pointer-events: none;
+	}
+
+	:global(.rhythm-item:hover) {
+		background: linear-gradient(to bottom right, rgb(221, 214, 254), rgb(233, 213, 255)) !important;
+		border-color: rgb(139, 92, 246) !important;
+		box-shadow: 
+			0 0 20px rgba(139, 92, 246, 0.4),
+			0 0 40px rgba(139, 92, 246, 0.2),
+			inset 0 0 20px rgba(139, 92, 246, 0.1);
+		transform: scale(1.01);
+	}
+
+	:global(.rhythm-item:hover::before) {
+		left: 100%;
+	}
+
+	/* Pulsing glow animation for active rhythm items */
+	@keyframes rhythm-pulse {
+		0%, 100% {
+			box-shadow: 
+				0 0 15px rgba(139, 92, 246, 0.5),
+				0 0 30px rgba(139, 92, 246, 0.3);
+		}
+		50% {
+			box-shadow: 
+				0 0 25px rgba(139, 92, 246, 0.7),
+				0 0 50px rgba(139, 92, 246, 0.4);
+		}
+	}
+
+	:global(.rhythm-item:hover .badge) {
+		animation: badge-bounce 0.5s ease;
+	}
+
+	@keyframes badge-bounce {
+		0%, 100% { transform: scale(1); }
+		50% { transform: scale(1.1); }
+	}
+</style>
