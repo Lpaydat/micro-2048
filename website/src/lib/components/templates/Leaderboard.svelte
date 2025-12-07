@@ -6,6 +6,7 @@
 	import Plus from 'lucide-svelte/icons/plus';
 	import GitBranchPlus from 'lucide-svelte/icons/git-branch-plus';
 	import ContinueIcon from 'lucide-svelte/icons/step-forward';
+	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
 	import MainTemplate from '../organisms/MainTemplate.svelte';
 	import RankerLeaderboard from '../organisms/RankerLeaderboard.svelte';
 	import UserSidebar from '../organisms/UserSidebar.svelte';
@@ -25,6 +26,7 @@
 	import { addShards, getShards } from '$lib/stores/shards';
 	import { getBoard } from '$lib/graphql/queries/getBoard';
 	import { requestFaucetMutation } from '$lib/graphql/mutations/requestFaucet';
+	import { requestLeaderboardRefresh } from '$lib/graphql/mutations/requestLeaderboardRefresh';
 
 	interface Props {
 		leaderboardId?: string;
@@ -93,6 +95,78 @@
 	let newGameAt = $state(Date.now());
 	let isNewGameCreated = $state(false);
 	let isCreatingNewGame = $state(false);
+
+	// Leaderboard refresh state
+	let lastRefreshTime = $state(0);
+	let isRefreshing = $state(false);
+	let now = $state(Date.now()); // Reactive time for countdown
+	const REFRESH_COOLDOWN_MS = 10000; // 10 seconds cooldown
+
+	// Get current player's best score from leaderboard
+	const playerLeaderboardScore = $derived.by(() => {
+		const username = $userStore.username;
+		const rankers = $leaderboard?.data?.leaderboard?.rankers;
+		if (!username || !rankers?.length) return 0;
+		const playerRanker = rankers.find((r: { username: string }) => r.username === username);
+		return playerRanker?.score ?? 0;
+	});
+
+	// Get current board score (from player's active board)
+	const currentBoardScore = $derived($board?.data?.board?.score ?? 0);
+
+	// Show refresh button only when current score > leaderboard score
+	const shouldShowRefreshButton = $derived.by(() => {
+		if (!$userStore.username || !leaderboardId) return false;
+		return currentBoardScore > playerLeaderboardScore;
+	});
+
+	const canRefresh = $derived.by(() => {
+		if (!shouldShowRefreshButton) return false;
+		return now - lastRefreshTime >= REFRESH_COOLDOWN_MS;
+	});
+
+	const refreshCooldownRemaining = $derived.by(() => {
+		const remaining = REFRESH_COOLDOWN_MS - (now - lastRefreshTime);
+		return remaining > 0 ? Math.ceil(remaining / 1000) : 0;
+	});
+
+	const triggerLeaderboardRefresh = async () => {
+		if (!canRefresh || isRefreshing) return;
+
+		isRefreshing = true;
+		lastRefreshTime = Date.now();
+
+		try {
+			const result = requestLeaderboardRefresh(playerClient, leaderboardId);
+			if (result) {
+				result.subscribe((res) => {
+					if (res.error) {
+						console.error('Leaderboard refresh failed:', res.error);
+					} else {
+						console.log('Leaderboard refresh triggered successfully');
+						// Refresh the leaderboard data after a short delay
+						setTimeout(() => {
+							leaderboard.reexecute({ requestPolicy: 'network-only' });
+						}, 2000);
+					}
+					isRefreshing = false;
+				});
+			} else {
+				isRefreshing = false;
+			}
+		} catch (error) {
+			console.error('Failed to trigger leaderboard refresh:', error);
+			isRefreshing = false;
+		}
+	};
+
+	// Update countdown timer every second
+	onMount(() => {
+		const interval = setInterval(() => {
+			now = Date.now();
+		}, 1000);
+		return () => clearInterval(interval);
+	});
 
 	const newEventGame = async () => {
 		if (isNewGameCreated || isCreatingNewGame) return;
@@ -244,6 +318,29 @@
 		{:else}
 			<PageHeader title={$leaderboard?.data?.leaderboard?.name} {prevPage}>
 				{#snippet subActions()}
+					{#if shouldShowRefreshButton}
+						<button
+							type="button"
+							class="btn-icon relative"
+							onclick={triggerLeaderboardRefresh}
+							disabled={!canRefresh || isRefreshing}
+							title={canRefresh ? 'Refresh leaderboard scores' : `Wait ${refreshCooldownRemaining}s`}
+						>
+							<RefreshCw
+								size={20}
+								class={isRefreshing ? 'animate-spin' : ''}
+								strokeWidth={2}
+								color={canRefresh ? '#4ade80' : '#6b7280'}
+							/>
+							{#if !canRefresh && refreshCooldownRemaining > 0}
+								<span
+									class="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-gray-700 text-[10px] text-gray-300"
+								>
+									{refreshCooldownRemaining}
+								</span>
+							{/if}
+						</button>
+					{/if}
 					{#if canPinEvent}
 						<button type="button" class="btn-icon" onclick={togglePin}>
 							<Star size={20} fill={isPinned ? '#FFCC00' : 'none'} strokeWidth={isPinned ? 0 : 2} />
