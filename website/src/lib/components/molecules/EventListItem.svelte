@@ -10,6 +10,7 @@
 	import { formatInTimeZone } from 'date-fns-tz';
 	import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
 	import { onDestroy } from 'svelte';
+	import Music from 'lucide-svelte/icons/music';
 
 	interface Props {
 		leaderboardId: string;
@@ -41,6 +42,28 @@
 		callback
 	}: Props = $props();
 
+	// Check if this is a rhythm mode tournament
+	const isRhythmMode = $derived(description?.includes('[RHYTHM_MODE:true') ?? false);
+	
+	// Extract rhythm settings from description
+	const rhythmSettings = $derived(() => {
+		if (!isRhythmMode || !description) return null;
+		const match = description.match(/\[RHYTHM_MODE:true,BPM:(\d+),TOLERANCE:(\d+),MUSIC:(true|false)\]/);
+		if (match) {
+			return {
+				bpm: parseInt(match[1]),
+				tolerance: parseInt(match[2]),
+				useMusic: match[3] === 'true'
+			};
+		}
+		return null;
+	});
+
+	// Clean description (remove rhythm settings tag)
+	const cleanDescription = $derived(
+		description?.replace(/\s*\[RHYTHM_MODE:true,BPM:\d+,TOLERANCE:\d+,MUSIC:(true|false)\]/, '').trim() || ''
+	);
+
 	// Add reactive timestamp and interval for active state updates
 	let now = $state(Date.now());
 	const intervalId = setInterval(() => (now = Date.now()), 1000);
@@ -57,12 +80,22 @@
 		return now >= start && now < end;
 	});
 	const isPinnedAndActive = $derived(isPinned && isCurrentlyActive());
-	const activeClass = $derived(
-		isPinned && isCurrentlyActive()
-			? '!bg-orange-200 !border-2 !border-orange-800 !ring-1 !ring-orange-800 shadow-[0_0_15px_rgba(234,88,12,0.5)]'
+	
+	// Rhythm mode styling - purple/violet gradient theme
+	const rhythmClass = $derived(
+		isRhythmMode
+			? '!bg-gradient-to-br !from-violet-100 !to-purple-100 !border-2 !border-violet-400'
 			: ''
 	);
-	const itemClass = $derived(`${className} ${activeClass}`);
+	
+	const activeClass = $derived(
+		isPinned && isCurrentlyActive()
+			? isRhythmMode
+				? '!bg-gradient-to-br !from-violet-200 !to-purple-200 !border-2 !border-violet-600 !ring-1 !ring-violet-600 shadow-[0_0_15px_rgba(139,92,246,0.5)]'
+				: '!bg-orange-200 !border-2 !border-orange-800 !ring-1 !ring-orange-800 shadow-[0_0_15px_rgba(234,88,12,0.5)]'
+			: ''
+	);
+	const itemClass = $derived(`${className} ${rhythmClass} ${activeClass}`);
 
 	const modalStore = getModalStore();
 	const modal: ModalSettings = {
@@ -118,14 +151,20 @@
 	{#snippet leftContent()}
 		<a href={`/events/${leaderboardId}`}>
 			<div class="flex w-full items-center justify-between pb-3">
-				<div class="flex items-center gap-2">
-					<h3 class="text-xl font-bold text-gray-800">{name}</h3>
+				<div class="flex flex-wrap items-center gap-2">
+					<h3 class="text-xl font-bold {isRhythmMode ? 'text-violet-800' : 'text-gray-800'}">{name}</h3>
+					{#if isRhythmMode}
+						<span class="inline-flex items-center gap-1 rounded-full bg-violet-600 px-2.5 py-0.5 text-xs font-medium text-white">
+							<Music size={12} />
+							Rhythm
+						</span>
+					{/if}
 					{#if isPinnedAndActive}
 						<span class="badge-primary badge gap-2 px-2 py-1 text-sm"> 📌 Pinned & Active </span>
 					{/if}
 				</div>
 			</div>
-			<div class="text-sm text-gray-600">
+			<div class="text-sm {isRhythmMode ? 'text-violet-700' : 'text-gray-600'}">
 				<div class="pb-1">
 					<span class="me-1 font-semibold">Creator:</span><span>{host}</span>
 				</div>
@@ -137,9 +176,26 @@
 					<span class="me-1 font-semibold">End:</span>
 					<span>{formatLocalTime(endTime)}</span>
 				</div>
-				{#if description}
-					<div class="mt-3 border-t-2 border-surface-200 pt-4 text-gray-700">
-						{description}
+				{#if isRhythmMode && rhythmSettings()}
+					{@const settings = rhythmSettings()}
+					<div class="mt-2 flex flex-wrap gap-2">
+						<span class="inline-flex items-center rounded-md bg-violet-100 px-2 py-1 text-xs font-medium text-violet-700 ring-1 ring-inset ring-violet-300">
+							{settings?.bpm} BPM
+						</span>
+						<span class="inline-flex items-center rounded-md bg-violet-100 px-2 py-1 text-xs font-medium text-violet-700 ring-1 ring-inset ring-violet-300">
+							±{settings?.tolerance}ms
+						</span>
+						{#if settings?.useMusic}
+							<span class="inline-flex items-center gap-1 rounded-md bg-violet-100 px-2 py-1 text-xs font-medium text-violet-700 ring-1 ring-inset ring-violet-300">
+								<Music size={10} />
+								Music
+							</span>
+						{/if}
+					</div>
+				{/if}
+				{#if cleanDescription}
+					<div class="mt-3 border-t-2 {isRhythmMode ? 'border-violet-200' : 'border-surface-200'} pt-4 {isRhythmMode ? 'text-violet-800' : 'text-gray-700'}">
+						{cleanDescription}
 					</div>
 				{/if}
 			</div>

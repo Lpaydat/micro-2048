@@ -118,3 +118,12 @@ pub struct MoveHistoryRecord {
     pub board_after: [[u16; 4]; 4],
     pub score_after: u64,
 }
+
+/// 🚀 CHAIN POOL: Status information for monitoring
+#[derive(SimpleObject)]
+pub struct ChainPoolStatus {
+    pub pool_size: u32,      // Current number of unclaimed chains
+    pub target_size: u32,    // Target pool size
+    pub low_threshold: u32,  // Threshold to trigger replenish
+    pub needs_replenish: bool, // True if pool_size < low_threshold
+}

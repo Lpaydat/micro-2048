@@ -4,3 +4,4 @@ export * from './makeMove';
 export * from './toggleMod';
 export * from './leaderboardAction.ts';
 export * from './newBoard';
+export * from './refillChainPool';

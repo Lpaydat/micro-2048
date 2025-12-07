@@ -199,4 +199,9 @@ pub struct Game2048 {
     pub operations_since_tier6: RegisterView<u32>, // Count of operations since tier 6 started
     pub tier6_start_time: RegisterView<u64>,       // When tier 6 began (last_update + 5*threshold)
     pub is_in_tier6: RegisterView<bool>,           // Flag to track if we're in tier 6 mode
+
+    // 🚀 CHAIN POOL: Pre-created chains for fast registration
+    pub unclaimed_chains: QueueView<String>,         // Pre-created chain IDs available for claiming
+    pub chain_pool_target_size: RegisterView<u32>,   // Target pool size (e.g., 100)
+    pub chain_pool_low_threshold: RegisterView<u32>, // Trigger replenish when below this (e.g., 20)
 }
