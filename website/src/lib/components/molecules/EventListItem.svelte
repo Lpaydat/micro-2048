@@ -218,9 +218,9 @@
 </BaseListItem>
 
 <style>
-	/* Rhythm mode hover effects */
+	/* Rhythm mode hover effects - 120 BPM beat (500ms per beat) */
 	:global(.rhythm-item) {
-		transition: all 0.3s ease;
+		transition: all 0.2s ease;
 		position: relative;
 		overflow: hidden;
 	}
@@ -240,42 +240,84 @@
 		);
 		transition: left 0.5s ease;
 		pointer-events: none;
+		z-index: 1;
 	}
 
 	:global(.rhythm-item:hover) {
 		background: linear-gradient(to bottom right, rgb(221, 214, 254), rgb(233, 213, 255)) !important;
 		border-color: rgb(139, 92, 246) !important;
-		box-shadow: 
-			0 0 20px rgba(139, 92, 246, 0.4),
-			0 0 40px rgba(139, 92, 246, 0.2),
-			inset 0 0 20px rgba(139, 92, 246, 0.1);
-		transform: scale(1.01);
+		animation: rhythm-beat 500ms ease-in-out infinite;
 	}
 
 	:global(.rhythm-item:hover::before) {
 		left: 100%;
 	}
 
-	/* Pulsing glow animation for active rhythm items */
-	@keyframes rhythm-pulse {
+	/* Main beat animation - scale + glow pulse at 120 BPM */
+	@keyframes rhythm-beat {
 		0%, 100% {
+			transform: scale(1);
 			box-shadow: 
-				0 0 15px rgba(139, 92, 246, 0.5),
-				0 0 30px rgba(139, 92, 246, 0.3);
+				0 0 15px rgba(139, 92, 246, 0.3),
+				0 0 30px rgba(139, 92, 246, 0.15),
+				inset 0 0 15px rgba(139, 92, 246, 0.05);
 		}
 		50% {
+			transform: scale(1.015);
 			box-shadow: 
-				0 0 25px rgba(139, 92, 246, 0.7),
-				0 0 50px rgba(139, 92, 246, 0.4);
+				0 0 25px rgba(139, 92, 246, 0.6),
+				0 0 50px rgba(139, 92, 246, 0.3),
+				inset 0 0 25px rgba(139, 92, 246, 0.1);
 		}
 	}
 
-	:global(.rhythm-item:hover .badge) {
-		animation: badge-bounce 0.5s ease;
+	/* Music icon bounce synced to beat */
+	:global(.rhythm-item:hover [data-lucide="music"]) {
+		animation: music-bounce 500ms ease-in-out infinite;
 	}
 
-	@keyframes badge-bounce {
-		0%, 100% { transform: scale(1); }
-		50% { transform: scale(1.1); }
+	@keyframes music-bounce {
+		0%, 100% { 
+			transform: scale(1) rotate(0deg); 
+		}
+		25% {
+			transform: scale(1.2) rotate(-5deg);
+		}
+		50% { 
+			transform: scale(1) rotate(0deg); 
+		}
+		75% {
+			transform: scale(1.2) rotate(5deg);
+		}
+	}
+
+	/* Rhythm badge pulse */
+	:global(.rhythm-item:hover .badge) {
+		animation: badge-pulse 500ms ease-in-out infinite;
+	}
+
+	@keyframes badge-pulse {
+		0%, 100% { 
+			transform: scale(1);
+			opacity: 1;
+		}
+		50% { 
+			transform: scale(1.05);
+			opacity: 0.9;
+		}
+	}
+
+	/* BPM/tolerance tags subtle pulse */
+	:global(.rhythm-item:hover .ring-violet-300) {
+		animation: tag-glow 500ms ease-in-out infinite;
+	}
+
+	@keyframes tag-glow {
+		0%, 100% {
+			box-shadow: 0 0 0 rgba(139, 92, 246, 0);
+		}
+		50% {
+			box-shadow: 0 0 8px rgba(139, 92, 246, 0.5);
+		}
 	}
 </style>
