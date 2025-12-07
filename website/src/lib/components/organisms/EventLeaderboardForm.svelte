@@ -30,6 +30,7 @@
 	let rhythmMode = $state(false);
 	let rhythmBPM = $state(120);
 	let rhythmTolerance = $state(150); // milliseconds
+	let rhythmUseMusic = $state(true); // Use music instead of metronome
 
 	// Check if current user is admin
 	const isAdmin = $derived($userStore.isMod === true);
@@ -118,7 +119,7 @@
 				}),
 				// Rhythm mode settings (stored in description for now since backend doesn't support them yet)
 				...(rhythmMode && {
-					description: `${description || ''} [RHYTHM_MODE:true,BPM:${rhythmBPM},TOLERANCE:${rhythmTolerance}]`.trim()
+					description: `${description || ''} [RHYTHM_MODE:true,BPM:${rhythmBPM},TOLERANCE:${rhythmTolerance},MUSIC:${rhythmUseMusic}]`.trim()
 				})
 			};
 
@@ -338,6 +339,35 @@
 								<span>500ms (Relaxed)</span>
 							</div>
 						</div>
+						
+						<!-- Music vs Metronome Toggle -->
+						<div class="mt-3 flex items-center gap-3">
+							<label class="flex items-center gap-2 cursor-pointer">
+								<input
+									type="radio"
+									name="audioType"
+									checked={rhythmUseMusic}
+									onchange={() => rhythmUseMusic = true}
+									disabled={loading}
+									class="h-4 w-4 text-purple-600 focus:ring-purple-500"
+								/>
+								<span class="text-xs text-purple-900">🎵 Music (Random track)</span>
+							</label>
+							<label class="flex items-center gap-2 cursor-pointer">
+								<input
+									type="radio"
+									name="audioType"
+									checked={!rhythmUseMusic}
+									onchange={() => rhythmUseMusic = false}
+									disabled={loading}
+									class="h-4 w-4 text-purple-600 focus:ring-purple-500"
+								/>
+								<span class="text-xs text-purple-900">🔊 Metronome</span>
+							</label>
+						</div>
+						<p class="text-xs text-purple-600 mt-1">
+							Music mode plays a random track that matches the BPM.
+						</p>
 					</div>
 				{:else}
 					<p class="text-xs text-purple-600 ml-6">
