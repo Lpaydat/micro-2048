@@ -59,7 +59,8 @@
 	`;
 
 	const mainClient = getContextClient();
-	const leaderboardClient = getClient(leaderboardId, true);
+	// Must be $derived so it updates when leaderboardId changes (navigation between tournaments)
+	const leaderboardClient = $derived(getClient(leaderboardId, true));
 	const playerClient = $derived(getClient($userStore.chainId, true));
 
 	const leaderboard = $derived(

@@ -32,6 +32,14 @@ impl ShardOperationHandler {
         highest_tile: u64,
     ) {
         let shard = Self::is_shard_active(contract, timestamp).await;
+        
+        // 🔒 Validate tournament ID - only process scores for THIS shard's tournament
+        let shard_tournament_id = shard.leaderboard_id.get();
+        if !shard_tournament_id.is_empty() && shard_tournament_id != &leaderboard_id {
+            // Score update is for a different tournament - ignore it
+            return;
+        }
+        
         let player_shard_score = shard.score.get(player).await.unwrap();
         let is_ended = matches!(game_status, GameStatus::Ended(_));
 

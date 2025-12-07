@@ -154,7 +154,7 @@ pub struct Leaderboard {
 #[derive(View, SimpleObject)]
 #[view(context = ViewStorageContext)]
 pub struct PlayerRecord {
-    pub best_score: MapView<String, u64>, // leaderboard_id, score
+    pub best_score: MapView<String, u64>, // tournament_id (leaderboard_id) -> best_score
 }
 
 #[derive(RootView, SimpleObject)]
