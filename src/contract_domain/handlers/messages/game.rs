@@ -1,9 +1,7 @@
-use game2048::{hash_seed, Game, GameStatus, Message, RegistrationCheck};
+use game2048::{hash_seed, Game, GameStatus, RegistrationCheck};
 /// Game Messages Handler
 ///
 /// Handles game-related messages including board creation.
-use linera_sdk::linera_base_types::ChainId;
-use std::str::FromStr;
 
 pub struct GameMessageHandler;
 
@@ -101,15 +99,9 @@ impl GameMessageHandler {
         )
         .await;
 
-        // increment player and board count
-        let leaderboard_chain_id = ChainId::from_str(&leaderboard_id).unwrap();
-        contract
-            .runtime
-            .prepare_message(Message::LeaderboardNewGame {
-                player: player.clone(),
-                board_id: board_id.clone(),
-                timestamp,
-            })
-            .send_to(leaderboard_chain_id);
+        // 🚀 REMOVED: LeaderboardNewGame message
+        // Board/player counting is now handled by shard-based aggregation system
+        // via ShardScoreUpdate events and player_board_counts
+        // This reduces cross-chain message traffic during peak load
     }
 }

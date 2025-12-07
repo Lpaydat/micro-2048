@@ -800,10 +800,13 @@
 			if (result.success) {
 				// ✅ Only flush AFTER confirmed success
 				flushMoveHistory(boardId);
-				pendingMoveCount = Math.max(0, pendingMoveCount - moveCount);
+				// Sync pendingMoveCount with actual store state (handles race condition where
+				// new moves arrived during async submission)
+				const remainingMoves = $moveHistoryStore.get(boardId)?.length || 0;
+				pendingMoveCount = remainingMoves;
 				lastSyncTime = Date.now();
 				syncRetryCount = 0; // Reset retry counter on success
-				console.log(`✅ Background sync success: ${moveCount} moves synced`);
+				console.log(`✅ Background sync success: ${moveCount} moves synced, ${remainingMoves} remaining`);
 				
 				// Don't immediately set to ready - let hash validation confirm
 				// syncStatus will be updated by the sync interval
@@ -921,10 +924,12 @@
 					flushMoveHistory(boardId);
 					const newTablet = boardToString(state?.tablet);
 					stateHash = newTablet ?? '';
-					pendingMoveCount = Math.max(0, pendingMoveCount - moveCount);
+					// Sync pendingMoveCount with actual store state (handles race condition)
+					const remainingMoves = $moveHistoryStore.get(boardId)?.length || 0;
+					pendingMoveCount = remainingMoves;
 					lastSyncTime = Date.now();
 					syncRetryCount = 0;
-					console.log(`✅ Submit success: ${moveCount} moves`);
+					console.log(`✅ Submit success: ${moveCount} moves, ${remainingMoves} remaining`);
 				} else {
 					console.error('Submit moves failed:', result.error);
 					syncStatus = 'failed';

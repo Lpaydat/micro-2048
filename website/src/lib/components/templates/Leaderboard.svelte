@@ -137,7 +137,8 @@
 		lastRefreshTime = Date.now();
 
 		try {
-			const result = requestLeaderboardRefresh(playerClient, leaderboardId);
+			// 🚀 Call updateLeaderboard mutation directly on leaderboard chain
+			const result = requestLeaderboardRefresh(leaderboardClient);
 			if (result) {
 				result.subscribe((res) => {
 					if (res.error) {

@@ -12,14 +12,14 @@ const CONFIG = {
 	local: {
 		website: 'localhost',
 		port: '8088', // Linera node port (not 5173 which is SvelteKit dev server)
-		chainId: 'c157f8517881c84cd3c581ed1bda2d0d5e284e33260293dbeec927e885708863',
-		applicationId: '6dd84a283b08ab2df19456a1b370e709f80b02129887511d2d3b633cf57bd42f'
+		chainId: '52d89d77d2f103bcf741687984511b4524abb51bcda6716149ea5529e2cbb5b3',
+		applicationId: '1a3f4455c6403a368f56ddcba3be3fe52da4ec2ca86c7c6d6fbaf63ad7209a74'
 	},
 	production: {
 		website: 'api.micro2048.xyz',
 		port: '443',
-		chainId: 'c157f8517881c84cd3c581ed1bda2d0d5e284e33260293dbeec927e885708863',
-		applicationId: '6dd84a283b08ab2df19456a1b370e709f80b02129887511d2d3b633cf57bd42f'
+		chainId: '52d89d77d2f103bcf741687984511b4524abb51bcda6716149ea5529e2cbb5b3',
+		applicationId: 'f6f39c4f5ed19d9040c968687ea164b127a69146c1da48eed3eaaf22bde6bf0f'
 	}
 };
 
@@ -33,13 +33,16 @@ const config = {
 
 // Use http:// for localhost, https:// for others
 const protocol = config.website === 'localhost' ? 'http' : 'https';
-const API_URL = `${protocol}://${config.website}:${config.port}/chains/${config.chainId}/applications/${config.applicationId}`;
+// Don't add port for standard HTTPS (443)
+const portSuffix = protocol === 'https' && config.port === '443' ? '' : `:${config.port}`;
+const API_URL = `${protocol}://${config.website}${portSuffix}/chains/${config.chainId}/applications/${config.applicationId}`;
 
 // ========================================
 // TEST PARAMETERS (Adjustable)
 // ========================================
 
-const TOURNAMENT_ID = __ENV.TOURNAMENT_ID || ''; // REQUIRED: Set this to your tournament ID
+const TOURNAMENT_ID =
+	__ENV.TOURNAMENT_ID || 'a780876dde256280235ca6937054c914e34b2a33644e713646f55bf0b358d5b6'; // Leaderboard ID
 const NUM_PLAYERS = parseInt(__ENV.NUM_PLAYERS || '20'); // Number of mock players
 const GAMES_PER_CYCLE = parseInt(__ENV.GAMES_PER_CYCLE || '3'); // Games per player per cycle (not used in infinite mode)
 const MOVES_PER_BATCH = parseInt(__ENV.MOVES_PER_BATCH || '15'); // Moves in each batch (10-20 range)
@@ -178,7 +181,11 @@ const isPlayerReadyOnChain = (playerChainId: string, username: string) => {
 };
 
 // Wait for player to be ready on their chain with polling
-const waitForPlayerReady = (playerChainId: string, username: string, maxWaitSeconds: number = 60) => {
+const waitForPlayerReady = (
+	playerChainId: string,
+	username: string,
+	maxWaitSeconds: number = 60
+) => {
 	const startTime = Date.now();
 	const maxWaitMs = maxWaitSeconds * 1000;
 
@@ -341,9 +348,7 @@ export default function () {
 		return;
 	}
 
-	console.log(
-		`✅ [${username}] Got player chain ID: ${playerChainId.substring(0, 16)}...`
-	);
+	console.log(`✅ [${username}] Got player chain ID: ${playerChainId.substring(0, 16)}...`);
 
 	// Wait for player data to actually be available on the player chain
 	console.log(`⏳ [${username}] Waiting for player data to propagate to player chain...`);
@@ -359,9 +364,7 @@ export default function () {
 	// PHASE 2: INFINITE GAME CYCLE LOOP
 	// ========================================
 
-	console.log(
-		`🎮 [${username}] Starting infinite game cycle until test duration ends`
-	);
+	console.log(`🎮 [${username}] Starting infinite game cycle until test duration ends`);
 	console.log(`   ${BATCHES_PER_GAME} batches per game, ${MOVES_PER_BATCH} moves per batch`);
 
 	let cycle = 1;
@@ -451,7 +454,7 @@ export default function () {
 		}
 
 		console.log(`✅ [${username}] Completed cycle ${cycle}`);
-		
+
 		// Increment cycle counter
 		cycle++;
 

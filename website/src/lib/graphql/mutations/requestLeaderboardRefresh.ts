@@ -1,33 +1,25 @@
 import { Client, gql, mutationStore } from '@urql/svelte';
 
-const REQUEST_LEADERBOARD_REFRESH = gql`
-	mutation RequestLeaderboardRefresh(
-		$player: String!
-		$passwordHash: String!
-		$leaderboardId: String!
-	) {
-		requestLeaderboardRefresh(
-			player: $player
-			passwordHash: $passwordHash
-			leaderboardId: $leaderboardId
-		)
+// 🚀 IMPROVED: Call updateLeaderboard directly on the leaderboard chain
+// This bypasses the cross-chain message issue and triggers aggregation directly
+const UPDATE_LEADERBOARD = gql`
+	mutation UpdateLeaderboard {
+		updateLeaderboard
 	}
 `;
 
-export const requestLeaderboardRefresh = (client: Client, leaderboardId: string) => {
-	const player = localStorage.getItem('username');
-	const passwordHash = localStorage.getItem('passwordHash');
-
-	if (!player || !passwordHash) {
-		console.error('Player or password hash not found');
-		return null;
-	}
-
-	console.log('Requesting leaderboard refresh for:', leaderboardId);
+/**
+ * Trigger leaderboard update by calling mutation directly on the leaderboard chain.
+ * 
+ * @param leaderboardClient - Client configured for the leaderboard chain (leaderboardId IS the chain ID)
+ * @returns Mutation store result
+ */
+export const requestLeaderboardRefresh = (leaderboardClient: Client) => {
+	console.log('Triggering leaderboard update via direct operation');
 
 	return mutationStore({
-		client,
-		query: REQUEST_LEADERBOARD_REFRESH,
-		variables: { player, passwordHash, leaderboardId }
+		client: leaderboardClient,
+		query: UPDATE_LEADERBOARD,
+		variables: {}
 	});
 };
