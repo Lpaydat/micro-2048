@@ -26,13 +26,44 @@ impl PlayerOperationHandler {
             .check_player_registered(&username, RegistrationCheck::EnsureNotRegistered)
             .await;
 
-        let chain_ownership = contract.runtime.chain_ownership();
-        let application_permissions = ApplicationPermissions::default();
-        let amount = Amount::from_tokens(1);
-        let chain_id =
-            contract
-                .runtime
-                .open_chain(chain_ownership, application_permissions, amount);
+        // 🚀 CHAIN POOL: Try to claim a pre-created chain from the pool first
+        // This is much faster than creating a new chain on-demand
+        let chain_id = if let Some(pooled_chain_id) =
+            contract.state.unclaimed_chains.front().await.unwrap()
+        {
+            // Pop the chain from the pool
+            contract.state.unclaimed_chains.delete_front();
+            // Parse the chain ID
+            ChainId::from_str(&pooled_chain_id).expect("Invalid chain ID in pool")
+        } else {
+            // Fallback: Pool is empty - create a new chain AND refill pool with 50 more
+            let chain_ownership = contract.runtime.chain_ownership();
+            let application_permissions = ApplicationPermissions::default();
+            let amount = Amount::from_tokens(1);
+
+            // Create one chain for this registration
+            let new_chain_id = contract.runtime.open_chain(
+                chain_ownership.clone(),
+                application_permissions.clone(),
+                amount,
+            );
+
+            // 🚀 AUTO-REFILL: Create 50 more chains to refill the pool
+            // This ensures we don't hit the slow path repeatedly
+            for _ in 0..50 {
+                let pool_chain_id = contract.runtime.open_chain(
+                    chain_ownership.clone(),
+                    application_permissions.clone(),
+                    amount,
+                );
+                contract
+                    .state
+                    .unclaimed_chains
+                    .push_back(pool_chain_id.to_string());
+            }
+
+            new_chain_id
+        };
 
         let player = contract
             .state

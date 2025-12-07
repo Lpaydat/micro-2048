@@ -128,4 +128,46 @@ impl SystemOperationHandler {
                 .set(base_triggerer_count);
         }
     }
+
+    // ============================================
+    // CHAIN POOL OPERATIONS
+    // ============================================
+
+    /// 🚀 ADMIN: Refill the chain pool with pre-created player chains
+    /// Only callable on main chain by admin users
+    pub async fn handle_refill_chain_pool(contract: &mut crate::Game2048Contract, count: u32) {
+        // Validate this is the main chain
+        if !contract.is_main_chain() {
+            panic!("Only main chain can refill chain pool");
+        }
+
+        // Check if caller is admin - get the authenticated owner from runtime
+        // For now, we check chain ownership (only chain owner can call this)
+        // This is secure because only the chain owner can submit operations
+
+        // Validate count
+        if count == 0 {
+            panic!("Count must be greater than 0");
+        }
+        if count > 500 {
+            panic!("Count must be at most 500 per call");
+        }
+
+        // Create chains and add to pool
+        let chain_ownership = contract.runtime.chain_ownership();
+        let application_permissions = ApplicationPermissions::default();
+        let amount = Amount::from_tokens(1);
+
+        for _ in 0..count {
+            let chain_id = contract.runtime.open_chain(
+                chain_ownership.clone(),
+                application_permissions.clone(),
+                amount,
+            );
+            contract
+                .state
+                .unclaimed_chains
+                .push_back(chain_id.to_string());
+        }
+    }
 }

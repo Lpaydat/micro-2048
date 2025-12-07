@@ -152,6 +152,11 @@ impl OperationDispatcher {
                 )
                 .await;
             }
+
+            // Chain pool operations
+            Operation::RefillChainPool { count } => {
+                SystemOperationHandler::handle_refill_chain_pool(contract, count).await;
+            }
         }
     }
 }

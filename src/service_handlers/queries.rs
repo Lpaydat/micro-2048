@@ -330,6 +330,21 @@ impl QueryHandler {
         self.get_tournaments_by_filter(filter).await
     }
 
+    /// 🚀 NEW: Get chain pool status (for monitoring)
+    async fn chain_pool_status(&self) -> ChainPoolStatus {
+        let pool_size = self.state.unclaimed_chains.count() as u32;
+        let target_size = *self.state.chain_pool_target_size.get();
+        let low_threshold = *self.state.chain_pool_low_threshold.get();
+        let needs_replenish = pool_size < low_threshold;
+
+        ChainPoolStatus {
+            pool_size,
+            target_size,
+            low_threshold,
+            needs_replenish,
+        }
+    }
+
     async fn shards(&self) -> Shard {
         if let Some(shard) = self.state.shards.try_load_entry("").await.unwrap() {
             let mut scores: HashMap<String, u64> = HashMap::new();

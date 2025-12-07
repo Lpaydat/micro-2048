@@ -250,6 +250,28 @@ impl MutationHandler {
         self.runtime.schedule_operation(&operation);
         []
     }
+
+    // ============================================
+    // CHAIN POOL MUTATIONS
+    // ============================================
+
+    /// 🚀 ADMIN: Refill the chain pool with pre-created player chains
+    /// Only callable on main chain by the chain owner (admin)
+    async fn refill_chain_pool(&self, count: u32) -> [u8; 0] {
+        // No password validation needed - Linera's chain ownership enforces admin access
+        // Only the chain owner can submit operations to the main chain
+
+        if count == 0 {
+            panic!("Count must be greater than 0");
+        }
+        if count > 500 {
+            panic!("Count must be at most 500 per call");
+        }
+
+        let operation = Operation::RefillChainPool { count };
+        self.runtime.schedule_operation(&operation);
+        []
+    }
 }
 
 impl MutationHandler {

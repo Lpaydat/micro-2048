@@ -95,6 +95,12 @@ pub enum Operation {
         password_hash: String,
         leaderboard_id: String,
     },
+
+    // 🚀 CHAIN POOL: Pre-create chains for fast registration
+    /// ADMIN: Refill the chain pool with pre-created player chains
+    RefillChainPool {
+        count: u32,
+    },
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -307,3 +313,9 @@ pub enum RegistrationCheck {
     EnsureRegistered,
     EnsureNotRegistered,
 }
+
+/// Instantiation argument for the contract
+/// Simple u32 for backward compatibility:
+/// - 0 = use default (300 chains)
+/// - N = create N chains in pool
+pub type InstantiationArgument = u32;

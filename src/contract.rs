@@ -18,7 +18,7 @@ use contract_domain::{
     ContractHelpers, EventReader, LeaderboardOperationHandler, PlayerOperationHandler,
     ShardOperationHandler, StreamProcessor, SubscriptionManager, TournamentOperationHandler,
 };
-use game2048::{GameEvent, Message, Operation, RegistrationCheck};
+use game2048::{GameEvent, InstantiationArgument, Message, Operation, RegistrationCheck};
 
 pub struct Game2048Contract {
     state: Game2048,
@@ -34,7 +34,7 @@ impl WithContractAbi for Game2048Contract {
 impl Contract for Game2048Contract {
     type Message = Message;
     type Parameters = ();
-    type InstantiationArgument = u32;
+    type InstantiationArgument = InstantiationArgument;
     type EventValue = GameEvent;
 
     async fn load(runtime: ContractRuntime<Self>) -> Self {
@@ -44,9 +44,10 @@ impl Contract for Game2048Contract {
         Game2048Contract { state, runtime }
     }
 
-    async fn instantiate(&mut self, _seed: Self::InstantiationArgument) {
+    async fn instantiate(&mut self, _argument: Self::InstantiationArgument) {
         self.runtime.application_parameters();
 
+        // Initialize default leaderboard
         let leaderboard = self.state.leaderboards.load_entry_mut("").await.unwrap();
         leaderboard.leaderboard_id.set("".to_string());
         leaderboard
@@ -59,8 +60,13 @@ impl Contract for Game2048Contract {
         leaderboard.description.set("".to_string());
         leaderboard.total_boards.set(0);
         leaderboard.total_players.set(0);
-
         leaderboard.admin_base_triggerer_count.set(5); // Default to 5 triggerers
+
+        // 🚀 CHAIN POOL: Configure pool thresholds (fixed defaults)
+        // Pool is filled via RefillChainPool operation (admin only)
+        self.state.chain_pool_target_size.set(300); // Target: 300
+        self.state.chain_pool_low_threshold.set(50); // Threshold: 50
+        // Pool starts empty - admin must call RefillChainPool after deployment
     }
 
     async fn execute_operation(&mut self, operation: Self::Operation) -> Self::Response {

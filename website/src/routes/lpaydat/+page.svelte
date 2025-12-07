@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { toggleMod } from '$lib/graphql/mutations';
+	import { toggleMod, refillChainPool } from '$lib/graphql/mutations';
 	import { getPlayerInfo } from '$lib/graphql/queries/getPlayerInfo';
+	import { getChainPoolStatus } from '$lib/graphql/queries/getChainPoolStatus';
 	import { getContextClient } from '@urql/svelte';
 	import { onMount, onDestroy } from 'svelte';
 	import { getModalStore } from '@skeletonlabs/skeleton';
@@ -12,10 +13,16 @@
 	let lastOperation = $state<{ success: boolean; message: string; timestamp: number } | null>(null);
 	let statusPollingInterval = $state<NodeJS.Timeout | null>(null);
 
+	// Chain pool state
+	let poolRefillCount = $state(100);
+	let isRefilling = $state(false);
+	let poolPollingInterval = $state<NodeJS.Timeout | null>(null);
+
 	const client = getContextClient();
 	const modalStore = getModalStore();
 
 	const data = $derived(getPlayerInfo(client, username));
+	const poolStatus = $derived(getChainPoolStatus(client));
 
 	const showFeedback = (success: boolean, message: string) => {
 		lastOperation = { success, message, timestamp: Date.now() };
@@ -81,6 +88,49 @@
 		}
 	};
 
+	// Chain Pool Functions
+	const handleRefillPool = async () => {
+		if (poolRefillCount <= 0 || poolRefillCount > 500) {
+			showFeedback(false, 'Count must be between 1 and 500');
+			return;
+		}
+
+		isRefilling = true;
+		try {
+			refillChainPool(client, poolRefillCount);
+			showFeedback(true, `Refilling chain pool with ${poolRefillCount} chains...`);
+			startPoolPolling();
+		} catch (error) {
+			console.error('Refill chain pool error:', error);
+			showFeedback(false, 'An error occurred while refilling chain pool');
+		} finally {
+			isRefilling = false;
+		}
+	};
+
+	const startPoolPolling = () => {
+		if (poolPollingInterval) {
+			clearInterval(poolPollingInterval);
+		}
+
+		let pollCount = 0;
+		poolPollingInterval = setInterval(() => {
+			pollCount++;
+			poolStatus.reexecute({ requestPolicy: 'network-only' });
+
+			if (pollCount >= 15) {
+				stopPoolPolling();
+			}
+		}, 2000);
+	};
+
+	const stopPoolPolling = () => {
+		if (poolPollingInterval) {
+			clearInterval(poolPollingInterval);
+			poolPollingInterval = null;
+		}
+	};
+
 	onMount(() => {
 		const storedUsername = localStorage.getItem('username');
 		if (storedUsername !== 'lpaydat') {
@@ -93,6 +143,7 @@
 
 	onDestroy(() => {
 		stopStatusPolling();
+		stopPoolPolling();
 	});
 </script>
 
@@ -104,7 +155,7 @@
 		<div class="text-center">
 			<h1 class="mb-2 text-3xl font-bold text-white">Admin Panel</h1>
 			<p class="max-w-md text-sm text-gray-300">
-				Manage user moderator privileges. Enter a username below to toggle their moderator status.
+				Manage moderator privileges and chain pool for fast player registration.
 			</p>
 		</div>
 
@@ -242,6 +293,114 @@
 						<p class="mt-1 text-xs">Enter a valid username above</p>
 					</div>
 				{/if}
+			</div>
+		</div>
+
+		<!-- Chain Pool Management -->
+		<div class="w-full max-w-md">
+			<div class="rounded-lg border border-surface-600 bg-surface-700 p-6">
+				<h3 class="mb-4 text-center text-lg font-semibold text-white">Chain Pool Management</h3>
+				<p class="mb-4 text-center text-xs text-gray-400">
+					Pre-create player chains for faster registration
+				</p>
+
+				<!-- Pool Status -->
+				{#if $poolStatus.fetching}
+					<div class="mb-4 flex items-center justify-center gap-2 text-gray-400">
+						<div
+							class="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent"
+						></div>
+						<span>Loading pool status...</span>
+					</div>
+				{:else if $poolStatus.data?.chainPoolStatus}
+					{@const pool = $poolStatus.data.chainPoolStatus}
+					<div class="mb-4 space-y-2">
+						<div class="flex items-center justify-between text-sm">
+							<span class="text-gray-300">Pool Size:</span>
+							<span class="font-medium {pool.needsReplenish ? 'text-red-400' : 'text-green-400'}">
+								{pool.poolSize} / {pool.targetSize}
+							</span>
+						</div>
+						<div class="flex items-center justify-between text-sm">
+							<span class="text-gray-300">Low Threshold:</span>
+							<span class="font-medium text-white">{pool.lowThreshold}</span>
+						</div>
+						<div class="flex items-center justify-between text-sm">
+							<span class="text-gray-300">Status:</span>
+							{#if pool.needsReplenish}
+								<span
+									class="inline-flex items-center rounded-full bg-red-900 px-2.5 py-0.5 text-xs font-medium text-red-200"
+								>
+									Needs Refill
+								</span>
+							{:else}
+								<span
+									class="inline-flex items-center rounded-full bg-green-900 px-2.5 py-0.5 text-xs font-medium text-green-200"
+								>
+									Healthy
+								</span>
+							{/if}
+						</div>
+
+						<!-- Progress Bar -->
+						<div class="mt-2">
+							<div class="h-2 w-full overflow-hidden rounded-full bg-surface-600">
+								<div
+									class="h-full transition-all duration-300 {pool.needsReplenish
+										? 'bg-red-500'
+										: 'bg-green-500'}"
+									style="width: {Math.min(100, (pool.poolSize / pool.targetSize) * 100)}%"
+								></div>
+							</div>
+						</div>
+
+						{#if poolPollingInterval}
+							<div class="mt-2 text-center text-xs text-blue-400">Updating pool status...</div>
+						{/if}
+					</div>
+				{:else}
+					<div class="mb-4 text-center text-sm text-gray-400">Unable to load pool status</div>
+				{/if}
+
+				<!-- Refill Input -->
+				<div class="space-y-3">
+					<div class="space-y-2">
+						<label for="poolCount" class="block text-sm font-medium text-gray-300">
+							Number of Chains to Create
+						</label>
+						<input
+							id="poolCount"
+							type="number"
+							min="1"
+							max="500"
+							class="w-full rounded-lg border border-surface-600 bg-surface-800 p-3 text-white placeholder-gray-400 focus:border-transparent focus:ring-2 focus:ring-primary-500"
+							placeholder="Enter count (1-500)"
+							bind:value={poolRefillCount}
+						/>
+					</div>
+
+					<button
+						type="button"
+						class="variant-filled-secondary btn w-full rounded-lg py-3 font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+						onclick={handleRefillPool}
+						disabled={isRefilling}
+					>
+						{#if isRefilling}
+							<span class="flex items-center justify-center gap-2">
+								<div
+									class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"
+								></div>
+								Creating Chains...
+							</span>
+						{:else}
+							Refill Chain Pool
+						{/if}
+					</button>
+
+					<p class="text-center text-xs text-gray-500">
+						Each chain costs 1 token. Max 500 per call.
+					</p>
+				</div>
 			</div>
 		</div>
 	</div>
