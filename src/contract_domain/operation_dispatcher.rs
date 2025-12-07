@@ -137,6 +137,21 @@ impl OperationDispatcher {
                 )
                 .await;
             }
+
+            // Manual leaderboard refresh
+            Operation::RequestLeaderboardRefresh {
+                player,
+                password_hash,
+                leaderboard_id,
+            } => {
+                PlayerOperationHandler::handle_request_leaderboard_refresh(
+                    contract,
+                    player,
+                    password_hash,
+                    leaderboard_id,
+                )
+                .await;
+            }
         }
     }
 }

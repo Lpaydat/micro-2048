@@ -13,14 +13,13 @@ const CONFIG = {
 		website: 'localhost',
 		port: '8088', // Linera node port (not 5173 which is SvelteKit dev server)
 		chainId: 'c157f8517881c84cd3c581ed1bda2d0d5e284e33260293dbeec927e885708863',
-		applicationId: '85dc87695b0e46d3d568b2e105517dc75fc35e256489ebddbdad36480a740043'
+		applicationId: '6dd84a283b08ab2df19456a1b370e709f80b02129887511d2d3b633cf57bd42f'
 	},
 	production: {
 		website: 'api.micro2048.xyz',
 		port: '443',
-		chainId: '1e39c76c6a993a30cbb4f1980d2b833bbd6a53a7bc7ad9eab9a6ec16060daf21',
-		applicationId:
-			'7625e903bba83e87ee8216722940b9c6db75d4bbc5d3438993d6094331fc83c8e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a650b3000000000000000000000'
+		chainId: 'c157f8517881c84cd3c581ed1bda2d0d5e284e33260293dbeec927e885708863',
+		applicationId: '6dd84a283b08ab2df19456a1b370e709f80b02129887511d2d3b633cf57bd42f'
 	}
 };
 
@@ -148,6 +147,52 @@ const getPlayerChainId = (username: string) => {
 	}
 };
 
+// Check if player data has propagated to their player chain
+const isPlayerReadyOnChain = (playerChainId: string, username: string) => {
+	const playerApiUrl = `${protocol}://${config.website}:${config.port}/chains/${playerChainId}/applications/${config.applicationId}`;
+
+	const query = `
+    query checkPlayer($username: String!, $passwordHash: String!) {
+      checkPlayer(username: $username, passwordHash: $passwordHash)
+    }
+  `;
+
+	const variables = { username, passwordHash: 'test' };
+
+	const response = http.post(playerApiUrl, JSON.stringify({ query, variables }), {
+		headers: { 'Content-Type': 'application/json' },
+		timeout: '10s'
+	});
+
+	if (response.status !== 200) {
+		return false;
+	}
+
+	try {
+		const data = JSON.parse(response.body as string);
+		// checkPlayer returns true if player exists and password matches
+		return data.data?.checkPlayer === true;
+	} catch (error) {
+		return false;
+	}
+};
+
+// Wait for player to be ready on their chain with polling
+const waitForPlayerReady = (playerChainId: string, username: string, maxWaitSeconds: number = 60) => {
+	const startTime = Date.now();
+	const maxWaitMs = maxWaitSeconds * 1000;
+
+	while (Date.now() - startTime < maxWaitMs) {
+		if (isPlayerReadyOnChain(playerChainId, username)) {
+			return true;
+		}
+		console.log(`⏳ [${username}] Waiting for player data to propagate...`);
+		sleep(2); // Check every 2 seconds
+	}
+
+	return false;
+};
+
 const createGame = (
 	playerChainId: string,
 	username: string,
@@ -260,7 +305,7 @@ export default function () {
 	// Get VU index for unique player naming
 	const vuIndex = __VU;
 	const username = generatePlayerName(vuIndex);
-	const passwordHash = generateRandomString(16);
+	const passwordHash = 'test'; // Use simple password for all mock players
 
 	console.log(`🎯 [Player ${vuIndex}/${NUM_PLAYERS}] Starting leaderboard stress test`);
 	console.log(`   Tournament: ${TOURNAMENT_ID.substring(0, 16)}...`);
@@ -286,8 +331,8 @@ export default function () {
 
 	console.log(`✅ [${username}] Registered successfully`);
 
-	// Wait for registration to propagate
-	sleep(REGISTRATION_WAIT);
+	// Wait a bit for registration to start propagating
+	sleep(5);
 
 	// Get player chain ID
 	const playerChainId = getPlayerChainId(username);
@@ -297,8 +342,18 @@ export default function () {
 	}
 
 	console.log(
-		`✅ [${username}] Successfully got player chain ID: ${playerChainId.substring(0, 16)}...`
+		`✅ [${username}] Got player chain ID: ${playerChainId.substring(0, 16)}...`
 	);
+
+	// Wait for player data to actually be available on the player chain
+	console.log(`⏳ [${username}] Waiting for player data to propagate to player chain...`);
+	const isReady = waitForPlayerReady(playerChainId, username, REGISTRATION_WAIT);
+	if (!isReady) {
+		console.error(`❌ [${username}] Player data did not propagate within ${REGISTRATION_WAIT}s`);
+		return;
+	}
+
+	console.log(`✅ [${username}] Player is ready on chain!`);
 
 	// ========================================
 	// PHASE 2: INFINITE GAME CYCLE LOOP

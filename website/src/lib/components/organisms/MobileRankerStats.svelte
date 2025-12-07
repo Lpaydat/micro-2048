@@ -6,9 +6,11 @@
 	interface Props {
 		player: string;
 		rankers: { username: string; score: number; rank: number; boardId: string }[];
+		currentScore?: number; // Current board score for refresh button
+		leaderboardId?: string;
 	}
 
-	let { player, rankers = [] }: Props = $props();
+	let { player, rankers = [], currentScore = 0, leaderboardId }: Props = $props();
 
 	const currentPlayerIndex = $derived(rankers?.findIndex((p) => p.username === player));
 	const currentPlayer = $derived(
@@ -26,7 +28,9 @@
 		height: 'h-[80vh]',
 		meta: {
 			player,
-			rankers
+			rankers,
+			currentScore,
+			leaderboardId
 		}
 	});
 </script>

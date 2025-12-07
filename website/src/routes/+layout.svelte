@@ -87,7 +87,12 @@
 		/>
 	{/if}
 	{#if $drawerStore.id === 'mobile-ranker-stats'}
-		<SideLeaderboard isFullScreen rankers={$drawerStore.meta?.rankers} />
+		<SideLeaderboard
+			isFullScreen
+			rankers={$drawerStore.meta?.rankers}
+			currentScore={$drawerStore.meta?.currentScore}
+			leaderboardId={$drawerStore.meta?.leaderboardId}
+		/>
 	{/if}
 </Drawer>
 

@@ -230,6 +230,26 @@ impl MutationHandler {
         self.runtime.schedule_operation(&operation);
         []
     }
+
+    /// 🚀 NEW: Manual leaderboard refresh - player can trigger update when their score is higher
+    /// This sends a TriggerUpdate message directly to the leaderboard chain
+    async fn request_leaderboard_refresh(
+        &self,
+        player: String,
+        password_hash: String,
+        leaderboard_id: String,
+    ) -> [u8; 0] {
+        // Validate player exists and password is correct
+        self.validate_player_password(&player, &password_hash).await;
+
+        let operation = Operation::RequestLeaderboardRefresh {
+            player,
+            password_hash,
+            leaderboard_id,
+        };
+        self.runtime.schedule_operation(&operation);
+        []
+    }
 }
 
 impl MutationHandler {

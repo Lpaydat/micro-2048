@@ -89,6 +89,12 @@ pub enum Operation {
         password_hash: String,
         base_triggerer_count: u32,
     },
+    /// 🚀 NEW: Manual leaderboard refresh - player can trigger update when their score is higher
+    RequestLeaderboardRefresh {
+        player: String,
+        password_hash: String,
+        leaderboard_id: String,
+    },
 }
 
 #[derive(Debug, Deserialize, Serialize)]

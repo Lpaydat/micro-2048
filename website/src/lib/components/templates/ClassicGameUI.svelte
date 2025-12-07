@@ -84,7 +84,12 @@
 
 <MainTemplate mainCenter>
 	{#snippet header()}
-		<MobileRankerStats player={$userStore.username ?? ''} {rankers} />
+		<MobileRankerStats
+			player={$userStore.username ?? ''}
+			{rankers}
+			currentScore={currentPlayerScore}
+			{leaderboardId}
+		/>
 	{/snippet}
 
 	{#snippet subHeader()}
@@ -109,6 +114,7 @@
 				{rankers}
 				{leaderboardId}
 				{endCallback}
+				currentScore={currentPlayerScore}
 			/>
 		{:else}
 			<UserSidebar />

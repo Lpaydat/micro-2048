@@ -3,7 +3,8 @@
 //! Handles player-related operations including registration, authentication, and admin management.
 
 use game2048::{Message, RegistrationCheck};
-use linera_sdk::linera_base_types::{Amount, ApplicationPermissions};
+use linera_sdk::linera_base_types::{Amount, ApplicationPermissions, ChainId};
+use std::str::FromStr;
 
 pub struct PlayerOperationHandler;
 
@@ -134,6 +135,36 @@ impl PlayerOperationHandler {
         .await;
         if stored_password_hash != provided_password_hash {
             panic!("Invalid password");
+        }
+    }
+
+    /// Handle manual leaderboard refresh request from player
+    /// Sends TriggerUpdate message directly to leaderboard chain
+    pub async fn handle_request_leaderboard_refresh(
+        contract: &mut crate::Game2048Contract,
+        player: String,
+        password_hash: String,
+        leaderboard_id: String,
+    ) {
+        // Validate player password
+        Self::validate_player_password(contract, &player, &password_hash).await;
+
+        // Get current time
+        let current_time = contract.runtime.system_time().micros();
+        let my_chain_id = contract.runtime.chain_id().to_string();
+
+        // Parse leaderboard_id as chain ID and send TriggerUpdate message
+        if let Ok(leaderboard_chain_id) = ChainId::from_str(&leaderboard_id) {
+            contract
+                .runtime
+                .prepare_message(Message::TriggerUpdate {
+                    triggerer_chain_id: my_chain_id,
+                    tournament_id: leaderboard_id.clone(),
+                    timestamp: current_time,
+                })
+                .send_to(leaderboard_chain_id);
+        } else {
+            panic!("Invalid leaderboard ID format");
         }
     }
 }
