@@ -48,6 +48,7 @@
 				totalBoards
 				totalPlayers
 				isPinned
+				lastUpdate
 				rankers {
 					username
 					score
@@ -113,11 +114,32 @@
 
 	// Get current board score (from player's active board)
 	const currentBoardScore = $derived($board?.data?.board?.score ?? 0);
+	
+	// Get current board owner
+	const currentBoardPlayer = $derived($board?.data?.board?.player);
+	
+	// Get leaderboard last update time (in milliseconds)
+	const leaderboardLastUpdate = $derived(
+		Number($leaderboard?.data?.leaderboard?.lastUpdate ?? 0) / 1000 // Convert microseconds to ms
+	);
 
-	// Show refresh button only when current score > leaderboard score
+	// Show refresh button when:
+	// 1. Current board belongs to logged-in user AND current score > leaderboard score
+	// 2. OR leaderboard hasn't been updated in 30+ seconds (regardless of score)
 	const shouldShowRefreshButton = $derived.by(() => {
 		if (!$userStore.username || !leaderboardId) return false;
-		return currentBoardScore > playerLeaderboardScore;
+		
+		// Check if viewing own board with higher score
+		const isOwnBoardWithHigherScore = 
+			currentBoardPlayer === $userStore.username && 
+			currentBoardScore > playerLeaderboardScore;
+		
+		// Check if leaderboard is stale (30+ seconds old)
+		const isLeaderboardStale = 
+			leaderboardLastUpdate > 0 && 
+			(now - leaderboardLastUpdate) >= 30000; // 30 seconds
+		
+		return isOwnBoardWithHigherScore || isLeaderboardStale;
 	});
 
 	const canRefresh = $derived.by(() => {
