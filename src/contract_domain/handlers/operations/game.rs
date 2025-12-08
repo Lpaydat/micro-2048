@@ -390,15 +390,15 @@ impl GameOperationHandler {
             .await
             .unwrap();
 
-        // 🚀 COOLDOWN CHECK - 10s spam protection
+        // 🚀 COOLDOWN CHECK - 15s spam protection
         let cooldown_until = *leaderboard.trigger_cooldown_until.get();
         if current_time < cooldown_until {
             // Still in cooldown - silently ignore
             return;
         }
 
-        // Set global cooldown (10 seconds)
-        let cooldown_duration = 10_000_000; // 10 seconds in microseconds
+        // Set global cooldown (15 seconds)
+        let cooldown_duration = 15_000_000; // 15 seconds in microseconds
         leaderboard
             .trigger_cooldown_until
             .set(current_time + cooldown_duration);
