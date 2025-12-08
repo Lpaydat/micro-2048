@@ -160,8 +160,6 @@ impl OperationDispatcher {
             
             // Claim chain - just triggers block production to process inbox
             Operation::ClaimChain => {
-                log::info!("⚡ [CLAIM] ClaimChain operation called on chain {}", 
-                    contract.runtime.chain_id());
                 // No-op operation - just triggers block production which processes inbox messages
                 // The RegisterPlayer message in inbox will be processed during this block
             }
