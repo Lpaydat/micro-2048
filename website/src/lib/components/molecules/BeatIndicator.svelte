@@ -3,6 +3,7 @@
 	import type { RhythmEngine } from '$lib/game/rhythmEngine.js';
 
 	export let rhythmEngine: RhythmEngine;
+	export let showCalibration: boolean = false; // Toggle calibration UI
 
 	let beatProgress = 0;
 	let isOnBeat = false;
@@ -15,6 +16,10 @@
 	let leftBarPos = 0;
 	let rightBarPos = 100;
 	let barApproaching = false;
+	
+	// Calibration state
+	let calibrationOffset = 0;
+	let showCalibrationPanel = false;
 
 	// Animation loop
 	const animate = () => {
@@ -79,8 +84,26 @@
 			showMissFlash = false;
 		}, 200);
 	}
+	
+	// Calibration functions
+	const handleCalibrationChange = (e: Event) => {
+		const target = e.target as HTMLInputElement;
+		calibrationOffset = parseInt(target.value, 10);
+		rhythmEngine?.setCalibrationOffset(calibrationOffset);
+	};
+	
+	const toggleCalibrationPanel = () => {
+		showCalibrationPanel = !showCalibrationPanel;
+	};
+	
+	const resetCalibration = () => {
+		calibrationOffset = 0;
+		rhythmEngine?.setCalibrationOffset(0);
+	};
 
 	onMount(() => {
+		// Initialize calibration offset from engine
+		calibrationOffset = rhythmEngine?.getCalibrationOffset() ?? 0;
 		animate();
 	});
 
@@ -121,10 +144,57 @@
 			style="left: {rightBarPos}%;"
 		></div>
 	</div>
+	
+	<!-- Calibration toggle button -->
+	{#if showCalibration}
+		<button 
+			class="calibration-toggle"
+			onclick={toggleCalibrationPanel}
+			title="Adjust beat timing"
+		>
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+				<circle cx="12" cy="12" r="3"/>
+				<path d="M12 1v6m0 6v10M4.22 4.22l4.24 4.24m7.08 7.08l4.24 4.24M1 12h6m6 0h10M4.22 19.78l4.24-4.24m7.08-7.08l4.24-4.24"/>
+			</svg>
+		</button>
+	{/if}
+	
+	<!-- Calibration panel -->
+	{#if showCalibrationPanel}
+		<div class="calibration-panel">
+			<div class="calibration-header">
+				<span class="calibration-title">Beat Calibration</span>
+				<button class="calibration-close" onclick={toggleCalibrationPanel}>×</button>
+			</div>
+			<div class="calibration-content">
+				<p class="calibration-hint">
+					If visuals feel early, slide right (+).
+					If visuals feel late, slide left (-).
+				</p>
+				<div class="calibration-slider-container">
+					<span class="calibration-label">-200ms</span>
+					<input 
+						type="range" 
+						min="-200" 
+						max="200" 
+						value={calibrationOffset}
+						oninput={handleCalibrationChange}
+						class="calibration-slider"
+					/>
+					<span class="calibration-label">+200ms</span>
+				</div>
+				<div class="calibration-value">
+					<span>Offset: <strong>{calibrationOffset}ms</strong></span>
+					<button class="calibration-reset" onclick={resetCalibration}>Reset</button>
+				</div>
+			</div>
+		</div>
+	{/if}
 </div>
 
 <style>
 	.beat-indicator {
+		position: relative;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
@@ -221,6 +291,163 @@
 		filter: drop-shadow(0 0 20px rgba(34, 197, 94, 1));
 	}
 
+	/* Calibration toggle button */
+	.calibration-toggle {
+		position: absolute;
+		top: 4px;
+		right: 4px;
+		width: 24px;
+		height: 24px;
+		padding: 4px;
+		background: rgba(139, 92, 246, 0.3);
+		border: 1px solid rgba(139, 92, 246, 0.5);
+		border-radius: 4px;
+		color: rgba(255, 255, 255, 0.7);
+		cursor: pointer;
+		transition: all 0.2s ease;
+		z-index: 20;
+	}
+	
+	.calibration-toggle:hover {
+		background: rgba(139, 92, 246, 0.5);
+		color: white;
+	}
+	
+	.calibration-toggle svg {
+		width: 100%;
+		height: 100%;
+	}
+	
+	/* Calibration panel */
+	.calibration-panel {
+		position: absolute;
+		top: 100%;
+		left: 0;
+		right: 0;
+		margin-top: 8px;
+		background: rgba(20, 20, 30, 0.95);
+		border: 1px solid rgba(139, 92, 246, 0.4);
+		border-radius: 8px;
+		padding: 12px;
+		z-index: 30;
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+	}
+	
+	.calibration-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 8px;
+	}
+	
+	.calibration-title {
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: #a78bfa;
+	}
+	
+	.calibration-close {
+		width: 20px;
+		height: 20px;
+		background: transparent;
+		border: none;
+		color: #9ca3af;
+		font-size: 1.25rem;
+		cursor: pointer;
+		line-height: 1;
+	}
+	
+	.calibration-close:hover {
+		color: white;
+	}
+	
+	.calibration-content {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+	
+	.calibration-hint {
+		font-size: 0.75rem;
+		color: #9ca3af;
+		margin: 0;
+		line-height: 1.4;
+	}
+	
+	.calibration-slider-container {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+	
+	.calibration-label {
+		font-size: 0.625rem;
+		color: #6b7280;
+		white-space: nowrap;
+	}
+	
+	.calibration-slider {
+		flex: 1;
+		-webkit-appearance: none;
+		appearance: none;
+		height: 6px;
+		background: #374151;
+		border-radius: 3px;
+		outline: none;
+	}
+	
+	.calibration-slider::-webkit-slider-thumb {
+		-webkit-appearance: none;
+		appearance: none;
+		width: 16px;
+		height: 16px;
+		background: #a78bfa;
+		border-radius: 50%;
+		cursor: pointer;
+		transition: background 0.2s ease;
+	}
+	
+	.calibration-slider::-webkit-slider-thumb:hover {
+		background: #c4b5fd;
+	}
+	
+	.calibration-slider::-moz-range-thumb {
+		width: 16px;
+		height: 16px;
+		background: #a78bfa;
+		border-radius: 50%;
+		cursor: pointer;
+		border: none;
+	}
+	
+	.calibration-value {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		font-size: 0.75rem;
+		color: #d1d5db;
+	}
+	
+	.calibration-value strong {
+		color: #22c55e;
+	}
+	
+	.calibration-reset {
+		padding: 2px 8px;
+		background: rgba(239, 68, 68, 0.2);
+		border: 1px solid rgba(239, 68, 68, 0.4);
+		border-radius: 4px;
+		color: #f87171;
+		font-size: 0.625rem;
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+	
+	.calibration-reset:hover {
+		background: rgba(239, 68, 68, 0.3);
+		color: #fca5a5;
+	}
+
 	/* Responsive */
 	@media (max-width: 640px) {
 		.beat-track {
@@ -241,6 +468,24 @@
 		.heart {
 			width: 30px;
 			height: 30px;
+		}
+		
+		.calibration-toggle {
+			width: 20px;
+			height: 20px;
+			padding: 3px;
+		}
+		
+		.calibration-panel {
+			padding: 10px;
+		}
+		
+		.calibration-title {
+			font-size: 0.75rem;
+		}
+		
+		.calibration-hint {
+			font-size: 0.625rem;
 		}
 	}
 </style>

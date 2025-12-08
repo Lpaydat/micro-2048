@@ -1424,6 +1424,7 @@
 							<BeatIndicator 
 								{rhythmEngine} 
 								bind:this={beatIndicatorRef}
+								showCalibration={true}
 							/>
 						</div>
 						<div class="rhythm-stats">
