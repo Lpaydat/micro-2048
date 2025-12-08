@@ -127,6 +127,8 @@ pub struct Leaderboard {
     pub score: MapView<String, u64>,        // username, score
     pub board_ids: MapView<String, String>, // username, board_id
     pub is_ended: MapView<String, bool>,    // username, is_ended (for best board)
+    pub highest_tiles: MapView<String, u64>, // username -> highest_tile (for message-based updates)
+    pub last_update: MapView<String, u64>,   // username -> last_update_timestamp
     #[graphql(skip)]
     pub active_boards: MapView<String, ActiveBoardInfo>, // board_id -> board summary
 

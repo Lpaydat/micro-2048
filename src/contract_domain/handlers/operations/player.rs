@@ -14,10 +14,13 @@ impl PlayerOperationHandler {
         username: String,
         password_hash: String,
     ) {
+        log::info!("🚀 [REGISTER] Starting registration for user: {}", username);
+        
         if username.trim().is_empty() {
             panic!("Username cannot be empty");
         }
         let is_main_chain = contract.is_main_chain();
+        log::info!("🚀 [REGISTER] Is main chain: {}", is_main_chain);
         if !is_main_chain {
             panic!("Only main chain can register player");
         }
@@ -25,17 +28,24 @@ impl PlayerOperationHandler {
         contract
             .check_player_registered(&username, RegistrationCheck::EnsureNotRegistered)
             .await;
+        log::info!("🚀 [REGISTER] Player not registered yet, proceeding...");
+
+        // Check pool size
+        let pool_size = contract.state.unclaimed_chains.count();
+        log::info!("🚀 [REGISTER] Chain pool size: {}", pool_size);
 
         // 🚀 CHAIN POOL: Try to claim a pre-created chain from the pool first
         // This is much faster than creating a new chain on-demand
         let chain_id = if let Some(pooled_chain_id) =
             contract.state.unclaimed_chains.front().await.unwrap()
         {
+            log::info!("🚀 [REGISTER] Using pooled chain: {}", pooled_chain_id);
             // Pop the chain from the pool
             contract.state.unclaimed_chains.delete_front();
             // Parse the chain ID
             ChainId::from_str(&pooled_chain_id).expect("Invalid chain ID in pool")
         } else {
+            log::info!("🚀 [REGISTER] Pool empty, creating new chain...");
             // Fallback: Pool is empty - create a new chain AND refill pool with 50 more
             let chain_ownership = contract.runtime.chain_ownership();
             let application_permissions = ApplicationPermissions::default();
@@ -47,10 +57,12 @@ impl PlayerOperationHandler {
                 application_permissions.clone(),
                 amount,
             );
+            log::info!("🚀 [REGISTER] Created new chain: {}", new_chain_id);
 
             // 🚀 AUTO-REFILL: Create 50 more chains to refill the pool
             // This ensures we don't hit the slow path repeatedly
-            for _ in 0..50 {
+            log::info!("🚀 [REGISTER] Refilling pool with 50 chains...");
+            for i in 0..50 {
                 let pool_chain_id = contract.runtime.open_chain(
                     chain_ownership.clone(),
                     application_permissions.clone(),
@@ -60,10 +72,16 @@ impl PlayerOperationHandler {
                     .state
                     .unclaimed_chains
                     .push_back(pool_chain_id.to_string());
+                if i % 10 == 0 {
+                    log::info!("🚀 [REGISTER] Created pool chain {}/50", i + 1);
+                }
             }
+            log::info!("🚀 [REGISTER] Pool refilled");
 
             new_chain_id
         };
+
+        log::info!("🚀 [REGISTER] Assigning chain {} to user {}", chain_id, username);
 
         let player = contract
             .state
@@ -78,16 +96,22 @@ impl PlayerOperationHandler {
         // 🚀 NEW: Set up cross-chain subscription for new player chain
         // Player chains should subscribe to main chain's active_tournaments stream
         let main_chain_id = contract.runtime.application_creator_chain_id();
+        log::info!("🚀 [REGISTER] Main chain ID: {}", main_chain_id);
 
         // Send message to new player chain to subscribe to main chain's tournament events
+        log::info!("🚀 [REGISTER] Sending SubscribeToMainChain message to {}", chain_id);
         contract
             .runtime
             .prepare_message(Message::SubscribeToMainChain {
                 main_chain_id: main_chain_id.to_string(),
             })
+            .with_tracking() // Ensure application is deployed on target chain
             .send_to(chain_id);
 
+        log::info!("🚀 [REGISTER] Sending RegisterPlayer message to {}", chain_id);
         contract.register_player(chain_id, &username, &password_hash);
+        
+        log::info!("🚀 [REGISTER] Registration complete for user: {}", username);
     }
 
     pub async fn handle_toggle_admin(

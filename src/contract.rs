@@ -13,7 +13,6 @@ use state::Leaderboard;
 use std::str::FromStr;
 
 use self::state::Game2048;
-use contract_domain::events::emitters::EventEmitter;
 use contract_domain::{
     ContractHelpers, EventReader, LeaderboardOperationHandler, PlayerOperationHandler,
     ShardOperationHandler, StreamProcessor, SubscriptionManager, TournamentOperationHandler,
@@ -202,11 +201,13 @@ impl Game2048Contract {
     // ========================================
 
     fn register_player(&mut self, chain_id: ChainId, player: &str, password_hash: &str) {
+        log::info!("📤 [SEND] Sending RegisterPlayer message to chain {}", chain_id);
         self.runtime
             .prepare_message(Message::RegisterPlayer {
                 username: player.to_string(),
                 password_hash: password_hash.to_string(),
             })
+            .with_tracking() // Ensure application is deployed on target chain
             .send_to(chain_id);
     }
 
@@ -396,26 +397,6 @@ impl Game2048Contract {
             timestamp,
         )
         .await
-    }
-
-    /// Emit game creation event helper
-    pub async fn emit_game_creation_event(
-        &mut self,
-        board_id: &str,
-        player: &str,
-        tournament_id: &str,
-        timestamp: u64,
-        boards_in_tournament: u32,
-    ) {
-        EventEmitter::emit_game_creation_event(
-            self,
-            board_id,
-            player,
-            tournament_id,
-            timestamp,
-            boards_in_tournament,
-        )
-        .await;
     }
 
     // ========================================

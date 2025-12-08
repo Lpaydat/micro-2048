@@ -1,7 +1,10 @@
-use game2048::{hash_seed, Game, GameStatus, RegistrationCheck};
+use game2048::{hash_seed, Game, RegistrationCheck};
 /// Game Messages Handler
 ///
 /// Handles game-related messages including board creation.
+/// 
+/// 🚀 MESSAGE-BASED ARCHITECTURE: Score updates now use SubmitScore message.
+/// No events are emitted on board creation (score=0 boards don't send messages).
 
 pub struct GameMessageHandler;
 
@@ -45,63 +48,15 @@ impl GameMessageHandler {
         game.board.set(new_board);
         game.player.set(player.clone());
         game.leaderboard_id.set(leaderboard_id.clone());
-        game.shard_id.set(shard_id.clone());
+        game.shard_id.set(shard_id);
         game.chain_id.set(player_obj.chain_id.get().to_string());
         game.end_time.set(end_time);
         game.created_at.set(timestamp);
 
-        contract.state.latest_board_id.set(board_id.clone());
+        contract.state.latest_board_id.set(board_id);
 
-        // 🚀 NEW: Emit player score update for game creation (score = 0, status = Created)
-        // Get current best score for this player (likely 0 for new players)
-        let leaderboard_obj = contract
-            .state
-            .leaderboards
-            .load_entry_mut("")
-            .await
-            .unwrap();
-        let current_best = leaderboard_obj
-            .score
-            .get(&player)
-            .await
-            .unwrap()
-            .unwrap_or(0);
-
-        // Get player's current board count for this tournament
-        let player_state = contract
-            .state
-            .players
-            .load_entry_mut(&player)
-            .await
-            .unwrap();
-        let current_board_count = player_state
-            .boards_per_tournament
-            .get(&leaderboard_id)
-            .await
-            .unwrap()
-            .unwrap_or(0);
-
-        use crate::contract_domain::events::emitters::EventEmitter;
-        let chain_id = contract.runtime.chain_id().to_string();
-        EventEmitter::emit_player_score_update(
-            contract,
-            player.clone(),
-            board_id.clone(),
-            0, // Initial score is 0
-            chain_id,
-            timestamp,
-            GameStatus::Created,
-            2, // Initial highest tile
-            0,
-            leaderboard_id.clone(),
-            current_best,
-            current_board_count,
-        )
-        .await;
-
-        // 🚀 REMOVED: LeaderboardNewGame message
-        // Board/player counting is now handled by shard-based aggregation system
-        // via ShardScoreUpdate events and player_board_counts
-        // This reduces cross-chain message traffic during peak load
+        // 🚀 MESSAGE-BASED: No event emission on board creation
+        // Score=0 boards don't send SubmitScore messages
+        // First SubmitScore is sent when player makes moves and score > 0
     }
 }

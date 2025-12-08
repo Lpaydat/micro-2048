@@ -1,6 +1,10 @@
 //! Message Dispatcher
 //!
 //! Main dispatcher for routing messages directly to handlers.
+//! 
+//! 🚀 MESSAGE-BASED ARCHITECTURE: Score updates now use SubmitScore message
+//! directly from player chains to leaderboard chain. Shard-related messages
+//! are deprecated and made no-ops for backward compatibility.
 
 use crate::contract_domain::handlers::messages::{
     GameMessageHandler, LeaderboardMessageHandler, PlayerMessageHandler, TransferMessageHandler,
@@ -14,7 +18,11 @@ impl MessageDispatcher {
     /// Dispatch a message directly to the appropriate handler
     pub async fn dispatch(contract: &mut crate::Game2048Contract, message: Message) {
         match message {
-            // Player messages
+            // ═══════════════════════════════════════════════════════════════
+            // ACTIVE MESSAGES (Message-based architecture)
+            // ═══════════════════════════════════════════════════════════════
+            
+            // Player registration
             Message::RegisterPlayer {
                 username,
                 password_hash,
@@ -23,12 +31,12 @@ impl MessageDispatcher {
                     .await;
             }
 
-            // Transfer messages
+            // Token transfers
             Message::Transfer { chain_id, amount } => {
                 TransferMessageHandler::handle_transfer(contract, chain_id, amount);
             }
 
-            // Game messages
+            // Game board creation
             Message::CreateNewBoard {
                 seed,
                 player,
@@ -49,7 +57,7 @@ impl MessageDispatcher {
                 .await;
             }
 
-            // Leaderboard messages
+            // Leaderboard/tournament creation
             Message::CreateLeaderboard {
                 leaderboard_id,
                 name,
@@ -77,121 +85,77 @@ impl MessageDispatcher {
                 )
                 .await;
             }
-            Message::LeaderboardNewGame {
-                player: _,
-                board_id: _,
-                timestamp: _,
-            } => {
-                // 🚀 DEPRECATED: No-op - board/player counting now handled by shard aggregation
-                // Keeping handler to process any pending messages in queue
-            }
-            Message::UpdateScore {
+
+            // 🚀 PRIMARY: Direct score submission from player to leaderboard
+            Message::SubmitScore {
                 player,
+                player_chain_id,
                 board_id,
                 score,
-                is_end,
+                highest_tile,
+                game_status,
                 timestamp,
+                boards_in_tournament,
             } => {
-                LeaderboardMessageHandler::handle_update_score(
-                    contract, player, board_id, score, is_end, timestamp,
-                )
-                .await;
-            }
-            Message::Flush { board_ids, scores } => {
-                LeaderboardMessageHandler::handle_flush(contract, board_ids, scores).await;
-            }
-
-            // Shard registration message
-            Message::RegisterPlayerWithShard {
-                player_chain_id,
-                tournament_id,
-                player_name,
-            } => {
-                PlayerMessageHandler::handle_register_player_with_shard(
+                LeaderboardMessageHandler::handle_submit_score(
                     contract,
-                    player_chain_id.clone(),
-                    tournament_id,
-                    player_name,
-                )
-                .await;
-            }
-
-            // Aggregation trigger request (delegated triggerer pattern)
-            Message::RequestAggregationTrigger {
-                requester_chain_id,
-                timestamp,
-            } => {
-                use crate::contract_domain::handlers::operations::LeaderboardOperationHandler;
-                if let Err(e) = LeaderboardOperationHandler::handle_aggregation_trigger_request(
-                    contract,
-                    &requester_chain_id,
+                    player,
+                    player_chain_id,
+                    board_id,
+                    score,
+                    highest_tile,
+                    game_status,
                     timestamp,
+                    boards_in_tournament,
                 )
-                .await
-                {
-                    // Log error but don't panic - unauthorized triggers are expected
-                    eprintln!("Aggregation trigger rejected: {}", e);
-                }
-                // Note: Leaderboard updates happen via streams now, no manual trigger needed
-            }
-
-            // Shard aggregation trigger from leaderboard
-            Message::TriggerShardAggregation { timestamp: _ } => {
-                use crate::contract_domain::handlers::operations::ShardOperationHandler;
-                // Aggregate scores when requested by leaderboard
-                ShardOperationHandler::aggregate_scores_from_player_chains(contract, Vec::new())
-                    .await;
+                .await;
             }
 
             // Player chain subscribes to main chain's active tournaments
             Message::SubscribeToMainChain { main_chain_id } => {
-                use crate::contract_domain::handlers::messages::PlayerMessageHandler;
                 PlayerMessageHandler::handle_subscribe_to_main_chain(contract, main_chain_id).await;
             }
 
-            // Shard registers first player with leaderboard for triggerer system
-            Message::RegisterFirstPlayer {
-                shard_chain_id,
-                player_chain_id,
-                tournament_id,
-            } => {
-                LeaderboardMessageHandler::handle_register_first_player(
-                    contract,
-                    shard_chain_id,
-                    player_chain_id,
-                    tournament_id,
-                )
-                .await;
+            // ═══════════════════════════════════════════════════════════════
+            // DEPRECATED MESSAGES (No-ops for backward compatibility)
+            // These are kept to process any pending messages in the queue
+            // but no longer do anything meaningful.
+            // ═══════════════════════════════════════════════════════════════
+            
+            Message::LeaderboardNewGame { .. } => {
+                // DEPRECATED: Board counting now via SubmitScore
+            }
+            
+            Message::UpdateScore { .. } => {
+                // DEPRECATED: Use SubmitScore instead
+            }
+            
+            Message::Flush { .. } => {
+                // DEPRECATED: No longer using shard flush system
             }
 
-            // Shard sends multiple trigger candidates to leaderboard
-            Message::UpdateShardTriggerCandidates {
-                shard_chain_id,
-                player_chain_ids,
-                tournament_id,
-            } => {
-                LeaderboardMessageHandler::handle_update_shard_trigger_candidates(
-                    contract,
-                    shard_chain_id,
-                    player_chain_ids,
-                    tournament_id,
-                )
-                .await;
+            Message::RegisterPlayerWithShard { .. } => {
+                // DEPRECATED: No longer using shard registration
             }
 
-            // Player chain sends trigger update request to leaderboard
-            Message::TriggerUpdate {
-                triggerer_chain_id,
-                tournament_id,
-                timestamp,
-            } => {
-                LeaderboardMessageHandler::handle_trigger_update(
-                    contract,
-                    triggerer_chain_id,
-                    tournament_id,
-                    timestamp,
-                )
-                .await;
+            Message::RequestAggregationTrigger { .. } => {
+                // DEPRECATED: No longer using triggerer system
+            }
+
+            Message::TriggerShardAggregation { .. } => {
+                // DEPRECATED: No longer using shard aggregation
+            }
+
+            Message::RegisterFirstPlayer { .. } => {
+                // DEPRECATED: No longer using triggerer registration
+            }
+
+            Message::UpdateShardTriggerCandidates { .. } => {
+                // DEPRECATED: No longer using triggerer candidates
+            }
+
+            Message::TriggerUpdate { .. } => {
+                // DEPRECATED: No longer using auto-trigger system
             }
         }
     }

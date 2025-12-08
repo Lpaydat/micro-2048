@@ -101,6 +101,11 @@ pub enum Operation {
     RefillChainPool {
         count: u32,
     },
+    
+    /// 🚀 MESSAGE-BASED: Claim/initialize player chain after registration
+    /// This processes the inbox to receive RegisterPlayer message
+    /// No authentication needed - just triggers block production
+    ClaimChain,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -188,6 +193,20 @@ pub enum Message {
         triggerer_chain_id: String,
         tournament_id: String,
         timestamp: u64,
+    },
+    
+    /// 🚀 NEW (Message-based architecture): Player submits score directly to leaderboard
+    /// Sent when: score > 0 AND score > current_best (new personal best)
+    /// Replaces: PlayerScoreUpdate event + shard aggregation
+    SubmitScore {
+        player: String,
+        player_chain_id: String,
+        board_id: String,
+        score: u64,
+        highest_tile: u64,
+        game_status: GameStatus,
+        timestamp: u64,
+        boards_in_tournament: u32,
     },
 }
 

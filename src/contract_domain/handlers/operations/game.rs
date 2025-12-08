@@ -3,7 +3,7 @@
 //! Handles game-related operations including moves and board creation.
 
 use crate::contract_domain::game_logic::{GameMoveProcessor, GameMoveResult};
-use game2048::{hash_seed, Direction, Game, GameEndReason, GameStatus, Message};
+use game2048::{hash_seed, Direction, Game, GameEndReason, GameStatus};
 use linera_sdk::linera_base_types::ChainId;
 use std::str::FromStr;
 
@@ -164,26 +164,30 @@ impl GameOperationHandler {
                         .unwrap()
                         .unwrap_or(0);
 
-                    // 🚀 OPTIMIZATION: Only emit event when score beats current best
-                    // This drastically reduces event emissions during peak workload
-                    if final_score > current_best {
-                        use crate::contract_domain::events::emitters::EventEmitter;
-                        let chain_id = contract.runtime.chain_id().to_string();
-                        EventEmitter::emit_player_score_update(
-                            contract,
-                            player.clone(),
-                            board_id.clone(),
-                            final_score,
-                            chain_id.clone(),
-                            latest_timestamp,
-                            game_status,
-                            final_highest_tile,
-                            0, // TODO: Track actual move count
-                            leaderboard_id.clone(),
-                            current_best,
-                            current_board_count,
-                        )
-                        .await;
+                    // 🚀 MESSAGE-BASED: Send SubmitScore directly to leaderboard (replaces event)
+                    // Only send when score > 0 AND score > current_best
+                    if final_score > 0 && final_score > current_best {
+                        use linera_sdk::linera_base_types::ChainId;
+                        use std::str::FromStr;
+                        
+                        // Extract values before borrowing runtime
+                        let player_chain_id = contract.runtime.chain_id().to_string();
+                        
+                        if let Ok(leaderboard_chain_id) = ChainId::from_str(&leaderboard_id) {
+                            contract
+                                .runtime
+                                .prepare_message(game2048::Message::SubmitScore {
+                                    player: player.clone(),
+                                    player_chain_id,
+                                    board_id: board_id.clone(),
+                                    score: final_score,
+                                    highest_tile: final_highest_tile,
+                                    game_status,
+                                    timestamp: latest_timestamp,
+                                    boards_in_tournament: current_board_count,
+                                })
+                                .send_to(leaderboard_chain_id);
+                        }
 
                         // Update player's best score for THIS TOURNAMENT
                         let player_record = contract
@@ -221,8 +225,8 @@ impl GameOperationHandler {
             // Get current best score for this player in this leaderboard
             let current_best = leaderboard.score.get(&player).await.unwrap().unwrap_or(0);
 
-            // 🚀 OPTIMIZATION: Only emit if score beats current best
-            if score > current_best {
+            // 🚀 MESSAGE-BASED: Send SubmitScore for game end (only if score > 0 and beats current best)
+            if score > 0 && score > current_best {
                 // Get player's current board count for this tournament
                 let player_state = contract
                     .state
@@ -237,86 +241,62 @@ impl GameOperationHandler {
                     .unwrap()
                     .unwrap_or(0);
 
-                use crate::contract_domain::events::emitters::EventEmitter;
-                let chain_id = contract.runtime.chain_id().to_string();
+                use linera_sdk::linera_base_types::ChainId;
+                use std::str::FromStr;
+                
+                // Extract values before borrowing runtime
                 let highest_tile = Game::highest_tile(*board.board.get());
-                EventEmitter::emit_player_score_update(
-                    contract,
-                    player.clone(),
-                    board_id.clone(),
-                    score,
-                    chain_id,
-                    111970,
-                    GameStatus::Ended(GameEndReason::TournamentEnded),
-                    highest_tile,
-                    0, // TODO: Track actual move count
-                    leaderboard_id.clone(),
-                    current_best,
-                    current_board_count,
-                )
-                .await;
+                let player_chain_id = contract.runtime.chain_id().to_string();
+                let timestamp = contract.runtime.system_time().micros();
+                
+                if let Ok(leaderboard_chain_id) = ChainId::from_str(&leaderboard_id) {
+                    contract
+                        .runtime
+                        .prepare_message(game2048::Message::SubmitScore {
+                            player: player.clone(),
+                            player_chain_id,
+                            board_id: board_id.clone(),
+                            score,
+                            highest_tile,
+                            game_status: GameStatus::Ended(GameEndReason::TournamentEnded),
+                            timestamp,
+                            boards_in_tournament: current_board_count,
+                        })
+                        .send_to(leaderboard_chain_id);
+                }
             }
         } else {
             panic!("Game is ended");
         }
     }
 
+    /// 🚀 MESSAGE-BASED: Create a new board for the player
+    /// 
+    /// In the message-based architecture:
+    /// - No shards needed
+    /// - Board is created locally on player chain
+    /// - Scores are sent directly to leaderboard via SubmitScore message when player makes moves
     pub async fn handle_new_board(
         contract: &mut crate::Game2048Contract,
         player: String,
         timestamp: u64,
         password_hash: String,
-        leaderboard_id: String, // Leaderboard ID parameter
+        leaderboard_id: String,
     ) {
         // Validate password
         contract
             .validate_player_password(&player, &password_hash)
             .await;
 
-        // 🚀 NEW: Show cached tournament information
-
-        // Display cached tournaments from streaming system
-        let cached_tournaments = contract.list_cached_tournaments().await;
-        let _cache_count = contract.get_cached_tournament_count().await;
-
-        if !cached_tournaments.is_empty() {
-            for tournament in cached_tournaments.iter() {
-                let _status = if tournament.tournament_id == leaderboard_id {
-                    "🎯 TARGET"
-                } else {
-                    "📋"
-                };
-            }
-        }
-
-        // Check if target tournament is in cache
-        let _target_tournament = contract.get_cached_tournament(&leaderboard_id).await;
-
-        // 🧪 TEST: Disabled tournament validation to test without event propagation
-        // TODO: Re-enable after testing
-        // let is_valid_tournament = contract.validate_tournament(&leaderboard_id).await;
-        // if !is_valid_tournament {
-        //     panic!(
-        //         "Tournament '{}' is not active, expired, or does not exist",
-        //         leaderboard_id
-        //     );
-        // }
-
-        // 🚀 NEW: Get leaderboard info and select optimal shard using hash-based distribution
-        let selected_shard_id = contract
-            .select_optimal_shard(&leaderboard_id, &player)
-            .await;
-
-        // 🚀 FIX: Get tournament data before creating board to avoid borrow conflicts
+        // Get tournament end time from cache (if available)
         let tournament_end_time =
             if let Some(tournament) = contract.get_cached_tournament(&leaderboard_id).await {
-                // None -> 0 (unlimited)
                 tournament.end_time.unwrap_or(0)
             } else {
                 0 // Default to unlimited if tournament not in cache
             };
 
-        // 🚀 NEW: Create board locally (no cross-chain message needed)
+        // Create board locally
         let nonce = contract.state.nonce.get();
         let board_id = format!(
             "{}.{}",
@@ -335,15 +315,15 @@ impl GameOperationHandler {
         game.board.set(new_board);
         game.player.set(player.clone());
         game.leaderboard_id.set(leaderboard_id.clone());
-        game.shard_id.set(selected_shard_id.clone());
+        game.shard_id.set(String::new()); // No shard in message-based architecture
         game.chain_id.set(contract.runtime.chain_id().to_string());
         game.created_at.set(timestamp);
         game.end_time.set(tournament_end_time);
 
         contract.state.nonce.set(nonce + 1);
-        contract.state.latest_board_id.set(board_id.clone());
+        contract.state.latest_board_id.set(board_id);
 
-        // 🚀 NEW: Increment player's board count for this tournament (distributed counting)
+        // Increment player's board count for this tournament
         let player_state = contract
             .state
             .players
@@ -356,47 +336,14 @@ impl GameOperationHandler {
             .await
             .unwrap()
             .unwrap_or(0);
-        let new_board_count = current_board_count + 1;
         player_state
             .boards_per_tournament
-            .insert(&leaderboard_id, new_board_count)
+            .insert(&leaderboard_id, current_board_count + 1)
             .unwrap();
 
-        // 🚀 NEW: Register with selected shard (one-time registration)
-
-        let registration_message = Message::RegisterPlayerWithShard {
-            player_chain_id: contract.runtime.chain_id().to_string(),
-            tournament_id: leaderboard_id.clone(),
-            player_name: player.clone(),
-        };
-
-        if let Ok(shard_chain_id) = ChainId::from_str(&selected_shard_id) {
-            contract
-                .runtime
-                .prepare_message(registration_message)
-                .send_to(shard_chain_id);
-        }
-
-        // 🚀 NEW: Subscribe to leaderboard updates for triggerer system
-        if let Ok(leaderboard_chain_id) = ChainId::from_str(&leaderboard_id) {
-            contract.subscribe_to_leaderboard_update_events(leaderboard_chain_id);
-        }
-
-        // 🚀 BOOTSTRAP: Shard chains now handle first-player registration (not player chains)
-
-        // 🚀 NEW: Emit game creation event with actual board count
-        contract
-            .emit_game_creation_event(
-                &board_id,
-                &player,
-                &leaderboard_id,
-                timestamp,
-                new_board_count,
-            )
-            .await;
-
-        // 🚀 NEW: Track activity for workload statistics
-        contract.track_game_activity().await;
+        // 🚀 MESSAGE-BASED: No registration with shard needed
+        // No event emission needed
+        // First SubmitScore is sent when player makes moves and score > 0
     }
 
     /// 🚀 IMPROVED: Handle score aggregation using monitored player chains from shard state
@@ -425,16 +372,17 @@ impl GameOperationHandler {
             .await;
     }
 
-    /// 🚀 IMPROVED: Handle leaderboard update by triggering shard aggregation
+    /// 🚀 MESSAGE-BASED: Handle leaderboard update (manual refresh)
     /// 
-    /// This can be called directly via mutation on the leaderboard chain.
-    /// Shared 10s cooldown with auto-triggers to prevent spam.
+    /// With message-based architecture, this operation just needs to:
+    /// 1. Check cooldown (10s spam protection)
+    /// 2. Trigger block production (which processes all pending SubmitScore messages)
+    /// 
+    /// The leaderboard chain should run with --listener-skip-process-inbox so
+    /// SubmitScore messages queue up and are processed when this operation is called.
     pub async fn handle_update_leaderboard(contract: &mut crate::Game2048Contract) {
-        use game2048::Message;
-
         let current_time = contract.runtime.system_time().micros();
 
-        // Get registered shard chain IDs from leaderboard state
         let leaderboard = contract
             .state
             .leaderboards
@@ -442,25 +390,14 @@ impl GameOperationHandler {
             .await
             .unwrap();
 
-        // 🚀 SHARED COOLDOWN CHECK - prevents spam from both auto and manual triggers
+        // 🚀 COOLDOWN CHECK - 10s spam protection
         let cooldown_until = *leaderboard.trigger_cooldown_until.get();
         if current_time < cooldown_until {
             // Still in cooldown - silently ignore
             return;
         }
 
-        // Get all shard IDs
-        let shard_ids = leaderboard
-            .shard_ids
-            .read_front(100)
-            .await
-            .unwrap_or_default();
-
-        if shard_ids.is_empty() {
-            return;
-        }
-
-        // Set global cooldown FIRST (10 seconds)
+        // Set global cooldown (10 seconds)
         let cooldown_duration = 10_000_000; // 10 seconds in microseconds
         leaderboard
             .trigger_cooldown_until
@@ -470,18 +407,10 @@ impl GameOperationHandler {
         leaderboard.last_trigger_time.set(current_time);
         leaderboard
             .last_trigger_by
-            .set("direct_operation".to_string());
+            .set("manual_refresh".to_string());
 
-        // Send trigger message to ALL shards
-        for shard_id in shard_ids.iter() {
-            if let Ok(shard_chain_id) = ChainId::from_str(shard_id) {
-                contract
-                    .runtime
-                    .prepare_message(Message::TriggerShardAggregation {
-                        timestamp: current_time,
-                    })
-                    .send_to(shard_chain_id);
-            }
-        }
+        // That's it! The act of calling this operation triggers block production,
+        // which processes all pending SubmitScore messages in the inbox.
+        // No need to send messages to shards anymore.
     }
 }

@@ -1,6 +1,9 @@
 //! Event Emitters
 //!
 //! Utilities for creating and emitting events to streams.
+//! 
+//! 🚀 MESSAGE-BASED ARCHITECTURE: Score-related events are deprecated.
+//! Only ActiveTournaments event is still used for tournament discovery.
 
 use game2048::GameEvent;
 
@@ -8,67 +11,8 @@ use game2048::GameEvent;
 pub struct EventEmitter;
 
 impl EventEmitter {
-    /// Emit a player score update event
-    pub async fn emit_player_score_update(
-        contract: &mut crate::Game2048Contract,
-        player: String,
-        board_id: String,
-        score: u64,
-        chain_id: String,
-        timestamp: u64,
-        game_status: game2048::GameStatus,
-        highest_tile: u64,
-        moves_count: u32,
-        leaderboard_id: String,
-        current_leaderboard_best: u64,
-        boards_in_tournament: u32,
-    ) {
-        let event = GameEvent::PlayerScoreUpdate {
-            player,
-            board_id,
-            score,
-            chain_id,
-            timestamp,
-            game_status,
-            highest_tile,
-            moves_count,
-            leaderboard_id,
-            current_leaderboard_best,
-            boards_in_tournament,
-        };
-
-        use linera_sdk::linera_base_types::StreamName;
-        let stream_name = StreamName::from("player_score_update".to_string());
-        contract.runtime.emit(stream_name, &event);
-    }
-
-    /// Emit a shard score update event
-    pub async fn emit_shard_score_update(
-        contract: &mut crate::Game2048Contract,
-        shard_chain_id: String,
-        player_scores: std::collections::HashMap<String, game2048::PlayerScoreSummary>,
-        player_activity_scores: std::collections::HashMap<String, u32>,
-        player_board_counts: std::collections::HashMap<String, u32>,
-        aggregation_timestamp: u64,
-        total_players: u32,
-        leaderboard_id: String,
-    ) {
-        let event = GameEvent::ShardScoreUpdate {
-            shard_chain_id,
-            player_scores,
-            player_activity_scores,
-            player_board_counts,
-            aggregation_timestamp,
-            total_players,
-            leaderboard_id,
-        };
-
-        use linera_sdk::linera_base_types::StreamName;
-        let stream_name = StreamName::from("shard_score_update".to_string());
-        contract.runtime.emit(stream_name, &event);
-    }
-
     /// Emit active tournaments event
+    /// This is the only event still actively used in the message-based architecture.
     pub async fn emit_active_tournaments(
         contract: &mut crate::Game2048Contract,
         tournaments: Vec<game2048::TournamentInfo>,
@@ -84,53 +28,54 @@ impl EventEmitter {
         contract.runtime.emit(stream_name, &event);
     }
 
-    /// Emit leaderboard update event
-    pub async fn emit_leaderboard_update(
-        contract: &mut crate::Game2048Contract,
-        leaderboard_id: String,
-        triggerer_list: Vec<(String, u32)>,
-        last_update_timestamp: u64,
-        threshold_config: u64,
-        total_registered_players: u32,
-    ) {
-        let event = GameEvent::LeaderboardUpdate {
-            leaderboard_id,
-            triggerer_list,
-            last_update_timestamp,
-            threshold_config,
-            total_registered_players,
-        };
+    // ═══════════════════════════════════════════════════════════════
+    // DEPRECATED EMITTERS (kept for reference, may be removed later)
+    // ═══════════════════════════════════════════════════════════════
 
-        use linera_sdk::linera_base_types::StreamName;
-        let stream_name = StreamName::from("leaderboard_update".to_string());
-        contract.runtime.emit(stream_name, &event);
+    /// DEPRECATED: Use Message::SubmitScore instead
+    #[allow(dead_code)]
+    pub async fn emit_player_score_update(
+        _contract: &mut crate::Game2048Contract,
+        _player: String,
+        _board_id: String,
+        _score: u64,
+        _chain_id: String,
+        _timestamp: u64,
+        _game_status: game2048::GameStatus,
+        _highest_tile: u64,
+        _moves_count: u32,
+        _leaderboard_id: String,
+        _current_leaderboard_best: u64,
+        _boards_in_tournament: u32,
+    ) {
+        // No-op: Use Message::SubmitScore instead
     }
 
-    /// Emit game creation event helper
-    pub async fn emit_game_creation_event(
-        contract: &mut crate::Game2048Contract,
-        board_id: &str,
-        player: &str,
-        tournament_id: &str,
-        timestamp: u64,
-        boards_in_tournament: u32,
+    /// DEPRECATED: No longer using shard aggregation
+    #[allow(dead_code)]
+    pub async fn emit_shard_score_update(
+        _contract: &mut crate::Game2048Contract,
+        _shard_chain_id: String,
+        _player_scores: std::collections::HashMap<String, game2048::PlayerScoreSummary>,
+        _player_activity_scores: std::collections::HashMap<String, u32>,
+        _player_board_counts: std::collections::HashMap<String, u32>,
+        _aggregation_timestamp: u64,
+        _total_players: u32,
+        _leaderboard_id: String,
     ) {
-        let score_event = GameEvent::PlayerScoreUpdate {
-            player: player.to_string(),
-            board_id: board_id.to_string(),
-            score: 0,
-            chain_id: contract.runtime.chain_id().to_string(),
-            timestamp,
-            game_status: game2048::GameStatus::Active,
-            highest_tile: 2,
-            moves_count: 0,
-            leaderboard_id: tournament_id.to_string(),
-            current_leaderboard_best: 0,
-            boards_in_tournament,
-        };
+        // No-op: No longer using shard aggregation
+    }
 
-        use linera_sdk::linera_base_types::StreamName;
-        let stream_name = StreamName::from("player_score_update".to_string());
-        contract.runtime.emit(stream_name, &score_event);
+    /// DEPRECATED: No longer using triggerer system
+    #[allow(dead_code)]
+    pub async fn emit_leaderboard_update(
+        _contract: &mut crate::Game2048Contract,
+        _leaderboard_id: String,
+        _triggerer_list: Vec<(String, u32)>,
+        _last_update_timestamp: u64,
+        _threshold_config: u64,
+        _total_registered_players: u32,
+    ) {
+        // No-op: No longer using triggerer system
     }
 }
