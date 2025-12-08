@@ -14,7 +14,6 @@ export const GET_LEADERBOARD_DETAILS = gql`
 			endTime
 			totalBoards
 			totalPlayers
-			lastUpdate
 			rankers {
 				username
 				score
