@@ -101,7 +101,7 @@
 	let lastRefreshTime = $state(0);
 	let isRefreshing = $state(false);
 	let now = $state(Date.now()); // Reactive time for countdown
-	const REFRESH_COOLDOWN_MS = 10000; // 10 seconds cooldown
+	const REFRESH_COOLDOWN_MS = 15000; // 15 seconds cooldown
 
 	// Get current player's best score from leaderboard
 	const playerLeaderboardScore = $derived.by(() => {

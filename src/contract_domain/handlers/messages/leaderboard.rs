@@ -496,8 +496,8 @@ impl LeaderboardMessageHandler {
         }
 
         // Set global cooldown FIRST (prevents race conditions)
-        // 🚀 CHANGED: 10 seconds cooldown (down from 15s for better responsiveness)
-        let cooldown_duration = 10_000_000; // 10 seconds in microseconds
+        // 🚀 CHANGED: 15 seconds cooldown for spam protection
+        let cooldown_duration = 15_000_000; // 15 seconds in microseconds
         leaderboard
             .trigger_cooldown_until
             .set(timestamp + cooldown_duration);
