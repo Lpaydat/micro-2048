@@ -74,12 +74,21 @@ sudo pacman -S caddy  # Arch Linux
 # OR
 sudo apt install caddy  # Ubuntu/Debian
 
-# Start Linera service
+# Start Linera services
+
+# Main chain (default settings)
 linera service --port 8088 &
+
+# Leaderboard chains (with batch message processing)
+# IMPORTANT: --max-pending-message-bundles must come BEFORE 'service' keyword
+linera --max-pending-message-bundles 200 \
+  service --port 8089 --listener-skip-process-inbox &
 
 # Run Caddy setup script
 ./scripts/setup_caddy.sh yourdomain.com
 ```
+
+**Note:** The `--max-pending-message-bundles 200` flag allows the leaderboard to process up to 200 score submissions in a single batch, significantly improving refresh performance. See [INBOX_BATCH_SIZE_FIX.md](INBOX_BATCH_SIZE_FIX.md) for details.
 
 ### 6. Verify Deployment
 
@@ -90,6 +99,49 @@ curl https://yourdomain.com
 # Test backend
 curl https://api.yourdomain.com/chains/YOUR_CHAIN_ID/applications/YOUR_APP_ID
 ```
+
+---
+
+## ⚙️ Multi-Chain Service Configuration
+
+The application uses multiple chains with different configurations:
+
+### Main Chain
+- Handles player registration and game creation
+- Standard configuration
+```bash
+linera service --port 8088
+```
+
+### Leaderboard Chains
+- Process score submissions in batches
+- Run with `--listener-skip-process-inbox` to queue messages
+- Require `--max-pending-message-bundles` for batch processing
+
+```bash
+# ✅ Correct flag order (global flag BEFORE 'service')
+linera --max-pending-message-bundles 200 \
+  service --port 8089 --listener-skip-process-inbox
+
+# ❌ Wrong (flag after 'service' won't work)
+linera service --port 8089 \
+  --listener-skip-process-inbox \
+  --max-pending-message-bundles 200
+```
+
+**Recommended batch sizes:**
+- Small tournaments (< 50 players): `--max-pending-message-bundles 50`
+- Medium tournaments (50-200 players): `--max-pending-message-bundles 200`
+- Large tournaments (200+ players): `--max-pending-message-bundles 500`
+
+### Player Chains
+- Individual player game state
+- Standard configuration
+```bash
+linera service --port 8090
+```
+
+For detailed information about the batch processing fix, see [INBOX_BATCH_SIZE_FIX.md](INBOX_BATCH_SIZE_FIX.md).
 
 ---
 

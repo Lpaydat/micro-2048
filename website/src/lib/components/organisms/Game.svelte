@@ -305,16 +305,7 @@
 
 	$: boardEnded = isEnded || $game.data?.board?.isEnded || state?.finished;
 
-	// Debug logging for game end state
-	$: if (boardEnded) {
-		console.log('🎮 Game ended detected:', {
-			isEnded,
-			boardIsEnded: $game.data?.board?.isEnded,
-			stateFinished: state?.finished,
-			boardEnded,
-			overlayMessage
-		});
-	}
+
 
 	// Calculate loaded ranges reactively for visual indicator
 	$: loadedRanges = paginatedHistoryStore ? paginatedHistoryStore.getLoadedRanges() : [];
@@ -1630,10 +1621,10 @@
 				{/if}
 			</div>
 
-			<!-- Playback Controls and Status -->
-			<div class="mt-2 flex items-center justify-between gap-3">
-				<!-- Buttons -->
-				<div class="flex items-center gap-1 sm:gap-2">
+		<!-- Playback Controls and Status -->
+		<div class="mt-2 flex flex-wrap items-center justify-between gap-2 sm:gap-3">
+			<!-- Buttons -->
+			<div class="flex items-center gap-1 sm:gap-2">
 					<button
 						onclick={restartInspector}
 						class="rounded bg-surface-700 px-2 py-1 text-xs text-white transition-colors hover:bg-surface-600 sm:px-3 sm:py-1.5 sm:text-sm"
@@ -1682,33 +1673,33 @@
 					</button>
 				</div>
 
-				<!-- Status -->
-				{#if autoPlayEnabled}
-					<div class="flex flex-col gap-1 text-xs sm:gap-1.5 sm:text-sm">
-						<div class="flex items-center gap-1">
-							<span class="text-surface-300">
-								{$game.data?.board?.isEnded ? 'Replay' : 'Live'}
-							</span>
-							<span class="animate-pulse text-purple-400">
-								• {inspectorCurrentMoveIndex >= totalMoves && $game.data?.board?.isEnded
-									? 'Ended'
-									: isInspectorPlaying
-										? 'Playing'
-										: isLoadingMoves
-											? 'Loading...'
-											: 'Waiting'}
-							</span>
-						</div>
+			<!-- Status - wraps on small screens, inline when space allows -->
+			{#if autoPlayEnabled}
+				<div class="flex flex-col gap-1 text-xs sm:gap-1.5 sm:text-sm">
+					<div class="flex flex-wrap items-center gap-1">
+						<span class="text-surface-300">
+							{$game.data?.board?.isEnded ? 'Replay' : 'Live'}
+						</span>
+						<span class="animate-pulse text-purple-400">
+							• {inspectorCurrentMoveIndex >= totalMoves && $game.data?.board?.isEnded
+								? 'Ended'
+								: isInspectorPlaying
+									? 'Playing'
+									: isLoadingMoves
+										? 'Loading...'
+										: 'Waiting'}
+						</span>
 					</div>
-				{:else}
-					<div class="flex flex-col gap-1">
-						<div class="truncate text-xs text-surface-300 sm:text-sm">
-							{$game.data?.board?.player === $userStore.username
-								? 'Replay mode'
-								: `Viewing ${$game.data?.board?.player}'s game`}
-						</div>
+				</div>
+			{:else}
+				<div class="flex flex-col gap-1">
+					<div class="break-words text-xs text-surface-300 sm:text-sm">
+						{$game.data?.board?.player === $userStore.username
+							? 'Replay mode'
+							: `Viewing ${$game.data?.board?.player}'s game`}
 					</div>
-				{/if}
+				</div>
+			{/if}
 			</div>
 		</div>
 	{/if}

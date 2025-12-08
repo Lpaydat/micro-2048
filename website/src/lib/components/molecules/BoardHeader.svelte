@@ -180,13 +180,13 @@
 	const currentSize = $derived(sizeConfig[$boardSize]);
 </script>
 
-<div class="flex items-center justify-between" style="width: {currentSize.width}px">
+<div class="flex items-center justify-between gap-2" style="width: {currentSize.width}px">
 	{#if canStartNewGame}
-		<div class="flex items-center gap-2">
+		<div class="flex min-w-0 flex-shrink items-center gap-2">
 			<button
 				onclick={newSingleGame}
 				disabled={isCreatingBoard}
-				class="text-md rounded-md border-none px-2 py-2 text-center font-bold text-[#f9f6f2] md:px-4 md:text-xl
+				class="text-md flex-shrink-0 rounded-md border-none px-2 py-2 text-center font-bold text-[#f9f6f2] md:px-4 md:text-xl
 				{canStartNewGame ? 'visible' : 'invisible'}
 				{isCreatingBoard
 					? 'cursor-not-allowed bg-[#9f8a76] opacity-70'
@@ -200,11 +200,15 @@
 			</button>
 		</div>
 	{:else}
-		<UsernameBadge username={player} fontSize={currentSize.fontSize} />
-	{/if}
-	<div class="flex flex-row items-center transition-all">
-		{#if player && canStartNewGame && !isOwner}
+		<div class="min-w-0 flex-shrink">
 			<UsernameBadge username={player} fontSize={currentSize.fontSize} />
+		</div>
+	{/if}
+	<div class="flex min-w-0 flex-shrink-0 flex-row items-center transition-all">
+		{#if player && canStartNewGame && !isOwner}
+			<div class="min-w-0 max-w-[200px] flex-shrink">
+				<UsernameBadge username={player} fontSize={currentSize.fontSize} />
+			</div>
 		{/if}
 		<div class="mb-2 ml-2 flex min-w-16 flex-col rounded-md bg-[#bbada0] p-2 font-bold text-white">
 			<div class="text-xs text-[#eee4da] text-{scoreLabelAlign}">Score</div>
