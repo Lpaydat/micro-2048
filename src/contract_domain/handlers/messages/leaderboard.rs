@@ -571,6 +571,9 @@ impl LeaderboardMessageHandler {
             leaderboard.board_ids.insert(&player, board_id.clone()).unwrap();
             leaderboard.highest_tiles.insert(&player, highest_tile).unwrap();
             leaderboard.last_update.insert(&player, timestamp).unwrap();
+            
+            // Update global leaderboard timestamp for staleness check
+            leaderboard.leaderboard_last_update.set(timestamp);
         }
 
         // Track game ended status

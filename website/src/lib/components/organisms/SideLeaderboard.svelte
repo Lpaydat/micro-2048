@@ -21,6 +21,7 @@
 		endCallback?: () => void;
 		forceAllEnded?: boolean; // TEST: Force all boards to show as ended
 		currentScore?: number; // Current board score for refresh button visibility
+		lastUpdate?: string; // Backend leaderboard last update timestamp (milliseconds)
 	}
 
 	let {
@@ -30,6 +31,7 @@
 		endCallback,
 		forceAllEnded = false,
 		currentScore = 0,
+		lastUpdate,
 		...rest
 	}: Props = $props();
 
@@ -49,21 +51,25 @@
 		const playerRanker = rankers.find((r) => r.username === player);
 		return playerRanker?.score ?? 0;
 	});
+	
+	// Get leaderboard last update time (from backend, in milliseconds)
+	const leaderboardLastUpdate = $derived(lastUpdate ? Number(lastUpdate) : 0);
 
 	// Show refresh button when:
 	// 1. Current score > leaderboard score (player has higher score to submit)
-	// 2. OR 30+ seconds since last refresh attempt (client-side staleness)
+	// 2. OR leaderboard is stale (30+ seconds since backend last update)
 	const shouldShowRefreshButton = $derived.by(() => {
 		if (!$userStore.username || !leaderboardId) return false;
 		
 		// Check if player has higher score than leaderboard
 		const hasHigherScore = currentScore > playerLeaderboardScore;
 		
-		// Check if enough time passed since last refresh (client-side staleness)
-		const timeSinceLastRefresh = now - lastRefreshTime;
-		const canRefreshAgain = timeSinceLastRefresh >= 30000; // 30 seconds
+		// Check if leaderboard is stale (backend timestamp > 30s old)
+		const isBackendStale = 
+			leaderboardLastUpdate > 0 && 
+			(now - leaderboardLastUpdate) >= 30000; // 30 seconds
 		
-		return hasHigherScore || (lastRefreshTime > 0 && canRefreshAgain);
+		return hasHigherScore || isBackendStale;
 	});
 
 	// Leaderboard refresh state

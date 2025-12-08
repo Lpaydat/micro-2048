@@ -65,6 +65,7 @@ pub struct LeaderboardState {
     pub rankers: Vec<Ranker>,
     pub shard_ids: Vec<String>,
     pub active_boards: Vec<ActiveBoard>,
+    pub last_update: String, // Global leaderboard last update timestamp
 }
 
 #[derive(SimpleObject)]
