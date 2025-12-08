@@ -311,6 +311,7 @@ impl QueryHandler {
                 rankers,
                 shard_ids,
                 active_boards,
+                last_update: micros_to_millis(*leaderboard.leaderboard_last_update.get()),
             };
 
             Some(leaderboard_state)
@@ -466,6 +467,7 @@ impl QueryHandler {
                         rankers: Vec::new(),
                         shard_ids,
                         active_boards: Vec::new(),
+                        last_update: micros_to_millis(*leaderboard.leaderboard_last_update.get()),
                     });
                 }
             }

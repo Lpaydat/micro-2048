@@ -145,6 +145,7 @@ pub struct Leaderboard {
     pub last_trigger_by: RegisterView<String>,   // Who triggered last
     pub trigger_rotation_counter: RegisterView<u32>, // Rotation counter for fairness
     pub trigger_cooldown_until: RegisterView<u64>, // Global cooldown: no triggers until this time
+    pub leaderboard_last_update: RegisterView<u64>, // Global leaderboard last update timestamp (for client staleness check)
 
     // 🚀 NEW: Activity-based triggerer ranking
     pub player_activity_scores: MapView<String, u32>, // player_chain_id -> weighted_activity_score

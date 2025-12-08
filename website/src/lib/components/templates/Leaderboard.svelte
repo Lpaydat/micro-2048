@@ -48,6 +48,7 @@
 				totalBoards
 				totalPlayers
 				isPinned
+				lastUpdate
 				rankers {
 					username
 					score
@@ -116,10 +117,15 @@
 	
 	// Get current board owner
 	const currentBoardPlayer = $derived($board?.data?.board?.player);
+	
+	// Get leaderboard last update time (from backend, in milliseconds)
+	const leaderboardLastUpdate = $derived(
+		Number($leaderboard?.data?.leaderboard?.lastUpdate ?? 0)
+	);
 
 	// Show refresh button when:
 	// 1. Current board belongs to logged-in user AND current score > leaderboard score
-	// 2. OR 30+ seconds since last refresh attempt (client-side staleness)
+	// 2. OR leaderboard is stale (30+ seconds since backend last update)
 	const shouldShowRefreshButton = $derived.by(() => {
 		if (!$userStore.username || !leaderboardId) return false;
 		
@@ -128,11 +134,12 @@
 			currentBoardPlayer === $userStore.username && 
 			currentBoardScore > playerLeaderboardScore;
 		
-		// Check if enough time passed since last refresh (client-side staleness)
-		const timeSinceLastRefresh = now - lastRefreshTime;
-		const canRefreshAgain = timeSinceLastRefresh >= 30000; // 30 seconds
+		// Check if leaderboard is stale (backend timestamp > 30s old)
+		const isBackendStale = 
+			leaderboardLastUpdate > 0 && 
+			(now - leaderboardLastUpdate) >= 30000; // 30 seconds
 		
-		return isOwnBoardWithHigherScore || (lastRefreshTime > 0 && canRefreshAgain);
+		return isOwnBoardWithHigherScore || isBackendStale;
 	});
 
 	const canRefresh = $derived.by(() => {
