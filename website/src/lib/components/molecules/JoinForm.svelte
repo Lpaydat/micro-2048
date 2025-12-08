@@ -9,6 +9,8 @@
 	import { preventDefault } from '$lib/utils/preventDefault';
 	import { onMount } from 'svelte';
 	import { isMobile } from '$lib/stores/isMobile';
+	import { getClient } from '$lib/client';
+	import { claimChain } from '$lib/graphql/mutations';
 
 	interface Props {
 		mobileForm?: boolean;
@@ -176,21 +178,54 @@
 	});
 
 	$effect(() => {
-		if (!$player.fetching && $player.data?.player && canLogin) {
-			localStorage.setItem('username', username);
-			localStorage.setItem('passwordHash', passwordHash);
-			localStorage.setItem('chainId', $player.data.player.chainId);
-			localStorage.setItem('isMod', $player.data.player.isMod);
+		(async () => {
+			if (!$player.fetching && $player.data?.player && canLogin) {
+				const playerChainId = $player.data.player.chainId;
+				
+				console.log('🎉 Player registered! Chain ID:', playerChainId);
+				console.log('⚡ Claiming player chain...');
+				
+				// 🚀 NEW: Claim the player chain to process inbox messages
+				// This triggers block production on the player chain which processes:
+				// - RegisterPlayer message
+				// - SubscribeToMainChain message
+				try {
+					const playerClient = getClient(playerChainId);
+					const claim = claimChain(playerClient);
+					
+					await new Promise((resolve) => {
+						const unsubscribe = claim.subscribe((result) => {
+							if (!result.fetching) {
+								console.log('⚡ ClaimChain result:', result);
+								if (result.error) {
+									console.error('❌ ClaimChain error:', result.error);
+								} else {
+									console.log('✅ Player chain claimed successfully!');
+								}
+								unsubscribe();
+								resolve(result);
+							}
+						});
+					});
+				} catch (error) {
+					console.error('❌ Failed to claim chain:', error);
+				}
+				
+				localStorage.setItem('username', username);
+				localStorage.setItem('passwordHash', passwordHash);
+				localStorage.setItem('chainId', playerChainId);
+				localStorage.setItem('isMod', $player.data.player.isMod);
 
-			userStore.update((store) => ({
-				...store,
-				username: $player.data.player.username,
-				chainId: $player.data.player.chainId,
-				isMod: $player.data.player.isMod,
-				...(passwordHash && { passwordHash })
-			}));
-			canLogin = false;
-		}
+				userStore.update((store) => ({
+					...store,
+					username: $player.data.player.username,
+					chainId: playerChainId,
+					isMod: $player.data.player.isMod,
+					...(passwordHash && { passwordHash })
+				}));
+				canLogin = false;
+			}
+		})();
 	});
 </script>
 

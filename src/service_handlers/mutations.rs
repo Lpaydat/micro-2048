@@ -272,6 +272,15 @@ impl MutationHandler {
         self.runtime.schedule_operation(&operation);
         []
     }
+    
+    /// 🚀 MESSAGE-BASED: Claim player chain after registration
+    /// This triggers block production which processes the inbox messages
+    /// (RegisterPlayer, SubscribeToMainChain)
+    async fn claim_chain(&self) -> [u8; 0] {
+        let operation = Operation::ClaimChain;
+        self.runtime.schedule_operation(&operation);
+        []
+    }
 }
 
 impl MutationHandler {

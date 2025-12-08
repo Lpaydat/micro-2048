@@ -12,6 +12,9 @@ impl PlayerMessageHandler {
         username: String,
         password_hash: String,
     ) {
+        log::info!("📨 [MSG:RegisterPlayer] Received on chain {} for user: {}", 
+            contract.runtime.chain_id(), username);
+        
         contract
             .check_player_registered(&username, RegistrationCheck::EnsureNotRegistered)
             .await;
@@ -27,8 +30,7 @@ impl PlayerMessageHandler {
         player.password_hash.set(password_hash);
         player.chain_id.set(chain_id.clone());
 
-        // No need to emit events for player registration -
-        // scores will be tracked when players start playing
+        log::info!("📨 [MSG:RegisterPlayer] Player {} registered on chain {}", username, chain_id);
     }
 
     /// 🚀 IMPROVED: Handle player registration with shard
@@ -49,6 +51,9 @@ impl PlayerMessageHandler {
         contract: &mut crate::Game2048Contract,
         main_chain_id: String,
     ) {
+        log::info!("📨 [MSG:SubscribeToMainChain] Received on chain {}, subscribing to main chain: {}", 
+            contract.runtime.chain_id(), main_chain_id);
+        
         use linera_sdk::linera_base_types::{ApplicationId, ChainId, StreamName};
         use std::str::FromStr;
 
@@ -64,6 +69,10 @@ impl PlayerMessageHandler {
             contract
                 .runtime
                 .subscribe_to_events(main_chain_id, application_id, stream_name);
+            
+            log::info!("📨 [MSG:SubscribeToMainChain] Subscribed to active_tournaments stream");
+        } else {
+            log::error!("📨 [MSG:SubscribeToMainChain] Failed to parse main chain ID: {}", main_chain_id);
         }
     }
 }

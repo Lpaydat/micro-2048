@@ -5,3 +5,4 @@ export * from './toggleMod';
 export * from './leaderboardAction.ts';
 export * from './newBoard';
 export * from './refillChainPool';
+export * from './claimChain';

@@ -533,6 +533,99 @@ impl LeaderboardMessageHandler {
         }
     }
 
+    /// 🚀 NEW (Message-based architecture): Handle direct score submission from player chain
+    /// 
+    /// This replaces the event-based system (PlayerScoreUpdate → Shard → ShardScoreUpdate → Leaderboard)
+    /// with a simple direct message from player to leaderboard.
+    /// 
+    /// The leaderboard chain should run with --listener-skip-process-inbox so messages
+    /// queue up and are processed in batch when UpdateLeaderboard operation is called.
+    pub async fn handle_submit_score(
+        contract: &mut crate::Game2048Contract,
+        player: String,
+        player_chain_id: String,
+        board_id: String,
+        score: u64,
+        highest_tile: u64,
+        game_status: game2048::GameStatus,
+        timestamp: u64,
+        boards_in_tournament: u32,
+    ) {
+        let leaderboard = contract
+            .state
+            .leaderboards
+            .load_entry_mut("")
+            .await
+            .unwrap();
+
+        // Get current best score for this player
+        let current_best = leaderboard.score.get(&player).await.unwrap().unwrap_or(0);
+        let is_new_player = current_best == 0 && leaderboard.board_ids.get(&player).await.unwrap().is_none();
+
+        // Only update if better score (or equal score from ended game)
+        let is_ended = matches!(game_status, game2048::GameStatus::Ended(_));
+        let should_update = score > current_best || (score == current_best && is_ended);
+
+        if should_update {
+            leaderboard.score.insert(&player, score).unwrap();
+            leaderboard.board_ids.insert(&player, board_id.clone()).unwrap();
+            leaderboard.highest_tiles.insert(&player, highest_tile).unwrap();
+            leaderboard.last_update.insert(&player, timestamp).unwrap();
+        }
+
+        // Track game ended status
+        if is_ended {
+            leaderboard.is_ended.insert(&player, true).unwrap();
+            // Remove from active boards if it was there
+            let _ = leaderboard.active_boards.remove(&board_id);
+        } else {
+            // Track as active board
+            leaderboard
+                .active_boards
+                .insert(
+                    &board_id,
+                    crate::state::ActiveBoardInfo {
+                        player: player.clone(),
+                        score,
+                        is_ended: false,
+                    },
+                )
+                .unwrap();
+        }
+
+        // Track new player
+        if is_new_player {
+            let count = *leaderboard.total_players.get();
+            leaderboard.total_players.set(count + 1);
+        }
+
+        // Update board count for this player (take max seen)
+        let current_board_count = leaderboard
+            .player_board_counts
+            .get(&player_chain_id)
+            .await
+            .unwrap()
+            .unwrap_or(0);
+        if boards_in_tournament > current_board_count {
+            leaderboard
+                .player_board_counts
+                .insert(&player_chain_id, boards_in_tournament)
+                .unwrap();
+
+            // Recalculate total boards
+            let mut total = 0u32;
+            leaderboard
+                .player_board_counts
+                .for_each_index_value(|_, count| {
+                    total += *count;
+                    Ok(())
+                })
+                .await
+                .unwrap();
+            leaderboard.total_boards.set(total);
+        }
+    }
+
     /// Update triggerer list based on player activity scores (called after activity updates)
     pub async fn update_triggerer_list_by_activity(
         contract: &mut crate::Game2048Contract,
