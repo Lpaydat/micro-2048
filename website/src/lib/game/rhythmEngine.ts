@@ -61,6 +61,15 @@ export class RhythmEngine {
 	
 	// Phase 4: Loop tracking
 	private lastAudioTime: number = 0; // Track audio position for loop detection
+	
+	// Auto-calibration system
+	private autoCalibrationEnabled: boolean = true;
+	private autoCalibrationSamples: number[] = []; // Timing differences from perfect/good hits
+	private readonly AUTO_CALIBRATION_MIN_SAMPLES = 10; // Minimum samples before applying
+	private readonly AUTO_CALIBRATION_MAX_SAMPLES = 30; // Keep only recent samples
+	private readonly AUTO_CALIBRATION_MAX_OFFSET = 100; // Max auto-adjustment (±100ms)
+	private autoCalibrationApplied: boolean = false; // Track if we've applied auto-calibration
+	private onCalibrationChangeCallback: ((offset: number) => void) | null = null;
 
 	constructor(settings: RhythmSettings) {
 		this.settings = settings;
@@ -71,11 +80,144 @@ export class RhythmEngine {
 	setCalibrationOffset(offsetMs: number): void {
 		this.userCalibrationOffset = Math.max(-200, Math.min(200, offsetMs));
 		console.log(`🎵 Calibration offset set to: ${this.userCalibrationOffset}ms`);
+		
+		// If user manually sets offset, disable auto-calibration to respect their preference
+		if (offsetMs !== 0) {
+			this.autoCalibrationEnabled = false;
+			this.autoCalibrationSamples = [];
+			console.log('🎵 Auto-calibration disabled (user set manual offset)');
+		}
 	}
 	
 	// Phase 3: Get current calibration offset
 	getCalibrationOffset(): number {
 		return this.userCalibrationOffset;
+	}
+	
+	// Auto-calibration: Enable/disable
+	setAutoCalibration(enabled: boolean): void {
+		this.autoCalibrationEnabled = enabled;
+		if (!enabled) {
+			this.autoCalibrationSamples = [];
+		}
+		console.log(`🎵 Auto-calibration ${enabled ? 'enabled' : 'disabled'}`);
+	}
+	
+	// Auto-calibration: Check if enabled
+	isAutoCalibrationEnabled(): boolean {
+		return this.autoCalibrationEnabled;
+	}
+	
+	// Auto-calibration: Get current sample count
+	getAutoCalibrationSampleCount(): number {
+		return this.autoCalibrationSamples.length;
+	}
+	
+	// Auto-calibration: Set callback for when calibration changes
+	onCalibrationChange(callback: ((offset: number) => void) | null): void {
+		this.onCalibrationChangeCallback = callback;
+	}
+	
+	// Auto-calibration: Record a hit timing for calibration
+	// timingDiff: positive = player hit late, negative = player hit early
+	// accuracy: only 'perfect' and 'good' hits are used for calibration
+	recordHitForCalibration(timingDiff: number, accuracy: 'perfect' | 'good' | 'early' | 'late' | 'miss'): void {
+		if (!this.autoCalibrationEnabled) return;
+		
+		// Only use perfect and good hits - these indicate intentional timing
+		if (accuracy !== 'perfect' && accuracy !== 'good') return;
+		
+		// The timingDiff from checkRhythm is always positive (absolute distance from beat)
+		// We need to determine the direction: early (negative) or late (positive)
+		// This is calculated in checkRhythm based on which beat is closer
+		// For calibration, we'll record the signed difference
+		
+		this.autoCalibrationSamples.push(timingDiff);
+		
+		// Keep only recent samples (sliding window)
+		if (this.autoCalibrationSamples.length > this.AUTO_CALIBRATION_MAX_SAMPLES) {
+			this.autoCalibrationSamples.shift();
+		}
+		
+		// Try to apply calibration if we have enough samples
+		this.tryApplyAutoCalibration();
+	}
+	
+	// Auto-calibration: Record signed timing (called from checkRhythm with direction)
+	recordSignedHitForCalibration(signedTimingDiff: number, accuracy: 'perfect' | 'good' | 'early' | 'late' | 'miss'): void {
+		if (!this.autoCalibrationEnabled) return;
+		
+		// Only use perfect and good hits
+		if (accuracy !== 'perfect' && accuracy !== 'good') return;
+		
+		this.autoCalibrationSamples.push(signedTimingDiff);
+		
+		// Keep only recent samples
+		if (this.autoCalibrationSamples.length > this.AUTO_CALIBRATION_MAX_SAMPLES) {
+			this.autoCalibrationSamples.shift();
+		}
+		
+		// Try to apply calibration
+		this.tryApplyAutoCalibration();
+	}
+	
+	// Auto-calibration: Calculate and apply calibration offset
+	private tryApplyAutoCalibration(): void {
+		if (this.autoCalibrationSamples.length < this.AUTO_CALIBRATION_MIN_SAMPLES) {
+			return; // Not enough samples yet
+		}
+		
+		// Calculate median (more robust than average against outliers)
+		const sorted = [...this.autoCalibrationSamples].sort((a, b) => a - b);
+		const mid = Math.floor(sorted.length / 2);
+		const median = sorted.length % 2 === 0
+			? (sorted[mid - 1] + sorted[mid]) / 2
+			: sorted[mid];
+		
+		// Only apply if the median offset is significant (> 15ms)
+		if (Math.abs(median) < 15) {
+			return; // Offset is negligible, no need to adjust
+		}
+		
+		// Calculate new offset (negative median because if player is consistently late,
+		// we need to shift the beat window earlier, i.e., negative offset)
+		const adjustment = -Math.round(median);
+		
+		// Cap the adjustment
+		const cappedAdjustment = Math.max(-this.AUTO_CALIBRATION_MAX_OFFSET, 
+			Math.min(this.AUTO_CALIBRATION_MAX_OFFSET, adjustment));
+		
+		// Only apply if it would change the offset meaningfully
+		const newOffset = Math.max(-200, Math.min(200, this.userCalibrationOffset + cappedAdjustment));
+		
+		if (Math.abs(newOffset - this.userCalibrationOffset) >= 10) {
+			const oldOffset = this.userCalibrationOffset;
+			this.userCalibrationOffset = newOffset;
+			this.autoCalibrationApplied = true;
+			
+			console.log(`🎵 Auto-calibration applied: ${oldOffset}ms → ${newOffset}ms (median timing: ${median.toFixed(1)}ms, samples: ${this.autoCalibrationSamples.length})`);
+			
+			// Clear samples after applying (start fresh)
+			this.autoCalibrationSamples = [];
+			
+			// Notify callback if set
+			if (this.onCalibrationChangeCallback) {
+				this.onCalibrationChangeCallback(newOffset);
+			}
+		}
+	}
+	
+	// Auto-calibration: Reset
+	resetAutoCalibration(): void {
+		this.autoCalibrationSamples = [];
+		this.autoCalibrationApplied = false;
+		this.userCalibrationOffset = 0;
+		this.autoCalibrationEnabled = true;
+		console.log('🎵 Auto-calibration reset');
+		
+		if (this.onCalibrationChangeCallback) {
+			this.onCalibrationChangeCallback(0);
+		}
 	}
 
 	// Initialize audio context
@@ -269,6 +411,9 @@ export class RhythmEngine {
 		this.isAudioPlaying = false;
 		this.lastAudioTime = 0;
 		
+		// Reset auto-calibration samples (keep the applied offset though)
+		this.autoCalibrationSamples = [];
+		
 		// Stop metronome
 		if (this.metronomeIntervalId !== null) {
 			clearInterval(this.metronomeIntervalId);
@@ -379,9 +524,15 @@ export class RhythmEngine {
 		const beatStartTime = this.currentBeat * this.beatInterval;
 		const beatEndTime = (this.currentBeat + 1) * this.beatInterval;
 		
-		const diffFromLastBeat = Math.abs(elapsed - beatStartTime);
-		const diffFromNextBeat = Math.abs(elapsed - beatEndTime);
-		const timingDiff = Math.min(diffFromLastBeat, diffFromNextBeat);
+		const diffFromLastBeat = elapsed - beatStartTime; // Positive = late
+		const diffFromNextBeat = elapsed - beatEndTime;   // Negative = early
+		const absDiffFromLastBeat = Math.abs(diffFromLastBeat);
+		const absDiffFromNextBeat = Math.abs(diffFromNextBeat);
+		const timingDiff = Math.min(absDiffFromLastBeat, absDiffFromNextBeat);
+		
+		// Signed timing: positive = late (after beat), negative = early (before beat)
+		const isCloserToLastBeat = absDiffFromLastBeat < absDiffFromNextBeat;
+		const signedTimingDiff = isCloserToLastBeat ? diffFromLastBeat : diffFromNextBeat;
 
 		let accuracy: RhythmFeedback['accuracy'];
 		let score: number;
@@ -393,12 +544,16 @@ export class RhythmEngine {
 			accuracy = 'good';
 			score = 50;
 		} else if (timingDiff <= this.settings.tolerance) {
-			accuracy = diffFromLastBeat < diffFromNextBeat ? 'late' : 'early';
+			accuracy = isCloserToLastBeat ? 'late' : 'early';
 			score = 25;
 		} else {
 			accuracy = 'miss';
 			score = 0;
 		}
+		
+		// Auto-calibration: Record this hit's timing
+		// Only perfect and good hits are used (filtered inside the method)
+		this.recordSignedHitForCalibration(signedTimingDiff, accuracy);
 
 		return {
 			accuracy,
