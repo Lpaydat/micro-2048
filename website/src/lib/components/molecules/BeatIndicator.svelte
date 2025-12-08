@@ -20,6 +20,8 @@
 	// Calibration state
 	let calibrationOffset = 0;
 	let showCalibrationPanel = false;
+	let autoCalibrationEnabled = true;
+	let autoCalibrationSamples = 0;
 
 	// Animation loop
 	const animate = () => {
@@ -98,19 +100,50 @@
 	
 	const resetCalibration = () => {
 		calibrationOffset = 0;
-		rhythmEngine?.setCalibrationOffset(0);
+		rhythmEngine?.resetAutoCalibration();
+		autoCalibrationEnabled = true;
+	};
+	
+	const toggleAutoCalibration = () => {
+		autoCalibrationEnabled = !autoCalibrationEnabled;
+		rhythmEngine?.setAutoCalibration(autoCalibrationEnabled);
+	};
+	
+	// Update auto-calibration sample count periodically
+	const updateAutoCalibrationStatus = () => {
+		if (rhythmEngine) {
+			autoCalibrationSamples = rhythmEngine.getAutoCalibrationSampleCount();
+			autoCalibrationEnabled = rhythmEngine.isAutoCalibrationEnabled();
+		}
 	};
 
+	let statusInterval: ReturnType<typeof setInterval>;
+	
 	onMount(() => {
 		// Initialize calibration offset from engine
 		calibrationOffset = rhythmEngine?.getCalibrationOffset() ?? 0;
+		autoCalibrationEnabled = rhythmEngine?.isAutoCalibrationEnabled() ?? true;
+		
+		// Set up callback for when auto-calibration changes the offset
+		rhythmEngine?.onCalibrationChange((newOffset: number) => {
+			calibrationOffset = newOffset;
+		});
+		
 		animate();
+		
+		// Update auto-calibration status periodically
+		statusInterval = setInterval(updateAutoCalibrationStatus, 500);
 	});
 
 	onDestroy(() => {
 		if (animationFrame) {
 			cancelAnimationFrame(animationFrame);
 		}
+		if (statusInterval) {
+			clearInterval(statusInterval);
+		}
+		// Clear callback to prevent memory leaks
+		rhythmEngine?.onCalibrationChange(null);
 	});
 </script>
 
@@ -167,9 +200,33 @@
 				<button class="calibration-close" onclick={toggleCalibrationPanel}>×</button>
 			</div>
 			<div class="calibration-content">
+				<!-- Auto-calibration status -->
+				<div class="auto-calibration-section">
+					<button 
+						class="auto-calibration-toggle"
+						class:enabled={autoCalibrationEnabled}
+						onclick={toggleAutoCalibration}
+					>
+						<span class="auto-dot" class:active={autoCalibrationEnabled}></span>
+						<span>Auto-Calibrate</span>
+					</button>
+					{#if autoCalibrationEnabled}
+						<span class="auto-status">
+							{#if autoCalibrationSamples < 10}
+								Learning... ({autoCalibrationSamples}/10)
+							{:else}
+								Active ({autoCalibrationSamples} samples)
+							{/if}
+						</span>
+					{:else}
+						<span class="auto-status disabled">Disabled</span>
+					{/if}
+				</div>
+				
+				<div class="calibration-divider"></div>
+				
 				<p class="calibration-hint">
-					If visuals feel early, slide right (+).
-					If visuals feel late, slide left (-).
+					Manual: Slide right (+) if visuals feel early, left (-) if late.
 				</p>
 				<div class="calibration-slider-container">
 					<span class="calibration-label">-200ms</span>
@@ -365,6 +422,72 @@
 		display: flex;
 		flex-direction: column;
 		gap: 8px;
+	}
+	
+	/* Auto-calibration section */
+	.auto-calibration-section {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		flex-wrap: wrap;
+	}
+	
+	.auto-calibration-toggle {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		padding: 4px 10px;
+		background: rgba(34, 197, 94, 0.1);
+		border: 1px solid rgba(34, 197, 94, 0.3);
+		border-radius: 4px;
+		color: #9ca3af;
+		font-size: 0.75rem;
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+	
+	.auto-calibration-toggle:hover {
+		background: rgba(34, 197, 94, 0.2);
+	}
+	
+	.auto-calibration-toggle.enabled {
+		background: rgba(34, 197, 94, 0.2);
+		border-color: rgba(34, 197, 94, 0.5);
+		color: #4ade80;
+	}
+	
+	.auto-dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background: #6b7280;
+		transition: all 0.2s ease;
+	}
+	
+	.auto-dot.active {
+		background: #4ade80;
+		box-shadow: 0 0 8px rgba(74, 222, 128, 0.6);
+		animation: pulse-dot 2s ease-in-out infinite;
+	}
+	
+	@keyframes pulse-dot {
+		0%, 100% { opacity: 1; }
+		50% { opacity: 0.5; }
+	}
+	
+	.auto-status {
+		font-size: 0.625rem;
+		color: #4ade80;
+	}
+	
+	.auto-status.disabled {
+		color: #6b7280;
+	}
+	
+	.calibration-divider {
+		height: 1px;
+		background: rgba(139, 92, 246, 0.2);
+		margin: 4px 0;
 	}
 	
 	.calibration-hint {
