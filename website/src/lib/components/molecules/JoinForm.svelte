@@ -182,9 +182,6 @@
 			if (!$player.fetching && $player.data?.player && canLogin) {
 				const playerChainId = $player.data.player.chainId;
 				
-				console.log('🎉 Player registered! Chain ID:', playerChainId);
-				console.log('⚡ Claiming player chain...');
-				
 				// 🚀 NEW: Claim the player chain to process inbox messages
 				// This triggers block production on the player chain which processes:
 				// - RegisterPlayer message
@@ -196,11 +193,8 @@
 					await new Promise((resolve) => {
 						const unsubscribe = claim.subscribe((result) => {
 							if (!result.fetching) {
-								console.log('⚡ ClaimChain result:', result);
 								if (result.error) {
-									console.error('❌ ClaimChain error:', result.error);
-								} else {
-									console.log('✅ Player chain claimed successfully!');
+									console.error('Failed to claim chain:', result.error);
 								}
 								unsubscribe();
 								resolve(result);
@@ -208,7 +202,7 @@
 						});
 					});
 				} catch (error) {
-					console.error('❌ Failed to claim chain:', error);
+					console.error('Failed to claim chain:', error);
 				}
 				
 				localStorage.setItem('username', username);

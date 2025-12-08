@@ -201,7 +201,6 @@ impl Game2048Contract {
     // ========================================
 
     fn register_player(&mut self, chain_id: ChainId, player: &str, password_hash: &str) {
-        log::info!("📤 [SEND] Sending RegisterPlayer message to chain {}", chain_id);
         self.runtime
             .prepare_message(Message::RegisterPlayer {
                 username: player.to_string(),
