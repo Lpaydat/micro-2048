@@ -47,6 +47,29 @@ export const flushMoveHistory = (boardId: string) => {
 	return moves;
 };
 
+/**
+ * Flush only the first N moves from the history.
+ * This is used after a successful sync to remove only the moves that were submitted,
+ * preserving any moves that were added during the sync.
+ */
+export const flushNMoves = (boardId: string, count: number): MoveHistory[] => {
+	let flushedMoves: MoveHistory[] = [];
+	moveHistoryStore.update((map) => {
+		const moves = map.get(boardId) || [];
+		if (count >= moves.length) {
+			// Flush all moves
+			flushedMoves = moves;
+			map.delete(boardId);
+		} else {
+			// Only flush first N moves, keep the rest
+			flushedMoves = moves.slice(0, count);
+			map.set(boardId, moves.slice(count));
+		}
+		return map;
+	});
+	return flushedMoves;
+};
+
 export const getMoveBatchForSubmission = (moves: MoveHistory[]): string => {
 	const validMoves = moves.filter((m) =>
 		Object.values(directionList).includes(m.direction.replace('Arrow', ''))
