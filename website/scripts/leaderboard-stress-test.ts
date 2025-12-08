@@ -12,8 +12,8 @@ const CONFIG = {
 	local: {
 		website: 'localhost',
 		port: '8088', // Linera node port (not 5173 which is SvelteKit dev server)
-		chainId: '52d89d77d2f103bcf741687984511b4524abb51bcda6716149ea5529e2cbb5b3',
-		applicationId: '1a3f4455c6403a368f56ddcba3be3fe52da4ec2ca86c7c6d6fbaf63ad7209a74'
+		chainId: '4be348cc444ace2ee56f634333b53aaba008d34371435336838340dfca983524',
+		applicationId: 'c570a551f5e9bffa885126ed883f090a8066147356cbfcae0946f324f99deb12'
 	},
 	production: {
 		website: 'api.micro2048.xyz',
@@ -148,6 +148,21 @@ const getPlayerChainId = (username: string) => {
 		console.error('Failed to parse player chain response:', error);
 		return null;
 	}
+};
+
+const claimChain = (playerChainId: string) => {
+	const playerApiUrl = `${protocol}://${config.website}:${config.port}/chains/${playerChainId}/applications/${config.applicationId}`;
+
+	const query = `
+    mutation claimChain {
+      claimChain
+    }
+  `;
+
+	return http.post(playerApiUrl, JSON.stringify({ query }), {
+		headers: { 'Content-Type': 'application/json' },
+		timeout: '30s'
+	});
 };
 
 // Check if player data has propagated to their player chain
@@ -349,6 +364,23 @@ export default function () {
 	}
 
 	console.log(`✅ [${username}] Got player chain ID: ${playerChainId.substring(0, 16)}...`);
+
+	// 🚀 NEW: Claim the player chain to process inbox messages
+	// This triggers block production which processes RegisterPlayer and SubscribeToMainChain messages
+	console.log(`⚡ [${username}] Claiming player chain...`);
+	const claimResponse = claimChain(playerChainId);
+	check(claimResponse, {
+		'player chain claim successful': (r) => r.status === 200
+	});
+
+	if (claimResponse.status !== 200) {
+		console.error(`❌ [${username}] Failed to claim chain`);
+		console.error(`   Status: ${claimResponse.status}`);
+		console.error(`   Body: ${claimResponse.body}`);
+		return;
+	}
+
+	console.log(`✅ [${username}] Player chain claimed successfully`);
 
 	// Wait for player data to actually be available on the player chain
 	console.log(`⏳ [${username}] Waiting for player data to propagate to player chain...`);
