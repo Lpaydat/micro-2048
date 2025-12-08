@@ -18,6 +18,7 @@
 		moveHistoryStore,
 		addMoveToHistory,
 		flushMoveHistory,
+		flushNMoves,
 		getMoveBatchForSubmission
 	} from '$lib/stores/moveHistories';
 	import { formatBalance } from '$lib/utils/formatBalance';
@@ -414,6 +415,8 @@
 			lastHashMismatchTime = null;
 			lastBoardId = boardId;
 			isLeaderboardIdSet = false; // Reset so leaderboardId updates for new board
+			lastUsedTimestamp = 0; // Reset timestamp tracking for new board
+			moveQueue = []; // Clear any queued moves from previous board
 			
 			// 🎵 Reset rhythm stats for new board
 			rhythmScore = 0;
@@ -523,8 +526,11 @@
 		setGameCreationStatus(false);
 	};
 
+	// Track last used timestamp to ensure strictly increasing order
+	let lastUsedTimestamp = 0;
+
 	// Movement Functions
-	const move = async (boardId: string, direction: GameKeys) => {
+	const move = async (boardId: string, direction: GameKeys, inputTimestamp?: string) => {
 		if (!canMakeMove || boardEnded || !state || isProcessingMove) return;
 
 		const tournamentEndTime = parseInt($game.data?.board?.endTime || '0');
@@ -535,7 +541,14 @@
 		isProcessingMove = true;
 
 		try {
-			const timestamp = Date.now().toString();
+			// 🔧 FIX: Use the input timestamp if provided, otherwise generate new one
+			// Ensure timestamp is strictly increasing to prevent backend rejection
+			let timestampNum = inputTimestamp ? parseInt(inputTimestamp) : Date.now();
+			if (timestampNum <= lastUsedTimestamp) {
+				timestampNum = lastUsedTimestamp + 1;
+			}
+			lastUsedTimestamp = timestampNum;
+			const timestamp = timestampNum.toString();
 
 			// Keep local state management
 			const prevTablet = boardToString(state?.tablet);
@@ -591,12 +604,13 @@
 
 		const nextMove = moveQueue.shift();
 		if (nextMove && !boardEnded) {
-			await move(boardId, nextMove.direction);
+			// 🔧 FIX: Pass the original timestamp from when user pressed the key
+			await move(boardId, nextMove.direction, nextMove.timestamp);
 		}
 	};
 
 	let lastMoveTime = 0;
-	const MOVE_COOLDOWN = 50; // 50ms minimum between moves
+	const MOVE_COOLDOWN = 80; // 80ms minimum between moves (prevents timestamp collisions)
 
 	// 🎵 Reference to beat indicator for miss feedback
 	let beatIndicatorRef: { showMiss: () => void } | null = null;
@@ -609,6 +623,13 @@
 		lastMoveTime = now;
 
 		if (!boardId) return;
+
+		// 🧪 TEST: Block moves while syncing to diagnose desync cause
+		// If this fixes desync, the bug is race condition during sync
+		if (syncStatus === 'syncing' || syncStatus === 'syncing-bg') {
+			console.log('⏸️ Move blocked - sync in progress');
+			return;
+		}
 
 		const tournamentEndTime = parseInt($game.data?.board?.endTime || '0');
 		if (tournamentEndTime > 0 && tournamentEndTime <= Date.now()) {
@@ -668,10 +689,11 @@
 		}
 
 		// Queue move if currently processing, otherwise execute immediately
+		// 🔧 FIX: Always pass the timestamp to preserve timing information
 		if (isProcessingMove) {
 			moveQueue.push({ direction, timestamp });
 		} else {
-			move(boardId, direction);
+			move(boardId, direction, timestamp);
 		}
 
 		dispatch('move', { direction, timestamp });
@@ -774,7 +796,9 @@
 		if (syncStatus === 'syncing' || syncStatus === 'syncing-bg') return;
 
 		// Get moves to submit (but don't flush yet!)
-		const movesToSubmit = $moveHistoryStore.get(boardId) || [];
+		// 🔧 FIX: Take a snapshot of the current moves to submit
+		// This way, moves added during sync won't be affected
+		const movesToSubmit = [...($moveHistoryStore.get(boardId) || [])];
 		if (movesToSubmit.length === 0) return;
 
 		// Mark as syncing
@@ -789,10 +813,11 @@
 			const result: MakeMoveResult = await makeMoves(client, moveBatch, boardId);
 
 			if (result.success) {
-				// ✅ Only flush AFTER confirmed success
-				flushMoveHistory(boardId);
-				// Sync pendingMoveCount with actual store state (handles race condition where
-				// new moves arrived during async submission)
+				// ✅ Only flush the moves that were actually submitted
+				// 🔧 FIX: Use flushNMoves instead of flushMoveHistory to preserve
+				// moves that were added during the async sync operation
+				flushNMoves(boardId, moveCount);
+				// Sync pendingMoveCount with actual store state
 				const remainingMoves = $moveHistoryStore.get(boardId)?.length || 0;
 				pendingMoveCount = remainingMoves;
 				lastSyncTime = Date.now();
@@ -896,8 +921,8 @@
 
 	// Submit function (used for idle sync and game end)
 	const submitMoves = async (boardId: string, force = false) => {
-		// Get moves but don't flush yet
-		const moves = $moveHistoryStore.get(boardId) || [];
+		// 🔧 FIX: Take a snapshot of moves to submit (preserves moves added during sync)
+		const moves = [...($moveHistoryStore.get(boardId) || [])];
 		
 		try {
 			if (moves.length > 0 || force) {
@@ -911,11 +936,11 @@
 				const result = await makeMoves(client, moveBatch, boardId);
 				
 				if (result.success) {
-					// Only flush after success
-					flushMoveHistory(boardId);
+					// 🔧 FIX: Only flush the moves that were actually submitted
+					flushNMoves(boardId, moveCount);
 					const newTablet = boardToString(state?.tablet);
 					stateHash = newTablet ?? '';
-					// Sync pendingMoveCount with actual store state (handles race condition)
+					// Sync pendingMoveCount with actual store state
 					const remainingMoves = $moveHistoryStore.get(boardId)?.length || 0;
 					pendingMoveCount = remainingMoves;
 					lastSyncTime = Date.now();
@@ -1111,13 +1136,30 @@
 						console.warn('❌ 30+ seconds of hash mismatch - desync detected');
 						handleDesync();
 					}
-				} else {
-					// No pending moves and backend is different - likely backend is ahead
-					// Accept backend state as valid and add to our hash set
-					console.log('📥 Backend ahead - accepting new state');
-					validBoardHashes.add(backendHash);
-					lastHashMismatchTime = null;
-				}
+			} else {
+				// No pending moves and backend is different - likely backend is ahead
+				// OR we lost moves during sync (the desync bug)
+				// 
+				// 🔧 FIX: Actually update local state to match backend instead of just
+				// adding hash to valid set. This prevents the "sudden full board" bug
+				// where local UI shows old state while backend has moved on.
+				console.log('📥 Backend state differs - syncing local state to blockchain');
+				
+				// Reset local state to match backend
+				state = createState($game.data.board.board, 4, boardId!, player);
+				score = $game.data.board.score || 0;
+				
+				// Clear and rebuild valid hashes from this new state
+				validBoardHashes.clear();
+				validBoardHashes.add(backendHash);
+				
+				// Ensure we're in a clean sync state
+				syncStatus = 'ready';
+				lastHashMismatchTime = null;
+				
+				// Log for debugging - this is the key desync detection point
+				console.log(`🔄 Local state reset to backend (score: ${score}, hash: ${backendHash.toString(16)})`);
+			}
 			}
 		}, 1000); // Check every second
 
