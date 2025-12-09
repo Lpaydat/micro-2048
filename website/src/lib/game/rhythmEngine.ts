@@ -82,11 +82,9 @@ export class RhythmEngine {
 	// First beat offset for current track (seconds from file start to first beat)
 	private firstBeatOffset: number = 0;
 
-	// Visual lookahead in seconds - compensates for requestAnimationFrame lag
-	// Measured: Phase ~0.57 when transport fires, meaning visual is 0.43 beats behind
-	// At any BPM: we need to advance by (1 - 0.57) = 0.43 of a beat
-	// This is applied as a fraction of beat length in getBeatPhase
-	private static readonly VISUAL_PHASE_ADVANCE = 0.43; // fraction of beat to advance
+	// REMOVED: VISUAL_PHASE_ADVANCE was a magic number measured on one device
+	// Now we rely ONLY on calibrationOffset (user-measured) for timing adjustment
+	// This is cleaner and more accurate across different devices/browsers
 
 	// Beat callback for visual sync debugging
 	private onBeatCallback: ((beatNumber: number) => void) | null = null;
@@ -339,13 +337,8 @@ export class RhythmEngine {
 		
 		// Adjust for:
 		// - firstBeatOffset: when music beat actually starts in the file
-		// - calibrationOffset: user's device latency adjustment  
-		// - VISUAL_PHASE_ADVANCE: compensate for requestAnimationFrame lag
+		// - calibrationOffset: user's device latency adjustment (the ONLY timing adjustment)
 		let seconds = transport.seconds - this.firstBeatOffset + this.calibrationOffset;
-		
-		// Add visual phase advance (as fraction of beat)
-		const visualAdvance = beatLength * RhythmEngine.VISUAL_PHASE_ADVANCE;
-		seconds += visualAdvance;
 		
 		// Handle negative time (before first beat)
 		if (seconds < 0) {
