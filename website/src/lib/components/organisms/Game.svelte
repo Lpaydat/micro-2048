@@ -1223,11 +1223,23 @@
 			return;
 		}
 
+		const nextMoveIndex = inspectorCurrentMoveIndex + 1;
+
 		// Ensure the next move is loaded
-		await loadMoveRange(inspectorCurrentMoveIndex + 1);
+		await loadMoveRange(nextMoveIndex);
+
+		// 🔧 FIX: Check if next move is actually loaded before advancing
+		// If still loading (e.g., another load in progress), retry after delay
+		const nextMove = paginatedHistoryStore?.getMove(nextMoveIndex);
+		if (!nextMove) {
+			// Move not loaded yet, retry after a short delay
+			inspectorPlayTimeout = setTimeout(() => {
+				playNextInspectorMove();
+			}, 100);
+			return;
+		}
 
 		const currentMove = getCurrentMoveData();
-		const nextMove = paginatedHistoryStore?.getMove(inspectorCurrentMoveIndex + 1);
 
 		// Calculate delay based on timestamp difference
 		let delay = 500; // Default 500ms
@@ -1390,6 +1402,14 @@
 		// Load the target range if not already loaded (skip for position 0)
 		if (targetMove > 0) {
 			await loadMoveRange(targetMove);
+			
+			// 🔧 FIX: Wait for move to be loaded before updating state
+			// If move not loaded yet (e.g., another load in progress), wait and retry
+			let retries = 0;
+			while (!paginatedHistoryStore.isMoveLoaded(targetMove) && retries < 50) {
+				await new Promise(resolve => setTimeout(resolve, 100));
+				retries++;
+			}
 		} else {
 			// Position 0: load initial board if needed
 			await loadInitialBoard();
