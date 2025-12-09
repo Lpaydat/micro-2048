@@ -8,12 +8,12 @@
 
 	let feedback: RhythmFeedback | null = null;
 	let visualData: {
-		isOnBeat: boolean;
+		isInWindow: boolean;
 		beatProgress: number;
 		timeToNext: number;
 		intensity: number;
 	} = {
-		isOnBeat: false,
+		isInWindow: false,
 		beatProgress: 0,
 		timeToNext: 0,
 		intensity: 0
@@ -25,7 +25,13 @@
 	// Animation loop for visual updates
 	const animate = () => {
 		if (rhythmEngine) {
-			visualData = rhythmEngine.getVisualFeedback();
+			const state = rhythmEngine.getVisualState();
+			visualData = {
+				isInWindow: state.isInWindow,
+				beatProgress: state.beatPhase,
+				timeToNext: 0, // Not provided by new API
+				intensity: state.intensity
+			};
 		}
 		animationFrame = requestAnimationFrame(animate);
 	};
@@ -73,7 +79,7 @@
 
 	// Calculate pulse animation
 	function getPulseStyle(): string {
-		if (!rhythmEngine || !visualData.isOnBeat) return '';
+		if (!rhythmEngine || !visualData.isInWindow) return '';
 		
 		const scale = 1 + (visualData.intensity * 0.1);
 		const opacity = 0.3 + (visualData.intensity * 0.7);
