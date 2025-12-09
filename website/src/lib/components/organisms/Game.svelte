@@ -210,6 +210,12 @@
 	let initialBoardCache: number[][] | null = null;
 	let isLoadingInitialBoard: boolean = false;
 
+	// 🔍 Board not found tracking
+	let boardNotFoundCount = 0;
+	let isBoardNotFound = false;
+	let boardRedirectCountdown = 5;
+	const MAX_BOARD_NOT_FOUND_ATTEMPTS = 10; // Stop after 10 consecutive not found (~5 seconds at 500ms)
+
 	// 🎵 Rhythm System
 	let rhythmEngine: RhythmEngine | null = null;
 	let rhythmSettings: RhythmSettings | null = null;
@@ -1013,6 +1019,11 @@
 			initGameIntervalId = null;
 		}
 
+		// Reset not found state when boardId changes
+		boardNotFoundCount = 0;
+		isBoardNotFound = false;
+		boardRedirectCountdown = 5;
+
 		lastPolledBoardId = boardId;
 
 		// Only start polling if we have a boardId
@@ -1022,10 +1033,34 @@
 
 			// Start polling interval
 			initGameIntervalId = setInterval(() => {
+				// Stop polling if board not found
+				if (isBoardNotFound) return;
+
 				if (boardId && !$game.data?.board) {
+					// Board not found yet - track consecutive failures
+					if (!$game.fetching) {
+						boardNotFoundCount++;
+						if (boardNotFoundCount >= MAX_BOARD_NOT_FOUND_ATTEMPTS) {
+							isBoardNotFound = true;
+							if (initGameIntervalId) {
+								clearInterval(initGameIntervalId);
+								initGameIntervalId = null;
+							}
+							// Start redirect countdown
+							const countdownInterval = setInterval(() => {
+								boardRedirectCountdown--;
+								if (boardRedirectCountdown <= 0) {
+									clearInterval(countdownInterval);
+									goto('/');
+								}
+							}, 1000);
+							return;
+						}
+					}
 					game.reexecute({ requestPolicy: 'network-only' });
 				} else if ($game.data?.board?.boardId === boardId) {
 					// Board found AND matches requested boardId, stop polling
+					boardNotFoundCount = 0; // Reset counter
 					if (initGameIntervalId) {
 						clearInterval(initGameIntervalId);
 						initGameIntervalId = null;
@@ -1463,6 +1498,41 @@
 	// }
 </script>
 
+{#if isBoardNotFound}
+	<div class="game-container {$boardSize}">
+		<div class="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
+			<div class="text-6xl">🎮</div>
+			<h2 class="text-xl font-semibold text-gray-200">Game Not Found</h2>
+			<p class="text-gray-400">
+				This game doesn't exist or hasn't been created yet.
+			</p>
+			<p class="text-sm text-gray-500">
+				Redirecting to home in {boardRedirectCountdown} seconds...
+			</p>
+			<div class="flex gap-3">
+				<button
+					type="button"
+					class="btn variant-filled-primary"
+					onclick={() => {
+						boardNotFoundCount = 0;
+						isBoardNotFound = false;
+						boardRedirectCountdown = 5;
+						game.reexecute({ requestPolicy: 'network-only' });
+					}}
+				>
+					Retry
+				</button>
+				<button
+					type="button"
+					class="btn variant-filled-surface"
+					onclick={() => goto('/')}
+				>
+					Go Home
+				</button>
+			</div>
+		</div>
+	</div>
+{:else}
 <div class="game-container {$boardSize}">
 	<div class="game-board">
 		<Board
@@ -1827,6 +1897,7 @@
 		</div>
 	{/if}
 </div>
+{/if}
 
 <style>
 	.inspector-slider {
