@@ -18,6 +18,8 @@
 	let leaderboardId = $state<string | undefined>(
 		$page.url.searchParams.get('leaderboardId') ?? undefined
 	);
+	// URL param fallback for rhythm mode on first load (leaderboard chain may not have data yet)
+	let urlDescription = $state<string>($page.url.searchParams.get('description') ?? '');
 	let chainId = $derived(boardId.split('.')[0] ?? $userStore.chainId);
 
 	let unsubscribe: any;
@@ -26,6 +28,11 @@
 		unsubscribe = page.subscribe(($page) => {
 			boardId = $page.url.searchParams.get('boardId') ?? '';
 			leaderboardId = $page.url.searchParams.get('leaderboardId') ?? undefined;
+			// Also update URL description param (for rhythm mode fallback)
+			const newUrlDescription = $page.url.searchParams.get('description') ?? '';
+			if (newUrlDescription) {
+				urlDescription = newUrlDescription;
+			}
 		});
 	});
 
@@ -63,7 +70,10 @@
 	);
 	
 	// Get tournament description for rhythm mode detection
-	const tournamentDescription = $derived($leaderboard?.data?.leaderboard?.description ?? '');
+	// Prefer leaderboard data, fallback to URL param (for first load when leaderboard chain has no data yet)
+	const tournamentDescription = $derived(
+		$leaderboard?.data?.leaderboard?.description || urlDescription || ''
+	);
 
 	$effect(() => {
 		bestScore =
