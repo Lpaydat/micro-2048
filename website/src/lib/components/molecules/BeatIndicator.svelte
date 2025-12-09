@@ -16,6 +16,9 @@
 	// Animation
 	let animationFrame: number;
 	let showMissFlash = false;
+	
+	// Beat flash (triggered by transport beat event)
+	let showBeatFlash = false;
 
 	/**
 	 * Animation loop - runs every frame
@@ -59,19 +62,33 @@
 		setTimeout(() => showMissFlash = false, 200);
 	}
 
+	// Called on actual transport beat (for debugging sync)
+	function onBeat(beatNumber: number) {
+		showBeatFlash = true;
+		setTimeout(() => showBeatFlash = false, 100);
+	}
+
 	onMount(() => {
 		animate();
+		// Register beat callback for visual debugging
+		if (rhythmEngine) {
+			rhythmEngine.setOnBeatCallback(onBeat);
+		}
 	});
 
 	onDestroy(() => {
 		if (animationFrame) {
 			cancelAnimationFrame(animationFrame);
 		}
+		// Clean up callback
+		if (rhythmEngine) {
+			rhythmEngine.setOnBeatCallback(null);
+		}
 	});
 </script>
 
 <div class="beat-indicator" class:miss-flash={showMissFlash}>
-	<div class="beat-track">
+	<div class="beat-track" class:beat-flash={showBeatFlash}>
 		<!-- Left bar -->
 		<div 
 			class="beat-bar"
@@ -131,6 +148,13 @@
 		border-radius: 8px;
 		overflow: hidden;
 		border: 2px solid rgba(139, 92, 246, 0.4);
+		transition: border-color 0.05s ease;
+	}
+
+	/* Flash border on actual beat (for debugging sync) */
+	.beat-track.beat-flash {
+		border-color: rgba(255, 255, 0, 1);
+		box-shadow: 0 0 15px rgba(255, 255, 0, 0.8);
 	}
 
 	.beat-bar {

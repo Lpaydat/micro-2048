@@ -35,6 +35,7 @@ export interface MusicTrack {
 	name: string;
 	url: string;
 	bpm: number;
+	firstBeatOffset: number; // seconds from start of file to first beat
 }
 
 // ============================================================================
@@ -42,10 +43,13 @@ export interface MusicTrack {
 // ============================================================================
 
 // BPM values verified with beat analyzer
+// firstBeatOffset: time in seconds from file start to the first downbeat
+// These need to be measured for each track!
+// TODO: Measure these precisely with audio analysis
 export const MUSIC_TRACKS: MusicTrack[] = [
-	{ name: 'Watch Your Step', url: '/music/track1.mp3', bpm: 120 },
-	{ name: 'Crypteque', url: '/music/track2.mp3', bpm: 130 },
-	{ name: 'Tombtorial', url: '/music/track3.mp3', bpm: 100 }
+	{ name: 'Watch Your Step', url: '/music/track1.mp3', bpm: 120, firstBeatOffset: 0 },
+	{ name: 'Crypteque', url: '/music/track2.mp3', bpm: 130, firstBeatOffset: 0 },
+	{ name: 'Tombtorial', url: '/music/track3.mp3', bpm: 100, firstBeatOffset: 0 }
 ];
 
 // ============================================================================
@@ -74,6 +78,12 @@ export class RhythmEngine {
 
 	// Calibration offset in seconds (user adjustment for audio latency)
 	private calibrationOffset: number = 0;
+
+	// First beat offset for current track (seconds from file start to first beat)
+	private firstBeatOffset: number = 0;
+
+	// Beat callback for visual sync debugging
+	private onBeatCallback: ((beatNumber: number) => void) | null = null;
 
 	constructor(settings: RhythmSettings) {
 		this.bpm = settings.bpm;
@@ -154,11 +164,12 @@ export class RhythmEngine {
 
 			await Tone.loaded();
 
-			// CRITICAL: Set BPM from track
+			// CRITICAL: Set BPM and first beat offset from track
 			console.log(`🎵 [LOAD] Setting BPM from ${this.bpm} to ${track.bpm}`);
 			this.bpm = track.bpm;
+			this.firstBeatOffset = track.firstBeatOffset;
 
-			console.log(`🎵 [LOAD] Loaded: ${track.name}, BPM is now: ${this.bpm}`);
+			console.log(`🎵 [LOAD] Loaded: ${track.name}, BPM: ${this.bpm}, firstBeatOffset: ${this.firstBeatOffset}s`);
 		} catch (error) {
 			console.error('🎵 [LOAD] Failed to load track:', error);
 			this.useMusic = false;
@@ -201,19 +212,35 @@ export class RhythmEngine {
 
 		console.log(`🎵 [START] Final BPM: ${this.bpm}, Transport BPM: ${transport.bpm.value}`);
 
-		// Schedule metronome clicks on each beat (only if not using music)
-		if (!this.useMusic || !this.player) {
-			this.beatEventId = transport.scheduleRepeat(
-				(time) => {
+		// Schedule beat events
+		// For music: schedule from firstBeatOffset so beats align with music
+		// For metronome: schedule from 0
+		const beatStartTime = this.useMusic && this.player ? this.firstBeatOffset : 0;
+		
+		this.beatEventId = transport.scheduleRepeat(
+			(time) => {
+				this.beatCount++;
+				
+				// Play metronome click only if not using music
+				if (!this.useMusic || !this.player) {
 					this.playMetronomeClick(time);
-				},
-				'4n',
-				0
-			);
-		}
+				}
+				
+				// Fire beat callback for visual sync
+				if (this.onBeatCallback) {
+					// Use Tone.Draw to sync callback with visual frame
+					Tone.getDraw().schedule(() => {
+						this.onBeatCallback?.(this.beatCount);
+					}, time);
+				}
+			},
+			'4n',
+			beatStartTime
+		);
 
 		// Start music player synced to transport
 		if (this.useMusic && this.player) {
+			// Start music from beginning, but transport beats start at firstBeatOffset
 			this.player.sync().start(0);
 		}
 
@@ -274,8 +301,7 @@ export class RhythmEngine {
 	// ========================================================================
 
 	private playMetronomeClick(time: number): void {
-		this.beatCount++;
-
+		// Note: beatCount is incremented in the scheduleRepeat callback, not here
 		// Accent every 4 beats
 		if (this.beatCount % 4 === 1) {
 			this.metronomeHigh?.triggerAttackRelease('C5', '32n', time);
@@ -303,8 +329,18 @@ export class RhythmEngine {
 		if (!this.running) return 0;
 
 		const transport = Tone.getTransport();
-		const seconds = transport.seconds + this.calibrationOffset;
 		const beatLength = 60 / this.bpm;
+		
+		// Adjust for first beat offset and calibration
+		// firstBeatOffset: when music beat actually starts in the file
+		// calibrationOffset: user's device latency adjustment
+		let seconds = transport.seconds - this.firstBeatOffset + this.calibrationOffset;
+		
+		// Handle negative time (before first beat)
+		if (seconds < 0) {
+			// Wrap to end of beat cycle
+			seconds = beatLength + (seconds % beatLength);
+		}
 
 		// Position within current beat (0 to 1)
 		const phase = (seconds % beatLength) / beatLength;
@@ -320,8 +356,15 @@ export class RhythmEngine {
 	 */
 	private getTimingFromNearestBeat(): { diffMs: number; isLate: boolean } {
 		const transport = Tone.getTransport();
-		const seconds = transport.seconds + this.calibrationOffset;
 		const beatLength = 60 / this.bpm;
+		
+		// Adjust for first beat offset and calibration
+		let seconds = transport.seconds - this.firstBeatOffset + this.calibrationOffset;
+		
+		// Handle negative time
+		if (seconds < 0) {
+			seconds = beatLength + (seconds % beatLength);
+		}
 
 		// Position within current beat (0 to beatLength in seconds)
 		const positionInBeat = seconds % beatLength;
@@ -543,6 +586,20 @@ export class RhythmEngine {
 
 	getCurrentTrack(): MusicTrack | null {
 		return this.currentTrack;
+	}
+
+	/**
+	 * Set callback to be called on each beat (for visual debugging)
+	 */
+	setOnBeatCallback(callback: ((beatNumber: number) => void) | null): void {
+		this.onBeatCallback = callback;
+	}
+
+	/**
+	 * Get the first beat offset for current track
+	 */
+	getFirstBeatOffset(): number {
+		return this.firstBeatOffset;
 	}
 
 	// ========================================================================
