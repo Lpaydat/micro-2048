@@ -26,10 +26,10 @@ export interface MusicTrack {
 }
 
 // Music tracks from Crypt of the NecroDancer OST
-// BPM values are from official sources: https://crypt-of-the-necrodancer.fandom.com/wiki/Music
+// BPM values from beat analyzer (actual audio file analysis)
 export const MUSIC_TRACKS: MusicTrack[] = [
 	{ name: 'Watch Your Step (Training)', url: '/music/track1.mp3', bpm: 120, firstBeatOffset: 0 },
-	{ name: 'Crypteque (1-2)', url: '/music/track2.mp3', bpm: 130, firstBeatOffset: 0 },
+	{ name: 'Crypteque (1-2)', url: '/music/track2.mp3', bpm: 65, firstBeatOffset: 0 },
 	{ name: 'Tombtorial (Tutorial)', url: '/music/track3.mp3', bpm: 100, firstBeatOffset: 0 },
 ];
 
@@ -144,8 +144,16 @@ export class RhythmEngine {
 		this.currentBeat = 0;
 		this.autoCalibrationSamples = [];
 		
-		// Configure Transport
-		getTransport().bpm.value = this.settings.bpm;
+		// Determine BPM: use track BPM for music, settings BPM for metronome
+		const effectiveBpm = (this.settings.useMusic && this.musicLoaded && this.currentTrack)
+			? this.currentTrack.bpm
+			: this.settings.bpm;
+		
+		// Update settings to reflect actual BPM being used
+		this.settings.bpm = effectiveBpm;
+		
+		// Configure Transport with the correct BPM
+		getTransport().bpm.value = effectiveBpm;
 		getTransport().position = 0;
 		
 		// Schedule beat events - fires exactly on each beat
@@ -160,9 +168,9 @@ export class RhythmEngine {
 		if (this.settings.useMusic && this.player && this.musicLoaded) {
 			// Sync player to transport
 			this.player.sync().start(0);
-			console.log(`🎵 Playing: ${this.currentTrack?.name} (${this.settings.bpm} BPM)`);
+			console.log(`🎵 Playing: ${this.currentTrack?.name} @ ${effectiveBpm} BPM`);
 		} else {
-			console.log(`🎵 Metronome started (${this.settings.bpm} BPM)`);
+			console.log(`🎵 Metronome started @ ${effectiveBpm} BPM`);
 		}
 	}
 
@@ -388,7 +396,18 @@ export class RhythmEngine {
 
 	updateSettings(settings: Partial<RhythmSettings>): void {
 		const wasUsingMusic = this.settings.useMusic;
+		
+		// When using music, preserve the track's BPM (don't override from settings)
+		const preserveBpm = this.musicLoaded && this.currentTrack && this.settings.useMusic;
+		const trackBpm = this.currentTrack?.bpm;
+		
 		this.settings = { ...this.settings, ...settings };
+		
+		// Restore track BPM if using music
+		if (preserveBpm && trackBpm) {
+			this.settings.bpm = trackBpm;
+			console.log(`🎵 Preserving track BPM: ${trackBpm} (ignoring settings)`);
+		}
 		
 		// Update Transport BPM if running
 		if (this.isRunning) {
@@ -411,8 +430,23 @@ export class RhythmEngine {
 		return this.currentTrack;
 	}
 
-	getDetectedBpm(): number {
+	/**
+	 * Get the effective BPM being used
+	 * When using music, returns the track's BPM
+	 * When using metronome, returns the settings BPM
+	 */
+	getEffectiveBpm(): number {
+		if (this.settings.useMusic && this.musicLoaded && this.currentTrack) {
+			return this.currentTrack.bpm;
+		}
 		return this.settings.bpm;
+	}
+	
+	/**
+	 * @deprecated Use getEffectiveBpm() instead
+	 */
+	getDetectedBpm(): number {
+		return this.getEffectiveBpm();
 	}
 
 	isUsingMusic(): boolean {

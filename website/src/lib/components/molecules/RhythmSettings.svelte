@@ -4,6 +4,8 @@
 
 	export let settings: RhythmSettings;
 	export let showAdvanced: boolean = false;
+	export let isUsingMusic: boolean = false; // When true, hide BPM controls (music has its own BPM)
+	export let musicBpm: number | null = null; // The BPM of the current music track
 
 	const dispatch = createEventDispatcher();
 
@@ -61,45 +63,59 @@
 		</div>
 
 		{#if settings.enabled}
-			<!-- Presets -->
-			<div class="setting-group">
-				<label class="setting-label">Difficulty Presets</label>
-				<div class="presets-grid">
-					{#each presets as preset}
-						<button
-							class="preset-button"
-							class:selected={settings.bpm === preset.bpm && settings.tolerance === preset.tolerance}
-							onclick={() => applyPreset(preset)}
-							type="button"
-						>
-							{preset.name}
-							<div class="preset-details">
-								{preset.bpm} BPM • {preset.tolerance}ms
-							</div>
-						</button>
-					{/each}
+			<!-- Music BPM Info (shown when using music) -->
+			{#if isUsingMusic && musicBpm}
+				<div class="setting-group music-bpm-info">
+					<div class="music-bpm-badge">
+						<span class="music-icon">🎵</span>
+						<span class="music-label">Music BPM:</span>
+						<span class="music-value">{musicBpm}</span>
+					</div>
+					<p class="setting-description">
+						BPM is set by the music track. Switch to metronome mode to customize BPM.
+					</p>
 				</div>
-			</div>
+			{:else}
+				<!-- Presets (only for metronome mode) -->
+				<div class="setting-group">
+					<label class="setting-label">Difficulty Presets</label>
+					<div class="presets-grid">
+						{#each presets as preset}
+							<button
+								class="preset-button"
+								class:selected={settings.bpm === preset.bpm && settings.tolerance === preset.tolerance}
+								onclick={() => applyPreset(preset)}
+								type="button"
+							>
+								{preset.name}
+								<div class="preset-details">
+									{preset.bpm} BPM • {preset.tolerance}ms
+								</div>
+							</button>
+						{/each}
+					</div>
+				</div>
 
-			<!-- BPM Slider -->
-			<div class="setting-group">
-				<label class="setting-label">
-					Beats Per Minute: <span class="setting-value">{settings.bpm}</span>
-				</label>
-				<input
-					type="range"
-					min="60"
-					max="200"
-					bind:value={settings.bpm}
-					oninput={(e) => updateSetting('bpm', parseInt((e.target as HTMLInputElement).value))}
-					class="setting-slider"
-				/>
-				<div class="slider-labels">
-					<span>Slow (60)</span>
-					<span>Normal (120)</span>
-					<span>Fast (200)</span>
+				<!-- BPM Slider (only for metronome mode) -->
+				<div class="setting-group">
+					<label class="setting-label">
+						Beats Per Minute: <span class="setting-value">{settings.bpm}</span>
+					</label>
+					<input
+						type="range"
+						min="60"
+						max="200"
+						bind:value={settings.bpm}
+						oninput={(e) => updateSetting('bpm', parseInt((e.target as HTMLInputElement).value))}
+						class="setting-slider"
+					/>
+					<div class="slider-labels">
+						<span>Slow (60)</span>
+						<span>Normal (120)</span>
+						<span>Fast (200)</span>
+					</div>
 				</div>
-			</div>
+			{/if}
 
 			<!-- Tolerance Slider -->
 			<div class="setting-group">
@@ -277,6 +293,36 @@
 		font-size: 0.75rem;
 		color: #6b7280;
 		line-height: 1.4;
+	}
+
+	/* Music BPM Info */
+	.music-bpm-info {
+		background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+		padding: 0.75rem;
+		border-radius: 0.5rem;
+		border: 1px solid #c4b5fd;
+	}
+
+	.music-bpm-badge {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 1rem;
+	}
+
+	.music-icon {
+		font-size: 1.25rem;
+	}
+
+	.music-label {
+		font-weight: 500;
+		color: #6b21a8;
+	}
+
+	.music-value {
+		font-weight: 700;
+		font-size: 1.25rem;
+		color: #7c3aed;
 	}
 
 	.setting-slider {
