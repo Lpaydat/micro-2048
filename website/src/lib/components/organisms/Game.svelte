@@ -324,9 +324,9 @@
 				rhythmNeedsStart = true;
 				showRhythmIndicator = true;
 				console.log('🎵 Rhythm mode detected, waiting for user to start:', rhythmSettings);
-			} else {
-				rhythmEngine.updateSettings(rhythmSettings);
 			}
+			// Note: New engine doesn't support updateSettings - settings are immutable
+			// If settings change, we'd need to recreate the engine
 		} else {
 			// No rhythm mode or in inspector mode, stop engine if running
 			if (rhythmEngine) {
@@ -344,13 +344,12 @@
 		if (!rhythmEngine || !rhythmNeedsStart) return;
 		
 		try {
-			await rhythmEngine.initAudio();
+			await rhythmEngine.init();
 			rhythmEngine.start();
 			rhythmNeedsStart = false;
 			console.log('🎵 Rhythm mode started!');
 		} catch (err) {
-			console.warn('🎵 Audio initialization failed, visual mode only:', err);
-			rhythmEngine.start();
+			console.warn('🎵 Audio initialization failed:', err);
 			rhythmNeedsStart = false;
 		}
 	};
@@ -637,7 +636,7 @@
 
 		// 🎵 Rhythm Mode Check - BLOCK moves if not on beat
 		if (rhythmEngine && rhythmSettings?.enabled) {
-			const rhythmFeedback = rhythmEngine.checkRhythm(now);
+			const rhythmFeedback = rhythmEngine.checkRhythm();
 			
 			// Check if move is valid (on beat) - allow perfect, good, early, and late
 			// Only 'miss' is blocked (outside tolerance window)
@@ -1424,7 +1423,6 @@
 							<BeatIndicator 
 								{rhythmEngine} 
 								bind:this={beatIndicatorRef}
-								showCalibration={true}
 							/>
 						</div>
 						<div class="rhythm-stats">
@@ -1440,12 +1438,10 @@
 								<span class="label">Miss</span>
 								<span class="value text-red-400">{missCount}</span>
 							</span>
-							{#if rhythmEngine?.isUsingMusic()}
-								<span class="stat">
-									<span class="label">BPM</span>
-									<span class="value text-yellow-400">{rhythmEngine.getDetectedBpm() || '?'}</span>
-								</span>
-							{/if}
+							<span class="stat">
+								<span class="label">BPM</span>
+								<span class="value text-yellow-400">{rhythmEngine?.getBpm() || '?'}</span>
+							</span>
 						</div>
 					{/if}
 				</div>

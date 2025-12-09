@@ -1,18 +1,31 @@
+/**
+ * RhythmEngine - Industry-standard rhythm game timing system
+ * 
+ * Architecture:
+ * - Tone.Transport is the ONLY source of truth for timing
+ * - All timing calculations derive from Transport.seconds
+ * - Visual beat phase is a pure function of Transport time
+ * - Input validation is a pure function of Transport time
+ * 
+ * NO performance.now(), NO Date.now(), NO setInterval for timing
+ */
+
 import * as Tone from 'tone';
 
-// Get the Transport singleton (getTransport() is deprecated)
-const getTransport = () => Tone.getTransport();
+// ============================================================================
+// TYPES
+// ============================================================================
 
 export interface RhythmSettings {
 	enabled: boolean;
 	bpm: number;
-	tolerance: number; // milliseconds
-	useMusic?: boolean; // Use music instead of metronome
+	tolerance: number; // milliseconds - window for valid hits
+	useMusic?: boolean;
 }
 
 export interface RhythmFeedback {
-	accuracy: 'perfect' | 'good' | 'miss' | 'early' | 'late';
-	timingDiff: number; // milliseconds from beat
+	accuracy: 'perfect' | 'good' | 'early' | 'late' | 'miss';
+	timingDiff: number; // milliseconds from nearest beat (signed: - = early, + = late)
 	beatNumber: number;
 	score: number;
 }
@@ -21,79 +34,78 @@ export interface MusicTrack {
 	name: string;
 	url: string;
 	bpm: number;
-	// Offset in seconds from start to first beat (for tracks that don't start on beat)
-	firstBeatOffset: number;
 }
 
-// Music tracks from Crypt of the NecroDancer OST
-// BPM values from beat analyzer (actual audio file analysis)
+// ============================================================================
+// TRACK DATA
+// ============================================================================
+
+// BPM values verified with beat analyzer
 export const MUSIC_TRACKS: MusicTrack[] = [
-	{ name: 'Watch Your Step (Training)', url: '/music/track1.mp3', bpm: 120, firstBeatOffset: 0 },
-	{ name: 'Crypteque (1-2)', url: '/music/track2.mp3', bpm: 65, firstBeatOffset: 0 },
-	{ name: 'Tombtorial (Tutorial)', url: '/music/track3.mp3', bpm: 100, firstBeatOffset: 0 },
+	{ name: 'Watch Your Step', url: '/music/track1.mp3', bpm: 120 },
+	{ name: 'Crypteque', url: '/music/track2.mp3', bpm: 65 },
+	{ name: 'Tombtorial', url: '/music/track3.mp3', bpm: 100 },
 ];
 
-/**
- * RhythmEngine - Tone.js based rhythm game engine
- * 
- * Uses getTransport() for sample-accurate beat timing.
- * All timing is derived from the audio context, not JS timers.
- */
+// ============================================================================
+// RHYTHM ENGINE
+// ============================================================================
+
 export class RhythmEngine {
-	private settings: RhythmSettings;
-	private isRunning: boolean = false;
-	private currentBeat: number = 0;
+	// Configuration
+	private bpm: number;
+	private tolerance: number;
+	private useMusic: boolean;
 	
-	// Music playback
-	private player: Tone.Player | null = null;
+	// State
+	private running: boolean = false;
 	private currentTrack: MusicTrack | null = null;
-	private musicLoaded: boolean = false;
 	
-	// Metronome
-	private metronome: Tone.Synth | null = null;
-	private metronomeLowSynth: Tone.Synth | null = null;
-	
-	// Beat scheduling
+	// Tone.js instances
+	private player: Tone.Player | null = null;
+	private metronomeHigh: Tone.Synth | null = null;
+	private metronomeLow: Tone.Synth | null = null;
 	private beatEventId: number | null = null;
 	
-	// Calibration
-	private userCalibrationOffset: number = 0; // ms
+	// Beat counter (for display only, not for timing)
+	private beatCount: number = 0;
 	
-	// Auto-calibration
-	private autoCalibrationEnabled: boolean = true;
-	private autoCalibrationSamples: number[] = [];
-	private readonly AUTO_CALIBRATION_MIN_SAMPLES = 10;
-	private readonly AUTO_CALIBRATION_MAX_SAMPLES = 30;
-	private readonly AUTO_CALIBRATION_MAX_OFFSET = 100;
-	private onCalibrationChangeCallback: ((offset: number) => void) | null = null;
+	// Calibration offset in seconds (user adjustment for audio latency)
+	private calibrationOffset: number = 0;
 
 	constructor(settings: RhythmSettings) {
-		this.settings = settings;
+		this.bpm = settings.bpm;
+		this.tolerance = settings.tolerance;
+		this.useMusic = settings.useMusic ?? false;
 	}
 
+	// ========================================================================
+	// INITIALIZATION
+	// ========================================================================
+
 	/**
-	 * Initialize audio - must be called after user interaction (browser requirement)
+	 * Initialize audio system - MUST be called after user interaction
 	 */
-	async initAudio(): Promise<void> {
+	async init(): Promise<void> {
 		// Start Tone.js audio context (requires user gesture)
 		await Tone.start();
-		console.log('🎵 Tone.js audio context started');
+		console.log('🎵 Audio context started');
 		
-		// Set up metronome synths
-		this.metronome = new Tone.Synth({
-			oscillator: { type: 'sine' },
+		// Create metronome synths
+		this.metronomeHigh = new Tone.Synth({
+			oscillator: { type: 'triangle' },
 			envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 }
 		}).toDestination();
-		this.metronome.volume.value = -10;
+		this.metronomeHigh.volume.value = -6;
 		
-		this.metronomeLowSynth = new Tone.Synth({
-			oscillator: { type: 'sine' },
+		this.metronomeLow = new Tone.Synth({
+			oscillator: { type: 'triangle' },
 			envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 }
 		}).toDestination();
-		this.metronomeLowSynth.volume.value = -10;
+		this.metronomeLow.volume.value = -10;
 		
 		// Load music if enabled
-		if (this.settings.useMusic) {
+		if (this.useMusic) {
 			await this.loadRandomTrack();
 		}
 	}
@@ -102,124 +114,100 @@ export class RhythmEngine {
 	 * Load a random music track
 	 */
 	private async loadRandomTrack(): Promise<void> {
-		const randomIndex = Math.floor(Math.random() * MUSIC_TRACKS.length);
-		this.currentTrack = MUSIC_TRACKS[randomIndex];
+		const track = MUSIC_TRACKS[Math.floor(Math.random() * MUSIC_TRACKS.length)];
+		this.currentTrack = track;
 		
-		console.log(`🎵 Loading track: ${this.currentTrack.name}...`);
+		console.log(`🎵 Loading: ${track.name} (${track.bpm} BPM)`);
 		
 		try {
-			// Create Tone.Player for music playback
 			this.player = new Tone.Player({
-				url: this.currentTrack.url,
+				url: track.url,
 				loop: true,
-				onload: () => {
-					console.log(`🎵 Track loaded: ${this.currentTrack?.name}`);
-					this.musicLoaded = true;
-				}
 			}).toDestination();
 			
-			// Wait for the player to load
 			await Tone.loaded();
 			
-			// Set BPM from track
-			this.settings.bpm = this.currentTrack.bpm;
-			getTransport().bpm.value = this.currentTrack.bpm;
+			// CRITICAL: Set BPM from track
+			this.bpm = track.bpm;
 			
-			console.log(`🎵 Ready: ${this.currentTrack.name} @ ${this.currentTrack.bpm} BPM`);
-			
+			console.log(`🎵 Loaded: ${track.name} @ ${track.bpm} BPM`);
 		} catch (error) {
-			console.warn('🎵 Failed to load music, will use metronome:', error);
-			this.settings.useMusic = false;
-			this.musicLoaded = false;
+			console.error('🎵 Failed to load track:', error);
+			this.useMusic = false;
+			this.player = null;
 		}
 	}
+
+	// ========================================================================
+	// TRANSPORT CONTROL
+	// ========================================================================
 
 	/**
 	 * Start the rhythm engine
 	 */
 	start(): void {
-		if (!this.settings.enabled || this.isRunning) return;
+		if (this.running) return;
 		
-		this.isRunning = true;
-		this.currentBeat = 0;
-		this.autoCalibrationSamples = [];
+		const transport = Tone.getTransport();
 		
-		// Determine BPM: use track BPM for music, settings BPM for metronome
-		const effectiveBpm = (this.settings.useMusic && this.musicLoaded && this.currentTrack)
-			? this.currentTrack.bpm
-			: this.settings.bpm;
+		// Reset state
+		this.running = true;
+		this.beatCount = 0;
 		
-		// Update settings to reflect actual BPM being used
-		this.settings.bpm = effectiveBpm;
+		// Configure transport with our BPM
+		transport.bpm.value = this.bpm;
+		transport.position = 0;
 		
-		// Configure Transport with the correct BPM
-		getTransport().bpm.value = effectiveBpm;
-		getTransport().position = 0;
+		// Schedule metronome clicks on each beat (only if not using music)
+		if (!this.useMusic || !this.player) {
+			this.beatEventId = transport.scheduleRepeat((time) => {
+				this.playMetronomeClick(time);
+			}, '4n', 0);
+		}
 		
-		// Schedule beat events - fires exactly on each beat
-		this.beatEventId = getTransport().scheduleRepeat((time) => {
-			this.onBeat(time);
-		}, '4n'); // quarter note = one beat
-		
-		// Start transport
-		getTransport().start();
-		
-		// Start music or metronome
-		if (this.settings.useMusic && this.player && this.musicLoaded) {
-			// Sync player to transport
+		// Start music player synced to transport
+		if (this.useMusic && this.player) {
 			this.player.sync().start(0);
-			console.log(`🎵 Playing: ${this.currentTrack?.name} @ ${effectiveBpm} BPM`);
-		} else {
-			console.log(`🎵 Metronome started @ ${effectiveBpm} BPM`);
 		}
-	}
-
-	/**
-	 * Called exactly on each beat by getTransport()
-	 */
-	private onBeat(time: number): void {
-		this.currentBeat++;
 		
-		// Play metronome click if not using music
-		if (!this.settings.useMusic || !this.musicLoaded) {
-			// Accent on beat 1 of each measure (every 4 beats)
-			if (this.currentBeat % 4 === 1) {
-				this.metronome?.triggerAttackRelease('C5', '32n', time);
-			} else {
-				this.metronomeLowSynth?.triggerAttackRelease('G4', '32n', time);
-			}
-		}
+		// Start the transport (this starts EVERYTHING)
+		transport.start();
+		
+		console.log(`🎵 Started @ ${this.bpm} BPM (music: ${this.useMusic && !!this.player})`);
 	}
 
 	/**
 	 * Stop the rhythm engine
 	 */
 	stop(): void {
-		this.isRunning = false;
+		if (!this.running) return;
 		
-		// Stop and reset transport
-		getTransport().stop();
-		getTransport().position = 0;
+		const transport = Tone.getTransport();
 		
-		// Clear beat event
+		// Stop transport
+		transport.stop();
+		transport.position = 0;
+		
+		// Clear scheduled events
 		if (this.beatEventId !== null) {
-			getTransport().clear(this.beatEventId);
+			transport.clear(this.beatEventId);
 			this.beatEventId = null;
 		}
 		
-		// Stop player
+		// Stop and unsync player
 		if (this.player) {
 			this.player.unsync();
 			this.player.stop();
 		}
 		
-		// Reset state
-		this.currentBeat = 0;
-		this.autoCalibrationSamples = [];
+		this.running = false;
+		this.beatCount = 0;
+		
+		console.log('🎵 Stopped');
 	}
 
 	/**
-	 * Clean up resources
+	 * Clean up all resources
 	 */
 	dispose(): void {
 		this.stop();
@@ -227,373 +215,244 @@ export class RhythmEngine {
 		this.player?.dispose();
 		this.player = null;
 		
-		this.metronome?.dispose();
-		this.metronome = null;
+		this.metronomeHigh?.dispose();
+		this.metronomeHigh = null;
 		
-		this.metronomeLowSynth?.dispose();
-		this.metronomeLowSynth = null;
+		this.metronomeLow?.dispose();
+		this.metronomeLow = null;
+	}
+
+	// ========================================================================
+	// METRONOME
+	// ========================================================================
+
+	private playMetronomeClick(time: number): void {
+		this.beatCount++;
 		
-		this.musicLoaded = false;
+		// Accent every 4 beats
+		if (this.beatCount % 4 === 1) {
+			this.metronomeHigh?.triggerAttackRelease('C5', '32n', time);
+		} else {
+			this.metronomeLow?.triggerAttackRelease('G4', '32n', time);
+		}
+	}
+
+	// ========================================================================
+	// TIMING - THE CORE
+	// ========================================================================
+
+	/**
+	 * Get the current beat phase (0 to 1)
+	 * 
+	 * This is THE function for visual sync.
+	 * Call this every frame in requestAnimationFrame.
+	 * 
+	 * Returns:
+	 *   0.0 = exactly on a beat
+	 *   0.5 = exactly between beats
+	 *   approaching 1.0 = about to hit next beat
+	 */
+	getBeatPhase(): number {
+		if (!this.running) return 0;
+		
+		const transport = Tone.getTransport();
+		const seconds = transport.seconds + this.calibrationOffset;
+		const beatLength = 60 / this.bpm;
+		
+		// Position within current beat (0 to 1)
+		const phase = (seconds % beatLength) / beatLength;
+		
+		return phase;
 	}
 
 	/**
-	 * Check if a move is on rhythm - THE CORE RHYTHM CHECK
+	 * Get timing info for input validation
 	 * 
-	 * Uses getTransport().seconds for sample-accurate timing
-	 * @param _timestamp Optional timestamp parameter (ignored, kept for API compatibility)
+	 * Returns how far we are from the nearest beat.
+	 * Negative = early (before beat), Positive = late (after beat)
 	 */
-	checkRhythm(_timestamp?: number): RhythmFeedback {
-		if (!this.settings.enabled || !this.isRunning) {
-			return {
-				accuracy: 'perfect',
-				timingDiff: 0,
-				beatNumber: 0,
-				score: 0
-			};
-		}
-
-		// Get current position in the beat cycle from Transport
-		// This is THE source of truth - derived directly from audio context
-		const transportSeconds = getTransport().seconds;
-		const beatLengthSeconds = 60 / this.settings.bpm;
+	private getTimingFromNearestBeat(): { diffMs: number; isLate: boolean } {
+		const transport = Tone.getTransport();
+		const seconds = transport.seconds + this.calibrationOffset;
+		const beatLength = 60 / this.bpm;
 		
-		// Apply calibration offset (convert ms to seconds)
-		const calibrationSeconds = this.userCalibrationOffset / 1000;
-		const adjustedTime = transportSeconds - calibrationSeconds;
+		// Position within current beat (0 to beatLength in seconds)
+		const positionInBeat = seconds % beatLength;
 		
-		// Calculate position within current beat (0 to 1)
-		const beatPosition = (adjustedTime % beatLengthSeconds) / beatLengthSeconds;
+		// Distance to previous beat (0) vs next beat (beatLength)
+		const distToPrev = positionInBeat;
+		const distToNext = beatLength - positionInBeat;
 		
-		// Calculate distance from nearest beat
-		// beatPosition near 0 = just after beat, near 1 = just before next beat
-		// We want distance from the nearest beat edge (0 or 1)
-		let distanceFromBeat: number;
-		let isLate: boolean;
-		
-		if (beatPosition <= 0.5) {
-			// Closer to the beat that just happened (late hit)
-			distanceFromBeat = beatPosition;
-			isLate = true;
+		if (distToPrev <= distToNext) {
+			// Closer to previous beat = we're LATE
+			return { diffMs: distToPrev * 1000, isLate: true };
 		} else {
-			// Closer to the upcoming beat (early hit)
-			distanceFromBeat = 1 - beatPosition;
-			isLate = false;
+			// Closer to next beat = we're EARLY
+			return { diffMs: -distToNext * 1000, isLate: false };
+		}
+	}
+
+	/**
+	 * Check if player's input is on beat
+	 * 
+	 * Call this when player makes a move.
+	 * Returns feedback about their timing.
+	 */
+	checkRhythm(): RhythmFeedback {
+		if (!this.running) {
+			return { accuracy: 'perfect', timingDiff: 0, beatNumber: 0, score: 0 };
 		}
 		
-		// Convert to milliseconds
-		const timingDiffMs = distanceFromBeat * beatLengthSeconds * 1000;
+		const { diffMs, isLate } = this.getTimingFromNearestBeat();
+		const absDiff = Math.abs(diffMs);
 		
-		// Signed timing for auto-calibration (positive = late, negative = early)
-		const signedTimingMs = isLate ? timingDiffMs : -timingDiffMs;
-		
-		// Determine accuracy
+		// Determine accuracy based on timing
 		let accuracy: RhythmFeedback['accuracy'];
 		let score: number;
 		
-		if (timingDiffMs <= 50) {
+		if (absDiff <= 50) {
+			// Within 50ms = Perfect
 			accuracy = 'perfect';
 			score = 100;
-		} else if (timingDiffMs <= 100) {
+		} else if (absDiff <= 100) {
+			// Within 100ms = Good
 			accuracy = 'good';
-			score = 50;
-		} else if (timingDiffMs <= this.settings.tolerance) {
+			score = 75;
+		} else if (absDiff <= this.tolerance) {
+			// Within tolerance = Early/Late
 			accuracy = isLate ? 'late' : 'early';
-			score = 25;
+			score = 50;
 		} else {
+			// Outside tolerance = Miss
 			accuracy = 'miss';
 			score = 0;
 		}
 		
-		// Record for auto-calibration
-		this.recordHitForAutoCalibration(signedTimingMs, accuracy);
-
 		return {
 			accuracy,
-			timingDiff: timingDiffMs,
-			beatNumber: this.currentBeat,
+			timingDiff: diffMs, // Signed: negative = early, positive = late
+			beatNumber: this.beatCount,
 			score
 		};
 	}
 
 	/**
-	 * Get current beat phase (0 to 1) for visual animation
-	 * 
-	 * This is called every frame and returns the exact position in the beat cycle
-	 * derived from getTransport() - guarantees perfect visual sync
+	 * Simple check: is player currently in the hit window?
 	 */
-	getBeatPhase(): number {
-		if (!this.isRunning) return 0;
+	isOnBeat(): boolean {
+		if (!this.running) return true;
 		
-		const transportSeconds = getTransport().seconds;
-		const beatLengthSeconds = 60 / this.settings.bpm;
-		
-		// Apply calibration
-		const calibrationSeconds = this.userCalibrationOffset / 1000;
-		const adjustedTime = transportSeconds - calibrationSeconds;
-		
-		// Return position in beat cycle (0 to 1)
-		return (adjustedTime % beatLengthSeconds) / beatLengthSeconds;
+		const { diffMs } = this.getTimingFromNearestBeat();
+		return Math.abs(diffMs) <= this.tolerance;
 	}
 
+	// ========================================================================
+	// VISUAL HELPERS
+	// ========================================================================
+
 	/**
-	 * Get visual feedback data for UI components
+	 * Get all data needed for visual feedback
+	 * 
+	 * Call this every frame for smooth animations.
 	 */
-	getVisualFeedback(): {
-		isOnBeat: boolean;
-		beatProgress: number;
-		timeToNext: number;
-		intensity: number;
+	getVisualState(): {
+		beatPhase: number;      // 0-1, position in beat cycle
+		intensity: number;      // 0-1, how close to beat (1 = on beat)
+		isInWindow: boolean;    // true if player can hit now
+		bpm: number;
+		beatNumber: number;
 	} {
-		if (!this.settings.enabled || !this.isRunning) {
+		if (!this.running) {
 			return {
-				isOnBeat: false,
-				beatProgress: 0,
-				timeToNext: 0,
-				intensity: 0
+				beatPhase: 0,
+				intensity: 0,
+				isInWindow: false,
+				bpm: this.bpm,
+				beatNumber: 0
 			};
 		}
-
+		
 		const beatPhase = this.getBeatPhase();
-		const beatLengthMs = (60 / this.settings.bpm) * 1000;
 		
-		// Distance from nearest beat edge (0 or 1)
+		// Calculate intensity: 1.0 at beat (phase near 0 or 1), 0 at middle
+		// Using smooth cosine curve
 		const distanceFromBeat = beatPhase <= 0.5 ? beatPhase : (1 - beatPhase);
-		const timingDiffMs = distanceFromBeat * beatLengthMs;
+		const intensity = Math.cos(distanceFromBeat * Math.PI);
 		
-		// Time to next beat
-		const timeToNext = (1 - beatPhase) * beatLengthMs;
+		// Check if in hit window
+		const { diffMs } = this.getTimingFromNearestBeat();
+		const isInWindow = Math.abs(diffMs) <= this.tolerance;
 		
-		// Is on beat (within tolerance)?
-		const isOnBeat = timingDiffMs <= this.settings.tolerance;
-		
-		// Intensity for visual effects (1.0 at beat, fades to 0)
-		let intensity = 0;
-		if (timingDiffMs <= 50) {
-			intensity = 1.0;
-		} else if (timingDiffMs <= 100) {
-			intensity = 0.7;
-		} else if (timingDiffMs <= this.settings.tolerance) {
-			intensity = 0.4;
-		}
-
 		return {
-			isOnBeat,
-			beatProgress: beatPhase,
-			timeToNext,
-			intensity
+			beatPhase,
+			intensity: Math.max(0, intensity),
+			isInWindow,
+			bpm: this.bpm,
+			beatNumber: this.beatCount
 		};
 	}
 
+	// ========================================================================
+	// CALIBRATION
+	// ========================================================================
+
 	/**
-	 * Check if currently on beat (for simple checks)
+	 * Set calibration offset (for audio latency compensation)
+	 * Positive = audio is delayed, negative = audio is early
 	 */
-	isOnBeat(): boolean {
-		const feedback = this.checkRhythm();
-		return feedback.accuracy !== 'miss';
+	setCalibrationOffset(ms: number): void {
+		this.calibrationOffset = ms / 1000; // Convert to seconds
+		console.log(`🎵 Calibration: ${ms}ms`);
 	}
 
-	// ==================== Settings & State ====================
-
-	updateSettings(settings: Partial<RhythmSettings>): void {
-		const wasUsingMusic = this.settings.useMusic;
-		
-		// When using music, preserve the track's BPM (don't override from settings)
-		const preserveBpm = this.musicLoaded && this.currentTrack && this.settings.useMusic;
-		const trackBpm = this.currentTrack?.bpm;
-		
-		this.settings = { ...this.settings, ...settings };
-		
-		// Restore track BPM if using music
-		if (preserveBpm && trackBpm) {
-			this.settings.bpm = trackBpm;
-			console.log(`🎵 Preserving track BPM: ${trackBpm} (ignoring settings)`);
-		}
-		
-		// Update Transport BPM if running
-		if (this.isRunning) {
-			getTransport().bpm.value = this.settings.bpm;
-		}
-		
-		// Handle music mode change
-		if (settings.useMusic !== undefined && settings.useMusic !== wasUsingMusic) {
-			if (settings.useMusic && !this.musicLoaded) {
-				this.loadRandomTrack();
-			}
-		}
+	getCalibrationOffset(): number {
+		return this.calibrationOffset * 1000; // Return in ms
 	}
 
-	getSettings(): RhythmSettings {
-		return { ...this.settings };
+	// ========================================================================
+	// GETTERS
+	// ========================================================================
+
+	getBpm(): number {
+		return this.bpm;
+	}
+
+	getTolerance(): number {
+		return this.tolerance;
+	}
+
+	isRunning(): boolean {
+		return this.running;
+	}
+
+	isUsingMusic(): boolean {
+		return this.useMusic && this.player !== null;
 	}
 
 	getCurrentTrack(): MusicTrack | null {
 		return this.currentTrack;
 	}
 
-	/**
-	 * Get the effective BPM being used
-	 * When using music, returns the track's BPM
-	 * When using metronome, returns the settings BPM
-	 */
-	getEffectiveBpm(): number {
-		if (this.settings.useMusic && this.musicLoaded && this.currentTrack) {
-			return this.currentTrack.bpm;
-		}
-		return this.settings.bpm;
-	}
-	
-	/**
-	 * @deprecated Use getEffectiveBpm() instead
-	 */
-	getDetectedBpm(): number {
-		return this.getEffectiveBpm();
-	}
-
-	isUsingMusic(): boolean {
-		return this.settings.useMusic === true && this.musicLoaded;
-	}
-
-	isActive(): boolean {
-		return this.isRunning;
-	}
-
-	// ==================== Calibration ====================
-
-	setCalibrationOffset(offsetMs: number): void {
-		this.userCalibrationOffset = Math.max(-200, Math.min(200, offsetMs));
-		console.log(`🎵 Calibration offset: ${this.userCalibrationOffset}ms`);
-		
-		// Disable auto-calibration if user manually sets offset
-		if (offsetMs !== 0) {
-			this.autoCalibrationEnabled = false;
-			this.autoCalibrationSamples = [];
-		}
-	}
-
-	getCalibrationOffset(): number {
-		return this.userCalibrationOffset;
-	}
-
-	setAutoCalibration(enabled: boolean): void {
-		this.autoCalibrationEnabled = enabled;
-		if (!enabled) {
-			this.autoCalibrationSamples = [];
-		}
-		console.log(`🎵 Auto-calibration ${enabled ? 'enabled' : 'disabled'}`);
-	}
-
-	isAutoCalibrationEnabled(): boolean {
-		return this.autoCalibrationEnabled;
-	}
-
-	getAutoCalibrationSampleCount(): number {
-		return this.autoCalibrationSamples.length;
-	}
-
-	onCalibrationChange(callback: ((offset: number) => void) | null): void {
-		this.onCalibrationChangeCallback = callback;
-	}
-
-	resetAutoCalibration(): void {
-		this.autoCalibrationSamples = [];
-		this.userCalibrationOffset = 0;
-		this.autoCalibrationEnabled = true;
-		console.log('🎵 Auto-calibration reset');
-		
-		if (this.onCalibrationChangeCallback) {
-			this.onCalibrationChangeCallback(0);
-		}
-	}
-
-	private recordHitForAutoCalibration(signedTimingMs: number, accuracy: RhythmFeedback['accuracy']): void {
-		if (!this.autoCalibrationEnabled) return;
-		if (accuracy !== 'perfect' && accuracy !== 'good') return;
-		
-		this.autoCalibrationSamples.push(signedTimingMs);
-		
-		// Keep only recent samples
-		if (this.autoCalibrationSamples.length > this.AUTO_CALIBRATION_MAX_SAMPLES) {
-			this.autoCalibrationSamples.shift();
-		}
-		
-		this.tryApplyAutoCalibration();
-	}
-
-	private tryApplyAutoCalibration(): void {
-		if (this.autoCalibrationSamples.length < this.AUTO_CALIBRATION_MIN_SAMPLES) {
-			return;
-		}
-		
-		// Calculate median
-		const sorted = [...this.autoCalibrationSamples].sort((a, b) => a - b);
-		const mid = Math.floor(sorted.length / 2);
-		const median = sorted.length % 2 === 0
-			? (sorted[mid - 1] + sorted[mid]) / 2
-			: sorted[mid];
-		
-		// Only apply if significant
-		if (Math.abs(median) < 15) return;
-		
-		// Calculate adjustment
-		const adjustment = -Math.round(median);
-		const cappedAdjustment = Math.max(-this.AUTO_CALIBRATION_MAX_OFFSET, 
-			Math.min(this.AUTO_CALIBRATION_MAX_OFFSET, adjustment));
-		
-		const newOffset = Math.max(-200, Math.min(200, this.userCalibrationOffset + cappedAdjustment));
-		
-		if (Math.abs(newOffset - this.userCalibrationOffset) >= 10) {
-			const oldOffset = this.userCalibrationOffset;
-			this.userCalibrationOffset = newOffset;
-			
-			console.log(`🎵 Auto-calibration: ${oldOffset}ms → ${newOffset}ms (median: ${median.toFixed(1)}ms)`);
-			
-			this.autoCalibrationSamples = [];
-			
-			if (this.onCalibrationChangeCallback) {
-				this.onCalibrationChangeCallback(newOffset);
-			}
-		}
-	}
-
-	// ==================== Static Helpers ====================
+	// ========================================================================
+	// STATIC HELPERS
+	// ========================================================================
 
 	/**
-	 * Parse rhythm settings from tournament description string
+	 * Parse rhythm settings from tournament description
+	 * Format: [RHYTHM_MODE:true,BPM:120,TOLERANCE:150,MUSIC:true]
 	 */
 	static parseFromDescription(description: string): RhythmSettings | null {
-		// Format: [RHYTHM_MODE:true,BPM:120,TOLERANCE:150,MUSIC:true]
-		const rhythmMatch = description.match(/\[RHYTHM_MODE:true,BPM:(\d+),TOLERANCE:(\d+)(?:,MUSIC:(true|false))?\]/);
-		if (!rhythmMatch) return null;
-
+		const match = description.match(
+			/\[RHYTHM_MODE:true,BPM:(\d+),TOLERANCE:(\d+)(?:,MUSIC:(true|false))?\]/
+		);
+		
+		if (!match) return null;
+		
 		return {
 			enabled: true,
-			bpm: parseInt(rhythmMatch[1], 10),
-			tolerance: parseInt(rhythmMatch[2], 10),
-			useMusic: rhythmMatch[3] === 'true'
-		};
-	}
-
-	// ==================== Debug ====================
-
-	getDebugInfo(): {
-		isRunning: boolean;
-		transportSeconds: number;
-		transportPosition: string;
-		bpm: number;
-		beatPhase: number;
-		currentBeat: number;
-		calibrationOffset: number;
-		autoCalibrationSamples: number;
-	} {
-		return {
-			isRunning: this.isRunning,
-			transportSeconds: getTransport().seconds,
-			transportPosition: getTransport().position.toString(),
-			bpm: this.settings.bpm,
-			beatPhase: this.getBeatPhase(),
-			currentBeat: this.currentBeat,
-			calibrationOffset: this.userCalibrationOffset,
-			autoCalibrationSamples: this.autoCalibrationSamples.length
+			bpm: parseInt(match[1], 10),
+			tolerance: parseInt(match[2], 10),
+			useMusic: match[3] === 'true'
 		};
 	}
 }
