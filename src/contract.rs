@@ -9,7 +9,6 @@ use linera_sdk::{
     views::{RootView, View},
     Contract, ContractRuntime,
 };
-use state::Leaderboard;
 use std::str::FromStr;
 
 use self::state::Game2048;
@@ -240,45 +239,10 @@ impl Game2048Contract {
         ContractHelpers::transfer(self, destination, amount);
     }
 
-    fn auto_faucet(&mut self, faucet_amount: Option<u128>) {
-        ContractHelpers::auto_faucet(self, faucet_amount);
-    }
-
     // ========================================
     // HANDLER-DELEGATED METHODS
     // (Business logic via handlers)
     // ========================================
-
-    async fn is_leaderboard_active(&mut self, timestamp: u64) -> &mut Leaderboard {
-        LeaderboardOperationHandler::is_leaderboard_active(self, timestamp).await
-    }
-
-    async fn update_shard_score(
-        &mut self,
-        player: &str,
-        board_id: String,
-        score: u64,
-        timestamp: u64,
-        player_chain_id: String,
-        boards_in_tournament: u32,
-        leaderboard_id: String,
-        game_status: game2048::GameStatus,
-        highest_tile: u64,
-    ) {
-        ShardOperationHandler::update_shard_score(
-            self,
-            player,
-            board_id,
-            score,
-            timestamp,
-            player_chain_id,
-            boards_in_tournament,
-            leaderboard_id,
-            game_status,
-            highest_tile,
-        )
-        .await;
-    }
 
     async fn check_player_registered(
         &mut self,
@@ -346,22 +310,6 @@ impl Game2048Contract {
     /// Emit current active tournaments (for leaderboard chains)
     pub async fn emit_active_tournaments(&mut self) {
         LeaderboardOperationHandler::emit_active_tournaments(self).await;
-    }
-
-    /// Register player with shard and update workload tracking
-    pub async fn register_player_with_shard(
-        &mut self,
-        player_chain_id: String,
-        tournament_id: String,
-        player_name: String,
-    ) {
-        ShardOperationHandler::register_player_with_shard(
-            self,
-            player_chain_id,
-            tournament_id,
-            player_name,
-        )
-        .await;
     }
 
     /// Update game count when games are created/ended

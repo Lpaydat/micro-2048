@@ -2,7 +2,6 @@
 //!
 //! Handles leaderboard-related operations including creation, updates, management, score aggregation, and triggerer coordination.
 
-use crate::state::Leaderboard;
 use game2048::{
     LeaderboardAction, LeaderboardSettings, Message, RegistrationCheck, TournamentInfo,
 };
@@ -294,63 +293,6 @@ impl LeaderboardOperationHandler {
                 leaderboard.is_pinned.set(!*leaderboard.is_pinned.get());
             }
         }
-    }
-
-    /// Check if leaderboard is active for the given timestamp
-    pub async fn is_leaderboard_active(
-        contract: &mut crate::Game2048Contract,
-        timestamp: u64,
-    ) -> &mut Leaderboard {
-        let leaderboard = contract
-            .state
-            .leaderboards
-            .load_entry_mut("")
-            .await
-            .unwrap();
-        let start_time = leaderboard.start_time.get();
-        let end_time = leaderboard.end_time.get();
-
-        // Basic bounds checking: prevent obviously invalid timestamps
-        if timestamp > u64::MAX / 2 {
-            panic!("Timestamp too large");
-        }
-
-        // Apply timestamp validation to all chains for consistency with optional time limits
-        // Keep bypass for system operations (111970) - used for game ending without moves
-        if timestamp != 111970 {
-            let start_time_raw = *start_time;
-            let end_time_raw = *end_time;
-
-            // Only validate if times are set (non-zero)
-            let start_limit = if start_time_raw == 0 {
-                None
-            } else {
-                Some(start_time_raw)
-            };
-            let end_limit = if end_time_raw == 0 {
-                None
-            } else {
-                Some(end_time_raw)
-            };
-
-            let mut invalid = false;
-            if let Some(start) = start_limit {
-                if timestamp < start {
-                    invalid = true;
-                }
-            }
-            if let Some(end) = end_limit {
-                if timestamp > end {
-                    invalid = true;
-                }
-            }
-
-            if invalid {
-                panic!("Leaderboard is not active for timestamp {}", timestamp);
-            }
-        }
-
-        leaderboard
     }
 
     /// Emit current active tournaments (for leaderboard chains)

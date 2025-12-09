@@ -28,20 +28,7 @@ impl PlayerMessageHandler {
         player.chain_id.set(chain_id);
     }
 
-    /// 🚀 IMPROVED: Handle player registration with shard
-    pub async fn handle_register_player_with_shard(
-        contract: &mut crate::Game2048Contract,
-        player_chain_id: String,
-        tournament_id: String,
-        player_name: String,
-    ) {
-        // Use the improved registration method with proper workload tracking
-        contract
-            .register_player_with_shard(player_chain_id, tournament_id, player_name)
-            .await;
-    }
-
-    /// 🚀 NEW: Handle subscription to main chain's active tournaments
+    /// Handle subscription to main chain's active tournaments
     pub async fn handle_subscribe_to_main_chain(
         contract: &mut crate::Game2048Contract,
         main_chain_id: String,
