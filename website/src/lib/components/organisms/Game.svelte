@@ -220,10 +220,17 @@
 	let hasCalibration = false; // Whether user has calibrated
 	let calibrationOffset = 0; // Current calibration offset
 	
+	// Function to refresh calibration status
+	const refreshCalibrationStatus = () => {
+		if (typeof window !== 'undefined') {
+			hasCalibration = RhythmEngine.hasCalibration();
+			calibrationOffset = RhythmEngine.getStoredCalibration();
+		}
+	};
+	
 	// Check calibration status on mount
 	$: if (typeof window !== 'undefined') {
-		hasCalibration = RhythmEngine.hasCalibration();
-		calibrationOffset = RhythmEngine.getStoredCalibration();
+		refreshCalibrationStatus();
 	}
 	
 	// Rhythm scoring
@@ -356,7 +363,11 @@
 	const openCalibrationModal = () => {
 		modalStore.trigger({
 			type: 'component',
-			component: { ref: RhythmCalibrationModal }
+			component: { ref: RhythmCalibrationModal },
+			response: (result: unknown) => {
+				// Refresh calibration status after modal closes
+				refreshCalibrationStatus();
+			}
 		});
 	};
 

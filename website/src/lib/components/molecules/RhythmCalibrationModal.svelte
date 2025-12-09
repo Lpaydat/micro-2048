@@ -190,6 +190,10 @@
 
 	function close() {
 		stopAudio();
+		// Trigger response callback before closing so parent can refresh
+		if ($modalStore[0]?.response) {
+			$modalStore[0].response(calculatedOffset);
+		}
 		modalStore.close();
 	}
 
