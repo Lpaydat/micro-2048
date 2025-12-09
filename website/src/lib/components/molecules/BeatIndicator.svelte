@@ -24,6 +24,11 @@
 	let lastCenterTime: number | null = null;
 	let visualBpmSamples: number[] = [];
 	let wasAtCenter = false;
+	
+	// Sync measurement: delta between transport and visual beats
+	let lastTransportBeatAt: number = 0;
+	let lastVisualBeatAt: number = 0;
+	let syncDeltaSamples: number[] = [];
 
 	/**
 	 * Animation loop - runs every frame
@@ -74,7 +79,14 @@
 					// Calculate average
 					const avgBpm = visualBpmSamples.reduce((a, b) => a + b, 0) / visualBpmSamples.length;
 					
-					console.log(`🎯 [VISUAL] Beat! Interval: ${intervalMs.toFixed(0)}ms, Measured BPM: ${measuredBpm.toFixed(1)}, Avg BPM: ${avgBpm.toFixed(1)}`);
+					// Calculate delta from last transport beat
+				const deltaFromTransport = now - lastTransportBeatAt;
+				syncDeltaSamples.push(deltaFromTransport);
+				if (syncDeltaSamples.length > 10) syncDeltaSamples.shift();
+				const avgDelta = syncDeltaSamples.reduce((a, b) => a + b, 0) / syncDeltaSamples.length;
+				
+				lastVisualBeatAt = now;
+				console.log(`🎯 [VISUAL] Beat! Interval: ${intervalMs.toFixed(0)}ms, BPM: ${measuredBpm.toFixed(1)}, Δ from transport: ${deltaFromTransport.toFixed(0)}ms (avg: ${avgDelta.toFixed(0)}ms)`);
 				}
 				lastCenterTime = now;
 			}
@@ -101,6 +113,8 @@
 		
 		// Measure transport BPM
 		const now = performance.now();
+		lastTransportBeatAt = now; // Always update this
+		
 		if (lastTransportBeatTime !== null) {
 			const intervalMs = now - lastTransportBeatTime;
 			const measuredBpm = 60000 / intervalMs;
@@ -111,10 +125,7 @@
 				transportBpmSamples.shift();
 			}
 			
-			// Calculate average
-			const avgBpm = transportBpmSamples.reduce((a, b) => a + b, 0) / transportBpmSamples.length;
-			
-			console.log(`⚡ [TRANSPORT] Beat #${beatNumber}! Interval: ${intervalMs.toFixed(0)}ms, Measured BPM: ${measuredBpm.toFixed(1)}, Avg BPM: ${avgBpm.toFixed(1)}`);
+			console.log(`⚡ [TRANSPORT] Beat #${beatNumber}! Interval: ${intervalMs.toFixed(0)}ms, BPM: ${measuredBpm.toFixed(1)}`);
 		}
 		lastTransportBeatTime = now;
 	}
