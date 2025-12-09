@@ -11,6 +11,7 @@
 	import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
 	import { onDestroy } from 'svelte';
 	import Music from 'lucide-svelte/icons/music';
+	import { MUSIC_TRACKS } from '$lib/game/rhythmEngine.js';
 
 	interface Props {
 		leaderboardId: string;
@@ -45,23 +46,36 @@
 	// Check if this is a rhythm mode tournament
 	const isRhythmMode = $derived(description?.includes('[RHYTHM_MODE:true') ?? false);
 	
-	// Extract rhythm settings from description
+	// Extract rhythm settings from description (updated to include TRACK)
 	const rhythmSettings = $derived(() => {
 		if (!isRhythmMode || !description) return null;
-		const match = description.match(/\[RHYTHM_MODE:true,BPM:(\d+),TOLERANCE:(\d+),MUSIC:(true|false)\]/);
+		const match = description.match(/\[RHYTHM_MODE:true,BPM:(\d+),TOLERANCE:(\d+)(?:,MUSIC:(true|false))?(?:,TRACK:(\w+))?\]/);
 		if (match) {
+			// Parse track index
+			let trackIndex: number | 'random' = 'random';
+			let trackName: string | null = null;
+			if (match[4] && match[4] !== 'random') {
+				const parsed = parseInt(match[4], 10);
+				if (!isNaN(parsed) && MUSIC_TRACKS[parsed]) {
+					trackIndex = parsed;
+					trackName = MUSIC_TRACKS[parsed].name;
+				}
+			}
+			
 			return {
 				bpm: parseInt(match[1]),
 				tolerance: parseInt(match[2]),
-				useMusic: match[3] === 'true'
+				useMusic: match[3] === 'true',
+				trackIndex,
+				trackName
 			};
 		}
 		return null;
 	});
 
-	// Clean description (remove rhythm settings tag)
+	// Clean description (remove rhythm settings tag - updated regex)
 	const cleanDescription = $derived(
-		description?.replace(/\s*\[RHYTHM_MODE:true,BPM:\d+,TOLERANCE:\d+,MUSIC:(true|false)\]/, '').trim() || ''
+		description?.replace(/\s*\[RHYTHM_MODE:true,BPM:\d+,TOLERANCE:\d+(?:,MUSIC:(?:true|false))?(?:,TRACK:\w+)?\]/, '').trim() || ''
 	);
 
 	// Add reactive timestamp and interval for active state updates
@@ -188,7 +202,15 @@
 						{#if settings?.useMusic}
 							<span class="inline-flex items-center gap-1 rounded-md bg-violet-100 px-2 py-1 text-xs font-medium text-violet-700 ring-1 ring-inset ring-violet-300">
 								<Music size={10} />
-								Music
+								{#if settings.trackName}
+									{settings.trackName}
+								{:else}
+									Random Track
+								{/if}
+							</span>
+						{:else}
+							<span class="inline-flex items-center gap-1 rounded-md bg-violet-100 px-2 py-1 text-xs font-medium text-violet-700 ring-1 ring-inset ring-violet-300">
+								🔊 Metronome
 							</span>
 						{/if}
 					</div>

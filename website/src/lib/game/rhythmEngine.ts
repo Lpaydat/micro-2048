@@ -21,6 +21,7 @@ export interface RhythmSettings {
 	bpm: number;
 	tolerance: number; // milliseconds - window for valid hits
 	useMusic?: boolean;
+	trackIndex?: number | 'random'; // specific track index or 'random'
 }
 
 export interface RhythmFeedback {
@@ -56,6 +57,7 @@ export class RhythmEngine {
 	private bpm: number;
 	private tolerance: number;
 	private useMusic: boolean;
+	private trackIndex: number | 'random';
 
 	// State
 	private running: boolean = false;
@@ -77,6 +79,7 @@ export class RhythmEngine {
 		this.bpm = settings.bpm;
 		this.tolerance = settings.tolerance;
 		this.useMusic = settings.useMusic ?? false;
+		this.trackIndex = settings.trackIndex ?? 'random';
 	}
 
 	// ========================================================================
@@ -108,18 +111,36 @@ export class RhythmEngine {
 
 		// Load music if enabled
 		if (this.useMusic) {
-			await this.loadRandomTrack();
-			console.log(`🎵 [INIT] After loadRandomTrack, BPM is now: ${this.bpm}`);
+			await this.loadTrack();
+			console.log(`🎵 [INIT] After loadTrack, BPM is now: ${this.bpm}`);
 		}
+
+		// Load calibration from localStorage
+		this.loadCalibration();
 
 		console.log(`🎵 [INIT] Init complete. Final BPM: ${this.bpm}`);
 	}
 
 	/**
-	 * Load a random music track
+	 * Load music track (specific or random based on settings)
 	 */
-	private async loadRandomTrack(): Promise<void> {
-		const track = MUSIC_TRACKS[Math.floor(Math.random() * MUSIC_TRACKS.length)];
+	private async loadTrack(): Promise<void> {
+		let track: MusicTrack;
+
+		if (this.trackIndex === 'random') {
+			track = MUSIC_TRACKS[Math.floor(Math.random() * MUSIC_TRACKS.length)];
+			console.log(`🎵 [LOAD] Random track selected: ${track.name}`);
+		} else {
+			const index = typeof this.trackIndex === 'number' ? this.trackIndex : parseInt(this.trackIndex);
+			if (index >= 0 && index < MUSIC_TRACKS.length) {
+				track = MUSIC_TRACKS[index];
+				console.log(`🎵 [LOAD] Specific track selected: ${track.name} (index ${index})`);
+			} else {
+				console.warn(`🎵 [LOAD] Invalid track index ${index}, falling back to random`);
+				track = MUSIC_TRACKS[Math.floor(Math.random() * MUSIC_TRACKS.length)];
+			}
+		}
+
 		this.currentTrack = track;
 
 		console.log(`🎵 [LOAD] Loading track: ${track.name} (track BPM: ${track.bpm})`);
@@ -423,6 +444,54 @@ export class RhythmEngine {
 	// CALIBRATION
 	// ========================================================================
 
+	private static readonly CALIBRATION_KEY = 'rhythm_calibration_offset';
+
+	/**
+	 * Load calibration offset from localStorage
+	 */
+	private loadCalibration(): void {
+		if (typeof window === 'undefined') return;
+
+		const stored = localStorage.getItem(RhythmEngine.CALIBRATION_KEY);
+		if (stored) {
+			const ms = parseFloat(stored);
+			if (!isNaN(ms)) {
+				this.calibrationOffset = ms / 1000;
+				console.log(`🎵 [CALIBRATION] Loaded offset: ${ms}ms`);
+			}
+		}
+	}
+
+	/**
+	 * Save calibration offset to localStorage
+	 */
+	static saveCalibration(ms: number): void {
+		if (typeof window === 'undefined') return;
+		localStorage.setItem(RhythmEngine.CALIBRATION_KEY, ms.toString());
+		console.log(`🎵 [CALIBRATION] Saved offset: ${ms}ms`);
+	}
+
+	/**
+	 * Get stored calibration offset (without needing an instance)
+	 */
+	static getStoredCalibration(): number {
+		if (typeof window === 'undefined') return 0;
+		const stored = localStorage.getItem(RhythmEngine.CALIBRATION_KEY);
+		if (stored) {
+			const ms = parseFloat(stored);
+			if (!isNaN(ms)) return ms;
+		}
+		return 0;
+	}
+
+	/**
+	 * Check if user has calibrated
+	 */
+	static hasCalibration(): boolean {
+		if (typeof window === 'undefined') return false;
+		return localStorage.getItem(RhythmEngine.CALIBRATION_KEY) !== null;
+	}
+
 	/**
 	 * Set calibration offset (for audio latency compensation)
 	 * Positive = audio is delayed, negative = audio is early
@@ -482,20 +551,32 @@ export class RhythmEngine {
 
 	/**
 	 * Parse rhythm settings from tournament description
-	 * Format: [RHYTHM_MODE:true,BPM:120,TOLERANCE:150,MUSIC:true]
+	 * Format: [RHYTHM_MODE:true,BPM:120,TOLERANCE:150,MUSIC:true,TRACK:random]
+	 * or: [RHYTHM_MODE:true,BPM:100,TOLERANCE:150,MUSIC:true,TRACK:2]
 	 */
 	static parseFromDescription(description: string): RhythmSettings | null {
+		// Updated regex to handle TRACK parameter
 		const match = description.match(
-			/\[RHYTHM_MODE:true,BPM:(\d+),TOLERANCE:(\d+)(?:,MUSIC:(true|false))?\]/
+			/\[RHYTHM_MODE:true,BPM:(\d+),TOLERANCE:(\d+)(?:,MUSIC:(true|false))?(?:,TRACK:(\w+))?\]/
 		);
 
 		if (!match) return null;
+
+		// Parse track index
+		let trackIndex: number | 'random' = 'random';
+		if (match[4] && match[4] !== 'random') {
+			const parsed = parseInt(match[4], 10);
+			if (!isNaN(parsed)) {
+				trackIndex = parsed;
+			}
+		}
 
 		return {
 			enabled: true,
 			bpm: parseInt(match[1], 10),
 			tolerance: parseInt(match[2], 10),
-			useMusic: match[3] === 'true'
+			useMusic: match[3] === 'true',
+			trackIndex
 		};
 	}
 }
