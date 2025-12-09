@@ -82,6 +82,10 @@ export class RhythmEngine {
 	// First beat offset for current track (seconds from file start to first beat)
 	private firstBeatOffset: number = 0;
 
+	// Visual lookahead in seconds - compensates for requestAnimationFrame lag
+	// Measured value: visual was ~220ms behind transport, so we advance by 0.22s
+	private static readonly VISUAL_LOOKAHEAD = 0.22;
+
 	// Beat callback for visual sync debugging
 	private onBeatCallback: ((beatNumber: number) => void) | null = null;
 
@@ -331,10 +335,11 @@ export class RhythmEngine {
 		const transport = Tone.getTransport();
 		const beatLength = 60 / this.bpm;
 		
-		// Adjust for first beat offset and calibration
-		// firstBeatOffset: when music beat actually starts in the file
-		// calibrationOffset: user's device latency adjustment
-		let seconds = transport.seconds - this.firstBeatOffset + this.calibrationOffset;
+		// Adjust for:
+		// - firstBeatOffset: when music beat actually starts in the file
+		// - calibrationOffset: user's device latency adjustment  
+		// - VISUAL_LOOKAHEAD: compensate for requestAnimationFrame lag (~220ms measured)
+		let seconds = transport.seconds - this.firstBeatOffset + this.calibrationOffset + RhythmEngine.VISUAL_LOOKAHEAD;
 		
 		// Handle negative time (before first beat)
 		if (seconds < 0) {
