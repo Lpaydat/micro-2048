@@ -7,8 +7,13 @@
 	import EventListItem from '../molecules/EventListItem.svelte';
 	import { getClient } from '$lib/client';
 	import { chainId as mainChainId } from '$lib/constants';
+	import { userStore } from '$lib/stores/userStore';
+	import { requestLeaderboardRefresh } from '$lib/graphql/mutations/requestLeaderboardRefresh';
 
 	const client = getClient(mainChainId, true);
+	
+	// Track leaderboards we've already initialized to avoid duplicate calls
+	let initializedLeaderboards = new Set<string>();
 	const GET_LEADERBOARDS = gql`
 		query GetLeaderboards($filter: TournamentFilter) {
 			leaderboards(filter: $filter) {
@@ -164,6 +169,44 @@
 	};
 
 	let titleClass = $derived(pinnedEvents?.length > 0 ? 'text-lg mt-4' : 'text-xl');
+
+	// 🚀 Auto-initialize new leaderboards created by the current user
+	// This sends the first transaction to the leaderboard chain so config message is processed
+	$effect(() => {
+		const currentUser = $userStore.username;
+		const events = $leaderboards?.data?.leaderboards;
+		
+		if (!currentUser || !events) return;
+		
+		for (const event of events) {
+			// Check if this is a new leaderboard created by the current user that we haven't initialized
+			if (
+				event.leaderboardId &&
+				event.host === currentUser &&
+				!initializedLeaderboards.has(event.leaderboardId)
+			) {
+				// Mark as initialized immediately to prevent duplicate calls
+				initializedLeaderboards.add(event.leaderboardId);
+				
+				// Call updateLeaderboard to initialize the chain
+				try {
+					const leaderboardClient = getClient(event.leaderboardId, true);
+					const result = requestLeaderboardRefresh(leaderboardClient);
+					if (result) {
+						result.subscribe((res) => {
+							if (res.error) {
+								console.warn(`Leaderboard ${event.leaderboardId} initialization failed:`, res.error);
+							} else {
+								console.log(`🚀 Leaderboard ${event.leaderboardId} initialized`);
+							}
+						});
+					}
+				} catch (error) {
+					console.warn(`Failed to initialize leaderboard ${event.leaderboardId}:`, error);
+				}
+			}
+		}
+	});
 
 	let interval: NodeJS.Timeout;
 	onMount(() => {
