@@ -307,15 +307,16 @@ export class RhythmEngine {
 		const absDiff = Math.abs(diffMs);
 		
 		// Determine accuracy based on timing
+		// Windows are relaxed for better feel (similar to Guitar Hero/NecroDancer casual)
 		let accuracy: RhythmFeedback['accuracy'];
 		let score: number;
 		
-		if (absDiff <= 50) {
-			// Within 50ms = Perfect
+		if (absDiff <= 75) {
+			// Within 75ms = Perfect
 			accuracy = 'perfect';
 			score = 100;
-		} else if (absDiff <= 100) {
-			// Within 100ms = Good
+		} else if (absDiff <= 150) {
+			// Within 150ms = Good
 			accuracy = 'good';
 			score = 75;
 		} else if (absDiff <= this.tolerance) {
