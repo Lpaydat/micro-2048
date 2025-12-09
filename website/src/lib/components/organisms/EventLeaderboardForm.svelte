@@ -11,6 +11,7 @@
 	import { getClient } from '$lib/client';
 	import { chainId as mainChainId } from '$lib/constants';
 	import { userStore } from '$lib/stores/userStore';
+	import { MUSIC_TRACKS } from '$lib/game/rhythmEngine.js';
 
 	const client = getClient(mainChainId, true);
 	const modalStore = getModalStore();
@@ -31,6 +32,17 @@
 	let rhythmBPM = $state(120);
 	let rhythmTolerance = $state(150); // milliseconds
 	let rhythmUseMusic = $state(true); // Use music instead of metronome
+	let rhythmTrack = $state('random'); // 'random' or track index ('0', '1', '2')
+	
+	// Auto-update BPM when track changes (only for specific tracks)
+	$effect(() => {
+		if (rhythmUseMusic && rhythmTrack !== 'random') {
+			const trackIndex = parseInt(rhythmTrack);
+			if (!isNaN(trackIndex) && MUSIC_TRACKS[trackIndex]) {
+				rhythmBPM = MUSIC_TRACKS[trackIndex].bpm;
+			}
+		}
+	});
 
 	// Check if current user is admin
 	const isAdmin = $derived($userStore.isMod === true);
@@ -119,7 +131,7 @@
 				}),
 				// Rhythm mode settings (stored in description for now since backend doesn't support them yet)
 				...(rhythmMode && {
-					description: `${description || ''} [RHYTHM_MODE:true,BPM:${rhythmBPM},TOLERANCE:${rhythmTolerance},MUSIC:${rhythmUseMusic}]`.trim()
+					description: `${description || ''} [RHYTHM_MODE:true,BPM:${rhythmBPM},TOLERANCE:${rhythmTolerance},MUSIC:${rhythmUseMusic},TRACK:${rhythmTrack}]`.trim()
 				})
 			};
 
@@ -351,7 +363,7 @@
 									disabled={loading}
 									class="h-4 w-4 text-purple-600 focus:ring-purple-500"
 								/>
-								<span class="text-xs text-purple-900">🎵 Music (Random track)</span>
+								<span class="text-xs text-purple-900">🎵 Music</span>
 							</label>
 							<label class="flex items-center gap-2 cursor-pointer">
 								<input
@@ -365,9 +377,39 @@
 								<span class="text-xs text-purple-900">🔊 Metronome</span>
 							</label>
 						</div>
-						<p class="text-xs text-purple-600 mt-1">
-							Music mode plays a random track that matches the BPM.
-						</p>
+						
+						<!-- Track Selection (only when music is enabled) -->
+						{#if rhythmUseMusic}
+							<div class="mt-3">
+								<label for="rhythmTrack" class="block text-xs font-medium text-purple-900 mb-1">
+									Music Track
+								</label>
+								<select
+									id="rhythmTrack"
+									bind:value={rhythmTrack}
+									disabled={loading}
+									class="w-full rounded-md border border-purple-300 bg-white px-3 py-2 text-sm text-purple-900 focus:border-purple-500 focus:ring-purple-500"
+								>
+									<option value="random">🎲 Random (different for each player)</option>
+									{#each MUSIC_TRACKS as track, index}
+										<option value={index.toString()}>
+											🎵 {track.name} ({track.bpm} BPM)
+										</option>
+									{/each}
+								</select>
+								<p class="text-xs text-purple-600 mt-1">
+									{#if rhythmTrack === 'random'}
+										Each player gets a random track. BPM setting above will be used.
+									{:else}
+										All players will play with the same track for fairness. BPM is set by the track.
+									{/if}
+								</p>
+							</div>
+						{:else}
+							<p class="text-xs text-purple-600 mt-1">
+								Metronome mode uses the BPM setting above.
+							</p>
+						{/if}
 					</div>
 				{:else}
 					<p class="text-xs text-purple-600 ml-6">

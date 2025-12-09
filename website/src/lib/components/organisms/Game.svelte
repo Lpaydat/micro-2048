@@ -30,8 +30,10 @@
 		type MoveHistoryRecord
 	} from '$lib/stores/paginatedMoveHistory';
 	import { getBoardPaginated } from '$lib/graphql/queries/getBoardPaginated';
-	import { RhythmEngine, type RhythmSettings } from '$lib/game/rhythmEngine.js';
+	import { RhythmEngine, MUSIC_TRACKS, type RhythmSettings } from '$lib/game/rhythmEngine.js';
 	import BeatIndicator from '../molecules/BeatIndicator.svelte';
+	import RhythmCalibrationModal from '../molecules/RhythmCalibrationModal.svelte';
+	import { getModalStore } from '@skeletonlabs/skeleton';
 
 	// Props
 	export let isMultiplayer: boolean = false;
@@ -49,6 +51,7 @@
 	export let tournamentDescription: string = '';
 
 	const dispatch = createEventDispatcher();
+	const modalStore = getModalStore();
 
 	// Board ID Management
 	let localBoardId: string | null = null;
@@ -213,6 +216,15 @@
 	let showRhythmIndicator = false;
 	let rhythmNeedsStart = false; // True when rhythm mode detected but needs user interaction
 	let displayBpm = 0; // Reactive BPM for display (updated after engine starts)
+	let displayTrackName = ''; // Track name for display
+	let hasCalibration = false; // Whether user has calibrated
+	let calibrationOffset = 0; // Current calibration offset
+	
+	// Check calibration status on mount
+	$: if (typeof window !== 'undefined') {
+		hasCalibration = RhythmEngine.hasCalibration();
+		calibrationOffset = RhythmEngine.getStoredCalibration();
+	}
 	
 	// Rhythm scoring
 	let rhythmScore = 0;
@@ -340,6 +352,14 @@
 		}
 	}
 
+	// 🎵 Open calibration modal
+	const openCalibrationModal = () => {
+		modalStore.trigger({
+			type: 'component',
+			component: { ref: RhythmCalibrationModal }
+		});
+	};
+
 	// 🎵 Start rhythm engine (called on user interaction)
 	const startRhythmEngine = async () => {
 		if (!rhythmEngine || !rhythmNeedsStart) return;
@@ -350,9 +370,11 @@
 			console.log('🎵 [GAME] Init complete, calling start()...');
 			rhythmEngine.start();
 			
-			// Update reactive BPM for display
+			// Update reactive values for display
 			displayBpm = rhythmEngine.getBpm();
-			console.log('🎵 [GAME] Start complete, displayBpm set to:', displayBpm);
+			const track = rhythmEngine.getCurrentTrack();
+			displayTrackName = track?.name || '';
+			console.log('🎵 [GAME] Start complete, displayBpm set to:', displayBpm, 'track:', displayTrackName);
 			
 			rhythmEngine.debugState();
 			rhythmNeedsStart = false;
@@ -1460,17 +1482,58 @@
 		
 		<!-- 🎵 Rhythm Start Overlay - requires user interaction to start audio -->
 		{#if rhythmNeedsStart && !isInspectorMode}
-			<button
-				class="rhythm-start-overlay"
-				onclick={startRhythmEngine}
-				aria-label="Start rhythm mode"
-			>
+			<div class="rhythm-start-overlay">
 				<div class="rhythm-start-content">
 					<div class="rhythm-icon">🎵</div>
 					<div class="rhythm-title">Rhythm Mode</div>
-					<div class="rhythm-subtitle">Tap to Start Music</div>
+					
+					<!-- Track info -->
+					{#if rhythmSettings?.useMusic}
+						<div class="rhythm-track-info">
+							{#if rhythmSettings.trackIndex === 'random' || rhythmSettings.trackIndex === undefined}
+								<span class="track-label">🎲 Random Track</span>
+							{:else}
+								{@const trackIdx = typeof rhythmSettings.trackIndex === 'number' ? rhythmSettings.trackIndex : parseInt(rhythmSettings.trackIndex)}
+								{@const track = MUSIC_TRACKS[trackIdx]}
+								{#if track}
+									<span class="track-label">🎵 {track.name}</span>
+									<span class="track-bpm">{track.bpm} BPM</span>
+								{/if}
+							{/if}
+						</div>
+					{:else}
+						<div class="rhythm-track-info">
+							<span class="track-label">🔊 Metronome</span>
+							<span class="track-bpm">{rhythmSettings?.bpm || 120} BPM</span>
+						</div>
+					{/if}
+					
+					<!-- Calibration status -->
+					<div class="rhythm-calibration-status">
+						{#if hasCalibration}
+							<span class="calibrated">✓ Calibrated ({calibrationOffset > 0 ? '+' : ''}{calibrationOffset}ms)</span>
+						{:else}
+							<span class="not-calibrated">⚠ Not calibrated</span>
+						{/if}
+					</div>
+					
+					<!-- Buttons -->
+					<div class="rhythm-buttons">
+						<button
+							class="rhythm-calibrate-btn"
+							onclick={openCalibrationModal}
+						>
+							🎯 Calibrate
+						</button>
+						<button
+							class="rhythm-start-btn"
+							onclick={startRhythmEngine}
+						>
+							▶ Start
+						</button>
+					</div>
 				</div>
-			</button>
+			</div>
 		{/if}
 	</div>
 	{#if $userStore.username && !isInspectorMode}
@@ -1857,17 +1920,12 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: rgba(0, 0, 0, 0.85);
+		background: rgba(0, 0, 0, 0.9);
 		backdrop-filter: blur(4px);
 		z-index: 50;
-		cursor: pointer;
 		border: none;
 		border-radius: 8px;
 		animation: rhythm-pulse 2s ease-in-out infinite;
-	}
-
-	.rhythm-start-overlay:hover {
-		background: rgba(0, 0, 0, 0.75);
 	}
 
 	@keyframes rhythm-pulse {
@@ -1879,7 +1937,8 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 0.5rem;
+		gap: 0.75rem;
+		padding: 1.5rem;
 	}
 
 	.rhythm-icon {
@@ -1898,9 +1957,77 @@
 		color: #a78bfa;
 	}
 
-	.rhythm-subtitle {
-		font-size: 1rem;
+	.rhythm-track-info {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.25rem;
+		padding: 0.5rem 1rem;
+		background: rgba(139, 92, 246, 0.2);
+		border-radius: 8px;
+		border: 1px solid rgba(139, 92, 246, 0.3);
+	}
+
+	.track-label {
+		font-size: 0.9rem;
+		color: #c4b5fd;
+	}
+
+	.track-bpm {
+		font-size: 0.8rem;
 		color: #9ca3af;
+	}
+
+	.rhythm-calibration-status {
+		font-size: 0.8rem;
+		padding: 0.25rem 0.5rem;
+		border-radius: 4px;
+	}
+
+	.rhythm-calibration-status .calibrated {
+		color: #4ade80;
+	}
+
+	.rhythm-calibration-status .not-calibrated {
+		color: #fbbf24;
+	}
+
+	.rhythm-buttons {
+		display: flex;
+		gap: 0.75rem;
+		margin-top: 0.5rem;
+	}
+
+	.rhythm-calibrate-btn {
+		padding: 0.75rem 1.25rem;
+		background: rgba(107, 114, 128, 0.5);
+		border: 1px solid rgba(107, 114, 128, 0.7);
+		border-radius: 8px;
+		color: white;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+
+	.rhythm-calibrate-btn:hover {
+		background: rgba(107, 114, 128, 0.7);
+	}
+
+	.rhythm-start-btn {
+		padding: 0.75rem 1.5rem;
+		background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+		border: none;
+		border-radius: 8px;
+		color: white;
+		font-weight: 600;
+		font-size: 1.1rem;
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+
+	.rhythm-start-btn:hover {
+		transform: scale(1.05);
+		box-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
 	}
 
 	@media (max-width: 640px) {
@@ -1912,8 +2039,14 @@
 			font-size: 1.25rem;
 		}
 
-		.rhythm-subtitle {
-			font-size: 0.875rem;
+		.rhythm-buttons {
+			flex-direction: column;
+			width: 100%;
+		}
+
+		.rhythm-calibrate-btn,
+		.rhythm-start-btn {
+			width: 100%;
 		}
 	}
 </style>
