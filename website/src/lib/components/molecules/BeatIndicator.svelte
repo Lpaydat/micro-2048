@@ -115,6 +115,9 @@
 		const now = performance.now();
 		lastTransportBeatAt = now; // Always update this
 		
+		// Log current visual phase at moment of transport beat
+		const currentPhase = beatPhase;
+		
 		if (lastTransportBeatTime !== null) {
 			const intervalMs = now - lastTransportBeatTime;
 			const measuredBpm = 60000 / intervalMs;
@@ -125,7 +128,7 @@
 				transportBpmSamples.shift();
 			}
 			
-			console.log(`⚡ [TRANSPORT] Beat #${beatNumber}! Interval: ${intervalMs.toFixed(0)}ms, BPM: ${measuredBpm.toFixed(1)}`);
+			console.log(`⚡ [TRANSPORT] Beat #${beatNumber}! Phase: ${currentPhase.toFixed(3)}, Interval: ${intervalMs.toFixed(0)}ms`);
 		}
 		lastTransportBeatTime = now;
 	}
