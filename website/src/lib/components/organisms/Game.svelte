@@ -252,7 +252,11 @@
 	});
 
 	// Reactive Statements
-	$: score = $game.data?.board?.score || 0;
+	// 🔧 FIX: Only update score from game data when NOT in inspector mode
+	// During replay, score is managed by handleGameStateUpdate() based on move history
+	$: if (!isInspectorMode) {
+		score = $game.data?.board?.score || 0;
+	}
 
 	// 🔍 Check if inspector mode (viewing someone else's board OR own ended game)
 	$: {
