@@ -154,9 +154,17 @@ export class RhythmEngine {
 		this.running = true;
 		this.beatCount = 0;
 		
+		// If using music and track is loaded, use track BPM (override settings)
+		if (this.useMusic && this.currentTrack && this.player) {
+			this.bpm = this.currentTrack.bpm;
+			console.log(`🎵 Using track BPM: ${this.bpm}`);
+		}
+		
 		// Configure transport with our BPM
 		transport.bpm.value = this.bpm;
 		transport.position = 0;
+		
+		console.log(`🎵 Transport BPM set to: ${transport.bpm.value}`);
 		
 		// Schedule metronome clicks on each beat (only if not using music)
 		if (!this.useMusic || !this.player) {
