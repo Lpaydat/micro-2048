@@ -82,7 +82,7 @@ impl GameOperationHandler {
                     final_board,
                     final_score,
                     final_highest_tile,
-                    initial_highest_tile,
+                    initial_highest_tile: _, // Not needed with simplified score submission
                     is_ended,
                     latest_timestamp,
                     move_history,
@@ -140,40 +140,29 @@ impl GameOperationHandler {
                         .unwrap()
                         .unwrap_or(0);
 
-                    // 🚀 HYBRID SCORE SUBMISSION OPTIMIZATION
-                    // Only send SubmitScore when one of these conditions is met:
-                    // 1. Board ended (game over - no moves available)
-                    // 2. Tournament ended (time expired)
-                    // 3. New highest tile achieved (milestone)
-                    // 4. Heartbeat timer expired (90 seconds since last send)
-                    // AND score > tournament_best
+                    // 🚀 SIMPLIFIED SCORE SUBMISSION (Manual-Only)
+                    // Only auto-send on critical events:
+                    // - Board ended (game over - no moves available)
+                    // - Tournament ended (time expired)
+                    // All other updates require manual submission via SubmitCurrentScore
+                    // Condition: score > 0 AND score > tournament_best
 
                     let current_time = contract.runtime.system_time().micros();
                     let end_time_val = *board.end_time.get();
                     let tournament_just_ended = end_time_val > 0 && current_time >= end_time_val * 1000; // end_time is in millis, current_time in micros
                     let board_ended = is_ended;
                     
-                    // Check for new highest tile milestone
-                    let highest_tile_sent = *board.highest_tile_sent.get();
-                    let new_highest_tile_achieved = final_highest_tile > highest_tile_sent && final_highest_tile > initial_highest_tile;
-                    
-                    // Check heartbeat timer (30 seconds = 30_000_000 microseconds)
-                    let last_score_sent_time = *board.last_score_sent_time.get();
-                    const HEARTBEAT_INTERVAL_MICROS: u64 = 30_000_000; // 30 seconds
-                    let heartbeat_expired = last_score_sent_time == 0 || (current_time - last_score_sent_time) >= HEARTBEAT_INTERVAL_MICROS;
-
+                    // Only send on game end or tournament end
                     let should_send = final_score > 0 
                         && final_score > current_best 
-                        && (tournament_just_ended || board_ended || new_highest_tile_achieved || heartbeat_expired);
+                        && (board_ended || tournament_just_ended);
 
                     if should_send {
                         // Determine game status
                         let game_status = if board_ended {
                             GameStatus::Ended(GameEndReason::NoMoves)
-                        } else if tournament_just_ended {
-                            GameStatus::Ended(GameEndReason::TournamentEnded)
                         } else {
-                            GameStatus::Active
+                            GameStatus::Ended(GameEndReason::TournamentEnded)
                         };
 
                         // Get player's current board count for this tournament
@@ -462,5 +451,121 @@ impl GameOperationHandler {
         // That's it! The act of calling this operation triggers block production,
         // which processes all pending SubmitScore messages in the inbox.
         // No need to send messages to shards anymore.
+    }
+    
+    /// 🚀 MANUAL SCORE SUBMISSION: Submit current board score to leaderboard
+    /// Called when user clicks "refresh leaderboard" button
+    /// Only sends if: score > 0 AND score > player's tournament best
+    pub async fn handle_submit_current_score(
+        contract: &mut crate::Game2048Contract,
+        board_id: String,
+        player: String,
+        password_hash: String,
+    ) {
+        // Validate password
+        contract
+            .validate_player_password(&player, &password_hash)
+            .await;
+            
+        let board = contract
+            .state
+            .boards
+            .load_entry_mut(&board_id)
+            .await
+            .unwrap();
+
+        // Verify ownership
+        if player != *board.player.get() {
+            panic!("You can only submit score for your own board");
+        }
+
+        // Get current board state
+        let current_board = *board.board.get();
+        let score = Game::score(current_board);
+        let highest_tile = Game::highest_tile(current_board);
+        let is_ended = *board.is_ended.get();
+        let leaderboard_id = board.leaderboard_id.get().clone();
+
+        // Get current best score for this player in this tournament
+        let player_record = contract
+            .state
+            .player_records
+            .load_entry_mut(&player)
+            .await
+            .unwrap();
+        let current_best = player_record
+            .best_score
+            .get(&leaderboard_id)
+            .await
+            .unwrap()
+            .unwrap_or(0);
+
+        // Only send if score > 0 AND score > current_best
+        if score == 0 || score <= current_best {
+            // Nothing to submit - score not better than current best
+            return;
+        }
+
+        // Get player's current board count for this tournament
+        let player_state = contract
+            .state
+            .players
+            .load_entry_mut(&player)
+            .await
+            .unwrap();
+        let current_board_count = player_state
+            .boards_per_tournament
+            .get(&leaderboard_id)
+            .await
+            .unwrap()
+            .unwrap_or(0);
+
+        // Determine game status
+        let game_status = if is_ended {
+            GameStatus::Ended(GameEndReason::NoMoves)
+        } else {
+            GameStatus::Active
+        };
+
+        let player_chain_id = contract.runtime.chain_id().to_string();
+        let timestamp = contract.runtime.system_time().micros();
+
+        if let Ok(leaderboard_chain_id) = ChainId::from_str(&leaderboard_id) {
+            contract
+                .runtime
+                .prepare_message(game2048::Message::SubmitScore {
+                    player: player.clone(),
+                    player_chain_id,
+                    board_id: board_id.clone(),
+                    score,
+                    highest_tile,
+                    game_status,
+                    timestamp,
+                    boards_in_tournament: current_board_count,
+                })
+                .send_to(leaderboard_chain_id);
+        }
+
+        // Update player's best score for this tournament
+        let player_record = contract
+            .state
+            .player_records
+            .load_entry_mut(&player)
+            .await
+            .unwrap();
+        player_record
+            .best_score
+            .insert(&leaderboard_id, score)
+            .unwrap();
+            
+        // Update board tracking state
+        let board = contract
+            .state
+            .boards
+            .load_entry_mut(&board_id)
+            .await
+            .unwrap();
+        board.highest_tile_sent.set(highest_tile);
+        board.last_score_sent_time.set(timestamp);
     }
 }

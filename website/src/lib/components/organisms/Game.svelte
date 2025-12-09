@@ -23,6 +23,7 @@
 	} from '$lib/stores/moveHistories';
 	import { formatBalance } from '$lib/utils/formatBalance';
 	import { requestFaucetMutation } from '$lib/graphql/mutations/requestFaucet';
+	import { submitCurrentScore } from '$lib/graphql/mutations/submitCurrentScore';
 	import {
 		getPaginatedMoveHistory,
 		calculateLoadRange,
@@ -214,7 +215,9 @@
 	let boardNotFoundCount = 0;
 	let isBoardNotFound = false;
 	let boardRedirectCountdown = 5;
-	const MAX_BOARD_NOT_FOUND_ATTEMPTS = 10; // Stop after 10 consecutive not found (~5 seconds at 500ms)
+	let boardCreationTime: number | null = null; // Track when we started looking for this board
+	const MAX_BOARD_NOT_FOUND_ATTEMPTS = 20; // Stop after 20 consecutive not found (~10 seconds at 500ms)
+	const NEW_BOARD_GRACE_PERIOD = 15000; // 15 seconds grace period for newly created boards
 
 	// 🎵 Rhythm System
 	let rhythmEngine: RhythmEngine | null = null;
@@ -910,6 +913,12 @@
 
 	// 🔄 Background Sync: Handle desync with overlay warning
 	const handleDesync = async () => {
+		// 🔧 FIX: Don't desync if game is already finished - preserve game over state
+		if (state?.finished || boardEnded) {
+			console.log('🔄 Skipping desync - game is finished');
+			return;
+		}
+		
 		// Pause game and show warning
 		isFrozen = true;
 		syncStatus = 'desynced';
@@ -943,7 +952,12 @@
 
 			if (finalBackendState !== currentLocalState) {
 				// Full reset to backend state
-				state = createState($game.data.board.board, 4, boardId!, player);
+				const newState = createState($game.data.board.board, 4, boardId!, player);
+				// 🔧 FIX: Preserve finished state from backend
+				if ($game.data.board.isEnded) {
+					newState.finished = true;
+				}
+				state = newState;
 				validBoardHashes.clear();
 				validBoardHashes.add(hashBoard($game.data.board.board));
 				lastHashMismatchTime = null;
@@ -1008,6 +1022,67 @@
 		requestFaucetMutation(client);
 	};
 
+	// 🚀 Manual Score Submission to Leaderboard
+	let isSubmittingScore = false;
+	let lastScoreSubmitTime = 0;
+	let scoreSubmitCooldownRemaining = 0;
+	const SCORE_SUBMIT_COOLDOWN = 10000; // 10 seconds cooldown
+
+	// Check if can submit score (reactive based on conditions)
+	$: canSubmitScore = 
+		leaderboardId && 
+		boardId && 
+		$userStore.username && 
+		$userStore.passwordHash &&
+		$game.data?.board?.player === $userStore.username &&
+		!isSubmittingScore &&
+		scoreSubmitCooldownRemaining <= 0 &&
+		score > 0;
+
+	const handleSubmitScore = async () => {
+		if (!canSubmitScore || !boardId || !$userStore.username || !$userStore.passwordHash) return;
+
+		isSubmittingScore = true;
+		lastScoreSubmitTime = Date.now();
+
+		try {
+			console.log('🚀 Submitting score to leaderboard...', { boardId, score, leaderboardId });
+			
+			const result = submitCurrentScore(
+				client,
+				boardId,
+				$userStore.username,
+				$userStore.passwordHash
+			);
+
+			if (result) {
+				await new Promise<void>((resolve) => {
+					result.subscribe((res) => {
+						if (res.fetching) return;
+						if (res.error) {
+							console.warn('❌ Score submission failed:', res.error.message);
+						} else {
+							console.log('✅ Score submitted successfully');
+						}
+						resolve();
+					});
+				});
+			}
+		} catch (error) {
+			console.error('Failed to submit score:', error);
+		} finally {
+			isSubmittingScore = false;
+			// Start cooldown countdown
+			scoreSubmitCooldownRemaining = Math.ceil(SCORE_SUBMIT_COOLDOWN / 1000);
+			const cooldownInterval = setInterval(() => {
+				scoreSubmitCooldownRemaining = Math.max(0, scoreSubmitCooldownRemaining - 1);
+				if (scoreSubmitCooldownRemaining <= 0) {
+					clearInterval(cooldownInterval);
+				}
+			}, 1000);
+		}
+	};
+
 	// Reactive polling: Restart polling when boardId changes
 	let initGameIntervalId: ReturnType<typeof setInterval> | null = null;
 	let lastPolledBoardId: string | undefined = undefined;
@@ -1023,6 +1098,7 @@
 		boardNotFoundCount = 0;
 		isBoardNotFound = false;
 		boardRedirectCountdown = 5;
+		boardCreationTime = Date.now(); // Track when we started looking for this board
 
 		lastPolledBoardId = boardId;
 
@@ -1037,10 +1113,17 @@
 				if (isBoardNotFound) return;
 
 				if (boardId && !$game.data?.board) {
-					// Board not found yet - track consecutive failures
+					// Board not found yet - only count failures when NOT actively fetching
+					// This prevents false positives when backend is slow/overloaded
 					if (!$game.fetching) {
 						boardNotFoundCount++;
-						if (boardNotFoundCount >= MAX_BOARD_NOT_FOUND_ATTEMPTS) {
+						
+						// Check if we're still in grace period for newly created boards
+						const timeSinceCreation = boardCreationTime ? Date.now() - boardCreationTime : Infinity;
+						const isInGracePeriod = timeSinceCreation < NEW_BOARD_GRACE_PERIOD;
+						
+						// Only trigger "not found" if we've exceeded attempts AND grace period
+						if (boardNotFoundCount >= MAX_BOARD_NOT_FOUND_ATTEMPTS && !isInGracePeriod) {
 							isBoardNotFound = true;
 							if (initGameIntervalId) {
 								clearInterval(initGameIntervalId);
@@ -1061,6 +1144,7 @@
 				} else if ($game.data?.board?.boardId === boardId) {
 					// Board found AND matches requested boardId, stop polling
 					boardNotFoundCount = 0; // Reset counter
+					boardCreationTime = null; // Clear creation time
 					if (initGameIntervalId) {
 						clearInterval(initGameIntervalId);
 						initGameIntervalId = null;
@@ -1190,11 +1274,13 @@
 				// - We have pending moves locally
 				// - Sync is in progress
 				// - We just finished syncing (backend may be processing)
+				// - Local game is finished (don't overwrite game over state!)
 				const shouldWaitForBackend = 
 					pendingMoveCount > 0 || 
 					syncStatus === 'syncing-bg' || 
 					syncStatus === 'syncing' ||
-					syncStatus === 'synced';  // Just finished sync, backend catching up
+					syncStatus === 'synced' ||  // Just finished sync, backend catching up
+					state?.finished;  // 🔧 FIX: Don't overwrite finished state
 				
 				if (shouldWaitForBackend) {
 					if (lastHashMismatchTime === null) {
@@ -1721,36 +1807,36 @@
 								<span class="font-mono text-orange-400">{pendingMoveCount}</span>
 							</div>
 						</div>
-
-						{#if lastSyncTime}
-							<div class="h-px w-full bg-surface-600 lg:h-4 lg:w-px"></div>
-							<div class="flex w-full items-center gap-2 whitespace-nowrap lg:w-auto">
-								<span class="text-surface-400">Last sync:</span>
-								<span class="font-mono text-purple-400">
-									{new Date(lastSyncTime).toLocaleTimeString([], {
-										hour: '2-digit',
-										minute: '2-digit',
-										second: '2-digit'
-									})}
-								</span>
-							</div>
-						{/if}
 					</button>
 				{/if}
 			</div>
 
-			<!-- Offline mode toggle hidden for website -->
-			{#if false}
+			<!-- 🚀 Submit Score to Leaderboard Button -->
+			{#if leaderboardId && $game.data?.board?.player === $userStore.username && !isInspectorMode}
 				<button
-					onclick={toggleOfflineMode}
-					class="flex w-full items-center gap-2 rounded-lg border border-surface-600/50 bg-surface-800/50 px-4 py-2 transition-colors hover:bg-surface-700/50 lg:w-auto"
+					onclick={handleSubmitScore}
+					disabled={!canSubmitScore}
+					class="flex w-full items-center justify-center gap-2 rounded-lg border px-4 py-2 transition-colors lg:w-auto
+						{canSubmitScore 
+							? 'border-green-500/50 bg-green-950/50 hover:bg-green-900/50 text-green-400' 
+							: 'border-surface-600/50 bg-surface-800/50 text-surface-500 cursor-not-allowed'}"
+					title={canSubmitScore ? 'Submit current score to leaderboard' : scoreSubmitCooldownRemaining > 0 ? `Wait ${scoreSubmitCooldownRemaining}s` : 'Cannot submit'}
 				>
-					<div
-						class="h-2 w-2 rounded-full {offlineMode ? 'bg-orange-500' : 'bg-emerald-500'}"
-					></div>
-					<span class="whitespace-nowrap text-xs text-surface-400 lg:text-sm"
-						>{offlineMode ? 'Go Online' : 'Go Offline'}</span
-					>
+					{#if isSubmittingScore}
+						<div class="h-4 w-4 animate-spin rounded-full border-2 border-green-400 border-t-transparent"></div>
+						<span class="whitespace-nowrap text-xs lg:text-sm">Submitting...</span>
+					{:else}
+						<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M12 19V5M5 12l7-7 7 7"/>
+						</svg>
+						<span class="whitespace-nowrap text-xs lg:text-sm">
+							{#if scoreSubmitCooldownRemaining > 0}
+								Submit ({scoreSubmitCooldownRemaining}s)
+							{:else}
+								Submit Score
+							{/if}
+						</span>
+					{/if}
 				</button>
 			{/if}
 		</div>

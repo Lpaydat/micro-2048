@@ -163,6 +163,21 @@ impl OperationDispatcher {
                 // No-op operation - just triggers block production which processes inbox messages
                 // The RegisterPlayer message in inbox will be processed during this block
             }
+            
+            // Manual score submission - user clicks "refresh leaderboard"
+            Operation::SubmitCurrentScore {
+                board_id,
+                player,
+                password_hash,
+            } => {
+                GameOperationHandler::handle_submit_current_score(
+                    contract,
+                    board_id,
+                    player,
+                    password_hash,
+                )
+                .await;
+            }
         }
     }
 }
