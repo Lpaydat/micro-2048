@@ -303,9 +303,10 @@
 			// Set inspector to latest move (unless user is controlling replay)
 			if (!isUserControlledReplay) {
 				inspectorCurrentMoveIndex = newTotalMoves;
+				// Only update game state when not in user-controlled replay
+				// This prevents the fallback from showing final board during active replay
+				handleGameStateUpdate();
 			}
-			// No longer tracking previousMoveHistoryLength with pagination
-			handleGameStateUpdate();
 
 			// Show overlay if at end and game ended
 			if (gameEnded && inspectorCurrentMoveIndex >= totalMoves) {
