@@ -212,6 +212,7 @@
 	let rhythmSettings: RhythmSettings | null = null;
 	let showRhythmIndicator = false;
 	let rhythmNeedsStart = false; // True when rhythm mode detected but needs user interaction
+	let displayBpm = 0; // Reactive BPM for display (updated after engine starts)
 	
 	// Rhythm scoring
 	let rhythmScore = 0;
@@ -344,8 +345,16 @@
 		if (!rhythmEngine || !rhythmNeedsStart) return;
 		
 		try {
+			console.log('🎵 [GAME] Starting rhythm engine...');
 			await rhythmEngine.init();
+			console.log('🎵 [GAME] Init complete, calling start()...');
 			rhythmEngine.start();
+			
+			// Update reactive BPM for display
+			displayBpm = rhythmEngine.getBpm();
+			console.log('🎵 [GAME] Start complete, displayBpm set to:', displayBpm);
+			
+			rhythmEngine.debugState();
 			rhythmNeedsStart = false;
 			console.log('🎵 Rhythm mode started!');
 		} catch (err) {
@@ -424,6 +433,7 @@
 			perfectCount = 0;
 			goodCount = 0;
 			missCount = 0;
+			displayBpm = 0;
 			totalRhythmMoves = 0;
 		}
 		handleGameStateUpdate();
@@ -1440,7 +1450,7 @@
 							</span>
 							<span class="stat">
 								<span class="label">BPM</span>
-								<span class="value text-yellow-400">{rhythmEngine?.getBpm() || '?'}</span>
+								<span class="value text-yellow-400">{displayBpm || rhythmEngine?.getBpm() || '?'}</span>
 							</span>
 						</div>
 					{/if}

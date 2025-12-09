@@ -1,12 +1,12 @@
 /**
  * RhythmEngine - Industry-standard rhythm game timing system
- * 
+ *
  * Architecture:
  * - Tone.Transport is the ONLY source of truth for timing
  * - All timing calculations derive from Transport.seconds
  * - Visual beat phase is a pure function of Transport time
  * - Input validation is a pure function of Transport time
- * 
+ *
  * NO performance.now(), NO Date.now(), NO setInterval for timing
  */
 
@@ -43,8 +43,8 @@ export interface MusicTrack {
 // BPM values verified with beat analyzer
 export const MUSIC_TRACKS: MusicTrack[] = [
 	{ name: 'Watch Your Step', url: '/music/track1.mp3', bpm: 120 },
-	{ name: 'Crypteque', url: '/music/track2.mp3', bpm: 65 },
-	{ name: 'Tombtorial', url: '/music/track3.mp3', bpm: 100 },
+	{ name: 'Crypteque', url: '/music/track2.mp3', bpm: 130 },
+	{ name: 'Tombtorial', url: '/music/track3.mp3', bpm: 100 }
 ];
 
 // ============================================================================
@@ -56,20 +56,20 @@ export class RhythmEngine {
 	private bpm: number;
 	private tolerance: number;
 	private useMusic: boolean;
-	
+
 	// State
 	private running: boolean = false;
 	private currentTrack: MusicTrack | null = null;
-	
+
 	// Tone.js instances
 	private player: Tone.Player | null = null;
 	private metronomeHigh: Tone.Synth | null = null;
 	private metronomeLow: Tone.Synth | null = null;
 	private beatEventId: number | null = null;
-	
+
 	// Beat counter (for display only, not for timing)
 	private beatCount: number = 0;
-	
+
 	// Calibration offset in seconds (user adjustment for audio latency)
 	private calibrationOffset: number = 0;
 
@@ -87,27 +87,32 @@ export class RhythmEngine {
 	 * Initialize audio system - MUST be called after user interaction
 	 */
 	async init(): Promise<void> {
+		console.log(`🎵 [INIT] Starting with BPM: ${this.bpm}, useMusic: ${this.useMusic}`);
+
 		// Start Tone.js audio context (requires user gesture)
 		await Tone.start();
-		console.log('🎵 Audio context started');
-		
+		console.log('🎵 [INIT] Audio context started');
+
 		// Create metronome synths
 		this.metronomeHigh = new Tone.Synth({
 			oscillator: { type: 'triangle' },
 			envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 }
 		}).toDestination();
 		this.metronomeHigh.volume.value = -6;
-		
+
 		this.metronomeLow = new Tone.Synth({
 			oscillator: { type: 'triangle' },
 			envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 }
 		}).toDestination();
 		this.metronomeLow.volume.value = -10;
-		
+
 		// Load music if enabled
 		if (this.useMusic) {
 			await this.loadRandomTrack();
+			console.log(`🎵 [INIT] After loadRandomTrack, BPM is now: ${this.bpm}`);
 		}
+
+		console.log(`🎵 [INIT] Init complete. Final BPM: ${this.bpm}`);
 	}
 
 	/**
@@ -116,23 +121,25 @@ export class RhythmEngine {
 	private async loadRandomTrack(): Promise<void> {
 		const track = MUSIC_TRACKS[Math.floor(Math.random() * MUSIC_TRACKS.length)];
 		this.currentTrack = track;
-		
-		console.log(`🎵 Loading: ${track.name} (${track.bpm} BPM)`);
-		
+
+		console.log(`🎵 [LOAD] Loading track: ${track.name} (track BPM: ${track.bpm})`);
+		console.log(`🎵 [LOAD] BPM before load: ${this.bpm}`);
+
 		try {
 			this.player = new Tone.Player({
 				url: track.url,
-				loop: true,
+				loop: true
 			}).toDestination();
-			
+
 			await Tone.loaded();
-			
+
 			// CRITICAL: Set BPM from track
+			console.log(`🎵 [LOAD] Setting BPM from ${this.bpm} to ${track.bpm}`);
 			this.bpm = track.bpm;
-			
-			console.log(`🎵 Loaded: ${track.name} @ ${track.bpm} BPM`);
+
+			console.log(`🎵 [LOAD] Loaded: ${track.name}, BPM is now: ${this.bpm}`);
 		} catch (error) {
-			console.error('🎵 Failed to load track:', error);
+			console.error('🎵 [LOAD] Failed to load track:', error);
 			this.useMusic = false;
 			this.player = null;
 		}
@@ -147,40 +154,51 @@ export class RhythmEngine {
 	 */
 	start(): void {
 		if (this.running) return;
-		
+
 		const transport = Tone.getTransport();
-		
+
+		console.log(`🎵 [START] BPM before start: ${this.bpm}`);
+		console.log(
+			`🎵 [START] useMusic: ${this.useMusic}, currentTrack: ${this.currentTrack?.name}, player: ${!!this.player}`
+		);
+
 		// Reset state
 		this.running = true;
 		this.beatCount = 0;
-		
+
 		// If using music and track is loaded, use track BPM (override settings)
 		if (this.useMusic && this.currentTrack && this.player) {
+			console.log(
+				`🎵 [START] Overriding BPM from ${this.bpm} to track BPM: ${this.currentTrack.bpm}`
+			);
 			this.bpm = this.currentTrack.bpm;
-			console.log(`🎵 Using track BPM: ${this.bpm}`);
 		}
-		
+
 		// Configure transport with our BPM
 		transport.bpm.value = this.bpm;
 		transport.position = 0;
-		
-		console.log(`🎵 Transport BPM set to: ${transport.bpm.value}`);
-		
+
+		console.log(`🎵 [START] Final BPM: ${this.bpm}, Transport BPM: ${transport.bpm.value}`);
+
 		// Schedule metronome clicks on each beat (only if not using music)
 		if (!this.useMusic || !this.player) {
-			this.beatEventId = transport.scheduleRepeat((time) => {
-				this.playMetronomeClick(time);
-			}, '4n', 0);
+			this.beatEventId = transport.scheduleRepeat(
+				(time) => {
+					this.playMetronomeClick(time);
+				},
+				'4n',
+				0
+			);
 		}
-		
+
 		// Start music player synced to transport
 		if (this.useMusic && this.player) {
 			this.player.sync().start(0);
 		}
-		
+
 		// Start the transport (this starts EVERYTHING)
 		transport.start();
-		
+
 		console.log(`🎵 Started @ ${this.bpm} BPM (music: ${this.useMusic && !!this.player})`);
 	}
 
@@ -189,28 +207,28 @@ export class RhythmEngine {
 	 */
 	stop(): void {
 		if (!this.running) return;
-		
+
 		const transport = Tone.getTransport();
-		
+
 		// Stop transport
 		transport.stop();
 		transport.position = 0;
-		
+
 		// Clear scheduled events
 		if (this.beatEventId !== null) {
 			transport.clear(this.beatEventId);
 			this.beatEventId = null;
 		}
-		
+
 		// Stop and unsync player
 		if (this.player) {
 			this.player.unsync();
 			this.player.stop();
 		}
-		
+
 		this.running = false;
 		this.beatCount = 0;
-		
+
 		console.log('🎵 Stopped');
 	}
 
@@ -219,13 +237,13 @@ export class RhythmEngine {
 	 */
 	dispose(): void {
 		this.stop();
-		
+
 		this.player?.dispose();
 		this.player = null;
-		
+
 		this.metronomeHigh?.dispose();
 		this.metronomeHigh = null;
-		
+
 		this.metronomeLow?.dispose();
 		this.metronomeLow = null;
 	}
@@ -236,7 +254,7 @@ export class RhythmEngine {
 
 	private playMetronomeClick(time: number): void {
 		this.beatCount++;
-		
+
 		// Accent every 4 beats
 		if (this.beatCount % 4 === 1) {
 			this.metronomeHigh?.triggerAttackRelease('C5', '32n', time);
@@ -251,10 +269,10 @@ export class RhythmEngine {
 
 	/**
 	 * Get the current beat phase (0 to 1)
-	 * 
+	 *
 	 * This is THE function for visual sync.
 	 * Call this every frame in requestAnimationFrame.
-	 * 
+	 *
 	 * Returns:
 	 *   0.0 = exactly on a beat
 	 *   0.5 = exactly between beats
@@ -262,20 +280,20 @@ export class RhythmEngine {
 	 */
 	getBeatPhase(): number {
 		if (!this.running) return 0;
-		
+
 		const transport = Tone.getTransport();
 		const seconds = transport.seconds + this.calibrationOffset;
 		const beatLength = 60 / this.bpm;
-		
+
 		// Position within current beat (0 to 1)
 		const phase = (seconds % beatLength) / beatLength;
-		
+
 		return phase;
 	}
 
 	/**
 	 * Get timing info for input validation
-	 * 
+	 *
 	 * Returns how far we are from the nearest beat.
 	 * Negative = early (before beat), Positive = late (after beat)
 	 */
@@ -283,14 +301,14 @@ export class RhythmEngine {
 		const transport = Tone.getTransport();
 		const seconds = transport.seconds + this.calibrationOffset;
 		const beatLength = 60 / this.bpm;
-		
+
 		// Position within current beat (0 to beatLength in seconds)
 		const positionInBeat = seconds % beatLength;
-		
+
 		// Distance to previous beat (0) vs next beat (beatLength)
 		const distToPrev = positionInBeat;
 		const distToNext = beatLength - positionInBeat;
-		
+
 		if (distToPrev <= distToNext) {
 			// Closer to previous beat = we're LATE
 			return { diffMs: distToPrev * 1000, isLate: true };
@@ -302,7 +320,7 @@ export class RhythmEngine {
 
 	/**
 	 * Check if player's input is on beat
-	 * 
+	 *
 	 * Call this when player makes a move.
 	 * Returns feedback about their timing.
 	 */
@@ -310,15 +328,15 @@ export class RhythmEngine {
 		if (!this.running) {
 			return { accuracy: 'perfect', timingDiff: 0, beatNumber: 0, score: 0 };
 		}
-		
+
 		const { diffMs, isLate } = this.getTimingFromNearestBeat();
 		const absDiff = Math.abs(diffMs);
-		
+
 		// Determine accuracy based on timing
 		// Windows are relaxed for better feel (similar to Guitar Hero/NecroDancer casual)
 		let accuracy: RhythmFeedback['accuracy'];
 		let score: number;
-		
+
 		if (absDiff <= 75) {
 			// Within 75ms = Perfect
 			accuracy = 'perfect';
@@ -336,7 +354,7 @@ export class RhythmEngine {
 			accuracy = 'miss';
 			score = 0;
 		}
-		
+
 		return {
 			accuracy,
 			timingDiff: diffMs, // Signed: negative = early, positive = late
@@ -350,7 +368,7 @@ export class RhythmEngine {
 	 */
 	isOnBeat(): boolean {
 		if (!this.running) return true;
-		
+
 		const { diffMs } = this.getTimingFromNearestBeat();
 		return Math.abs(diffMs) <= this.tolerance;
 	}
@@ -361,13 +379,13 @@ export class RhythmEngine {
 
 	/**
 	 * Get all data needed for visual feedback
-	 * 
+	 *
 	 * Call this every frame for smooth animations.
 	 */
 	getVisualState(): {
-		beatPhase: number;      // 0-1, position in beat cycle
-		intensity: number;      // 0-1, how close to beat (1 = on beat)
-		isInWindow: boolean;    // true if player can hit now
+		beatPhase: number; // 0-1, position in beat cycle
+		intensity: number; // 0-1, how close to beat (1 = on beat)
+		isInWindow: boolean; // true if player can hit now
 		bpm: number;
 		beatNumber: number;
 	} {
@@ -380,18 +398,18 @@ export class RhythmEngine {
 				beatNumber: 0
 			};
 		}
-		
+
 		const beatPhase = this.getBeatPhase();
-		
+
 		// Calculate intensity: 1.0 at beat (phase near 0 or 1), 0 at middle
 		// Using smooth cosine curve
-		const distanceFromBeat = beatPhase <= 0.5 ? beatPhase : (1 - beatPhase);
+		const distanceFromBeat = beatPhase <= 0.5 ? beatPhase : 1 - beatPhase;
 		const intensity = Math.cos(distanceFromBeat * Math.PI);
-		
+
 		// Check if in hit window
 		const { diffMs } = this.getTimingFromNearestBeat();
 		const isInWindow = Math.abs(diffMs) <= this.tolerance;
-		
+
 		return {
 			beatPhase,
 			intensity: Math.max(0, intensity),
@@ -426,6 +444,22 @@ export class RhythmEngine {
 		return this.bpm;
 	}
 
+	/**
+	 * Debug: Log current state
+	 */
+	debugState(): void {
+		const transport = Tone.getTransport();
+		console.log('🎵 [DEBUG] RhythmEngine State:');
+		console.log(`  - this.bpm: ${this.bpm}`);
+		console.log(`  - Transport.bpm: ${transport.bpm.value}`);
+		console.log(`  - running: ${this.running}`);
+		console.log(`  - useMusic: ${this.useMusic}`);
+		console.log(
+			`  - currentTrack: ${this.currentTrack?.name || 'none'} (${this.currentTrack?.bpm || 'N/A'} BPM)`
+		);
+		console.log(`  - player loaded: ${!!this.player}`);
+	}
+
 	getTolerance(): number {
 		return this.tolerance;
 	}
@@ -454,9 +488,9 @@ export class RhythmEngine {
 		const match = description.match(
 			/\[RHYTHM_MODE:true,BPM:(\d+),TOLERANCE:(\d+)(?:,MUSIC:(true|false))?\]/
 		);
-		
+
 		if (!match) return null;
-		
+
 		return {
 			enabled: true,
 			bpm: parseInt(match[1], 10),
