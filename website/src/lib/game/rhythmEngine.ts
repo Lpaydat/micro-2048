@@ -83,8 +83,8 @@ export class RhythmEngine {
 	private firstBeatOffset: number = 0;
 
 	// Visual lookahead in seconds - compensates for requestAnimationFrame lag
-	// Measured value: visual was ~220ms behind transport, so we advance by 0.22s
-	private static readonly VISUAL_LOOKAHEAD = 0.22;
+	// Set to 0 for debugging, adjust based on measured delta
+	private static readonly VISUAL_LOOKAHEAD = 0;
 
 	// Beat callback for visual sync debugging
 	private onBeatCallback: ((beatNumber: number) => void) | null = null;
