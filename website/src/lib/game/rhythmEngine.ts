@@ -1,4 +1,7 @@
-import { guess } from 'web-audio-beat-detector';
+import * as Tone from 'tone';
+
+// Get the Transport singleton (getTransport() is deprecated)
+const getTransport = () => Tone.getTransport();
 
 export interface RhythmSettings {
 	enabled: boolean;
@@ -14,478 +17,224 @@ export interface RhythmFeedback {
 	score: number;
 }
 
-// Music tracks - BPM and offset will be auto-detected
 export interface MusicTrack {
 	name: string;
 	url: string;
-	// These are fallbacks if beat detection fails
-	fallbackBpm: number;
-	fallbackOffset: number;
+	bpm: number;
+	// Offset in seconds from start to first beat (for tracks that don't start on beat)
+	firstBeatOffset: number;
 }
 
 // Music tracks from Crypt of the NecroDancer OST
 // BPM values are from official sources: https://crypt-of-the-necrodancer.fandom.com/wiki/Music
 export const MUSIC_TRACKS: MusicTrack[] = [
-	{ name: 'Watch Your Step (Training)', url: '/music/track1.mp3', fallbackBpm: 120, fallbackOffset: 0 },
-	{ name: 'Crypteque (1-2)', url: '/music/track2.mp3', fallbackBpm: 130, fallbackOffset: 0 },
-	{ name: 'Tombtorial (Tutorial)', url: '/music/track3.mp3', fallbackBpm: 100, fallbackOffset: 0 },
+	{ name: 'Watch Your Step (Training)', url: '/music/track1.mp3', bpm: 120, firstBeatOffset: 0 },
+	{ name: 'Crypteque (1-2)', url: '/music/track2.mp3', bpm: 130, firstBeatOffset: 0 },
+	{ name: 'Tombtorial (Tutorial)', url: '/music/track3.mp3', bpm: 100, firstBeatOffset: 0 },
 ];
 
+/**
+ * RhythmEngine - Tone.js based rhythm game engine
+ * 
+ * Uses getTransport() for sample-accurate beat timing.
+ * All timing is derived from the audio context, not JS timers.
+ */
 export class RhythmEngine {
 	private settings: RhythmSettings;
-	private startTime: number = 0;
-	private beatInterval: number = 0;
-	private beatOffset: number = 0; // Offset from music start to first beat (in ms)
-	private currentBeat: number = 0;
-	private lastBeatTime: number = 0;
-	private nextBeatTime: number = 0;
-	private audioContext: AudioContext | null = null;
 	private isRunning: boolean = false;
-	private scheduledBeat: number = -1;
-	private metronomeIntervalId: number | null = null;
+	private currentBeat: number = 0;
 	
 	// Music playback
-	private musicElement: HTMLAudioElement | null = null;
-	private audioBuffer: AudioBuffer | null = null;
+	private player: Tone.Player | null = null;
 	private currentTrack: MusicTrack | null = null;
 	private musicLoaded: boolean = false;
-	private detectedBpm: number | null = null;
-	private detectedOffset: number | null = null;
 	
-	// Phase 1 & 2: Audio synchronization tracking
-	private isAudioPlaying: boolean = false;
-	private audioStartTime: number = 0; // When audio actually started playing
+	// Metronome
+	private metronome: Tone.Synth | null = null;
+	private metronomeLowSynth: Tone.Synth | null = null;
 	
-	// Phase 3: User calibration offset (±200ms range)
-	private userCalibrationOffset: number = 0;
+	// Beat scheduling
+	private beatEventId: number | null = null;
 	
-	// Phase 4: Loop tracking
-	private lastAudioTime: number = 0; // Track audio position for loop detection
+	// Calibration
+	private userCalibrationOffset: number = 0; // ms
 	
-	// Auto-calibration system
+	// Auto-calibration
 	private autoCalibrationEnabled: boolean = true;
-	private autoCalibrationSamples: number[] = []; // Timing differences from perfect/good hits
-	private readonly AUTO_CALIBRATION_MIN_SAMPLES = 10; // Minimum samples before applying
-	private readonly AUTO_CALIBRATION_MAX_SAMPLES = 30; // Keep only recent samples
-	private readonly AUTO_CALIBRATION_MAX_OFFSET = 100; // Max auto-adjustment (±100ms)
-	private autoCalibrationApplied: boolean = false; // Track if we've applied auto-calibration
+	private autoCalibrationSamples: number[] = [];
+	private readonly AUTO_CALIBRATION_MIN_SAMPLES = 10;
+	private readonly AUTO_CALIBRATION_MAX_SAMPLES = 30;
+	private readonly AUTO_CALIBRATION_MAX_OFFSET = 100;
 	private onCalibrationChangeCallback: ((offset: number) => void) | null = null;
 
 	constructor(settings: RhythmSettings) {
 		this.settings = settings;
-		this.beatInterval = (60 / settings.bpm) * 1000;
-	}
-	
-	// Phase 3: Set user calibration offset
-	setCalibrationOffset(offsetMs: number): void {
-		this.userCalibrationOffset = Math.max(-200, Math.min(200, offsetMs));
-		console.log(`🎵 Calibration offset set to: ${this.userCalibrationOffset}ms`);
-		
-		// If user manually sets offset, disable auto-calibration to respect their preference
-		if (offsetMs !== 0) {
-			this.autoCalibrationEnabled = false;
-			this.autoCalibrationSamples = [];
-			console.log('🎵 Auto-calibration disabled (user set manual offset)');
-		}
-	}
-	
-	// Phase 3: Get current calibration offset
-	getCalibrationOffset(): number {
-		return this.userCalibrationOffset;
-	}
-	
-	// Auto-calibration: Enable/disable
-	setAutoCalibration(enabled: boolean): void {
-		this.autoCalibrationEnabled = enabled;
-		if (!enabled) {
-			this.autoCalibrationSamples = [];
-		}
-		console.log(`🎵 Auto-calibration ${enabled ? 'enabled' : 'disabled'}`);
-	}
-	
-	// Auto-calibration: Check if enabled
-	isAutoCalibrationEnabled(): boolean {
-		return this.autoCalibrationEnabled;
-	}
-	
-	// Auto-calibration: Get current sample count
-	getAutoCalibrationSampleCount(): number {
-		return this.autoCalibrationSamples.length;
-	}
-	
-	// Auto-calibration: Set callback for when calibration changes
-	onCalibrationChange(callback: ((offset: number) => void) | null): void {
-		this.onCalibrationChangeCallback = callback;
-	}
-	
-	// Auto-calibration: Record a hit timing for calibration
-	// timingDiff: positive = player hit late, negative = player hit early
-	// accuracy: only 'perfect' and 'good' hits are used for calibration
-	recordHitForCalibration(timingDiff: number, accuracy: 'perfect' | 'good' | 'early' | 'late' | 'miss'): void {
-		if (!this.autoCalibrationEnabled) return;
-		
-		// Only use perfect and good hits - these indicate intentional timing
-		if (accuracy !== 'perfect' && accuracy !== 'good') return;
-		
-		// The timingDiff from checkRhythm is always positive (absolute distance from beat)
-		// We need to determine the direction: early (negative) or late (positive)
-		// This is calculated in checkRhythm based on which beat is closer
-		// For calibration, we'll record the signed difference
-		
-		this.autoCalibrationSamples.push(timingDiff);
-		
-		// Keep only recent samples (sliding window)
-		if (this.autoCalibrationSamples.length > this.AUTO_CALIBRATION_MAX_SAMPLES) {
-			this.autoCalibrationSamples.shift();
-		}
-		
-		// Try to apply calibration if we have enough samples
-		this.tryApplyAutoCalibration();
-	}
-	
-	// Auto-calibration: Record signed timing (called from checkRhythm with direction)
-	recordSignedHitForCalibration(signedTimingDiff: number, accuracy: 'perfect' | 'good' | 'early' | 'late' | 'miss'): void {
-		if (!this.autoCalibrationEnabled) return;
-		
-		// Only use perfect and good hits
-		if (accuracy !== 'perfect' && accuracy !== 'good') return;
-		
-		this.autoCalibrationSamples.push(signedTimingDiff);
-		
-		// Keep only recent samples
-		if (this.autoCalibrationSamples.length > this.AUTO_CALIBRATION_MAX_SAMPLES) {
-			this.autoCalibrationSamples.shift();
-		}
-		
-		// Try to apply calibration
-		this.tryApplyAutoCalibration();
-	}
-	
-	// Auto-calibration: Calculate and apply calibration offset
-	private tryApplyAutoCalibration(): void {
-		if (this.autoCalibrationSamples.length < this.AUTO_CALIBRATION_MIN_SAMPLES) {
-			return; // Not enough samples yet
-		}
-		
-		// Calculate median (more robust than average against outliers)
-		const sorted = [...this.autoCalibrationSamples].sort((a, b) => a - b);
-		const mid = Math.floor(sorted.length / 2);
-		const median = sorted.length % 2 === 0
-			? (sorted[mid - 1] + sorted[mid]) / 2
-			: sorted[mid];
-		
-		// Only apply if the median offset is significant (> 15ms)
-		if (Math.abs(median) < 15) {
-			return; // Offset is negligible, no need to adjust
-		}
-		
-		// Calculate new offset (negative median because if player is consistently late,
-		// we need to shift the beat window earlier, i.e., negative offset)
-		const adjustment = -Math.round(median);
-		
-		// Cap the adjustment
-		const cappedAdjustment = Math.max(-this.AUTO_CALIBRATION_MAX_OFFSET, 
-			Math.min(this.AUTO_CALIBRATION_MAX_OFFSET, adjustment));
-		
-		// Only apply if it would change the offset meaningfully
-		const newOffset = Math.max(-200, Math.min(200, this.userCalibrationOffset + cappedAdjustment));
-		
-		if (Math.abs(newOffset - this.userCalibrationOffset) >= 10) {
-			const oldOffset = this.userCalibrationOffset;
-			this.userCalibrationOffset = newOffset;
-			this.autoCalibrationApplied = true;
-			
-			console.log(`🎵 Auto-calibration applied: ${oldOffset}ms → ${newOffset}ms (median timing: ${median.toFixed(1)}ms, samples: ${this.autoCalibrationSamples.length})`);
-			
-			// Clear samples after applying (start fresh)
-			this.autoCalibrationSamples = [];
-			
-			// Notify callback if set
-			if (this.onCalibrationChangeCallback) {
-				this.onCalibrationChangeCallback(newOffset);
-			}
-		}
-	}
-	
-	// Auto-calibration: Reset
-	resetAutoCalibration(): void {
-		this.autoCalibrationSamples = [];
-		this.autoCalibrationApplied = false;
-		this.userCalibrationOffset = 0;
-		this.autoCalibrationEnabled = true;
-		console.log('🎵 Auto-calibration reset');
-		
-		if (this.onCalibrationChangeCallback) {
-			this.onCalibrationChangeCallback(0);
-		}
 	}
 
-	// Initialize audio context
+	/**
+	 * Initialize audio - must be called after user interaction (browser requirement)
+	 */
 	async initAudio(): Promise<void> {
-		if (!this.audioContext) {
-			this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-		}
+		// Start Tone.js audio context (requires user gesture)
+		await Tone.start();
+		console.log('🎵 Tone.js audio context started');
 		
-		if (this.audioContext.state === 'suspended') {
-			await this.audioContext.resume();
-		}
-
-		// If using music, preload a random track and detect its BPM
+		// Set up metronome synths
+		this.metronome = new Tone.Synth({
+			oscillator: { type: 'sine' },
+			envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 }
+		}).toDestination();
+		this.metronome.volume.value = -10;
+		
+		this.metronomeLowSynth = new Tone.Synth({
+			oscillator: { type: 'sine' },
+			envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 }
+		}).toDestination();
+		this.metronomeLowSynth.volume.value = -10;
+		
+		// Load music if enabled
 		if (this.settings.useMusic) {
 			await this.loadRandomTrack();
 		}
 	}
 
-	// Load a random music track and detect its BPM
+	/**
+	 * Load a random music track
+	 */
 	private async loadRandomTrack(): Promise<void> {
-		// Pick random track
 		const randomIndex = Math.floor(Math.random() * MUSIC_TRACKS.length);
 		this.currentTrack = MUSIC_TRACKS[randomIndex];
 		
 		console.log(`🎵 Loading track: ${this.currentTrack.name}...`);
 		
 		try {
-			// Fetch audio file as ArrayBuffer for beat detection
-			const response = await fetch(this.currentTrack.url);
-			if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
-			
-			const arrayBuffer = await response.arrayBuffer();
-			
-			// Decode audio for beat detection
-			if (!this.audioContext) {
-				this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-			}
-			
-			this.audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer.slice(0));
-			
-			// Use known BPM values for these tracks since web-audio-beat-detector can be unreliable
-			// The fallback BPMs are manually verified to match the actual music
-			console.log(`🎵 Loading track: "${this.currentTrack.name}"`);
-			console.log(`🎵 Using known BPM: ${this.currentTrack.fallbackBpm}`);
-			
-			// Use the known/fallback BPM (these are accurate for our tracks)
-			this.detectedBpm = this.currentTrack.fallbackBpm;
-			
-			// Try to detect the beat offset (first beat timing) which is more reliable
-			try {
-				const analysisLength = Math.min(30, this.audioBuffer.duration);
-				const result = await guess(this.audioBuffer, 0, analysisLength);
-				
-				// Only use detected offset, not BPM (BPM detection is often wrong)
-				this.detectedOffset = result.offset * 1000; // Convert to ms
-				
-				console.log(`🎵 Beat offset detected: ${this.detectedOffset.toFixed(0)}ms (detected BPM was ${result.bpm}, ignoring)`);
-			} catch (detectError) {
-				console.warn('🎵 Beat offset detection failed, using fallback:', detectError);
-				this.detectedOffset = this.currentTrack.fallbackOffset;
-			}
-			
-			// Update engine with detected values
-			this.settings.bpm = this.detectedBpm!;
-			this.beatInterval = (60 / this.settings.bpm) * 1000;
-			this.beatOffset = this.detectedOffset!;
-			
-			console.log(`🎵 Final rhythm config: BPM=${this.settings.bpm}, interval=${this.beatInterval.toFixed(0)}ms, offset=${this.beatOffset.toFixed(0)}ms`);
-			
-			// Also create HTML Audio element for playback
-			this.musicElement = new Audio(this.currentTrack.url);
-			this.musicElement.loop = true;
-			this.musicElement.volume = 0.5;
-			
-			// Phase 4: Add loop detection handler for re-sync
-			this.musicElement.addEventListener('timeupdate', () => {
-				if (!this.musicElement || !this.isAudioPlaying) return;
-				
-				const currentAudioTime = this.musicElement.currentTime * 1000;
-				
-				// Detect loop: audio time jumped backwards significantly
-				if (this.lastAudioTime > 0 && currentAudioTime < this.lastAudioTime - 500) {
-					// Music looped - recalculate beat based on new audio position
-					const elapsed = currentAudioTime - this.beatOffset;
-					if (elapsed >= 0) {
-						this.currentBeat = Math.floor(elapsed / this.beatInterval);
-						console.log(`🎵 Music looped, resynced to beat ${this.currentBeat} (audio: ${currentAudioTime.toFixed(0)}ms)`);
-					}
+			// Create Tone.Player for music playback
+			this.player = new Tone.Player({
+				url: this.currentTrack.url,
+				loop: true,
+				onload: () => {
+					console.log(`🎵 Track loaded: ${this.currentTrack?.name}`);
+					this.musicLoaded = true;
 				}
-				
-				this.lastAudioTime = currentAudioTime;
-			});
+			}).toDestination();
 			
-			// Wait for it to be ready
-			await new Promise<void>((resolve, reject) => {
-				if (!this.musicElement) return reject('No music element');
-				
-				const onCanPlay = () => {
-					this.musicElement?.removeEventListener('canplaythrough', onCanPlay);
-					this.musicElement?.removeEventListener('error', onError);
-					resolve();
-				};
-				
-				const onError = () => {
-					this.musicElement?.removeEventListener('canplaythrough', onCanPlay);
-					this.musicElement?.removeEventListener('error', onError);
-					reject('Failed to load audio');
-				};
-				
-				this.musicElement.addEventListener('canplaythrough', onCanPlay);
-				this.musicElement.addEventListener('error', onError);
-				this.musicElement.load();
-				
-				// Timeout after 10 seconds
-				setTimeout(() => reject('Load timeout'), 10000);
-			});
+			// Wait for the player to load
+			await Tone.loaded();
 			
-			this.musicLoaded = true;
-			console.log(`🎵 Ready: ${this.currentTrack.name} @ ${this.settings.bpm} BPM`);
+			// Set BPM from track
+			this.settings.bpm = this.currentTrack.bpm;
+			getTransport().bpm.value = this.currentTrack.bpm;
+			
+			console.log(`🎵 Ready: ${this.currentTrack.name} @ ${this.currentTrack.bpm} BPM`);
 			
 		} catch (error) {
-			console.warn('🎵 Failed to load music, falling back to metronome:', error);
+			console.warn('🎵 Failed to load music, will use metronome:', error);
 			this.settings.useMusic = false;
 			this.musicLoaded = false;
-			
-			// Reset to default BPM if we don't have music
-			this.beatInterval = (60 / this.settings.bpm) * 1000;
-			this.beatOffset = 0;
 		}
 	}
 
-	// Start the rhythm engine
+	/**
+	 * Start the rhythm engine
+	 */
 	start(): void {
-		if (!this.settings.enabled) return;
+		if (!this.settings.enabled || this.isRunning) return;
 		
-		// For music: startTime is when we pressed play, but the first beat
-		// happens at startTime + beatOffset.
-		this.startTime = performance.now();
-		this.currentBeat = 0;
-		this.lastBeatTime = this.startTime + this.beatOffset;
-		this.nextBeatTime = this.lastBeatTime + this.beatInterval;
 		this.isRunning = true;
-		this.scheduledBeat = -1;
-		
-		if (this.settings.useMusic && this.musicElement && this.musicLoaded) {
-			this.startMusic();
-		} else {
-			this.startMetronome();
-		}
-	}
-
-	// Start music playback
-	// Phase 1: Capture actual audio start time for accurate sync
-	private startMusic(): void {
-		if (!this.musicElement) return;
-		
-		this.musicElement.currentTime = 0;
-		this.lastAudioTime = 0; // Reset loop tracking
-		this.isAudioPlaying = false;
-		
-		// Phase 1: Listen for actual playback start to sync timing
-		const onPlaying = () => {
-			this.audioStartTime = performance.now();
-			this.isAudioPlaying = true;
-			
-			// Re-sync beat timing with actual audio start (not when play() was called)
-			this.startTime = this.audioStartTime;
-			this.lastBeatTime = this.startTime + this.beatOffset;
-			this.nextBeatTime = this.lastBeatTime + this.beatInterval;
-			this.currentBeat = 0;
-			
-			console.log(`🎵 Audio started at: ${this.audioStartTime.toFixed(0)}ms (latency compensated)`);
-			
-			this.musicElement?.removeEventListener('playing', onPlaying);
-		};
-		
-		this.musicElement.addEventListener('playing', onPlaying);
-		
-		this.musicElement.play().catch(error => {
-			console.warn('🎵 Music playback failed, falling back to metronome:', error);
-			this.musicElement?.removeEventListener('playing', onPlaying);
-			this.startMetronome();
-		});
-		
-		console.log(`🎵 Starting: ${this.currentTrack?.name} (${this.settings.bpm} BPM, offset: ${this.beatOffset.toFixed(0)}ms)`);
-	}
-
-	// Stop the rhythm engine
-	stop(): void {
-		this.isRunning = false;
-		this.isAudioPlaying = false;
-		this.lastAudioTime = 0;
-		
-		// Reset auto-calibration samples (keep the applied offset though)
+		this.currentBeat = 0;
 		this.autoCalibrationSamples = [];
 		
-		// Stop metronome
-		if (this.metronomeIntervalId !== null) {
-			clearInterval(this.metronomeIntervalId);
-			this.metronomeIntervalId = null;
-		}
+		// Configure Transport
+		getTransport().bpm.value = this.settings.bpm;
+		getTransport().position = 0;
 		
-		// Stop music
-		if (this.musicElement) {
-			this.musicElement.pause();
-			this.musicElement.currentTime = 0;
-		}
+		// Schedule beat events - fires exactly on each beat
+		this.beatEventId = getTransport().scheduleRepeat((time) => {
+			this.onBeat(time);
+		}, '4n'); // quarter note = one beat
 		
-		// Close audio context
-		if (this.audioContext) {
-			this.audioContext.close();
-			this.audioContext = null;
+		// Start transport
+		getTransport().start();
+		
+		// Start music or metronome
+		if (this.settings.useMusic && this.player && this.musicLoaded) {
+			// Sync player to transport
+			this.player.sync().start(0);
+			console.log(`🎵 Playing: ${this.currentTrack?.name} (${this.settings.bpm} BPM)`);
+		} else {
+			console.log(`🎵 Metronome started (${this.settings.bpm} BPM)`);
 		}
 	}
 
-	// Update rhythm settings
-	// NOTE: When music is loaded, we preserve the detected BPM and offset
-	// The tournament BPM is only used as initial/fallback value
-	updateSettings(settings: Partial<RhythmSettings>): void {
-		// Preserve detected BPM and offset if music is loaded
-		const preserveBpm = this.musicLoaded && this.detectedBpm !== null;
-		const preserveOffset = this.musicLoaded && this.detectedOffset !== null;
+	/**
+	 * Called exactly on each beat by getTransport()
+	 */
+	private onBeat(time: number): void {
+		this.currentBeat++;
 		
-		this.settings = { ...this.settings, ...settings };
-		
-		// Restore detected values if music is loaded (they are the source of truth)
-		if (preserveBpm) {
-			this.settings.bpm = this.detectedBpm!;
-			console.log(`🎵 Preserving detected BPM: ${this.detectedBpm} (ignoring settings BPM: ${settings.bpm})`);
-		}
-		if (preserveOffset) {
-			this.beatOffset = this.detectedOffset!;
-		}
-		
-		this.beatInterval = (60 / this.settings.bpm) * 1000;
-		
-		if (this.isRunning) {
-			const elapsed = performance.now() - this.startTime - this.beatOffset;
-			if (elapsed >= 0) {
-				this.currentBeat = Math.floor(elapsed / this.beatInterval);
-				this.lastBeatTime = this.startTime + this.beatOffset + (this.currentBeat * this.beatInterval);
-				this.nextBeatTime = this.lastBeatTime + this.beatInterval;
+		// Play metronome click if not using music
+		if (!this.settings.useMusic || !this.musicLoaded) {
+			// Accent on beat 1 of each measure (every 4 beats)
+			if (this.currentBeat % 4 === 1) {
+				this.metronome?.triggerAttackRelease('C5', '32n', time);
+			} else {
+				this.metronomeLowSynth?.triggerAttackRelease('G4', '32n', time);
 			}
 		}
 	}
 
-	// Get current track info
-	getCurrentTrack(): MusicTrack | null {
-		return this.currentTrack;
+	/**
+	 * Stop the rhythm engine
+	 */
+	stop(): void {
+		this.isRunning = false;
+		
+		// Stop and reset transport
+		getTransport().stop();
+		getTransport().position = 0;
+		
+		// Clear beat event
+		if (this.beatEventId !== null) {
+			getTransport().clear(this.beatEventId);
+			this.beatEventId = null;
+		}
+		
+		// Stop player
+		if (this.player) {
+			this.player.unsync();
+			this.player.stop();
+		}
+		
+		// Reset state
+		this.currentBeat = 0;
+		this.autoCalibrationSamples = [];
 	}
 
-	// Get detected BPM
-	getDetectedBpm(): number | null {
-		return this.detectedBpm;
+	/**
+	 * Clean up resources
+	 */
+	dispose(): void {
+		this.stop();
+		
+		this.player?.dispose();
+		this.player = null;
+		
+		this.metronome?.dispose();
+		this.metronome = null;
+		
+		this.metronomeLowSynth?.dispose();
+		this.metronomeLowSynth = null;
+		
+		this.musicLoaded = false;
 	}
 
-	// Get detected offset
-	getDetectedOffset(): number | null {
-		return this.detectedOffset;
-	}
-
-	// Check if using music
-	isUsingMusic(): boolean {
-		return this.settings.useMusic === true && this.musicLoaded;
-	}
-
-	// Check if a move is on rhythm and provide feedback
-	checkRhythm(timestamp: number = performance.now()): RhythmFeedback {
+	/**
+	 * Check if a move is on rhythm - THE CORE RHYTHM CHECK
+	 * 
+	 * Uses getTransport().seconds for sample-accurate timing
+	 * @param _timestamp Optional timestamp parameter (ignored, kept for API compatibility)
+	 */
+	checkRhythm(_timestamp?: number): RhythmFeedback {
 		if (!this.settings.enabled || !this.isRunning) {
 			return {
 				accuracy: 'perfect',
@@ -495,201 +244,93 @@ export class RhythmEngine {
 			};
 		}
 
-		// Phase 2: Use audio time as source of truth when music is playing
-		// Phase 3: Apply user calibration offset
-		let elapsed: number;
-		if (this.settings.useMusic && this.musicElement && this.isAudioPlaying) {
-			// Use actual audio position - this is THE source of truth for music mode
-			const audioTimeMs = this.musicElement.currentTime * 1000;
-			elapsed = audioTimeMs - this.beatOffset - this.userCalibrationOffset;
+		// Get current position in the beat cycle from Transport
+		// This is THE source of truth - derived directly from audio context
+		const transportSeconds = getTransport().seconds;
+		const beatLengthSeconds = 60 / this.settings.bpm;
+		
+		// Apply calibration offset (convert ms to seconds)
+		const calibrationSeconds = this.userCalibrationOffset / 1000;
+		const adjustedTime = transportSeconds - calibrationSeconds;
+		
+		// Calculate position within current beat (0 to 1)
+		const beatPosition = (adjustedTime % beatLengthSeconds) / beatLengthSeconds;
+		
+		// Calculate distance from nearest beat
+		// beatPosition near 0 = just after beat, near 1 = just before next beat
+		// We want distance from the nearest beat edge (0 or 1)
+		let distanceFromBeat: number;
+		let isLate: boolean;
+		
+		if (beatPosition <= 0.5) {
+			// Closer to the beat that just happened (late hit)
+			distanceFromBeat = beatPosition;
+			isLate = true;
 		} else {
-			// Metronome mode: use performance.now() based timing
-			elapsed = timestamp - this.startTime - this.beatOffset - this.userCalibrationOffset;
+			// Closer to the upcoming beat (early hit)
+			distanceFromBeat = 1 - beatPosition;
+			isLate = false;
 		}
 		
-		// Before the first beat
-		if (elapsed < 0) {
-			const timeToFirstBeat = -elapsed;
-			return {
-				accuracy: timeToFirstBeat <= this.settings.tolerance ? 'early' : 'miss',
-				timingDiff: timeToFirstBeat,
-				beatNumber: 0,
-				score: timeToFirstBeat <= this.settings.tolerance ? 25 : 0
-			};
-		}
+		// Convert to milliseconds
+		const timingDiffMs = distanceFromBeat * beatLengthSeconds * 1000;
 		
-		this.currentBeat = Math.floor(elapsed / this.beatInterval);
+		// Signed timing for auto-calibration (positive = late, negative = early)
+		const signedTimingMs = isLate ? timingDiffMs : -timingDiffMs;
 		
-		// Calculate beat times based on elapsed time (not startTime for music mode)
-		const beatStartTime = this.currentBeat * this.beatInterval;
-		const beatEndTime = (this.currentBeat + 1) * this.beatInterval;
-		
-		const diffFromLastBeat = elapsed - beatStartTime; // Positive = late
-		const diffFromNextBeat = elapsed - beatEndTime;   // Negative = early
-		const absDiffFromLastBeat = Math.abs(diffFromLastBeat);
-		const absDiffFromNextBeat = Math.abs(diffFromNextBeat);
-		const timingDiff = Math.min(absDiffFromLastBeat, absDiffFromNextBeat);
-		
-		// Signed timing: positive = late (after beat), negative = early (before beat)
-		const isCloserToLastBeat = absDiffFromLastBeat < absDiffFromNextBeat;
-		const signedTimingDiff = isCloserToLastBeat ? diffFromLastBeat : diffFromNextBeat;
-
+		// Determine accuracy
 		let accuracy: RhythmFeedback['accuracy'];
 		let score: number;
-
-		if (timingDiff <= 50) {
+		
+		if (timingDiffMs <= 50) {
 			accuracy = 'perfect';
 			score = 100;
-		} else if (timingDiff <= 100) {
+		} else if (timingDiffMs <= 100) {
 			accuracy = 'good';
 			score = 50;
-		} else if (timingDiff <= this.settings.tolerance) {
-			accuracy = isCloserToLastBeat ? 'late' : 'early';
+		} else if (timingDiffMs <= this.settings.tolerance) {
+			accuracy = isLate ? 'late' : 'early';
 			score = 25;
 		} else {
 			accuracy = 'miss';
 			score = 0;
 		}
 		
-		// Auto-calibration: Record this hit's timing
-		// Only perfect and good hits are used (filtered inside the method)
-		this.recordSignedHitForCalibration(signedTimingDiff, accuracy);
+		// Record for auto-calibration
+		this.recordHitForAutoCalibration(signedTimingMs, accuracy);
 
 		return {
 			accuracy,
-			timingDiff,
+			timingDiff: timingDiffMs,
 			beatNumber: this.currentBeat,
 			score
 		};
 	}
 
-	// Get current beat info
-	// Phase 2: Use audio time as source of truth for visual feedback
-	// Phase 3: Apply user calibration offset
-	getCurrentBeat(timestamp: number = performance.now()): { beat: number; progress: number; timeToNext: number } {
-		if (!this.settings.enabled || !this.isRunning) {
-			return { beat: 0, progress: 0, timeToNext: 0 };
-		}
-
-		// Phase 2: Use audio time as source of truth when music is playing
-		let elapsed: number;
-		if (this.settings.useMusic && this.musicElement && this.isAudioPlaying) {
-			// Use actual audio position for visual sync
-			const audioTimeMs = this.musicElement.currentTime * 1000;
-			elapsed = audioTimeMs - this.beatOffset - this.userCalibrationOffset;
-		} else {
-			// Metronome mode: use performance.now() based timing
-			elapsed = timestamp - this.startTime - this.beatOffset - this.userCalibrationOffset;
-		}
+	/**
+	 * Get current beat phase (0 to 1) for visual animation
+	 * 
+	 * This is called every frame and returns the exact position in the beat cycle
+	 * derived from getTransport() - guarantees perfect visual sync
+	 */
+	getBeatPhase(): number {
+		if (!this.isRunning) return 0;
 		
-		// Before first beat
-		if (elapsed < 0) {
-			const timeToFirstBeat = -elapsed;
-			const twoBeatDuration = this.beatInterval * 2;
-			const progress = timeToFirstBeat < twoBeatDuration 
-				? 1 - (timeToFirstBeat / twoBeatDuration)
-				: 0;
-			return { beat: -1, progress, timeToNext: timeToFirstBeat };
-		}
+		const transportSeconds = getTransport().seconds;
+		const beatLengthSeconds = 60 / this.settings.bpm;
 		
-		const beat = Math.floor(elapsed / this.beatInterval);
-		const progress = (elapsed % this.beatInterval) / this.beatInterval;
-		const timeToNext = this.beatInterval - (elapsed % this.beatInterval);
-
-		return { beat, progress, timeToNext };
-	}
-
-	// Check if currently on beat
-	isOnBeat(timestamp: number = performance.now()): boolean {
-		const feedback = this.checkRhythm(timestamp);
-		return feedback.accuracy !== 'miss';
-	}
-
-	// Play metronome tick at specific audio time
-	private playTickAtTime(audioTime: number, frequency: number = 800, duration: number = 0.03): void {
-		if (!this.audioContext) return;
-
-		const oscillator = this.audioContext.createOscillator();
-		const gainNode = this.audioContext.createGain();
-
-		oscillator.connect(gainNode);
-		gainNode.connect(this.audioContext.destination);
-
-		oscillator.frequency.value = frequency;
-		oscillator.type = 'sine';
-
-		gainNode.gain.setValueAtTime(0.3, audioTime);
-		gainNode.gain.exponentialRampToValueAtTime(0.01, audioTime + duration);
-
-		oscillator.start(audioTime);
-		oscillator.stop(audioTime + duration);
-	}
-
-	// Start metronome with precise scheduling
-	private startMetronome(): void {
-		if (!this.settings.enabled || !this.isRunning || !this.audioContext) return;
-
-		const scheduleAhead = 0.1;
-		const checkInterval = 25;
+		// Apply calibration
+		const calibrationSeconds = this.userCalibrationOffset / 1000;
+		const adjustedTime = transportSeconds - calibrationSeconds;
 		
-		const scheduler = () => {
-			if (!this.isRunning || !this.audioContext) return;
-
-			const now = performance.now();
-			const audioNow = this.audioContext.currentTime;
-			const elapsed = now - this.startTime - this.beatOffset;
-			
-			// Before first beat, check if we need to schedule beat 0
-			if (elapsed < 0) {
-				const timeToFirstBeat = -elapsed;
-				if (timeToFirstBeat <= scheduleAhead * 1000 && this.scheduledBeat < 0) {
-					const beatTimeAudio = audioNow + (timeToFirstBeat / 1000);
-					this.playTickAtTime(beatTimeAudio, 1000, 0.03);
-					this.scheduledBeat = 0;
-				}
-				return;
-			}
-			
-			const currentBeatNum = Math.floor(elapsed / this.beatInterval);
-			
-			for (let i = 0; i <= 2; i++) {
-				const beatNum = currentBeatNum + i;
-				
-				if (beatNum <= this.scheduledBeat) continue;
-				
-				const beatTimePerf = this.startTime + this.beatOffset + (beatNum * this.beatInterval);
-				const msUntilBeat = beatTimePerf - now;
-				
-				if (msUntilBeat < 0 || msUntilBeat > scheduleAhead * 1000) continue;
-				
-				const beatTimeAudio = audioNow + (msUntilBeat / 1000);
-				const frequency = (beatNum % 4 === 0) ? 1000 : 800;
-				this.playTickAtTime(beatTimeAudio, frequency, 0.03);
-				
-				this.scheduledBeat = beatNum;
-			}
-		};
-
-		this.metronomeIntervalId = window.setInterval(scheduler, checkInterval);
-		scheduler();
+		// Return position in beat cycle (0 to 1)
+		return (adjustedTime % beatLengthSeconds) / beatLengthSeconds;
 	}
 
-	// Parse rhythm settings from description string
-	static parseFromDescription(description: string): RhythmSettings | null {
-		// Extended format: [RHYTHM_MODE:true,BPM:120,TOLERANCE:150,MUSIC:true]
-		const rhythmMatch = description.match(/\[RHYTHM_MODE:true,BPM:(\d+),TOLERANCE:(\d+)(?:,MUSIC:(true|false))?\]/);
-		if (!rhythmMatch) return null;
-
-		return {
-			enabled: true,
-			bpm: parseInt(rhythmMatch[1], 10),
-			tolerance: parseInt(rhythmMatch[2], 10),
-			useMusic: rhythmMatch[3] === 'true'
-		};
-	}
-
-	// Get visual feedback data for UI
-	getVisualFeedback(timestamp: number = performance.now()): {
+	/**
+	 * Get visual feedback data for UI components
+	 */
+	getVisualFeedback(): {
 		isOnBeat: boolean;
 		beatProgress: number;
 		timeToNext: number;
@@ -704,59 +345,221 @@ export class RhythmEngine {
 			};
 		}
 
-		const { progress, timeToNext } = this.getCurrentBeat(timestamp);
-		const feedback = this.checkRhythm(timestamp);
+		const beatPhase = this.getBeatPhase();
+		const beatLengthMs = (60 / this.settings.bpm) * 1000;
 		
-		const maxIntensity = 1;
+		// Distance from nearest beat edge (0 or 1)
+		const distanceFromBeat = beatPhase <= 0.5 ? beatPhase : (1 - beatPhase);
+		const timingDiffMs = distanceFromBeat * beatLengthMs;
+		
+		// Time to next beat
+		const timeToNext = (1 - beatPhase) * beatLengthMs;
+		
+		// Is on beat (within tolerance)?
+		const isOnBeat = timingDiffMs <= this.settings.tolerance;
+		
+		// Intensity for visual effects (1.0 at beat, fades to 0)
 		let intensity = 0;
-		
-		if (feedback.timingDiff <= 50) {
-			intensity = maxIntensity;
-		} else if (feedback.timingDiff <= 100) {
+		if (timingDiffMs <= 50) {
+			intensity = 1.0;
+		} else if (timingDiffMs <= 100) {
 			intensity = 0.7;
-		} else if (feedback.timingDiff <= this.settings.tolerance) {
+		} else if (timingDiffMs <= this.settings.tolerance) {
 			intensity = 0.4;
 		}
 
 		return {
-			isOnBeat: feedback.accuracy !== 'miss',
-			beatProgress: progress,
+			isOnBeat,
+			beatProgress: beatPhase,
 			timeToNext,
 			intensity
 		};
 	}
-	
-	// Debug: Get sync status for verification
+
+	/**
+	 * Check if currently on beat (for simple checks)
+	 */
+	isOnBeat(): boolean {
+		const feedback = this.checkRhythm();
+		return feedback.accuracy !== 'miss';
+	}
+
+	// ==================== Settings & State ====================
+
+	updateSettings(settings: Partial<RhythmSettings>): void {
+		const wasUsingMusic = this.settings.useMusic;
+		this.settings = { ...this.settings, ...settings };
+		
+		// Update Transport BPM if running
+		if (this.isRunning) {
+			getTransport().bpm.value = this.settings.bpm;
+		}
+		
+		// Handle music mode change
+		if (settings.useMusic !== undefined && settings.useMusic !== wasUsingMusic) {
+			if (settings.useMusic && !this.musicLoaded) {
+				this.loadRandomTrack();
+			}
+		}
+	}
+
+	getSettings(): RhythmSettings {
+		return { ...this.settings };
+	}
+
+	getCurrentTrack(): MusicTrack | null {
+		return this.currentTrack;
+	}
+
+	getDetectedBpm(): number {
+		return this.settings.bpm;
+	}
+
+	isUsingMusic(): boolean {
+		return this.settings.useMusic === true && this.musicLoaded;
+	}
+
+	isActive(): boolean {
+		return this.isRunning;
+	}
+
+	// ==================== Calibration ====================
+
+	setCalibrationOffset(offsetMs: number): void {
+		this.userCalibrationOffset = Math.max(-200, Math.min(200, offsetMs));
+		console.log(`🎵 Calibration offset: ${this.userCalibrationOffset}ms`);
+		
+		// Disable auto-calibration if user manually sets offset
+		if (offsetMs !== 0) {
+			this.autoCalibrationEnabled = false;
+			this.autoCalibrationSamples = [];
+		}
+	}
+
+	getCalibrationOffset(): number {
+		return this.userCalibrationOffset;
+	}
+
+	setAutoCalibration(enabled: boolean): void {
+		this.autoCalibrationEnabled = enabled;
+		if (!enabled) {
+			this.autoCalibrationSamples = [];
+		}
+		console.log(`🎵 Auto-calibration ${enabled ? 'enabled' : 'disabled'}`);
+	}
+
+	isAutoCalibrationEnabled(): boolean {
+		return this.autoCalibrationEnabled;
+	}
+
+	getAutoCalibrationSampleCount(): number {
+		return this.autoCalibrationSamples.length;
+	}
+
+	onCalibrationChange(callback: ((offset: number) => void) | null): void {
+		this.onCalibrationChangeCallback = callback;
+	}
+
+	resetAutoCalibration(): void {
+		this.autoCalibrationSamples = [];
+		this.userCalibrationOffset = 0;
+		this.autoCalibrationEnabled = true;
+		console.log('🎵 Auto-calibration reset');
+		
+		if (this.onCalibrationChangeCallback) {
+			this.onCalibrationChangeCallback(0);
+		}
+	}
+
+	private recordHitForAutoCalibration(signedTimingMs: number, accuracy: RhythmFeedback['accuracy']): void {
+		if (!this.autoCalibrationEnabled) return;
+		if (accuracy !== 'perfect' && accuracy !== 'good') return;
+		
+		this.autoCalibrationSamples.push(signedTimingMs);
+		
+		// Keep only recent samples
+		if (this.autoCalibrationSamples.length > this.AUTO_CALIBRATION_MAX_SAMPLES) {
+			this.autoCalibrationSamples.shift();
+		}
+		
+		this.tryApplyAutoCalibration();
+	}
+
+	private tryApplyAutoCalibration(): void {
+		if (this.autoCalibrationSamples.length < this.AUTO_CALIBRATION_MIN_SAMPLES) {
+			return;
+		}
+		
+		// Calculate median
+		const sorted = [...this.autoCalibrationSamples].sort((a, b) => a - b);
+		const mid = Math.floor(sorted.length / 2);
+		const median = sorted.length % 2 === 0
+			? (sorted[mid - 1] + sorted[mid]) / 2
+			: sorted[mid];
+		
+		// Only apply if significant
+		if (Math.abs(median) < 15) return;
+		
+		// Calculate adjustment
+		const adjustment = -Math.round(median);
+		const cappedAdjustment = Math.max(-this.AUTO_CALIBRATION_MAX_OFFSET, 
+			Math.min(this.AUTO_CALIBRATION_MAX_OFFSET, adjustment));
+		
+		const newOffset = Math.max(-200, Math.min(200, this.userCalibrationOffset + cappedAdjustment));
+		
+		if (Math.abs(newOffset - this.userCalibrationOffset) >= 10) {
+			const oldOffset = this.userCalibrationOffset;
+			this.userCalibrationOffset = newOffset;
+			
+			console.log(`🎵 Auto-calibration: ${oldOffset}ms → ${newOffset}ms (median: ${median.toFixed(1)}ms)`);
+			
+			this.autoCalibrationSamples = [];
+			
+			if (this.onCalibrationChangeCallback) {
+				this.onCalibrationChangeCallback(newOffset);
+			}
+		}
+	}
+
+	// ==================== Static Helpers ====================
+
+	/**
+	 * Parse rhythm settings from tournament description string
+	 */
+	static parseFromDescription(description: string): RhythmSettings | null {
+		// Format: [RHYTHM_MODE:true,BPM:120,TOLERANCE:150,MUSIC:true]
+		const rhythmMatch = description.match(/\[RHYTHM_MODE:true,BPM:(\d+),TOLERANCE:(\d+)(?:,MUSIC:(true|false))?\]/);
+		if (!rhythmMatch) return null;
+
+		return {
+			enabled: true,
+			bpm: parseInt(rhythmMatch[1], 10),
+			tolerance: parseInt(rhythmMatch[2], 10),
+			useMusic: rhythmMatch[3] === 'true'
+		};
+	}
+
+	// ==================== Debug ====================
+
 	getDebugInfo(): {
 		isRunning: boolean;
-		isAudioPlaying: boolean;
-		audioTimeMs: number;
-		performanceNow: number;
-		startTime: number;
-		audioStartTime: number;
-		beatOffset: number;
-		calibrationOffset: number;
+		transportSeconds: number;
+		transportPosition: string;
+		bpm: number;
+		beatPhase: number;
 		currentBeat: number;
-		beatInterval: number;
-		drift: number; // Difference between audio time and calculated time
+		calibrationOffset: number;
+		autoCalibrationSamples: number;
 	} {
-		const now = performance.now();
-		const audioTimeMs = this.musicElement?.currentTime ? this.musicElement.currentTime * 1000 : 0;
-		const expectedAudioTime = now - this.audioStartTime;
-		const drift = this.isAudioPlaying ? audioTimeMs - expectedAudioTime : 0;
-		
 		return {
 			isRunning: this.isRunning,
-			isAudioPlaying: this.isAudioPlaying,
-			audioTimeMs,
-			performanceNow: now,
-			startTime: this.startTime,
-			audioStartTime: this.audioStartTime,
-			beatOffset: this.beatOffset,
-			calibrationOffset: this.userCalibrationOffset,
+			transportSeconds: getTransport().seconds,
+			transportPosition: getTransport().position.toString(),
+			bpm: this.settings.bpm,
+			beatPhase: this.getBeatPhase(),
 			currentBeat: this.currentBeat,
-			beatInterval: this.beatInterval,
-			drift
+			calibrationOffset: this.userCalibrationOffset,
+			autoCalibrationSamples: this.autoCalibrationSamples.length
 		};
 	}
 }

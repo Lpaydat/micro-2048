@@ -1368,9 +1368,9 @@
 	onDestroy(() => {
 		setGameCreationStatus(false);
 		stopInspectorPlay();
-		// 🎵 Clean up rhythm engine to stop audio
+		// 🎵 Clean up rhythm engine to stop audio and dispose Tone.js resources
 		if (rhythmEngine) {
-			rhythmEngine.stop();
+			rhythmEngine.dispose();
 			rhythmEngine = null;
 		}
 	});
