@@ -336,7 +336,13 @@
 		// Use tournament description for rhythm settings (passed from leaderboard)
 		const parsedRhythm = RhythmEngine.parseFromDescription(tournamentDescription);
 		
-		if (parsedRhythm && $game.data?.board && !isInspectorMode) {
+		console.log('🎵 [INIT CHECK] tournamentDescription:', tournamentDescription?.substring(0, 50), '| parsedRhythm:', !!parsedRhythm, '| isInspectorMode:', isInspectorMode, '| rhythmEngine:', !!rhythmEngine);
+		
+		// Initialize rhythm mode when:
+		// 1. Rhythm settings are detected in description
+		// 2. Not in inspector mode
+		// Note: We DON'T require $game.data?.board - rhythm UI should show immediately
+		if (parsedRhythm && !isInspectorMode) {
 			rhythmSettings = parsedRhythm;
 			if (!rhythmEngine) {
 				// Create engine but don't start yet - wait for user interaction
@@ -347,9 +353,10 @@
 			}
 			// Note: New engine doesn't support updateSettings - settings are immutable
 			// If settings change, we'd need to recreate the engine
-		} else {
-			// No rhythm mode or in inspector mode, stop engine if running
+		} else if (!parsedRhythm) {
+			// No rhythm mode, stop engine if running
 			if (rhythmEngine) {
+				console.log('🎵 Rhythm mode disabled, stopping engine');
 				rhythmEngine.stop();
 				rhythmEngine = null;
 				showRhythmIndicator = false;
@@ -357,6 +364,8 @@
 				rhythmNeedsStart = false;
 			}
 		}
+		// Note: If in inspector mode but rhythm was detected, we keep the engine
+		// stopped but don't destroy it (in case user switches back)
 	}
 
 	// 🎵 Open calibration modal
