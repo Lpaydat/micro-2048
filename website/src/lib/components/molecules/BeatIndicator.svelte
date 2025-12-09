@@ -19,6 +19,11 @@
 	
 	// Beat flash (triggered by transport beat event)
 	let showBeatFlash = false;
+	
+	// BPM measurement from visual (heart reaching center)
+	let lastCenterTime: number | null = null;
+	let visualBpmSamples: number[] = [];
+	let wasAtCenter = false;
 
 	/**
 	 * Animation loop - runs every frame
@@ -51,6 +56,29 @@
 				leftBarPos = 50 * t;              // 0→50
 				rightBarPos = 100 - (50 * t);    // 100→50
 			}
+			
+			// Measure visual BPM: detect when bars reach center (phase near 0 or 1)
+			const isAtCenter = beatPhase < 0.05 || beatPhase > 0.95;
+			if (isAtCenter && !wasAtCenter) {
+				const now = performance.now();
+				if (lastCenterTime !== null) {
+					const intervalMs = now - lastCenterTime;
+					const measuredBpm = 60000 / intervalMs;
+					visualBpmSamples.push(measuredBpm);
+					
+					// Keep last 10 samples
+					if (visualBpmSamples.length > 10) {
+						visualBpmSamples.shift();
+					}
+					
+					// Calculate average
+					const avgBpm = visualBpmSamples.reduce((a, b) => a + b, 0) / visualBpmSamples.length;
+					
+					console.log(`🎯 [VISUAL] Beat! Interval: ${intervalMs.toFixed(0)}ms, Measured BPM: ${measuredBpm.toFixed(1)}, Avg BPM: ${avgBpm.toFixed(1)}`);
+				}
+				lastCenterTime = now;
+			}
+			wasAtCenter = isAtCenter;
 		}
 		
 		animationFrame = requestAnimationFrame(animate);
@@ -62,10 +90,33 @@
 		setTimeout(() => showMissFlash = false, 200);
 	}
 
+	// Transport beat timing measurement
+	let lastTransportBeatTime: number | null = null;
+	let transportBpmSamples: number[] = [];
+
 	// Called on actual transport beat (for debugging sync)
 	function onBeat(beatNumber: number) {
 		showBeatFlash = true;
 		setTimeout(() => showBeatFlash = false, 100);
+		
+		// Measure transport BPM
+		const now = performance.now();
+		if (lastTransportBeatTime !== null) {
+			const intervalMs = now - lastTransportBeatTime;
+			const measuredBpm = 60000 / intervalMs;
+			transportBpmSamples.push(measuredBpm);
+			
+			// Keep last 10 samples
+			if (transportBpmSamples.length > 10) {
+				transportBpmSamples.shift();
+			}
+			
+			// Calculate average
+			const avgBpm = transportBpmSamples.reduce((a, b) => a + b, 0) / transportBpmSamples.length;
+			
+			console.log(`⚡ [TRANSPORT] Beat #${beatNumber}! Interval: ${intervalMs.toFixed(0)}ms, Measured BPM: ${measuredBpm.toFixed(1)}, Avg BPM: ${avgBpm.toFixed(1)}`);
+		}
+		lastTransportBeatTime = now;
 	}
 
 	onMount(() => {
