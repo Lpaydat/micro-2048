@@ -27,6 +27,7 @@
 	import { getBoard } from '$lib/graphql/queries/getBoard';
 	import { requestFaucetMutation } from '$lib/graphql/mutations/requestFaucet';
 	import { requestLeaderboardRefresh } from '$lib/graphql/mutations/requestLeaderboardRefresh';
+	import { submitCurrentScore } from '$lib/graphql/mutations/submitCurrentScore';
 
 	interface Props {
 		leaderboardId?: string;
@@ -64,7 +65,9 @@
 	const mainClient = getContextClient();
 	// Must be $derived so it updates when leaderboardId changes (navigation between tournaments)
 	const leaderboardClient = $derived(getClient(leaderboardId, true));
-	const playerClient = $derived(getClient($userStore.chainId, true));
+	// Player client should only be created when we have a valid player chain ID
+	// Do NOT use main chain as default - that would send player mutations to wrong chain!
+	const playerClient = $derived($userStore.chainId ? getClient($userStore.chainId, false) : null);
 
 	const leaderboard = $derived(
 		queryStore({
@@ -73,7 +76,7 @@
 		})
 	);
 	const currentBoardId = $derived(getBoardId(leaderboardId));
-	const board = $derived(getBoard(playerClient));
+	const board = $derived(playerClient ? getBoard(playerClient) : null);
 
 	const isEnded = $derived.by(() => {
 		const endTime = Number($leaderboard?.data?.leaderboard?.endTime ?? '0');
@@ -107,7 +110,9 @@
 	let notFoundCount = $state(0);
 	let isNotFound = $state(false);
 	let redirectCountdown = $state(5);
-	const MAX_NOT_FOUND_ATTEMPTS = 5; // Stop after 5 consecutive not found (~25 seconds)
+	let leaderboardLoadStartTime: number | null = $state(null); // Track when we started looking
+	const MAX_NOT_FOUND_ATTEMPTS = 10; // Stop after 10 consecutive not found (~50 seconds at 5s interval)
+	const NEW_LEADERBOARD_GRACE_PERIOD = 30000; // 30 seconds grace period for newly created tournaments
 
 	// Get current player's best score from leaderboard
 	const playerLeaderboardScore = $derived.by(() => {
@@ -165,7 +170,52 @@
 		lastRefreshTime = Date.now();
 
 		try {
-			// 🚀 Call updateLeaderboard mutation directly on leaderboard chain
+			// 🚀 Step 1: Submit current score from player's board (if applicable)
+			// This sends SubmitScore message to leaderboard chain
+			console.log('🔄 Refresh LB - checking conditions:', {
+				currentBoardId,
+				username: $userStore.username,
+				hasPasswordHash: !!$userStore.passwordHash,
+				playerChainId: $userStore.chainId
+			});
+			
+			// Must have player's chain ID to submit score (not main chain!)
+			if (currentBoardId && $userStore.username && $userStore.passwordHash && $userStore.chainId && playerClient) {
+				console.log('✅ Submitting current score before refresh...', { boardId: currentBoardId, chainId: $userStore.chainId });
+				const scoreResult = submitCurrentScore(
+					playerClient,
+					currentBoardId,
+					$userStore.username,
+					$userStore.passwordHash
+				);
+				if (scoreResult) {
+					// Wait for the mutation to complete
+					await new Promise<void>((resolve) => {
+						scoreResult.subscribe((res) => {
+							if (res.fetching) return; // Still loading
+							if (res.error) {
+								console.warn('❌ Score submission failed:', res.error.message);
+							} else {
+								console.log('✅ Score submitted successfully, data:', res.data);
+							}
+							resolve();
+						});
+					});
+				}
+				// Wait a bit more for the message to propagate
+				await new Promise(resolve => setTimeout(resolve, 1500));
+			} else {
+				console.log('⏭️ Skipping score submission - missing:', {
+					hasBoardId: !!currentBoardId,
+					hasUsername: !!$userStore.username,
+					hasPasswordHash: !!$userStore.passwordHash,
+					hasPlayerChainId: !!$userStore.chainId,
+					hasPlayerClient: !!playerClient
+				});
+			}
+
+			// 🚀 Step 2: Call updateLeaderboard mutation directly on leaderboard chain
+			// This triggers block production which processes pending SubmitScore messages
 			const result = requestLeaderboardRefresh(leaderboardClient);
 			if (result) {
 				result.subscribe((res) => {
@@ -323,21 +373,30 @@
 	});
 
 	onMount(() => {
+		// Track when we started looking for this leaderboard
+		leaderboardLoadStartTime = Date.now();
 		leaderboard.reexecute({ requestPolicy: 'network-only' });
 
 		const interval = setInterval(() => {
 			// Stop polling if not found
 			if (isNotFound) return;
 
-			// Check if leaderboard data exists
+			// Check if leaderboard data exists - only count when NOT fetching
 			if (!$leaderboard.fetching) {
 				if ($leaderboard.data?.leaderboard?.leaderboardId) {
 					// Found - reset counter
 					notFoundCount = 0;
+					leaderboardLoadStartTime = null;
 				} else {
 					// Not found - increment counter
 					notFoundCount++;
-					if (notFoundCount >= MAX_NOT_FOUND_ATTEMPTS) {
+					
+					// Check if we're still in grace period for newly created tournaments
+					const timeSinceStart = leaderboardLoadStartTime ? Date.now() - leaderboardLoadStartTime : Infinity;
+					const isInGracePeriod = timeSinceStart < NEW_LEADERBOARD_GRACE_PERIOD;
+					
+					// Only trigger "not found" if we've exceeded attempts AND grace period
+					if (notFoundCount >= MAX_NOT_FOUND_ATTEMPTS && !isInGracePeriod) {
 						isNotFound = true;
 						// Start redirect countdown
 						const countdownInterval = setInterval(() => {

@@ -106,6 +106,15 @@ pub enum Operation {
     /// This processes the inbox to receive RegisterPlayer message
     /// No authentication needed - just triggers block production
     ClaimChain,
+    
+    /// 🚀 MANUAL SCORE SUBMISSION: Submit current board score to leaderboard
+    /// Called when user clicks "refresh leaderboard" button
+    /// Only sends if: score > 0 AND score > player's tournament best
+    SubmitCurrentScore {
+        board_id: String,
+        player: String,
+        password_hash: String,
+    },
 }
 
 #[derive(Debug, Deserialize, Serialize)]

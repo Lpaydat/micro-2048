@@ -13,7 +13,7 @@ const CONFIG = {
 		website: 'localhost',
 		port: '8088', // Linera node port (not 5173 which is SvelteKit dev server)
 		chainId: '635d6c4448d1c21f46640c17ea57344119cfc815fa0b9ad1f010e8b806986cf0',
-		applicationId: 'e067fc16298eabd266c76102b85f1c4a0ee352d19c07d59a56aaad4316ee01ba'
+		applicationId: 'd0b918eb1a0d4b70b4698991ab979990e0e5260816964334d85f66f9e35f6dd4'
 	},
 	production: {
 		website: 'api.micro2048.xyz',
@@ -45,9 +45,9 @@ const TOURNAMENT_ID =
 	__ENV.TOURNAMENT_ID || 'a780876dde256280235ca6937054c914e34b2a33644e713646f55bf0b358d5b6'; // Leaderboard ID
 const NUM_PLAYERS = parseInt(__ENV.NUM_PLAYERS || '20'); // Number of mock players
 const GAMES_PER_CYCLE = parseInt(__ENV.GAMES_PER_CYCLE || '3'); // Games per player per cycle (not used in infinite mode)
-const MOVES_PER_BATCH = parseInt(__ENV.MOVES_PER_BATCH || '15'); // Moves in each batch (10-20 range)
-const BATCH_INTERVAL = parseFloat(__ENV.BATCH_INTERVAL || '0.5'); // Seconds between batches (0.5s for fast gameplay)
-const BATCHES_PER_GAME = parseInt(__ENV.BATCHES_PER_GAME || '5'); // Number of batches per game
+const MOVES_PER_BATCH = parseInt(__ENV.MOVES_PER_BATCH || '20'); // Moves in each batch (larger batches, less frequent)
+const BATCH_INTERVAL = parseFloat(__ENV.BATCH_INTERVAL || '5'); // Seconds between batches (5s - realistic frontend behavior)
+const BATCHES_PER_GAME = parseInt(__ENV.BATCHES_PER_GAME || '6'); // Number of batches per game (more batches to compensate)
 const REGISTRATION_WAIT = parseInt(__ENV.REGISTRATION_WAIT || '10'); // Wait after registration (seconds)
 const TEST_DURATION = __ENV.TEST_DURATION || '10m'; // Total test duration (e.g., '10m', '1h')
 
@@ -93,9 +93,9 @@ const generateMoves = (count: number): string => {
 	const moves: [string, string][] = [];
 	for (let i = 0; i < count; i++) {
 		const direction = directions[Math.floor(Math.random() * directions.length)];
-		// Fast gameplay: 100-200ms per move (average 150ms)
-		// Real fast players can make moves every 100-300ms
-		const timestamp = Math.floor(baseTimestamp + i * 150 + Math.random() * 100);
+		// Realistic gameplay: 200-400ms per move (average 300ms)
+		// Simulates a moderately fast player making decisions
+		const timestamp = Math.floor(baseTimestamp + i * 300 + Math.random() * 100);
 		moves.push([direction, timestamp.toString()]);
 	}
 

@@ -281,6 +281,27 @@ impl MutationHandler {
         self.runtime.schedule_operation(&operation);
         []
     }
+    
+    /// 🚀 MANUAL SCORE SUBMISSION: Submit current board score to leaderboard
+    /// Called when user clicks "refresh leaderboard" button
+    /// Only sends if: score > 0 AND score > player's tournament best
+    async fn submit_current_score(
+        &self,
+        board_id: String,
+        player: String,
+        password_hash: String,
+    ) -> [u8; 0] {
+        // Validate player exists and password is correct
+        self.validate_player_password(&player, &password_hash).await;
+        
+        let operation = Operation::SubmitCurrentScore {
+            board_id,
+            player,
+            password_hash,
+        };
+        self.runtime.schedule_operation(&operation);
+        []
+    }
 }
 
 impl MutationHandler {

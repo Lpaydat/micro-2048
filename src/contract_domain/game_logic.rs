@@ -97,12 +97,13 @@ impl GameMoveProcessor {
     }
 }
 
+#[allow(dead_code)]
 pub enum GameMoveResult {
     Success {
         final_board: u64,
         final_score: u64,
         final_highest_tile: u64,
-        initial_highest_tile: u64,
+        initial_highest_tile: u64, // Kept for potential future use
         is_ended: bool,
         latest_timestamp: u64,
         move_history: Vec<ProcessedMove>,

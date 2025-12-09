@@ -58,6 +58,11 @@ pub struct BoardState {
     // 🚀 Hybrid score submission optimization
     pub highest_tile_sent: RegisterView<u64>,    // Highest tile we've sent to leaderboard
     pub last_score_sent_time: RegisterView<u64>, // Timestamp of last score submission (micros)
+    // 🚀 Debounced score submission - reduce message spam
+    pub tile_milestone_send_after: RegisterView<u64>,    // Send tile milestone after this time (micros)
+    pub score_improvement_send_after: RegisterView<u64>, // Send score improvement after this time (micros)
+    pub pending_tile_milestone: RegisterView<u64>,       // Pending highest tile to send (0 = none)
+    pub pending_score: RegisterView<u64>,                // Pending score to send (0 = none)
 }
 
 #[derive(Debug, Default, Deserialize, Serialize, Clone)]
