@@ -164,7 +164,7 @@
 
 <form
 	onsubmit={preventDefault(handleSubmit)}
-	class="mx-auto w-full max-w-md rounded-md bg-[#FAF8EF] p-6 shadow-md"
+	class="mx-auto w-full max-w-md rounded-md bg-[#FAF8EF] p-6 shadow-md max-h-[85vh] overflow-y-auto"
 >
 	<div class="space-y-6">
 		<!-- Title -->
