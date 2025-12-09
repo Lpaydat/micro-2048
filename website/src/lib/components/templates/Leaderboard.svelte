@@ -103,6 +103,12 @@
 	let now = $state(Date.now()); // Reactive time for countdown
 	const REFRESH_COOLDOWN_MS = 15000; // 15 seconds cooldown
 
+	// Not found tracking - stop polling after consecutive failures
+	let notFoundCount = $state(0);
+	let isNotFound = $state(false);
+	let redirectCountdown = $state(5);
+	const MAX_NOT_FOUND_ATTEMPTS = 5; // Stop after 5 consecutive not found (~25 seconds)
+
 	// Get current player's best score from leaderboard
 	const playerLeaderboardScore = $derived.by(() => {
 		const username = $userStore.username;
@@ -320,6 +326,32 @@
 		leaderboard.reexecute({ requestPolicy: 'network-only' });
 
 		const interval = setInterval(() => {
+			// Stop polling if not found
+			if (isNotFound) return;
+
+			// Check if leaderboard data exists
+			if (!$leaderboard.fetching) {
+				if ($leaderboard.data?.leaderboard?.leaderboardId) {
+					// Found - reset counter
+					notFoundCount = 0;
+				} else {
+					// Not found - increment counter
+					notFoundCount++;
+					if (notFoundCount >= MAX_NOT_FOUND_ATTEMPTS) {
+						isNotFound = true;
+						// Start redirect countdown
+						const countdownInterval = setInterval(() => {
+							redirectCountdown--;
+							if (redirectCountdown <= 0) {
+								clearInterval(countdownInterval);
+								goto('/');
+							}
+						}, 1000);
+						return;
+					}
+				}
+			}
+
 			leaderboard.reexecute({ requestPolicy: 'network-only' });
 		}, updateInterval);
 
@@ -339,7 +371,39 @@
 	{/snippet}
 
 	{#snippet main()}
-		{#if !leaderboardId}
+		{#if isNotFound}
+			<div class="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
+				<div class="text-6xl">🔍</div>
+				<h2 class="text-xl font-semibold text-gray-200">Tournament Not Found</h2>
+				<p class="text-gray-400">
+					This tournament doesn't exist or hasn't been created yet.
+				</p>
+				<p class="text-sm text-gray-500">
+					Redirecting to home in {redirectCountdown} seconds...
+				</p>
+				<div class="flex gap-3">
+					<button
+						type="button"
+						class="btn variant-filled-primary"
+						onclick={() => {
+							notFoundCount = 0;
+							isNotFound = false;
+							redirectCountdown = 5;
+							leaderboard.reexecute({ requestPolicy: 'network-only' });
+						}}
+					>
+						Retry
+					</button>
+					<button
+						type="button"
+						class="btn variant-filled-surface"
+						onclick={() => goto('/')}
+					>
+						Go Home
+					</button>
+				</div>
+			</div>
+		{:else if !leaderboardId}
 			<RankerLeaderboard
 				rankers={$leaderboard.data?.leaderboard?.rankers}
 				{balance}
