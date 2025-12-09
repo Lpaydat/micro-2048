@@ -338,7 +338,9 @@ export class RhythmEngine {
 		// Adjust for:
 		// - firstBeatOffset: when music beat actually starts in the file
 		// - calibrationOffset: user's device latency adjustment (the ONLY timing adjustment)
-		let seconds = transport.seconds - this.firstBeatOffset + this.calibrationOffset;
+		//   SUBTRACT calibration because: if user taps late (positive offset), we need to
+		//   shift the visual earlier (subtract from time) so beats align with when they hear it
+		let seconds = transport.seconds - this.firstBeatOffset - this.calibrationOffset;
 		
 		// Handle negative time (before first beat)
 		if (seconds < 0) {
@@ -363,7 +365,8 @@ export class RhythmEngine {
 		const beatLength = 60 / this.bpm;
 		
 		// Adjust for first beat offset and calibration
-		let seconds = transport.seconds - this.firstBeatOffset + this.calibrationOffset;
+		// SUBTRACT calibration: if user taps late (positive offset), shift window earlier
+		let seconds = transport.seconds - this.firstBeatOffset - this.calibrationOffset;
 		
 		// Handle negative time
 		if (seconds < 0) {

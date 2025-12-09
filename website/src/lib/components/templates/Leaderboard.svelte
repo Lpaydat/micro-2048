@@ -283,6 +283,13 @@
 				const url = new URL('/game', window.location.origin);
 				url.searchParams.set('boardId', $board?.data?.board?.boardId);
 				url.searchParams.set('leaderboardId', leaderboardId);
+				
+				// Pass tournament description for rhythm mode detection on first load
+				// This is needed because leaderboard chain may not have data yet
+				const description = $leaderboard?.data?.leaderboard?.description;
+				if (description) {
+					url.searchParams.set('description', description);
+				}
 
 				setBoardId($board.data?.board?.boardId, leaderboardId);
 
