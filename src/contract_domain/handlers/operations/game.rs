@@ -27,7 +27,6 @@ impl GameOperationHandler {
             .load_entry_mut(&board_id)
             .await
             .unwrap();
-        let shard_id = board.shard_id.get().clone();
 
         if player != *board.player.get() {
             panic!("You can only make move on your own board");
@@ -122,15 +121,6 @@ impl GameOperationHandler {
                         .move_count
                         .set(current_move_count + move_history.len() as u32);
 
-                    // 🚀 NEW: Always emit score update on every score change!
-                    let game_status = if is_ended {
-                        // Game ends only when no moves available (board is full)
-                        // Players can continue indefinitely for higher scores (2048 -> 4096 -> 8192 -> ...)
-                        GameStatus::Ended(GameEndReason::NoMoves)
-                    } else {
-                        GameStatus::Active
-                    };
-
                     // 🔒 FIX: Get tournament ID from the BOARD, not from local leaderboard
                     // The board knows which tournament it belongs to
                     let leaderboard_id = board.leaderboard_id.get().clone();
@@ -150,23 +140,56 @@ impl GameOperationHandler {
                         .unwrap()
                         .unwrap_or(0);
 
-                    // Get player's current board count for this tournament
-                    let player_state = contract
-                        .state
-                        .players
-                        .load_entry_mut(&player)
-                        .await
-                        .unwrap();
-                    let current_board_count = player_state
-                        .boards_per_tournament
-                        .get(&leaderboard_id)
-                        .await
-                        .unwrap()
-                        .unwrap_or(0);
+                    // 🚀 HYBRID SCORE SUBMISSION OPTIMIZATION
+                    // Only send SubmitScore when one of these conditions is met:
+                    // 1. Board ended (game over - no moves available)
+                    // 2. Tournament ended (time expired)
+                    // 3. New highest tile achieved (milestone)
+                    // 4. Heartbeat timer expired (90 seconds since last send)
+                    // AND score > tournament_best
 
-                    // 🚀 MESSAGE-BASED: Send SubmitScore directly to leaderboard (replaces event)
-                    // Only send when score > 0 AND score > current_best
-                    if final_score > 0 && final_score > current_best {
+                    let current_time = contract.runtime.system_time().micros();
+                    let end_time_val = *board.end_time.get();
+                    let tournament_just_ended = end_time_val > 0 && current_time >= end_time_val * 1000; // end_time is in millis, current_time in micros
+                    let board_ended = is_ended;
+                    
+                    // Check for new highest tile milestone
+                    let highest_tile_sent = *board.highest_tile_sent.get();
+                    let new_highest_tile_achieved = final_highest_tile > highest_tile_sent && final_highest_tile > initial_highest_tile;
+                    
+                    // Check heartbeat timer (30 seconds = 30_000_000 microseconds)
+                    let last_score_sent_time = *board.last_score_sent_time.get();
+                    const HEARTBEAT_INTERVAL_MICROS: u64 = 30_000_000; // 30 seconds
+                    let heartbeat_expired = last_score_sent_time == 0 || (current_time - last_score_sent_time) >= HEARTBEAT_INTERVAL_MICROS;
+
+                    let should_send = final_score > 0 
+                        && final_score > current_best 
+                        && (tournament_just_ended || board_ended || new_highest_tile_achieved || heartbeat_expired);
+
+                    if should_send {
+                        // Determine game status
+                        let game_status = if board_ended {
+                            GameStatus::Ended(GameEndReason::NoMoves)
+                        } else if tournament_just_ended {
+                            GameStatus::Ended(GameEndReason::TournamentEnded)
+                        } else {
+                            GameStatus::Active
+                        };
+
+                        // Get player's current board count for this tournament
+                        let player_state = contract
+                            .state
+                            .players
+                            .load_entry_mut(&player)
+                            .await
+                            .unwrap();
+                        let current_board_count = player_state
+                            .boards_per_tournament
+                            .get(&leaderboard_id)
+                            .await
+                            .unwrap()
+                            .unwrap_or(0);
+
                         use linera_sdk::linera_base_types::ChainId;
                         use std::str::FromStr;
                         
@@ -189,6 +212,16 @@ impl GameOperationHandler {
                                 .send_to(leaderboard_chain_id);
                         }
 
+                        // Update tracking state
+                        let board = contract
+                            .state
+                            .boards
+                            .load_entry_mut(&board_id)
+                            .await
+                            .unwrap();
+                        board.highest_tile_sent.set(final_highest_tile);
+                        board.last_score_sent_time.set(current_time);
+
                         // Update player's best score for THIS TOURNAMENT
                         let player_record = contract
                             .state
@@ -207,23 +240,30 @@ impl GameOperationHandler {
                 }
             }
         } else if moves.is_empty() {
+            // 🚀 FORCED GAME END (tournament time expired or explicit end)
+            // This always sends final score if it beats tournament best
             let score = Game::score(*board.board.get());
+            let highest_tile = Game::highest_tile(*board.board.get());
 
             // 🚀 MARK GAME AS ENDED
             board.is_ended.set(true);
 
-            // 🚀 Emit player score update for tournament end (only if beats current best)
-            // This case handles when tournament time expires and game ends
-            let leaderboard = contract
+            // Get tournament ID from the board
+            let leaderboard_id = board.leaderboard_id.get().clone();
+
+            // Get current best score for this player from player_records
+            let player_record = contract
                 .state
-                .leaderboards
-                .load_entry_mut("")
+                .player_records
+                .load_entry_mut(&player)
                 .await
                 .unwrap();
-            let leaderboard_id = leaderboard.leaderboard_id.get().clone();
-
-            // Get current best score for this player in this leaderboard
-            let current_best = leaderboard.score.get(&player).await.unwrap().unwrap_or(0);
+            let current_best = player_record
+                .best_score
+                .get(&leaderboard_id)
+                .await
+                .unwrap()
+                .unwrap_or(0);
 
             // 🚀 MESSAGE-BASED: Send SubmitScore for game end (only if score > 0 and beats current best)
             if score > 0 && score > current_best {
@@ -244,8 +284,6 @@ impl GameOperationHandler {
                 use linera_sdk::linera_base_types::ChainId;
                 use std::str::FromStr;
                 
-                // Extract values before borrowing runtime
-                let highest_tile = Game::highest_tile(*board.board.get());
                 let player_chain_id = contract.runtime.chain_id().to_string();
                 let timestamp = contract.runtime.system_time().micros();
                 
@@ -264,6 +302,18 @@ impl GameOperationHandler {
                         })
                         .send_to(leaderboard_chain_id);
                 }
+
+                // Update player's best score for THIS TOURNAMENT
+                let player_record = contract
+                    .state
+                    .player_records
+                    .load_entry_mut(&player)
+                    .await
+                    .unwrap();
+                player_record
+                    .best_score
+                    .insert(&leaderboard_id, score)
+                    .unwrap();
             }
         } else {
             panic!("Game is ended");
