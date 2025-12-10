@@ -122,14 +122,17 @@ impl LeaderboardMessageHandler {
 
         // 🔒 VALIDATION: Verify tournament times match leaderboard's stored times
         // This prevents tampered submissions from player chains with modified times
+        // Only validate if BOTH have non-zero times (0 = unlimited/not set)
         let lb_start_time = *leaderboard.start_time.get();
         let lb_end_time = *leaderboard.end_time.get();
         
-        if tournament_start_time != lb_start_time {
+        // Validate start_time only if both are set (non-zero)
+        if tournament_start_time != 0 && lb_start_time != 0 && tournament_start_time != lb_start_time {
             // Silently reject - times don't match (possible tampering or stale board)
             return;
         }
-        if tournament_end_time != lb_end_time {
+        // Validate end_time only if both are set (non-zero)
+        if tournament_end_time != 0 && lb_end_time != 0 && tournament_end_time != lb_end_time {
             // Silently reject - times don't match (possible tampering or stale board)
             return;
         }
