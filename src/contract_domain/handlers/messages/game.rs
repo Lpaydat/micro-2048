@@ -16,6 +16,7 @@ impl GameMessageHandler {
         timestamp: u64,
         leaderboard_id: String,
         shard_id: String,
+        start_time: u64,
         end_time: u64,
     ) {
         contract
@@ -50,6 +51,7 @@ impl GameMessageHandler {
         game.leaderboard_id.set(leaderboard_id.clone());
         game.shard_id.set(shard_id);
         game.chain_id.set(player_obj.chain_id.get().to_string());
+        game.start_time.set(start_time);
         game.end_time.set(end_time);
         game.created_at.set(timestamp);
 

@@ -98,6 +98,8 @@ impl LeaderboardMessageHandler {
     /// 
     /// This is the main handler for the message-based architecture.
     /// Player chains send SubmitScore directly to leaderboard chain.
+    /// 
+    /// 🔒 VALIDATION: Validates that tournament times in message match leaderboard times
     pub async fn handle_submit_score(
         contract: &mut crate::Game2048Contract,
         player: String,
@@ -108,6 +110,8 @@ impl LeaderboardMessageHandler {
         game_status: game2048::GameStatus,
         timestamp: u64,
         boards_in_tournament: u32,
+        tournament_start_time: u64,
+        tournament_end_time: u64,
     ) {
         let leaderboard = contract
             .state
@@ -115,6 +119,20 @@ impl LeaderboardMessageHandler {
             .load_entry_mut("")
             .await
             .unwrap();
+
+        // 🔒 VALIDATION: Verify tournament times match leaderboard's stored times
+        // This prevents tampered submissions from player chains with modified times
+        let lb_start_time = *leaderboard.start_time.get();
+        let lb_end_time = *leaderboard.end_time.get();
+        
+        if tournament_start_time != lb_start_time {
+            // Silently reject - times don't match (possible tampering or stale board)
+            return;
+        }
+        if tournament_end_time != lb_end_time {
+            // Silently reject - times don't match (possible tampering or stale board)
+            return;
+        }
 
         // Get current best score for this player
         let current_best = leaderboard.score.get(&player).await.unwrap().unwrap_or(0);

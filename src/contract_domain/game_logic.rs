@@ -15,6 +15,7 @@ impl GameMoveProcessor {
         player: &str,
         moves: &[(Direction, u64)],
         initial_board: u64,
+        start_time: Option<u64>,
         end_time: Option<u64>,
     ) -> GameMoveResult {
         let initial_highest_tile = Game::highest_tile(initial_board);
@@ -29,11 +30,21 @@ impl GameMoveProcessor {
                 break;
             }
 
-            // Only validate end_time if it's set (Some value)
-            // NOTE: timestamp is in milliseconds (from frontend), end_time is in microseconds
+            // NOTE: timestamp is in milliseconds (from frontend), start/end_time is in microseconds
+            let timestamp_micros = *timestamp * 1000;
+
+            // 🔒 VALIDATION: Reject moves before tournament start
+            if let Some(start_time_value) = start_time {
+                if timestamp_micros < start_time_value {
+                    return GameMoveResult::Error(
+                        "Move timestamp is before tournament start time".to_string(),
+                    );
+                }
+            }
+
+            // 🔒 VALIDATION: End game if move is after tournament end
             if let Some(end_time_value) = end_time {
-                if *timestamp * 1000 > end_time_value {
-                    // Convert ms to μs for comparison
+                if timestamp_micros > end_time_value {
                     is_ended = true;
                     break;
                 }

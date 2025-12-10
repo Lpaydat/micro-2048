@@ -37,8 +37,14 @@ impl GameOperationHandler {
             serde_json::from_str(&moves).unwrap_or_else(|_| panic!("Invalid moves format"));
 
         let is_ended = *board.is_ended.get();
+        let start_time_raw = *board.start_time.get();
         let end_time_raw = *board.end_time.get();
         // Convert 0 or u64::MAX to None (unlimited), otherwise Some(value)
+        let start_time = if start_time_raw == 0 || start_time_raw == u64::MAX {
+            None
+        } else {
+            Some(start_time_raw)
+        };
         let end_time = if end_time_raw == 0 || end_time_raw == u64::MAX {
             None
         } else {
@@ -76,6 +82,7 @@ impl GameOperationHandler {
                 &player,
                 &moves_u64,
                 initial_board,
+                start_time,
                 end_time,
             ) {
                 GameMoveResult::Success {
@@ -197,6 +204,8 @@ impl GameOperationHandler {
                                     game_status,
                                     timestamp: latest_timestamp,
                                     boards_in_tournament: current_board_count,
+                                    tournament_start_time: start_time_raw,
+                                    tournament_end_time: end_time_raw,
                                 })
                                 .send_to(leaderboard_chain_id);
                         }
@@ -233,6 +242,10 @@ impl GameOperationHandler {
             // This always sends final score if it beats tournament best
             let score = Game::score(*board.board.get());
             let highest_tile = Game::highest_tile(*board.board.get());
+            
+            // Get tournament times for SubmitScore message
+            let board_start_time = *board.start_time.get();
+            let board_end_time = *board.end_time.get();
 
             // 🚀 MARK GAME AS ENDED
             board.is_ended.set(true);
@@ -288,6 +301,8 @@ impl GameOperationHandler {
                             game_status: GameStatus::Ended(GameEndReason::TournamentEnded),
                             timestamp,
                             boards_in_tournament: current_board_count,
+                            tournament_start_time: board_start_time,
+                            tournament_end_time: board_end_time,
                         })
                         .send_to(leaderboard_chain_id);
                 }
@@ -327,13 +342,32 @@ impl GameOperationHandler {
             .validate_player_password(&player, &password_hash)
             .await;
 
-        // Get tournament end time from cache (if available)
-        let tournament_end_time =
+        // Get tournament times from cache (if available)
+        let (tournament_start_time, tournament_end_time) =
             if let Some(tournament) = contract.get_cached_tournament(&leaderboard_id).await {
-                tournament.end_time.unwrap_or(0)
+                (
+                    tournament.start_time.unwrap_or(0),
+                    tournament.end_time.unwrap_or(0),
+                )
             } else {
-                0 // Default to unlimited if tournament not in cache
+                (0, 0) // Default to unlimited if tournament not in cache
             };
+
+        // 🔒 VALIDATION: Reject board creation if tournament hasn't started yet
+        if tournament_start_time > 0 {
+            let current_time = contract.runtime.system_time().micros();
+            if current_time < tournament_start_time {
+                panic!("Tournament has not started yet");
+            }
+        }
+
+        // 🔒 VALIDATION: Reject board creation if tournament has already ended
+        if tournament_end_time > 0 {
+            let current_time = contract.runtime.system_time().micros();
+            if current_time >= tournament_end_time {
+                panic!("Tournament has already ended");
+            }
+        }
 
         // Create board locally
         let nonce = contract.state.nonce.get();
@@ -357,6 +391,7 @@ impl GameOperationHandler {
         game.shard_id.set(String::new()); // No shard in message-based architecture
         game.chain_id.set(contract.runtime.chain_id().to_string());
         game.created_at.set(timestamp);
+        game.start_time.set(tournament_start_time);
         game.end_time.set(tournament_end_time);
 
         contract.state.nonce.set(nonce + 1);
@@ -485,6 +520,8 @@ impl GameOperationHandler {
         let highest_tile = Game::highest_tile(current_board);
         let is_ended = *board.is_ended.get();
         let leaderboard_id = board.leaderboard_id.get().clone();
+        let board_start_time = *board.start_time.get();
+        let board_end_time = *board.end_time.get();
 
         // Get current best score for this player in this tournament
         let player_record = contract
@@ -542,6 +579,8 @@ impl GameOperationHandler {
                     game_status,
                     timestamp,
                     boards_in_tournament: current_board_count,
+                    tournament_start_time: board_start_time,
+                    tournament_end_time: board_end_time,
                 })
                 .send_to(leaderboard_chain_id);
         }
