@@ -204,8 +204,8 @@ impl GameOperationHandler {
                                     game_status,
                                     timestamp: latest_timestamp,
                                     boards_in_tournament: current_board_count,
-                                    tournament_start_time: start_time_raw,
-                                    tournament_end_time: end_time_raw,
+                                    start_time: start_time_raw,
+                                    end_time: end_time_raw,
                                 })
                                 .send_to(leaderboard_chain_id);
                         }
@@ -301,8 +301,8 @@ impl GameOperationHandler {
                             game_status: GameStatus::Ended(GameEndReason::TournamentEnded),
                             timestamp,
                             boards_in_tournament: current_board_count,
-                            tournament_start_time: board_start_time,
-                            tournament_end_time: board_end_time,
+                            start_time: board_start_time,
+                            end_time: board_end_time,
                         })
                         .send_to(leaderboard_chain_id);
                 }
@@ -579,8 +579,8 @@ impl GameOperationHandler {
                     game_status,
                     timestamp,
                     boards_in_tournament: current_board_count,
-                    tournament_start_time: board_start_time,
-                    tournament_end_time: board_end_time,
+                    start_time: board_start_time,
+                    end_time: board_end_time,
                 })
                 .send_to(leaderboard_chain_id);
         }
