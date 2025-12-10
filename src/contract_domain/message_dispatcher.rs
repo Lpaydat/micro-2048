@@ -98,8 +98,8 @@ impl MessageDispatcher {
                 game_status,
                 timestamp,
                 boards_in_tournament,
-                tournament_start_time,
-                tournament_end_time,
+                start_time,
+                end_time,
             } => {
                 LeaderboardMessageHandler::handle_submit_score(
                     contract,
@@ -111,8 +111,8 @@ impl MessageDispatcher {
                     game_status,
                     timestamp,
                     boards_in_tournament,
-                    tournament_start_time,
-                    tournament_end_time,
+                    start_time,
+                    end_time,
                 )
                 .await;
             }

@@ -99,7 +99,7 @@ impl LeaderboardMessageHandler {
     /// This is the main handler for the message-based architecture.
     /// Player chains send SubmitScore directly to leaderboard chain.
     /// 
-    /// 🔒 VALIDATION: Validates that tournament times in message match leaderboard times
+    /// 🔒 VALIDATION: Validates that tournament times in message match leaderboard times (if set)
     pub async fn handle_submit_score(
         contract: &mut crate::Game2048Contract,
         player: String,
@@ -110,8 +110,8 @@ impl LeaderboardMessageHandler {
         game_status: game2048::GameStatus,
         timestamp: u64,
         boards_in_tournament: u32,
-        tournament_start_time: u64,
-        tournament_end_time: u64,
+        start_time: u64,
+        end_time: u64,
     ) {
         let leaderboard = contract
             .state
@@ -121,18 +121,17 @@ impl LeaderboardMessageHandler {
             .unwrap();
 
         // 🔒 VALIDATION: Verify tournament times match leaderboard's stored times
-        // This prevents tampered submissions from player chains with modified times
-        // Only validate if BOTH have non-zero times (0 = unlimited/not set)
+        // Only validate if BOTH have non-zero times (0 = unlimited)
         let lb_start_time = *leaderboard.start_time.get();
         let lb_end_time = *leaderboard.end_time.get();
         
-        // Validate start_time only if both are set (non-zero)
-        if tournament_start_time != 0 && lb_start_time != 0 && tournament_start_time != lb_start_time {
+        // Validate start_time: if both are set (non-zero), they must match
+        if start_time != 0 && lb_start_time != 0 && start_time != lb_start_time {
             // Silently reject - times don't match (possible tampering or stale board)
             return;
         }
-        // Validate end_time only if both are set (non-zero)
-        if tournament_end_time != 0 && lb_end_time != 0 && tournament_end_time != lb_end_time {
+        // Validate end_time: if both are set (non-zero), they must match
+        if end_time != 0 && lb_end_time != 0 && end_time != lb_end_time {
             // Silently reject - times don't match (possible tampering or stale board)
             return;
         }

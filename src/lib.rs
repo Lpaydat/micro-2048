@@ -217,9 +217,10 @@ pub enum Message {
         game_status: GameStatus,
         timestamp: u64,
         boards_in_tournament: u32,
-        // Tournament time bounds for validation on LB chain
-        tournament_start_time: u64, // 0 = unlimited
-        tournament_end_time: u64,   // 0 = unlimited
+        /// Tournament start time (0 = unlimited)
+        start_time: u64,
+        /// Tournament end time (0 = unlimited)
+        end_time: u64,
     },
 }
 
