@@ -190,7 +190,6 @@
 				const lastSubmitted = getLastSubmittedScore(leaderboardId);
 				
 				if (currentBoardScore > lastSubmitted) {
-					console.log('✅ Submitting current score before refresh...', { boardId: currentBoardId, currentBoardScore, lastSubmitted });
 					const scoreResult = submitCurrentScore(
 						playerClient,
 						currentBoardId,
@@ -204,7 +203,6 @@
 								if (res.error) {
 									console.warn('❌ Score submission failed:', res.error.message);
 								} else {
-									console.log('✅ Score submitted successfully');
 									setLastSubmittedScore(leaderboardId!, currentBoardScore);
 								}
 								resolve();
@@ -214,7 +212,6 @@
 					// Wait for message to propagate
 					await new Promise(resolve => setTimeout(resolve, 1500));
 				} else {
-					console.log('⏭️ Score not better than last submitted, skipping', { currentBoardScore, lastSubmitted });
 				}
 			}
 
@@ -226,7 +223,6 @@
 					if (res.error) {
 						console.error('Leaderboard refresh failed:', res.error);
 					} else {
-						console.log('Leaderboard refresh triggered successfully');
 						// Refresh the leaderboard data after a short delay
 						setTimeout(() => {
 							leaderboard.reexecute({ requestPolicy: 'network-only' });
