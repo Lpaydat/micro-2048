@@ -8,9 +8,10 @@
 		rankers: { username: string; score: number; rank: number; boardId: string }[];
 		currentScore?: number; // Current board score for refresh button
 		leaderboardId?: string;
+		lastUpdate?: string; // Backend leaderboard last update timestamp
 	}
 
-	let { player, rankers = [], currentScore = 0, leaderboardId }: Props = $props();
+	let { player, rankers = [], currentScore = 0, leaderboardId, lastUpdate }: Props = $props();
 
 	const currentPlayerIndex = $derived(rankers?.findIndex((p) => p.username === player));
 	const currentPlayer = $derived(
@@ -30,7 +31,8 @@
 			player,
 			rankers,
 			currentScore,
-			leaderboardId
+			leaderboardId,
+			lastUpdate
 		}
 	});
 </script>

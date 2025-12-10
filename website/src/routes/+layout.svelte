@@ -92,6 +92,7 @@
 			rankers={$drawerStore.meta?.rankers}
 			currentScore={$drawerStore.meta?.currentScore}
 			leaderboardId={$drawerStore.meta?.leaderboardId}
+			lastUpdate={$drawerStore.meta?.lastUpdate}
 		/>
 	{/if}
 </Drawer>

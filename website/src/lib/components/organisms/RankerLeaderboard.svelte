@@ -69,19 +69,19 @@
 	<!-- Main Leaderboard Section -->
 	<div class="flex flex-1 flex-col overflow-hidden {hasDescription ? 'xl:max-w-4xl' : ''}">
 		<div class="flex flex-col gap-3 md:flex-row md:gap-6">
-			<div class="flex flex-row items-center gap-4">
-				<h1
-					class="md:ms-none mb-2 text-center text-2xl font-extrabold text-gray-100 md:mb-3 md:text-4xl"
-				>
-					Leaderboard
-				</h1>
-				<span
-					class="mb-2 rounded-lg bg-gray-800 px-3 py-1 text-sm font-medium text-gray-300 shadow-sm"
-				>
-					<span class="opacity-75">Balance:</span>
-					<span class="ml-1 font-mono">{formatBalance(balance)}</span>
-				</span>
-			</div>
+<div class="flex flex-row items-center gap-4">
+			<h1
+				class="md:ms-none mb-2 text-center text-2xl font-extrabold text-gray-100 md:mb-3 md:text-4xl"
+			>
+				Leaderboard
+			</h1>
+			<span
+				class="mb-2 rounded-lg bg-gray-800 px-3 py-1 text-sm font-medium text-gray-300 shadow-sm"
+			>
+				<span class="opacity-75">Balance:</span>
+				<span class="ml-1 font-mono">{formatBalance(balance)}</span>
+			</span>
+		</div>
 			{#if leaderboardId}
 				<LeaderboardDetails {...rest} />
 			{/if}
