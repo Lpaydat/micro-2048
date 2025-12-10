@@ -101,6 +101,11 @@
 	let isFrozen = false;
 	let lastHashMismatchTime: number | null = null; // Track when hash mismatch started
 	let roundFirstMoveTime: number | null = null;
+	
+	// 🔧 FIX: Track when we're waiting for backend to process submitted moves
+	// Mutation "success" only means "accepted", not "processed"
+	// This flag prevents premature state reset while backend is processing
+	let awaitingBackendSync = false;
 
 	// 🔄 Background Sync: Valid board states tracking (hash-based validation)
 	let validBoardHashes: Set<number> = new Set(); // All board states we've seen locally
@@ -851,7 +856,10 @@
 
 	// 🔄 Background Sync: Non-blocking sync with confirmation
 	const backgroundSync = async (boardId: string) => {
-		if (syncStatus === 'syncing' || syncStatus === 'syncing-bg') return;
+		if (syncStatus === 'syncing' || syncStatus === 'syncing-bg') {
+			console.log('⏳ backgroundSync skipped - sync already in progress');
+			return;
+		}
 
 		// Get moves to submit (but don't flush yet!)
 		// 🔧 FIX: Take a snapshot of the current moves to submit
@@ -859,29 +867,36 @@
 		const movesToSubmit = [...($moveHistoryStore.get(boardId) || [])];
 		if (movesToSubmit.length === 0) return;
 
-		// Mark as syncing
+		// 🔒 Mark as syncing IMMEDIATELY to prevent race conditions
 		syncStatus = 'syncing-bg';
 		const moveBatch = getMoveBatchForSubmission(movesToSubmit);
 		const moveCount = movesToSubmit.length;
+		
+		// 🔧 FIX: Mark that we're waiting for backend to process submitted moves
+		// awaitingBackendSync prevents premature state reset while backend is processing
+		awaitingBackendSync = true;
+		console.log(`🔄 backgroundSync: submitting ${moveCount} moves`);
 
 		try {
-			// Submit to backend and WAIT for confirmation
+			// Submit to backend and WAIT for confirmation (note: "success" = accepted, not processed)
 			const result: MakeMoveResult = await makeMoves(client, moveBatch, boardId);
 
 			if (result.success) {
-				// ✅ Only flush the moves that were actually submitted
-				// Use flushNMoves to preserve moves added during async sync
+				// ✅ Mutation accepted - flush moves from local store
 				flushNMoves(boardId, moveCount);
 				// Sync pendingMoveCount with actual store state
 				const remainingMoves = $moveHistoryStore.get(boardId)?.length || 0;
 				pendingMoveCount = remainingMoves;
 				lastSyncTime = Date.now();
 				syncRetryCount = 0;
+				// awaitingBackendSync will be cleared by periodic checker when backend matches local state
 			} else {
 				// Submission failed - keep moves for retry
 				console.error('Background sync failed:', result.error);
 				syncStatus = 'failed';
 				syncRetryCount++;
+				awaitingBackendSync = false;
+				
 				
 				// Schedule retry if under limit
 				if (syncRetryCount < MAX_SYNC_RETRIES) {
@@ -899,6 +914,8 @@
 			console.error('Background sync exception:', error);
 			syncStatus = 'failed';
 			syncRetryCount++;
+			awaitingBackendSync = false;
+			
 			
 			// Schedule retry if under limit
 			if (syncRetryCount < MAX_SYNC_RETRIES) {
@@ -928,6 +945,7 @@
 		const allPending = $moveHistoryStore.get(boardId!) || [];
 		
 		if (allPending.length > 0) {
+			console.log(`🔄 handleDesync: submitting ${allPending.length} pending moves`);
 			const result = await makeMoves(client, getMoveBatchForSubmission(allPending), boardId!);
 			
 			if (result.success) {
@@ -939,29 +957,63 @@
 			}
 		}
 
-		// Wait for backend to process
-		await new Promise((resolve) => setTimeout(resolve, 1500));
+		// 🔧 FIX: Wait longer for backend to process during peak load
+		// Poll multiple times instead of single wait
+		const MAX_POLL_ATTEMPTS = 5;
+		const POLL_INTERVAL = 1500; // 1.5s between polls
+		
+		for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
+			await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL));
+			await game.reexecute({ requestPolicy: 'network-only' });
+			
+			// Check if backend state is now valid (matches one of our known states)
+			if ($game.data?.board?.board) {
+				const backendHash = hashBoard($game.data.board.board);
+				if (validBoardHashes.has(backendHash)) {
+					console.log(`🔄 handleDesync: backend synced after ${attempt + 1} attempts`);
+					break;
+				}
+			}
+			
+			if (attempt < MAX_POLL_ATTEMPTS - 1) {
+				console.log(`🔄 handleDesync: waiting for backend (attempt ${attempt + 1}/${MAX_POLL_ATTEMPTS})`);
+			}
+		}
 
-		// Fetch fresh state
-		await game.reexecute({ requestPolicy: 'network-only' });
-
-		// Force reconciliation
+		// Force reconciliation - only if backend state is still mismatched
 		if ($game.data?.board?.board) {
-			const finalBackendState = boardToString($game.data.board.board);
-			const currentLocalState = boardToString(state?.tablet);
-
-			if (finalBackendState !== currentLocalState) {
-				// Full reset to backend state
+			const backendHash = hashBoard($game.data.board.board);
+			const backendIsValid = validBoardHashes.has(backendHash);
+			
+			if (backendIsValid) {
+				// Backend caught up - use backend state (it's valid)
 				const newState = createState($game.data.board.board, 4, boardId!, player);
-				// 🔧 FIX: Preserve finished state from backend
 				if ($game.data.board.isEnded) {
 					newState.finished = true;
 				}
 				state = newState;
+				score = $game.data.board.score || 0;
+				console.log('🔄 handleDesync: reconciled with valid backend state');
+			} else {
+				// Backend still doesn't match - this is a true desync
+				// Log details for debugging
+				console.error('🔄 handleDesync: TRUE DESYNC - backend state not in valid set', {
+					backendHash,
+					validHashCount: validBoardHashes.size,
+					localHash: state?.tablet ? hashBoard(state.tablet) : 'no-state'
+				});
+				
+				// Reset to backend state as last resort
+				const newState = createState($game.data.board.board, 4, boardId!, player);
+				if ($game.data.board.isEnded) {
+					newState.finished = true;
+				}
+				state = newState;
+				score = $game.data.board.score || 0;
 				validBoardHashes.clear();
-				validBoardHashes.add(hashBoard($game.data.board.board));
-				lastHashMismatchTime = null;
+				validBoardHashes.add(backendHash);
 			}
+			lastHashMismatchTime = null;
 		}
 
 		// Resume game
@@ -970,40 +1022,65 @@
 		pendingMoveCount = 0;
 		syncRetryCount = 0;
 		overlayMessage = undefined;
+		
+		// 🔧 FIX: Clear awaiting state after desync handling
+		awaitingBackendSync = false;
+		
 	};
 
 	// Submit function (used for idle sync and game end)
 	const submitMoves = async (boardId: string, force = false) => {
+		// 🔒 RACE CONDITION FIX: Don't submit if already syncing
+		// This prevents duplicate submissions that cause board state divergence
+		if (syncStatus === 'syncing' || syncStatus === 'syncing-bg') {
+			console.log('⏳ submitMoves skipped - sync already in progress');
+			return;
+		}
+
 		// Take a snapshot of moves to submit (preserves moves added during sync)
 		const moves = [...($moveHistoryStore.get(boardId) || [])];
 		
+		// Early return if no moves to submit (unless forced for game end)
+		if (moves.length === 0 && !force) {
+			return;
+		}
+
+		// 🔒 Set syncStatus IMMEDIATELY to prevent race conditions
+		// This must happen before any await to block other sync attempts
+		syncStatus = 'syncing-bg';
+		const moveBatch = getMoveBatchForSubmission(moves);
+		const moveCount = moves.length;
+		
+		// 🔧 FIX: Mark that we're waiting for backend to process submitted moves
+		awaitingBackendSync = true;
+		console.log(`📤 submitMoves: submitting ${moveCount} moves (force=${force})`);
+		
 		try {
-			if (moves.length > 0 || force) {
-				syncStatus = 'syncing-bg';
-				const moveBatch = getMoveBatchForSubmission(moves);
-				const moveCount = moves.length;
+			// Wait for confirmation (note: "success" = accepted, not processed)
+			const result = await makeMoves(client, moveBatch, boardId);
+			
+			if (result.success) {
+				// ✅ Mutation accepted - flush moves from local store
+				flushNMoves(boardId, moveCount);
+				const newTablet = boardToString(state?.tablet);
+				stateHash = newTablet ?? '';
+				// Sync pendingMoveCount with actual store state
+				const remainingMoves = $moveHistoryStore.get(boardId)?.length || 0;
+				pendingMoveCount = remainingMoves;
+				lastSyncTime = Date.now();
+				syncRetryCount = 0;
+				// awaitingBackendSync will be cleared by periodic checker when backend matches local state
+			} else {
+				console.error('Submit moves failed:', result.error);
+				syncStatus = 'failed';
+				awaitingBackendSync = false;
 				
-				// Wait for confirmation
-				const result = await makeMoves(client, moveBatch, boardId);
-				
-				if (result.success) {
-					// Only flush the moves that were actually submitted
-					flushNMoves(boardId, moveCount);
-					const newTablet = boardToString(state?.tablet);
-					stateHash = newTablet ?? '';
-					// Sync pendingMoveCount with actual store state
-					const remainingMoves = $moveHistoryStore.get(boardId)?.length || 0;
-					pendingMoveCount = remainingMoves;
-					lastSyncTime = Date.now();
-					syncRetryCount = 0;
-				} else {
-					console.error('Submit moves failed:', result.error);
-					syncStatus = 'failed';
-				}
 			}
 		} catch (error: unknown) {
 			console.error('Submit moves exception:', error);
 			syncStatus = 'failed';
+			awaitingBackendSync = false;
+			
 		} finally {
 			activityDetected = false;
 		}
@@ -1244,16 +1321,37 @@
 			const backendInValidSet = validBoardHashes.has(backendHash);
 
 			// If syncing in background, validate using hash lookup
-			if (syncStatus === 'syncing-bg') {
+			if (syncStatus === 'syncing-bg' || awaitingBackendSync) {
 				if (!syncingBackgroundStartTime) {
 					syncingBackgroundStartTime = Date.now();
 				}
 
-				// ✅ Simple hash validation: Has backend reached a state we've seen?
-				if (backendInValidSet) {
-					// Backend processed our moves successfully
-					if (backendMatchesLocal && pendingMoveCount === 0) {
+				if (backendMatchesLocal) {
+					// ✅ PERFECT: Backend has caught up completely to our current state
+					console.log(`✅ Backend fully synced! hash=${backendHash}`);
+					awaitingBackendSync = false;
+					syncingBackgroundStartTime = null;
+					
+					if (pendingMoveCount === 0) {
 						syncStatus = 'ready';
+					} else {
+						syncStatus = 'pending';
+					}
+					isFrozen = false;
+					lastHashMismatchTime = null;
+				} else if (backendInValidSet) {
+					// ✅ GOOD: Backend processed our submitted moves (reached a valid state)
+					// Clear awaitingBackendSync - the submitted batch was processed
+					// But backend may still be behind if user made more moves
+					if (awaitingBackendSync) {
+						console.log(`✅ Backend processed submitted moves, hash=${backendHash}`);
+						awaitingBackendSync = false;
+					}
+					syncingBackgroundStartTime = null;
+					
+					// Transition based on whether we have more pending moves
+					if (pendingMoveCount > 0) {
+						syncStatus = 'pending';
 					} else {
 						syncStatus = 'synced';
 						setTimeout(() => {
@@ -1266,13 +1364,12 @@
 					}
 					isFrozen = false;
 					lastHashMismatchTime = null;
-					syncingBackgroundStartTime = null;
 				} else {
-					// No match yet - check if we've been waiting too long
+					// ❌ Backend has unknown state - wait with timeout
 					const syncWaitTime = Date.now() - syncingBackgroundStartTime;
 
-					// Only trigger desync if we've waited > 8 seconds without finding a match
-					if (syncWaitTime > 8000) {
+					if (syncWaitTime > 10000) {
+						console.warn(`⚠️ Sync timeout after ${syncWaitTime}ms - backend at unknown state`);
 						syncingBackgroundStartTime = null;
 						handleDesync();
 					}
@@ -1282,9 +1379,9 @@
 				syncingBackgroundStartTime = null;
 			}
 
-			// Continuous hash validation (less frequent logging)
+			// Continuous hash validation
 			if (backendInValidSet) {
-				// ✅ Backend state is valid - reset mismatch tracking
+				// ✅ Backend state is valid - this is good
 				if (backendMatchesLocal && pendingMoveCount === 0) {
 					if (syncStatus !== 'ready' && syncStatus !== 'syncing-bg' && syncStatus !== 'syncing') {
 						syncStatus = 'ready';
@@ -1301,15 +1398,22 @@
 				// ❌ Backend state not in our valid hash set
 				// Wait for backend to catch up if:
 				// - We have pending moves locally
+				// - We're awaiting backend sync (submitted but not yet confirmed)
 				// - Sync is in progress
 				// - We just finished syncing (backend may be processing)
 				// - Local game is finished (don't overwrite game over state!)
+				// - 🔧 FIX: Recently synced (grace period for slow backend during peak load)
+				const SYNC_GRACE_PERIOD = 15000; // 15 seconds grace period after sync (increased for peak load)
+				const recentlySynced = lastSyncTime && (Date.now() - lastSyncTime < SYNC_GRACE_PERIOD);
+				
 				const shouldWaitForBackend = 
 					pendingMoveCount > 0 || 
+					awaitingBackendSync ||  // 🔧 FIX: Primary check - waiting for backend to process submitted moves
 					syncStatus === 'syncing-bg' || 
 					syncStatus === 'syncing' ||
 					syncStatus === 'synced' ||  // Just finished sync, backend catching up
-					state?.finished;  // 🔧 FIX: Don't overwrite finished state
+					recentlySynced ||  // 🔧 FIX: Grace period for slow backend processing
+					state?.finished;  // Don't overwrite finished state
 				
 				if (shouldWaitForBackend) {
 					if (lastHashMismatchTime === null) {
@@ -1321,12 +1425,22 @@
 				} else {
 					// No pending moves, not syncing, backend has unknown state
 					// This likely means moves were lost - accept backend as truth
+					console.log('⚠️ Backend state unknown - resetting to backend state', {
+						pendingMoveCount,
+						awaitingBackendSync,
+						syncStatus,
+						recentlySynced,
+						timeSinceSync: lastSyncTime ? Date.now() - lastSyncTime : 'never'
+					});
 					state = createState($game.data.board.board, 4, boardId!, player);
 					score = $game.data.board.score || 0;
 					
 					// Clear and rebuild valid hashes from this new state
 					validBoardHashes.clear();
 					validBoardHashes.add(backendHash);
+					
+					// Clear awaiting state since we're resetting
+					awaitingBackendSync = false;
 					
 					// Ensure we're in a clean sync state
 					syncStatus = 'ready';
