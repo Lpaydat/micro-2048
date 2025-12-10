@@ -87,19 +87,6 @@
 	let now = $state(Date.now()); // Reactive time for countdown
 	const REFRESH_COOLDOWN_MS = 15000; // 15 seconds cooldown (matches backend)
 	
-	// Track last submitted score per tournament (localStorage) to avoid unnecessary mutations
-	const getLastSubmittedScore = (tournamentId: string): number => {
-		if (typeof window === 'undefined') return 0;
-		const key = `lastSubmittedScore-${tournamentId}`;
-		return parseInt(localStorage.getItem(key) || '0', 10);
-	};
-
-	const setLastSubmittedScore = (tournamentId: string, score: number) => {
-		if (typeof window === 'undefined') return;
-		const key = `lastSubmittedScore-${tournamentId}`;
-		localStorage.setItem(key, score.toString());
-	};
-
 	const canRefresh = $derived.by(() => {
 		if (!shouldShowRefreshButton) return false;
 		return now - lastRefreshTime >= REFRESH_COOLDOWN_MS;
@@ -118,11 +105,9 @@
 
 		try {
 			// 🚀 Step 1: Submit current score from player's board (if applicable)
-			// Only send if score > lastSubmittedScore (avoid unnecessary mutations)
+			// Only send if score > playerLeaderboardScore (player's best on leaderboard)
 			if (currentBoardId && $userStore.username && $userStore.passwordHash && $userStore.chainId && playerClient) {
-				const lastSubmitted = getLastSubmittedScore(leaderboardId);
-				
-				if (currentScore > lastSubmitted) {
+				if (currentScore > playerLeaderboardScore) {
 					const scoreResult = submitCurrentScore(
 						playerClient,
 						currentBoardId,
@@ -135,8 +120,6 @@
 								if (res.fetching) return;
 								if (res.error) {
 									console.warn('❌ Score submission failed:', res.error.message);
-								} else {
-									setLastSubmittedScore(leaderboardId!, currentScore);
 								}
 								resolve();
 							});
@@ -144,7 +127,6 @@
 					}
 					// Wait for message to propagate
 					await new Promise(resolve => setTimeout(resolve, 1500));
-				} else {
 				}
 			}
 

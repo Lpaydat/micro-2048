@@ -1121,19 +1121,6 @@
 	const SCORE_SUBMIT_COOLDOWN = 10000; // 10 seconds cooldown
 	const ALREADY_BEST_DISPLAY_TIME = 2000; // 2 seconds to show "Already Best"
 
-	// Track last submitted score per tournament (localStorage)
-	const getLastSubmittedScore = (tournamentId: string): number => {
-		if (typeof window === 'undefined') return 0;
-		const key = `lastSubmittedScore-${tournamentId}`;
-		return parseInt(localStorage.getItem(key) || '0', 10);
-	};
-
-	const setLastSubmittedScore = (tournamentId: string, score: number) => {
-		if (typeof window === 'undefined') return;
-		const key = `lastSubmittedScore-${tournamentId}`;
-		localStorage.setItem(key, score.toString());
-	};
-
 	// Check if can submit score (reactive based on conditions)
 	$: canSubmitScore = 
 		leaderboardId && 
@@ -1150,11 +1137,9 @@
 		if (!boardId || !$userStore.username || !$userStore.passwordHash || !leaderboardId) return;
 		if (isSubmittingScore || scoreAlreadyBest || scoreSubmitCooldownRemaining > 0) return;
 
-		// Check if score would actually trigger a message (score > lastSubmitted)
-		const lastSubmitted = getLastSubmittedScore(leaderboardId);
-		if (score <= lastSubmitted) {
-			// Score not better than last submitted - show feedback without sending mutation
-
+		// Check if score would actually trigger a message (score > bestScore from leaderboard)
+		if (score <= bestScore) {
+			// Score not better than current best - show feedback without sending mutation
 			scoreAlreadyBest = true;
 			setTimeout(() => {
 				scoreAlreadyBest = false;
@@ -1165,8 +1150,6 @@
 		isSubmittingScore = true;
 
 		try {
-
-			
 			const result = submitCurrentScore(
 				client,
 				boardId,
@@ -1180,10 +1163,6 @@
 						if (res.fetching) return;
 						if (res.error) {
 							console.warn('❌ Score submission failed:', res.error.message);
-						} else {
-
-							// Update last submitted score on success
-							setLastSubmittedScore(leaderboardId!, score);
 						}
 						resolve();
 					});
