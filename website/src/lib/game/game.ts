@@ -156,7 +156,8 @@ export const genInitialState = (
 	initialTablet: number[][],
 	dimension: number,
 	boardId: string,
-	username: string
+	username: string,
+	skipGameOverCheck: boolean = false
 ): GameState => {
 	const tablet = generateTabletFromMatrix(initialTablet);
 	return {
@@ -164,7 +165,7 @@ export const genInitialState = (
 		boardId,
 		username,
 		score: 0,
-		finished: checkGameOver(tablet),
+		finished: skipGameOverCheck ? false : checkGameOver(tablet),
 		tablet,
 		actions: {
 			ArrowUp: async (state: GameState, timestamp: string, prevTablet?: string) =>
