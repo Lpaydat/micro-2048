@@ -544,32 +544,33 @@
 		if (!boardId) return;
 
 		// Inspector mode: use move history data
+		// Skip game over check in inspector mode - we manage finished state based on replay position
 		if (isInspectorMode && paginatedHistoryStore) {
 			if (inspectorCurrentMoveIndex === 0) {
 				// 🎮 Position 0: Show initial board (before any moves)
 				if (initialBoardCache) {
-					state = createState(initialBoardCache, 4, boardId, player);
+					state = createState(initialBoardCache, 4, boardId, player, true);
 					score = 0;
 				} else {
 					// Fallback while loading initial board
-					state = createState($game.data?.board?.board, 4, boardId, player);
+					state = createState($game.data?.board?.board, 4, boardId, player, true);
 					score = $game.data?.board?.score || 0;
 				}
 			} else {
 				const currentMove = getCurrentMoveData();
 				if (currentMove) {
-					state = createState(currentMove.boardAfter, 4, boardId, player);
+					state = createState(currentMove.boardAfter, 4, boardId, player, true);
 					score = currentMove.scoreAfter;
 				} else {
 					// 🔧 FIX: Moves not loaded yet - show current board state as fallback
 					// This prevents blank board while moves are loading
-					state = createState($game.data?.board?.board, 4, boardId, player);
+					state = createState($game.data?.board?.board, 4, boardId, player, true);
 					score = $game.data?.board?.score || 0;
 				}
 			}
 		} else if (isInspectorMode && !paginatedHistoryStore && $game.data?.board) {
 			// 🔧 FIX: Inspector mode but pagination not initialized yet - show current state
-			state = createState($game.data?.board?.board, 4, boardId, player);
+			state = createState($game.data?.board?.board, 4, boardId, player, true);
 			score = $game.data?.board?.score || 0;
 		} else {
 			// Normal mode: use current board state
