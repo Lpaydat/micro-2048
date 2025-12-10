@@ -51,7 +51,8 @@ pub struct BoardState {
     pub chain_id: RegisterView<String>,
     pub leaderboard_id: RegisterView<String>, // client can use to fetch leaderboard
     pub shard_id: RegisterView<String>,
-    pub end_time: RegisterView<u64>,
+    pub start_time: RegisterView<u64>, // Tournament start time (0 = unlimited)
+    pub end_time: RegisterView<u64>,   // Tournament end time (0 = unlimited)
     pub created_at: RegisterView<u64>,
     pub move_history: CollectionView<u32, MoveRecord>, // move_index -> MoveRecord
     pub move_count: RegisterView<u32>,                 // Total number of moves made

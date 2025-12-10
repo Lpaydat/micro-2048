@@ -43,6 +43,7 @@ impl MessageDispatcher {
                 timestamp,
                 leaderboard_id,
                 shard_id,
+                start_time,
                 end_time,
             } => {
                 GameMessageHandler::handle_create_new_board(
@@ -52,6 +53,7 @@ impl MessageDispatcher {
                     timestamp,
                     leaderboard_id,
                     shard_id,
+                    start_time,
                     end_time,
                 )
                 .await;
@@ -96,6 +98,8 @@ impl MessageDispatcher {
                 game_status,
                 timestamp,
                 boards_in_tournament,
+                tournament_start_time,
+                tournament_end_time,
             } => {
                 LeaderboardMessageHandler::handle_submit_score(
                     contract,
@@ -107,6 +111,8 @@ impl MessageDispatcher {
                     game_status,
                     timestamp,
                     boards_in_tournament,
+                    tournament_start_time,
+                    tournament_end_time,
                 )
                 .await;
             }
