@@ -75,7 +75,6 @@ const checkGameOver = (tablet: Tablet): boolean => {
 	// Check for empty tiles first
 	const hasEmptyTiles = tablet.some((row) => row.some(isEmptyTile));
 	if (hasEmptyTiles) {
-		console.log('🎮 Game not over - has empty tiles');
 		return false;
 	}
 
@@ -90,15 +89,7 @@ const checkGameOver = (tablet: Tablet): boolean => {
 		column.slice(0, -1).some((tile, i) => tile.value === column[i + 1].value)
 	);
 
-	const isGameOver = !(hasHorizontalMerges || hasVerticalMerges);
-	console.log('🎮 Game over check:', {
-		hasEmptyTiles,
-		hasHorizontalMerges,
-		hasVerticalMerges,
-		isGameOver
-	});
-
-	return isGameOver;
+	return !(hasHorizontalMerges || hasVerticalMerges);
 };
 
 const nextState = (state: GameState, newTablet: Tablet): GameState => ({
@@ -167,13 +158,14 @@ export const genInitialState = (
 	boardId: string,
 	username: string
 ): GameState => {
+	const tablet = generateTabletFromMatrix(initialTablet);
 	return {
 		dimension,
 		boardId,
 		username,
 		score: 0,
-		finished: false,
-		tablet: generateTabletFromMatrix(initialTablet),
+		finished: checkGameOver(tablet),
+		tablet,
 		actions: {
 			ArrowUp: async (state: GameState, timestamp: string, prevTablet?: string) =>
 				nextState(
