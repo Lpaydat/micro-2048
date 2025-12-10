@@ -1642,9 +1642,12 @@
 			}>((resolve) => {
 				let unsubscribe: (() => void) | undefined;
 				unsubscribe = boardQuery.subscribe((value) => {
-					resolve(value);
-					// Unsubscribe after first result
-					if (unsubscribe) unsubscribe();
+					// Wait until query is done fetching before resolving
+					if (!value.fetching) {
+						resolve(value);
+						// Unsubscribe after getting final result
+						if (unsubscribe) unsubscribe();
+					}
 				});
 			});
 
