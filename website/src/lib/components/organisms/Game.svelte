@@ -368,12 +368,14 @@
 				rhythmEngine = new RhythmEngine(rhythmSettings);
 				rhythmNeedsStart = true;
 				showRhythmIndicator = true;
+
 			}
 			// Note: New engine doesn't support updateSettings - settings are immutable
 			// If settings change, we'd need to recreate the engine
 		} else if (!parsedRhythm) {
 			// No rhythm mode, stop engine if running
 			if (rhythmEngine) {
+
 				rhythmEngine.stop();
 				rhythmEngine = null;
 				showRhythmIndicator = false;
@@ -402,16 +404,20 @@
 		if (!rhythmEngine || !rhythmNeedsStart) return;
 		
 		try {
+
 			await rhythmEngine.init();
+
 			rhythmEngine.start();
 			
 			// Update reactive values for display
 			displayBpm = rhythmEngine.getBpm();
 			const track = rhythmEngine.getCurrentTrack();
 			displayTrackName = track?.name || '';
+
 			
 			rhythmEngine.debugState();
 			rhythmNeedsStart = false;
+
 		} catch (err) {
 			console.warn('🎵 Audio initialization failed:', err);
 			rhythmNeedsStart = false;
@@ -469,15 +475,6 @@
 			($game.data?.board?.isEnded && !boardEnded) || // Game just ended
 			boardId !== lastBoardId) // New board created
 	) {
-		// 🔍 DEBUG: Log why this reactive block triggered
-			isInitialized,
-			backendIsEnded: $game.data?.board?.isEnded,
-			boardEnded,
-			boardIdChanged: boardId !== lastBoardId,
-			boardId,
-			lastBoardId
-		});
-		
 		// Reset state for new board
 		if (boardId !== lastBoardId) {
 			isInitialized = false;
@@ -545,14 +542,6 @@
 
 	const handleGameStateUpdate = () => {
 		if (!boardId) return;
-
-		// 🔍 DEBUG: Log state update
-		const pendingInStore = ($moveHistoryStore.get(boardId) || []).length;
-			isInspectorMode,
-			pendingInStore,
-			currentLocalHash: state?.tablet ? hashBoard(state.tablet) : 'no-state',
-			backendHash: $game.data?.board?.board ? hashBoard($game.data.board.board) : 'no-backend'
-		});
 
 		// Inspector mode: use move history data
 		if (isInspectorMode && paginatedHistoryStore) {
@@ -657,6 +646,7 @@
 			pendingMoveCount++;
 			
 			// 🔍 DEBUG: Log move being added to history
+
 			
 			addMoveToHistory({
 				direction,
@@ -731,6 +721,7 @@
 				// BLOCK the move - show miss feedback
 				missCount++;
 				rhythmCombo = 0;
+
 				
 				// Trigger miss visual feedback on beat indicator and board
 				beatIndicatorRef?.showMiss();
@@ -747,12 +738,15 @@
 				perfectCount++;
 				rhythmCombo++;
 				rhythmScore += rhythmFeedback.score * (1 + rhythmCombo * 0.1);
+
 			} else if (rhythmFeedback.accuracy === 'good') {
 				goodCount++;
 				rhythmCombo++;
 				rhythmScore += rhythmFeedback.score * (1 + rhythmCombo * 0.05);
+
 			} else {
 				// early or late - still valid but breaks combo
+
 				// Don't increment combo for early/late, but don't reset it either
 			}
 
@@ -764,6 +758,7 @@
 		// Queue move if currently processing, otherwise execute immediately
 		// 🔧 FIX: Always pass the timestamp to preserve timing information
 		if (isProcessingMove) {
+
 			moveQueue.push({ direction, timestamp });
 		} else {
 			move(boardId, direction, timestamp);
@@ -867,6 +862,7 @@
 	// 🔄 Background Sync: Non-blocking sync with confirmation
 	const backgroundSync = async (boardId: string) => {
 		if (syncStatus === 'syncing' || syncStatus === 'syncing-bg' || syncStatus === 'desynced') {
+
 			return;
 		}
 
@@ -884,6 +880,7 @@
 		// 🔧 FIX: Mark that we're waiting for backend to process submitted moves
 		// awaitingBackendSync prevents premature state reset while backend is processing
 		awaitingBackendSync = true;
+
 
 		try {
 			// Submit to backend and WAIT for confirmation (note: "success" = accepted, not processed)
@@ -940,6 +937,7 @@
 	const handleDesync = async () => {
 		// 🔧 FIX: Don't desync if game is already finished - preserve game over state
 		if (state?.finished || boardEnded) {
+
 			return;
 		}
 		
@@ -953,6 +951,7 @@
 		const pendingCount = allPending.length;
 		
 		if (pendingCount > 0) {
+
 			const result = await makeMoves(client, getMoveBatchForSubmission(allPending), boardId!);
 			
 			if (!result.success) {
@@ -976,11 +975,13 @@
 			if ($game.data?.board?.board) {
 				const backendHash = hashBoard($game.data.board.board);
 				if (validBoardHashes.has(backendHash)) {
+
 					break;
 				}
 			}
 			
 			if (attempt < MAX_POLL_ATTEMPTS - 1) {
+
 			}
 		}
 
@@ -993,6 +994,7 @@
 			
 			if (backendHash === localHash) {
 				// ✅ Perfect match - backend caught up to our local state
+
 				flushMoveHistory(boardId!);
 			} else if (backendIsValid && remainingMoves.length === 0) {
 				// Backend is at valid state and no pending moves - sync with backend
@@ -1002,9 +1004,11 @@
 				}
 				state = newState;
 				score = $game.data.board.score || 0;
+
 			} else if (remainingMoves.length > 0) {
 				// We have pending moves - DON'T reset, keep local state
 				// Backend will eventually process our submitted moves
+
 			} else {
 				// Backend has unknown state and no pending moves - true desync, reset
 				console.error('🔄 handleDesync: TRUE DESYNC - resetting to backend state', {
@@ -1042,6 +1046,7 @@
 		// 🔒 RACE CONDITION FIX: Don't submit if already syncing or desyncing
 		// This prevents duplicate submissions that cause board state divergence
 		if (syncStatus === 'syncing' || syncStatus === 'syncing-bg' || syncStatus === 'desynced') {
+
 			return;
 		}
 
@@ -1061,6 +1066,7 @@
 		
 		// 🔧 FIX: Mark that we're waiting for backend to process submitted moves
 		awaitingBackendSync = true;
+
 		
 		try {
 			// Wait for confirmation (note: "success" = accepted, not processed)
@@ -1147,6 +1153,7 @@
 		const lastSubmitted = getLastSubmittedScore(leaderboardId);
 		if (score <= lastSubmitted) {
 			// Score not better than last submitted - show feedback without sending mutation
+
 			scoreAlreadyBest = true;
 			setTimeout(() => {
 				scoreAlreadyBest = false;
@@ -1157,6 +1164,7 @@
 		isSubmittingScore = true;
 
 		try {
+
 			
 			const result = submitCurrentScore(
 				client,
@@ -1172,6 +1180,7 @@
 						if (res.error) {
 							console.warn('❌ Score submission failed:', res.error.message);
 						} else {
+
 							// Update last submitted score on success
 							setLastSubmittedScore(leaderboardId!, score);
 						}
@@ -1344,6 +1353,7 @@
 
 				if (backendMatchesLocal) {
 					// ✅ PERFECT: Backend has caught up completely to our current state
+
 					awaitingBackendSync = false;
 					syncingBackgroundStartTime = null;
 					
@@ -1359,6 +1369,7 @@
 					// Clear awaitingBackendSync - the submitted batch was processed
 					// But backend may still be behind if user made more moves
 					if (awaitingBackendSync) {
+
 						awaitingBackendSync = false;
 					}
 					syncingBackgroundStartTime = null;
@@ -1442,14 +1453,9 @@
 					const storeMovesCount = ($moveHistoryStore.get(boardId!) || []).length;
 					if (storeMovesCount > 0) {
 						// Still have moves in store - don't reset yet
+
 					} else {
 						// Truly no pending moves - safe to reset
-							pendingMoveCount,
-							awaitingBackendSync,
-							syncStatus,
-							recentlySynced,
-							timeSinceSync: lastSyncTime ? Date.now() - lastSyncTime : 'never'
-						});
 						state = createState($game.data.board.board, 4, boardId!, player);
 						score = $game.data.board.score || 0;
 						
