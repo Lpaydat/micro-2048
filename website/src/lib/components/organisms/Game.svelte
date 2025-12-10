@@ -1819,7 +1819,7 @@
 					class="flex w-full items-center justify-center gap-2 rounded-lg border px-4 py-2 transition-colors lg:w-auto
 						{canSubmitScore 
 							? 'border-green-500/50 bg-green-950/50 hover:bg-green-900/50 text-green-400' 
-							: 'border-surface-600/50 bg-surface-800/50 text-surface-500 cursor-not-allowed'}"
+							: 'border-green-800/30 bg-green-950/20 text-green-700 cursor-not-allowed opacity-60'}"
 					title={canSubmitScore ? 'Submit current score to leaderboard' : scoreSubmitCooldownRemaining > 0 ? `Wait ${scoreSubmitCooldownRemaining}s` : 'Cannot submit'}
 				>
 					{#if isSubmittingScore}
