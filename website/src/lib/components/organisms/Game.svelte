@@ -475,6 +475,16 @@
 			($game.data?.board?.isEnded && !boardEnded) || // Game just ended
 			boardId !== lastBoardId) // New board created
 	) {
+		// 🔍 DEBUG: Log why this reactive block triggered
+		console.log('📍 handleGameStateUpdate triggered:', {
+			isInitialized,
+			backendIsEnded: $game.data?.board?.isEnded,
+			boardEnded,
+			boardIdChanged: boardId !== lastBoardId,
+			boardId,
+			lastBoardId
+		});
+		
 		// Reset state for new board
 		if (boardId !== lastBoardId) {
 			isInitialized = false;
@@ -542,6 +552,15 @@
 
 	const handleGameStateUpdate = () => {
 		if (!boardId) return;
+
+		// 🔍 DEBUG: Log state update
+		const pendingInStore = ($moveHistoryStore.get(boardId) || []).length;
+		console.log('🔄 handleGameStateUpdate called:', {
+			isInspectorMode,
+			pendingInStore,
+			currentLocalHash: state?.tablet ? hashBoard(state.tablet) : 'no-state',
+			backendHash: $game.data?.board?.board ? hashBoard($game.data.board.board) : 'no-backend'
+		});
 
 		// Inspector mode: use move history data
 		if (isInspectorMode && paginatedHistoryStore) {
@@ -644,6 +663,10 @@
 				syncStatus = 'pending';
 			}
 			pendingMoveCount++;
+			
+			// 🔍 DEBUG: Log move being added to history
+			console.log(`🎮 Move executed: ${direction} @ ${timestamp}, board changed: ${prevTablet !== newTablet}`);
+			
 			addMoveToHistory({
 				direction,
 				timestamp,
@@ -754,6 +777,7 @@
 		// Queue move if currently processing, otherwise execute immediately
 		// 🔧 FIX: Always pass the timestamp to preserve timing information
 		if (isProcessingMove) {
+			console.log(`⏸️ Move queued (processing): ${direction} @ ${timestamp}`);
 			moveQueue.push({ direction, timestamp });
 		} else {
 			move(boardId, direction, timestamp);
@@ -856,8 +880,8 @@
 
 	// 🔄 Background Sync: Non-blocking sync with confirmation
 	const backgroundSync = async (boardId: string) => {
-		if (syncStatus === 'syncing' || syncStatus === 'syncing-bg') {
-			console.log('⏳ backgroundSync skipped - sync already in progress');
+		if (syncStatus === 'syncing' || syncStatus === 'syncing-bg' || syncStatus === 'desynced') {
+			console.log(`⏳ backgroundSync skipped - status is ${syncStatus}`);
 			return;
 		}
 
@@ -941,20 +965,20 @@
 		syncStatus = 'desynced';
 		overlayMessage = 'Syncing with server... Please wait.';
 
-		// Get ALL pending moves (don't flush yet)
+		// Get ALL pending moves (don't flush yet - wait for backend to process)
 		const allPending = $moveHistoryStore.get(boardId!) || [];
+		const pendingCount = allPending.length;
 		
-		if (allPending.length > 0) {
-			console.log(`🔄 handleDesync: submitting ${allPending.length} pending moves`);
+		if (pendingCount > 0) {
+			console.log(`🔄 handleDesync: submitting ${pendingCount} pending moves`);
 			const result = await makeMoves(client, getMoveBatchForSubmission(allPending), boardId!);
 			
-			if (result.success) {
-				flushMoveHistory(boardId!);
-			} else {
+			if (!result.success) {
 				console.error('Failed to submit pending moves during desync:', result.error);
-				// Clear the moves anyway to reset state - they're likely invalid
-				flushMoveHistory(boardId!);
+				// Don't flush on failure - keep moves for retry
 			}
+			// 🔧 FIX: DON'T flush here - wait for backend to process in the polling loop
+			// Moves will be flushed when backend state matches local state
 		}
 
 		// 🔧 FIX: Wait longer for backend to process during peak load
@@ -980,30 +1004,38 @@
 			}
 		}
 
-		// Force reconciliation - only if backend state is still mismatched
+		// Force reconciliation
 		if ($game.data?.board?.board) {
 			const backendHash = hashBoard($game.data.board.board);
 			const backendIsValid = validBoardHashes.has(backendHash);
+			const localHash = state?.tablet ? hashBoard(state.tablet) : null;
+			const remainingMoves = $moveHistoryStore.get(boardId!) || [];
 			
-			if (backendIsValid) {
-				// Backend caught up - use backend state (it's valid)
+			if (backendHash === localHash) {
+				// ✅ Perfect match - backend caught up to our local state
+				console.log('🔄 handleDesync: backend matches local state - flushing moves');
+				flushMoveHistory(boardId!);
+			} else if (backendIsValid && remainingMoves.length === 0) {
+				// Backend is at valid state and no pending moves - sync with backend
 				const newState = createState($game.data.board.board, 4, boardId!, player);
 				if ($game.data.board.isEnded) {
 					newState.finished = true;
 				}
 				state = newState;
 				score = $game.data.board.score || 0;
-				console.log('🔄 handleDesync: reconciled with valid backend state');
+				console.log('🔄 handleDesync: reconciled with valid backend state (no pending moves)');
+			} else if (remainingMoves.length > 0) {
+				// We have pending moves - DON'T reset, keep local state
+				// Backend will eventually process our submitted moves
+				console.log(`🔄 handleDesync: ${remainingMoves.length} moves still pending - keeping local state, waiting for backend`);
 			} else {
-				// Backend still doesn't match - this is a true desync
-				// Log details for debugging
-				console.error('🔄 handleDesync: TRUE DESYNC - backend state not in valid set', {
+				// Backend has unknown state and no pending moves - true desync, reset
+				console.error('🔄 handleDesync: TRUE DESYNC - resetting to backend state', {
 					backendHash,
 					validHashCount: validBoardHashes.size,
-					localHash: state?.tablet ? hashBoard(state.tablet) : 'no-state'
+					localHash
 				});
 				
-				// Reset to backend state as last resort
 				const newState = createState($game.data.board.board, 4, boardId!, player);
 				if ($game.data.board.isEnded) {
 					newState.finished = true;
@@ -1030,10 +1062,10 @@
 
 	// Submit function (used for idle sync and game end)
 	const submitMoves = async (boardId: string, force = false) => {
-		// 🔒 RACE CONDITION FIX: Don't submit if already syncing
+		// 🔒 RACE CONDITION FIX: Don't submit if already syncing or desyncing
 		// This prevents duplicate submissions that cause board state divergence
-		if (syncStatus === 'syncing' || syncStatus === 'syncing-bg') {
-			console.log('⏳ submitMoves skipped - sync already in progress');
+		if (syncStatus === 'syncing' || syncStatus === 'syncing-bg' || syncStatus === 'desynced') {
+			console.log(`⏳ submitMoves skipped - status is ${syncStatus}`);
 			return;
 		}
 
@@ -1305,6 +1337,9 @@
 		syncIntervalId = setInterval(() => {
 			if (offlineMode) return;
 			if (!boardId || !$game.data?.board) return;
+			
+			// 🔧 FIX: Skip sync logic during desync handling (handleDesync manages its own polling)
+			if (syncStatus === 'desynced') return;
 
 			// Continuously poll backend state (including inspector mode for live updates)
 			game.reexecute({ requestPolicy: 'network-only' });
@@ -1424,27 +1459,34 @@
 					}
 				} else {
 					// No pending moves, not syncing, backend has unknown state
-					// This likely means moves were lost - accept backend as truth
-					console.log('⚠️ Backend state unknown - resetting to backend state', {
-						pendingMoveCount,
-						awaitingBackendSync,
-						syncStatus,
-						recentlySynced,
-						timeSinceSync: lastSyncTime ? Date.now() - lastSyncTime : 'never'
-					});
-					state = createState($game.data.board.board, 4, boardId!, player);
-					score = $game.data.board.score || 0;
-					
-					// Clear and rebuild valid hashes from this new state
-					validBoardHashes.clear();
-					validBoardHashes.add(backendHash);
-					
-					// Clear awaiting state since we're resetting
-					awaitingBackendSync = false;
-					
-					// Ensure we're in a clean sync state
-					syncStatus = 'ready';
-					lastHashMismatchTime = null;
+					// 🔧 FIX: Double-check moveHistoryStore before resetting
+					const storeMovesCount = ($moveHistoryStore.get(boardId!) || []).length;
+					if (storeMovesCount > 0) {
+						// Still have moves in store - don't reset yet
+						console.log(`⚠️ Backend unknown but ${storeMovesCount} moves in store - waiting`);
+					} else {
+						// Truly no pending moves - safe to reset
+						console.log('⚠️ Backend state unknown - resetting to backend state', {
+							pendingMoveCount,
+							awaitingBackendSync,
+							syncStatus,
+							recentlySynced,
+							timeSinceSync: lastSyncTime ? Date.now() - lastSyncTime : 'never'
+						});
+						state = createState($game.data.board.board, 4, boardId!, player);
+						score = $game.data.board.score || 0;
+						
+						// Clear and rebuild valid hashes from this new state
+						validBoardHashes.clear();
+						validBoardHashes.add(backendHash);
+						
+						// Clear awaiting state since we're resetting
+						awaitingBackendSync = false;
+						
+						// Ensure we're in a clean sync state
+						syncStatus = 'ready';
+						lastHashMismatchTime = null;
+					}
 				}
 			}
 		}, 1000); // Check every second
