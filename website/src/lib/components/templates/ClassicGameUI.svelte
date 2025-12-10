@@ -99,6 +99,7 @@
 			{rankers}
 			currentScore={currentPlayerScore}
 			{leaderboardId}
+			lastUpdate={$leaderboard?.data?.leaderboard?.lastUpdate}
 		/>
 	{/snippet}
 

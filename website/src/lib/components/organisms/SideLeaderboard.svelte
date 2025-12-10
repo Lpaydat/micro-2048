@@ -39,7 +39,7 @@
 
 	const player = $derived($userStore.username);
 	const customClass = isFullScreen ? 'w-full h-full' : 'p-6 w-80 max-h-full max-w-md mx-auto';
-	const containerClass = isFullScreen ? 'mt-4' : 'mt-6';
+	const containerClass = isFullScreen ? 'mt-4' : '';
 
 	const getBoardUrl = (boardId: string) => {
 		return leaderboardId
@@ -181,7 +181,7 @@
 </script>
 
 <div class="mx-auto flex max-w-sm flex-col gap-4 {containerClass} overflow-hidden" style="max-height: calc(100vh - 2rem);">
-	{#if leaderboardId}
+	{#if leaderboardId && !isFullScreen}
 		<div class="me-auto flex flex-none">
 			<LeaderboardDetails {leaderboardId} {...rest} {endCallback} />
 		</div>
@@ -189,9 +189,9 @@
 	<div
 		class="text-center {customClass} flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg bg-[#FAF8EF] shadow-md"
 	>
-		<header class="mb-4 flex flex-none flex-col items-center pt-4">
+		<header class="mb-4 flex flex-none flex-col items-center">
 			<div class="mb-2 flex items-center gap-2">
-				<h1 class="text-2xl font-bold text-[#776E65]">Leaderboard</h1>
+				<h1 class="text-xl font-bold text-[#776E65]">Leaderboard</h1>
 				{#if shouldShowRefreshButton}
 					<button
 						type="button"
