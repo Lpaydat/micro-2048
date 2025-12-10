@@ -84,5 +84,10 @@ export const getMoveBatchForSubmission = (moves: MoveHistory[]): string => {
 		batch[i] = [dir, validMoves[i].timestamp];
 	}
 
-	return JSON.stringify(batch.filter(Boolean));
+	const result = JSON.stringify(batch.filter(Boolean));
+	
+	// 🔍 DEBUG: Log the batch being submitted
+	console.log(`📦 Move batch for submission (${validMoves.length} moves):`, result);
+	
+	return result;
 };
