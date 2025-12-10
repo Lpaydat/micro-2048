@@ -1024,9 +1024,23 @@
 
 	// 🚀 Manual Score Submission to Leaderboard
 	let isSubmittingScore = false;
-	let lastScoreSubmitTime = 0;
 	let scoreSubmitCooldownRemaining = 0;
+	let scoreAlreadyBest = false; // Show "Already Best" feedback
 	const SCORE_SUBMIT_COOLDOWN = 10000; // 10 seconds cooldown
+	const ALREADY_BEST_DISPLAY_TIME = 2000; // 2 seconds to show "Already Best"
+
+	// Track last submitted score per tournament (localStorage)
+	const getLastSubmittedScore = (tournamentId: string): number => {
+		if (typeof window === 'undefined') return 0;
+		const key = `lastSubmittedScore-${tournamentId}`;
+		return parseInt(localStorage.getItem(key) || '0', 10);
+	};
+
+	const setLastSubmittedScore = (tournamentId: string, score: number) => {
+		if (typeof window === 'undefined') return;
+		const key = `lastSubmittedScore-${tournamentId}`;
+		localStorage.setItem(key, score.toString());
+	};
 
 	// Check if can submit score (reactive based on conditions)
 	$: canSubmitScore = 
@@ -1036,14 +1050,27 @@
 		$userStore.passwordHash &&
 		$game.data?.board?.player === $userStore.username &&
 		!isSubmittingScore &&
+		!scoreAlreadyBest &&
 		scoreSubmitCooldownRemaining <= 0 &&
 		score > 0;
 
 	const handleSubmitScore = async () => {
-		if (!canSubmitScore || !boardId || !$userStore.username || !$userStore.passwordHash) return;
+		if (!boardId || !$userStore.username || !$userStore.passwordHash || !leaderboardId) return;
+		if (isSubmittingScore || scoreAlreadyBest || scoreSubmitCooldownRemaining > 0) return;
+
+		// Check if score would actually trigger a message (score > lastSubmitted)
+		const lastSubmitted = getLastSubmittedScore(leaderboardId);
+		if (score <= lastSubmitted) {
+			// Score not better than last submitted - show feedback without sending mutation
+			console.log('⏭️ Score not better than last submitted, skipping mutation', { score, lastSubmitted });
+			scoreAlreadyBest = true;
+			setTimeout(() => {
+				scoreAlreadyBest = false;
+			}, ALREADY_BEST_DISPLAY_TIME);
+			return;
+		}
 
 		isSubmittingScore = true;
-		lastScoreSubmitTime = Date.now();
 
 		try {
 			console.log('🚀 Submitting score to leaderboard...', { boardId, score, leaderboardId });
@@ -1063,6 +1090,8 @@
 							console.warn('❌ Score submission failed:', res.error.message);
 						} else {
 							console.log('✅ Score submitted successfully');
+							// Update last submitted score on success
+							setLastSubmittedScore(leaderboardId!, score);
 						}
 						resolve();
 					});
@@ -1815,16 +1844,23 @@
 			{#if leaderboardId && $game.data?.board?.player === $userStore.username && !isInspectorMode}
 				<button
 					onclick={handleSubmitScore}
-					disabled={!canSubmitScore}
+					disabled={!canSubmitScore && !scoreAlreadyBest}
 					class="flex w-full items-center justify-center gap-2 rounded-lg border px-4 py-2 transition-colors lg:w-auto
-						{canSubmitScore 
-							? 'border-green-500/50 bg-green-950/50 hover:bg-green-900/50 text-green-400' 
-							: 'border-green-800/30 bg-green-950/20 text-green-700 cursor-not-allowed opacity-60'}"
-					title={canSubmitScore ? 'Submit current score to leaderboard' : scoreSubmitCooldownRemaining > 0 ? `Wait ${scoreSubmitCooldownRemaining}s` : 'Cannot submit'}
+						{scoreAlreadyBest
+							? 'border-cyan-500/50 bg-cyan-950/50 text-cyan-400'
+							: canSubmitScore 
+								? 'border-green-500/50 bg-green-950/50 hover:bg-green-900/50 text-green-400' 
+								: 'border-green-800/30 bg-green-950/20 text-green-700 cursor-not-allowed opacity-60'}"
+					title={scoreAlreadyBest ? 'Score already submitted' : canSubmitScore ? 'Submit current score to leaderboard' : scoreSubmitCooldownRemaining > 0 ? `Wait ${scoreSubmitCooldownRemaining}s` : 'Cannot submit'}
 				>
 					{#if isSubmittingScore}
 						<div class="h-4 w-4 animate-spin rounded-full border-2 border-green-400 border-t-transparent"></div>
 						<span class="whitespace-nowrap text-xs lg:text-sm">Submitting...</span>
+					{:else if scoreAlreadyBest}
+						<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M20 6L9 17l-5-5"/>
+						</svg>
+						<span class="whitespace-nowrap text-xs lg:text-sm">Already Best</span>
 					{:else}
 						<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 							<path d="M12 19V5M5 12l7-7 7 7"/>

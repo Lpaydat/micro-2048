@@ -105,6 +105,19 @@
 	let isRefreshing = $state(false);
 	let now = $state(Date.now()); // Reactive time for countdown
 	const REFRESH_COOLDOWN_MS = 15000; // 15 seconds cooldown
+	
+	// Track last submitted score per tournament (localStorage) to avoid unnecessary mutations
+	const getLastSubmittedScore = (tournamentId: string): number => {
+		if (typeof window === 'undefined') return 0;
+		const key = `lastSubmittedScore-${tournamentId}`;
+		return parseInt(localStorage.getItem(key) || '0', 10);
+	};
+
+	const setLastSubmittedScore = (tournamentId: string, score: number) => {
+		if (typeof window === 'undefined') return;
+		const key = `lastSubmittedScore-${tournamentId}`;
+		localStorage.setItem(key, score.toString());
+	};
 
 	// Not found tracking - stop polling after consecutive failures
 	let notFoundCount = $state(0);
@@ -164,54 +177,44 @@
 	});
 
 	const triggerLeaderboardRefresh = async () => {
-		if (!canRefresh || isRefreshing) return;
+		if (!canRefresh || isRefreshing || !leaderboardId) return;
 
 		isRefreshing = true;
 		lastRefreshTime = Date.now();
 
 		try {
 			// 🚀 Step 1: Submit current score from player's board (if applicable)
-			// This sends SubmitScore message to leaderboard chain
-			console.log('🔄 Refresh LB - checking conditions:', {
-				currentBoardId,
-				username: $userStore.username,
-				hasPasswordHash: !!$userStore.passwordHash,
-				playerChainId: $userStore.chainId
-			});
-			
-			// Must have player's chain ID to submit score (not main chain!)
+			// Only send if score > lastSubmittedScore (avoid unnecessary mutations)
 			if (currentBoardId && $userStore.username && $userStore.passwordHash && $userStore.chainId && playerClient) {
-				console.log('✅ Submitting current score before refresh...', { boardId: currentBoardId, chainId: $userStore.chainId });
-				const scoreResult = submitCurrentScore(
-					playerClient,
-					currentBoardId,
-					$userStore.username,
-					$userStore.passwordHash
-				);
-				if (scoreResult) {
-					// Wait for the mutation to complete
-					await new Promise<void>((resolve) => {
-						scoreResult.subscribe((res) => {
-							if (res.fetching) return; // Still loading
-							if (res.error) {
-								console.warn('❌ Score submission failed:', res.error.message);
-							} else {
-								console.log('✅ Score submitted successfully, data:', res.data);
-							}
-							resolve();
+				const lastSubmitted = getLastSubmittedScore(leaderboardId);
+				
+				if (currentBoardScore > lastSubmitted) {
+					console.log('✅ Submitting current score before refresh...', { boardId: currentBoardId, currentBoardScore, lastSubmitted });
+					const scoreResult = submitCurrentScore(
+						playerClient,
+						currentBoardId,
+						$userStore.username,
+						$userStore.passwordHash
+					);
+					if (scoreResult) {
+						await new Promise<void>((resolve) => {
+							scoreResult.subscribe((res) => {
+								if (res.fetching) return;
+								if (res.error) {
+									console.warn('❌ Score submission failed:', res.error.message);
+								} else {
+									console.log('✅ Score submitted successfully');
+									setLastSubmittedScore(leaderboardId!, currentBoardScore);
+								}
+								resolve();
+							});
 						});
-					});
+					}
+					// Wait for message to propagate
+					await new Promise(resolve => setTimeout(resolve, 1500));
+				} else {
+					console.log('⏭️ Score not better than last submitted, skipping', { currentBoardScore, lastSubmitted });
 				}
-				// Wait a bit more for the message to propagate
-				await new Promise(resolve => setTimeout(resolve, 1500));
-			} else {
-				console.log('⏭️ Skipping score submission - missing:', {
-					hasBoardId: !!currentBoardId,
-					hasUsername: !!$userStore.username,
-					hasPasswordHash: !!$userStore.passwordHash,
-					hasPlayerChainId: !!$userStore.chainId,
-					hasPlayerClient: !!playerClient
-				});
 			}
 
 			// 🚀 Step 2: Call updateLeaderboard mutation directly on leaderboard chain

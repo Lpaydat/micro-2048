@@ -7,6 +7,8 @@
 	import LeaderboardRankers from '../molecules/LeaderboardRankers.svelte';
 	import { getClient } from '$lib/client';
 	import { requestLeaderboardRefresh } from '$lib/graphql/mutations/requestLeaderboardRefresh';
+	import { submitCurrentScore } from '$lib/graphql/mutations/submitCurrentScore';
+	import { getBoardId } from '$lib/stores/boardId';
 
 	interface Props {
 		isFullScreen?: boolean;
@@ -76,10 +78,27 @@
 	// 🚀 IMPROVED: Call mutation directly on leaderboard chain (leaderboardId IS the chain ID)
 	// Shared 10s cooldown with backend - manual refresh and auto-triggers share this
 	const leaderboardClient = $derived(leaderboardId ? getClient(leaderboardId, true) : null);
+	// Player client for submitting score (must use player's chain, not main chain)
+	const playerClient = $derived($userStore.chainId ? getClient($userStore.chainId, false) : null);
+	const currentBoardId = $derived(leaderboardId ? getBoardId(leaderboardId) : null);
+	
 	let lastRefreshTime = $state(0);
 	let isRefreshing = $state(false);
 	let now = $state(Date.now()); // Reactive time for countdown
 	const REFRESH_COOLDOWN_MS = 15000; // 15 seconds cooldown (matches backend)
+	
+	// Track last submitted score per tournament (localStorage) to avoid unnecessary mutations
+	const getLastSubmittedScore = (tournamentId: string): number => {
+		if (typeof window === 'undefined') return 0;
+		const key = `lastSubmittedScore-${tournamentId}`;
+		return parseInt(localStorage.getItem(key) || '0', 10);
+	};
+
+	const setLastSubmittedScore = (tournamentId: string, score: number) => {
+		if (typeof window === 'undefined') return;
+		const key = `lastSubmittedScore-${tournamentId}`;
+		localStorage.setItem(key, score.toString());
+	};
 
 	const canRefresh = $derived.by(() => {
 		if (!shouldShowRefreshButton) return false;
@@ -92,13 +111,47 @@
 	});
 
 	const triggerLeaderboardRefresh = async () => {
-		if (!canRefresh || isRefreshing || !leaderboardClient) return;
+		if (!canRefresh || isRefreshing || !leaderboardClient || !leaderboardId) return;
 
 		isRefreshing = true;
 		lastRefreshTime = Date.now();
 
 		try {
-			// 🚀 Call updateLeaderboard mutation directly on leaderboard chain
+			// 🚀 Step 1: Submit current score from player's board (if applicable)
+			// Only send if score > lastSubmittedScore (avoid unnecessary mutations)
+			if (currentBoardId && $userStore.username && $userStore.passwordHash && $userStore.chainId && playerClient) {
+				const lastSubmitted = getLastSubmittedScore(leaderboardId);
+				
+				if (currentScore > lastSubmitted) {
+					console.log('✅ Submitting current score before refresh...', { boardId: currentBoardId, currentScore, lastSubmitted });
+					const scoreResult = submitCurrentScore(
+						playerClient,
+						currentBoardId,
+						$userStore.username,
+						$userStore.passwordHash
+					);
+					if (scoreResult) {
+						await new Promise<void>((resolve) => {
+							scoreResult.subscribe((res) => {
+								if (res.fetching) return;
+								if (res.error) {
+									console.warn('❌ Score submission failed:', res.error.message);
+								} else {
+									console.log('✅ Score submitted successfully');
+									setLastSubmittedScore(leaderboardId!, currentScore);
+								}
+								resolve();
+							});
+						});
+					}
+					// Wait for message to propagate
+					await new Promise(resolve => setTimeout(resolve, 1500));
+				} else {
+					console.log('⏭️ Score not better than last submitted, skipping', { currentScore, lastSubmitted });
+				}
+			}
+
+			// 🚀 Step 2: Call updateLeaderboard mutation directly on leaderboard chain
 			const result = requestLeaderboardRefresh(leaderboardClient);
 			if (result) {
 				result.subscribe((res) => {
