@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { getContextClient, gql, queryStore } from '@urql/svelte';
 	import Trash from 'lucide-svelte/icons/trash-2';
 	import Star from 'lucide-svelte/icons/star';
@@ -123,6 +123,7 @@
 	let notFoundCount = $state(0);
 	let isNotFound = $state(false);
 	let redirectCountdown = $state(5);
+	let redirectCountdownInterval: ReturnType<typeof setInterval> | null = null; // Track interval for cleanup
 	let leaderboardLoadStartTime: number | null = $state(null); // Track when we started looking
 	const MAX_NOT_FOUND_ATTEMPTS = 10; // Stop after 10 consecutive not found (~50 seconds at 5s interval)
 	const NEW_LEADERBOARD_GRACE_PERIOD = 30000; // 30 seconds grace period for newly created tournaments
@@ -401,11 +402,15 @@
 					// Only trigger "not found" if we've exceeded attempts AND grace period
 					if (notFoundCount >= MAX_NOT_FOUND_ATTEMPTS && !isInGracePeriod) {
 						isNotFound = true;
-						// Start redirect countdown
-						const countdownInterval = setInterval(() => {
+						// Start redirect countdown (clear any existing interval first)
+						if (redirectCountdownInterval) {
+							clearInterval(redirectCountdownInterval);
+						}
+						redirectCountdownInterval = setInterval(() => {
 							redirectCountdown--;
-							if (redirectCountdown <= 0) {
-								clearInterval(countdownInterval);
+							if (redirectCountdown <= 0 && redirectCountdownInterval) {
+								clearInterval(redirectCountdownInterval);
+								redirectCountdownInterval = null;
 								goto('/');
 							}
 						}, 1000);
@@ -424,6 +429,14 @@
 		updateSize();
 		window.addEventListener('resize', updateSize);
 		return () => window.removeEventListener('resize', updateSize);
+	});
+
+	onDestroy(() => {
+		// Clean up redirect countdown interval if still running
+		if (redirectCountdownInterval) {
+			clearInterval(redirectCountdownInterval);
+			redirectCountdownInterval = null;
+		}
 	});
 </script>
 

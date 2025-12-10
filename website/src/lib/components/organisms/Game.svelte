@@ -220,6 +220,7 @@
 	let boardNotFoundCount = 0;
 	let isBoardNotFound = false;
 	let boardRedirectCountdown = 5;
+	let boardRedirectCountdownInterval: ReturnType<typeof setInterval> | null = null; // Track interval for cleanup
 	let boardCreationTime: number | null = null; // Track when we started looking for this board
 	const MAX_BOARD_NOT_FOUND_ATTEMPTS = 20; // Stop after 20 consecutive not found (~10 seconds at 500ms)
 	const NEW_BOARD_GRACE_PERIOD = 15000; // 15 seconds grace period for newly created boards
@@ -1135,6 +1136,7 @@
 	let isSubmittingScore = false;
 	let scoreSubmitCooldownRemaining = 0;
 	let scoreAlreadyBest = false; // Show "Already Best" feedback
+	let scoreSubmitCooldownInterval: ReturnType<typeof setInterval> | null = null; // Track interval for cleanup
 	const SCORE_SUBMIT_COOLDOWN = 10000; // 10 seconds cooldown
 	const ALREADY_BEST_DISPLAY_TIME = 2000; // 2 seconds to show "Already Best"
 
@@ -1210,12 +1212,16 @@
 			console.error('Failed to submit score:', error);
 		} finally {
 			isSubmittingScore = false;
-			// Start cooldown countdown
+			// Start cooldown countdown (clear any existing interval first)
+			if (scoreSubmitCooldownInterval) {
+				clearInterval(scoreSubmitCooldownInterval);
+			}
 			scoreSubmitCooldownRemaining = Math.ceil(SCORE_SUBMIT_COOLDOWN / 1000);
-			const cooldownInterval = setInterval(() => {
+			scoreSubmitCooldownInterval = setInterval(() => {
 				scoreSubmitCooldownRemaining = Math.max(0, scoreSubmitCooldownRemaining - 1);
-				if (scoreSubmitCooldownRemaining <= 0) {
-					clearInterval(cooldownInterval);
+				if (scoreSubmitCooldownRemaining <= 0 && scoreSubmitCooldownInterval) {
+					clearInterval(scoreSubmitCooldownInterval);
+					scoreSubmitCooldownInterval = null;
 				}
 			}, 1000);
 		}
@@ -1267,11 +1273,15 @@
 								clearInterval(initGameIntervalId);
 								initGameIntervalId = null;
 							}
-							// Start redirect countdown
-							const countdownInterval = setInterval(() => {
+							// Start redirect countdown (clear any existing interval first)
+							if (boardRedirectCountdownInterval) {
+								clearInterval(boardRedirectCountdownInterval);
+							}
+							boardRedirectCountdownInterval = setInterval(() => {
 								boardRedirectCountdown--;
-								if (boardRedirectCountdown <= 0) {
-									clearInterval(countdownInterval);
+								if (boardRedirectCountdown <= 0 && boardRedirectCountdownInterval) {
+									clearInterval(boardRedirectCountdownInterval);
+									boardRedirectCountdownInterval = null;
 									goto('/');
 								}
 							}, 1000);
@@ -1652,12 +1662,16 @@
 				limit
 			);
 
-			// Wait for the query to complete
+			// Wait for the query to complete (properly unsubscribe after)
 			const result = await new Promise<{
 				data?: { board?: { moveHistory?: MoveHistoryRecord[] } };
 			}>((resolve) => {
-				const unsubscribe = boardQuery.subscribe(resolve);
-				return unsubscribe;
+				let unsubscribe: (() => void) | undefined;
+				unsubscribe = boardQuery.subscribe((value) => {
+					resolve(value);
+					// Unsubscribe after first result
+					if (unsubscribe) unsubscribe();
+				});
 			});
 
 			if (result?.data?.board?.moveHistory) {
@@ -1750,11 +1764,31 @@
 	onDestroy(() => {
 		setGameCreationStatus(false);
 		stopInspectorPlay();
+		
 		// 🎵 Clean up rhythm engine to stop audio and dispose Tone.js resources
 		if (rhythmEngine) {
 			rhythmEngine.dispose();
 			rhythmEngine = null;
 		}
+		
+		// 🧹 Clean up intervals that may still be running
+		if (scoreSubmitCooldownInterval) {
+			clearInterval(scoreSubmitCooldownInterval);
+			scoreSubmitCooldownInterval = null;
+		}
+		if (boardRedirectCountdownInterval) {
+			clearInterval(boardRedirectCountdownInterval);
+			boardRedirectCountdownInterval = null;
+		}
+		
+		// 🧹 Clean up memory-holding data structures
+		validBoardHashes.clear();
+		recentMoves = [];
+		moveQueue = [];
+		
+		// 🧹 Clean up pagination store reference
+		paginatedHistoryStore = null;
+		initialBoardCache = null;
 	});
 
 	$: overlayMessage = hideInspectorOverlay
