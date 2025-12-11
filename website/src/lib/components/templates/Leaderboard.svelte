@@ -189,8 +189,20 @@
 		try {
 			// 🚀 Step 1: Submit current score from player's board (if applicable)
 			// Only send if score > playerLeaderboardScore (player's best on leaderboard)
+			console.log('🔄 [LB Refresh] Debug:', {
+				currentBoardId,
+				username: $userStore.username,
+				hasPasswordHash: !!$userStore.passwordHash,
+				chainId: $userStore.chainId,
+				hasPlayerClient: !!playerClient,
+				currentBoardScore,
+				playerLeaderboardScore,
+				shouldSubmit: currentBoardScore > playerLeaderboardScore
+			});
+			
 			if (currentBoardId && $userStore.username && $userStore.passwordHash && $userStore.chainId && playerClient) {
 				if (currentBoardScore > playerLeaderboardScore) {
+					console.log('🎯 [LB Refresh] Submitting score...');
 					const scoreResult = submitCurrentScore(
 						playerClient,
 						currentBoardId,
@@ -203,6 +215,8 @@
 								if (res.fetching) return;
 								if (res.error) {
 									console.warn('❌ Score submission failed:', res.error.message);
+								} else {
+									console.log('✅ [LB Refresh] Score submitted:', res.data);
 								}
 								resolve();
 							});
@@ -210,7 +224,11 @@
 					}
 					// Wait for message to propagate
 					await new Promise(resolve => setTimeout(resolve, 1500));
+				} else {
+					console.log('⏭️ [LB Refresh] Skipping score submit - not higher than leaderboard score');
 				}
+			} else {
+				console.log('⏭️ [LB Refresh] Skipping score submit - missing required data');
 			}
 
 			// 🚀 Step 2: Call updateLeaderboard mutation directly on leaderboard chain

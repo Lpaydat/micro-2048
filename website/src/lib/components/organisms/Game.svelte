@@ -911,7 +911,7 @@
 			return;
 		}
 
-		// Get moves to submit (but don't flush yet!)
+		// Get moves to submit
 		const movesToSubmit = [...($moveHistoryStore.get(boardId) || [])];
 		if (movesToSubmit.length === 0) return;
 
@@ -935,16 +935,31 @@
 			const result: MakeMoveResult = await makeMoves(client, moveBatch, boardId);
 
 			if (result.success) {
-				// 🔒 Track the latest timestamp we've submitted
-				// When backend confirms (hash match), we'll flush all moves up to this timestamp
-				lastSubmittedTimestamp = Math.max(lastSubmittedTimestamp, latestTimestampInBatch);
+				// 🔧 FIX: Optimistic flush - if backend accepted, trust it will process
+				// During peak load, hash confirmation may never come, causing infinite resubmission
+				const flushedCount = flushMovesUpToTimestamp(boardId, latestTimestampInBatch);
+				console.log(`📤 Submitted ${moveCount} moves, flushed ${flushedCount} (latest ts: ${latestTimestampInBatch})`);
+				
+				// Update pending count
+				const remainingMoves = $moveHistoryStore.get(boardId)?.length || 0;
+				pendingMoveCount = remainingMoves;
+				
 				lastSyncTime = Date.now();
 				syncRetryCount = 0;
+				lastSubmittedTimestamp = 0; // Reset - we flushed optimistically
+				awaitingBackendSync = false;
 				
-				console.log(`📤 Submitted ${moveCount} moves (latest ts: ${latestTimestampInBatch})`);
-				
-				// DON'T flush yet - wait for backend confirmation via hash match
-				// awaitingBackendSync will be cleared by periodic checker when backend matches local state
+				// Transition status based on remaining moves
+				if (remainingMoves > 0) {
+					syncStatus = 'pending';
+				} else {
+					syncStatus = 'synced';
+					setTimeout(() => {
+						if (syncStatus === 'synced') {
+							syncStatus = 'ready';
+						}
+					}, 500);
+				}
 			} else {
 				// Submission failed - keep moves for retry
 				console.error('Background sync failed:', result.error);
@@ -1136,16 +1151,32 @@
 			const result = await makeMoves(client, moveBatch, boardId);
 			
 			if (result.success) {
-				// 🔒 Track the latest timestamp we've submitted
-				lastSubmittedTimestamp = Math.max(lastSubmittedTimestamp, latestTimestampInBatch);
+				// 🔧 FIX: Optimistic flush - if backend accepted, trust it will process
+				const flushedCount = flushMovesUpToTimestamp(boardId, latestTimestampInBatch);
+				console.log(`📤 Submitted ${moveCount} moves via submitMoves, flushed ${flushedCount} (latest ts: ${latestTimestampInBatch})`);
+				
+				// Update pending count
+				const remainingMoves = $moveHistoryStore.get(boardId)?.length || 0;
+				pendingMoveCount = remainingMoves;
+				
 				const newTablet = boardToString(state?.tablet);
 				stateHash = newTablet ?? '';
 				lastSyncTime = Date.now();
 				syncRetryCount = 0;
+				lastSubmittedTimestamp = 0; // Reset - we flushed optimistically
+				awaitingBackendSync = false;
 				
-				console.log(`📤 Submitted ${moveCount} moves via submitMoves (latest ts: ${latestTimestampInBatch})`);
-				
-				// DON'T flush yet - wait for backend confirmation via hash match
+				// Transition status based on remaining moves
+				if (remainingMoves > 0) {
+					syncStatus = 'pending';
+				} else {
+					syncStatus = 'synced';
+					setTimeout(() => {
+						if (syncStatus === 'synced') {
+							syncStatus = 'ready';
+						}
+					}, 500);
+				}
 			} else {
 				console.error('Submit moves failed:', result.error);
 				syncStatus = 'failed';
