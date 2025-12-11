@@ -28,6 +28,7 @@
 	import { requestFaucetMutation } from '$lib/graphql/mutations/requestFaucet';
 	import { requestLeaderboardRefresh } from '$lib/graphql/mutations/requestLeaderboardRefresh';
 	import { submitCurrentScore } from '$lib/graphql/mutations/submitCurrentScore';
+	import { getPlayerBestScore } from '$lib/graphql/queries/getPlayerLeaderboardStats';
 
 	interface Props {
 		leaderboardId?: string;
@@ -77,6 +78,14 @@
 	);
 	const currentBoardId = $derived(getBoardId(leaderboardId));
 	const board = $derived(playerClient ? getBoard(playerClient) : null);
+	
+	// Query player's score from LEADERBOARD CHAIN (single source of truth)
+	// Direct key lookup - O(1), no loop needed
+	const playerBestScoreQuery = $derived(
+		$userStore.username && leaderboardId
+			? getPlayerBestScore(leaderboardClient, $userStore.username)
+			: null
+	);
 
 	const isEnded = $derived.by(() => {
 		const endTime = Number($leaderboard?.data?.leaderboard?.endTime ?? '0');
@@ -115,8 +124,15 @@
 	const MAX_NOT_FOUND_ATTEMPTS = 10; // Stop after 10 consecutive not found (~50 seconds at 5s interval)
 	const NEW_LEADERBOARD_GRACE_PERIOD = 30000; // 30 seconds grace period for newly created tournaments
 
-	// Get current player's best score from leaderboard
+	// Get current player's score from leaderboard chain (single source of truth, direct lookup)
 	const playerLeaderboardScore = $derived.by(() => {
+		// Use leaderboard chain query (accurate even if not in top 100)
+		const leaderboardScore = $playerBestScoreQuery?.data?.playerBestScore;
+		if (leaderboardScore !== undefined && leaderboardScore !== null) {
+			return leaderboardScore;
+		}
+		
+		// Fallback to rankers lookup
 		const username = $userStore.username;
 		const rankers = $leaderboard?.data?.leaderboard?.rankers;
 		if (!username || !rankers?.length) return 0;
@@ -358,6 +374,8 @@
 		// Track when we started looking for this leaderboard
 		leaderboardLoadStartTime = Date.now();
 		leaderboard.reexecute({ requestPolicy: 'network-only' });
+		// playerStats is the store, not $playerStats which is the value
+		playerBestScoreQuery?.reexecute({ requestPolicy: 'network-only' });
 
 		const interval = setInterval(() => {
 			// Stop polling if not found
@@ -398,6 +416,8 @@
 			}
 
 			leaderboard.reexecute({ requestPolicy: 'network-only' });
+			// Also refresh player stats (playerStats is the store, not $playerStats which is the value)
+			playerBestScoreQuery?.reexecute({ requestPolicy: 'network-only' });
 		}, updateInterval);
 
 		return () => clearInterval(interval);

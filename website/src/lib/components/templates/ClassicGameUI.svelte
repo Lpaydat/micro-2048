@@ -9,6 +9,7 @@
 	import SideLeaderboard from '../organisms/SideLeaderboard.svelte';
 	import MobileRankerStats from '../organisms/MobileRankerStats.svelte';
 	import { getLeaderboardDetails } from '$lib/graphql/queries/getLeaderboardDetails';
+	import { getPlayerBestScore } from '$lib/graphql/queries/getPlayerLeaderboardStats';
 	import { onDestroy, onMount } from 'svelte';
 	import LeaderboardDetails from '../molecules/LeaderboardDetails.svelte';
 	import { page } from '$app/stores';
@@ -62,6 +63,14 @@
 
 	const client = $derived(getClient(leaderboardId, true));
 	const leaderboard = $derived(getLeaderboardDetails(client));
+	
+	// Query player's score from LEADERBOARD CHAIN (single source of truth)
+	// Direct key lookup - O(1), no loop needed
+	const playerBestScoreQuery = $derived(
+		$userStore.username && leaderboardId
+			? getPlayerBestScore(client, $userStore.username)
+			: null
+	);
 
 	const rankers = $derived(
 		$leaderboard?.data?.leaderboard?.rankers?.sort(
@@ -75,17 +84,26 @@
 		$leaderboard?.data?.leaderboard?.description || urlDescription || ''
 	);
 
+	// Get bestScore from leaderboard chain (single source of truth, direct lookup)
 	$effect(() => {
-		bestScore =
-			rankers?.find(
-				(ranker: { username: string; score: number }) => ranker.username === $userStore.username
-			)?.score ?? 0;
+		const leaderboardScore = $playerBestScoreQuery?.data?.playerBestScore;
+		if (leaderboardScore !== undefined && leaderboardScore !== null) {
+			bestScore = leaderboardScore;
+		} else {
+			// Fallback to rankers lookup if query not available
+			bestScore =
+				rankers?.find(
+					(ranker: { username: string; score: number }) => ranker.username === $userStore.username
+				)?.score ?? 0;
+		}
 	});
 
 	let intervalId: NodeJS.Timeout;
 	onMount(() => {
 		intervalId = setInterval(() => {
 			leaderboard?.reexecute({ requestPolicy: 'network-only' });
+			// Also refresh player best score from leaderboard chain
+			playerBestScoreQuery?.reexecute({ requestPolicy: 'network-only' });
 		}, 1000);
 
 		return () => clearInterval(intervalId);

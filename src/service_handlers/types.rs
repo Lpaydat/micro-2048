@@ -35,6 +35,7 @@ pub struct BoardState {
     pub leaderboard_id: String,
     pub shard_id: String,
     pub created_at: String,
+    pub start_time: String,
     pub end_time: String,
     pub move_history: Vec<MoveHistoryRecord>,
     pub total_moves: u32,

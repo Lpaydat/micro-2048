@@ -12,8 +12,8 @@ const CONFIG = {
 	local: {
 		website: 'localhost',
 		port: '8088', // Linera node port (not 5173 which is SvelteKit dev server)
-		chainId: '635d6c4448d1c21f46640c17ea57344119cfc815fa0b9ad1f010e8b806986cf0',
-		applicationId: '5b928449a3bac00dfe25c7799256ac7b0f19e3e836c1b4867a00767354fc42c4'
+		chainId: '6faec602f7602be59d77eacefb131993a4a644cad6691f0ce46a27aac5a27c99',
+		applicationId: '222588d1614d536230c23eb66def64cda80d8d7ac99593e877356fadf309000b'
 	},
 	production: {
 		website: 'api.micro2048.xyz',
@@ -248,7 +248,7 @@ const createGame = (
 };
 
 const getBoards = (playerChainId: string) => {
-	const playerApiUrl = `${protocol}://${config.website}:${config.port}/chains/${playerChainId}/applications/${config.applicationId}`;
+	const playerApiUrl = `${protocol}://${config.website}${portSuffix}/chains/${playerChainId}/applications/${config.applicationId}`;
 
 	const query = `
     query getBoards {
@@ -256,6 +256,8 @@ const getBoards = (playerChainId: string) => {
         boardId
         score
         isEnded
+        startTime
+        endTime
       }
     }
   `;
@@ -282,6 +284,40 @@ const getBoards = (playerChainId: string) => {
 		console.error('Failed to parse boards response:', error);
 		console.error('Raw response:', response.body);
 		return [];
+	}
+};
+
+// Get tournament/leaderboard details including start/end times
+const getTournamentDetails = (leaderboardId: string) => {
+	const leaderboardApiUrl = `${protocol}://${config.website}${portSuffix}/chains/${leaderboardId}/applications/${config.applicationId}`;
+
+	const query = `
+    query getLeaderboard {
+      leaderboard {
+        leaderboardId
+        name
+        startTime
+        endTime
+      }
+    }
+  `;
+
+	const response = http.post(leaderboardApiUrl, JSON.stringify({ query }), {
+		headers: { 'Content-Type': 'application/json' },
+		timeout: '30s'
+	});
+
+	if (response.status !== 200) {
+		console.error(`getTournamentDetails failed with status ${response.status}`);
+		return null;
+	}
+
+	try {
+		const data = JSON.parse(response.body as string);
+		return data.data?.leaderboard;
+	} catch (error) {
+		console.error('Failed to parse tournament details:', error);
+		return null;
 	}
 };
 
@@ -332,6 +368,21 @@ export default function () {
 	console.log(`🎯 [Player ${vuIndex}/${NUM_PLAYERS}] Starting leaderboard stress test`);
 	console.log(`   Tournament: ${TOURNAMENT_ID.substring(0, 16)}...`);
 	console.log(`   Username: ${username}`);
+
+	// Query tournament details to get start/end times
+	const tournamentDetails = getTournamentDetails(TOURNAMENT_ID);
+	if (tournamentDetails) {
+		console.log(`📅 Tournament Details:`);
+		console.log(`   Name: ${tournamentDetails.name}`);
+		console.log(
+			`   Start Time: ${tournamentDetails.startTime} (${tournamentDetails.startTime ? new Date(Number(tournamentDetails.startTime)).toISOString() : 'unlimited'})`
+		);
+		console.log(
+			`   End Time: ${tournamentDetails.endTime} (${tournamentDetails.endTime ? new Date(Number(tournamentDetails.endTime)).toISOString() : 'unlimited'})`
+		);
+	} else {
+		console.warn(`⚠️ Could not fetch tournament details - continuing anyway`);
+	}
 	console.log(`   API URL: ${API_URL.substring(0, 80)}...`);
 
 	// ========================================
@@ -455,6 +506,7 @@ export default function () {
 			`🎲 [${username}] Playing board ${boardId.substring(0, 8)}... (ended: ${latestBoard.isEnded})`
 		);
 		console.log(`   Full board ID: ${boardId}`);
+		console.log(`   Board start_time: ${latestBoard.startTime}, end_time: ${latestBoard.endTime}`);
 
 		// Play batches of moves
 		for (let batch = 1; batch <= BATCHES_PER_GAME; batch++) {
