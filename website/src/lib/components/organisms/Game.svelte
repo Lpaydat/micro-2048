@@ -344,9 +344,17 @@
 				hideInspectorOverlay = true;
 			}
 		} else {
+			// 🔧 FIX: When exiting inspector mode, need to reinitialize board state
+			const wasInspectorMode = isInspectorMode;
 			isInspectorMode = false;
 			lastInspectedBoardId = undefined;
 			isUserControlledReplay = false;
+			
+			// If we were in inspector mode and now we're not, we need to re-initialize
+			// This handles the case of clicking your own board after viewing another player
+			if (wasInspectorMode && isBoardDataValid) {
+				handleGameStateUpdate();
+			}
 		}
 	}
 
