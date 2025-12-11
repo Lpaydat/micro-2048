@@ -1954,7 +1954,9 @@
 						boardNotFoundCount = 0;
 						isBoardNotFound = false;
 						boardRedirectCountdown = 5;
+						initPollConsecutiveFailures = 0;
 						game.reexecute({ requestPolicy: 'network-only' });
+						scheduleNextInitPoll();
 					}}
 				>
 					Retry
@@ -1967,6 +1969,35 @@
 					Go Home
 				</button>
 			</div>
+		</div>
+	</div>
+{:else if boardId && !$game.data?.board && !isCreatingNewBoard}
+	<!-- 🛡️ Loading state while fetching board -->
+	<div class="game-container {$boardSize}">
+		<div class="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
+			{#if $game.fetching}
+				<div class="h-8 w-8 animate-spin rounded-full border-2 border-purple-400 border-t-transparent"></div>
+				<p class="text-gray-400">Loading game...</p>
+			{:else if $game.error}
+				<div class="text-5xl">😵</div>
+				<h2 class="text-xl font-semibold text-red-300">Failed to load game</h2>
+				<p class="text-sm text-gray-400">{$game.error.message}</p>
+				<button
+					type="button"
+					class="btn variant-filled-primary"
+					onclick={() => {
+						initPollConsecutiveFailures = 0;
+						game.reexecute({ requestPolicy: 'network-only' });
+						scheduleNextInitPoll();
+					}}
+				>
+					Retry
+				</button>
+			{:else}
+				<div class="h-8 w-8 animate-spin rounded-full border-2 border-gray-400 border-t-transparent"></div>
+				<p class="text-gray-400">Waiting for board data...</p>
+				<p class="text-xs text-gray-500">Attempt {boardNotFoundCount} / {MAX_BOARD_NOT_FOUND_ATTEMPTS}</p>
+			{/if}
 		</div>
 	</div>
 {:else}
