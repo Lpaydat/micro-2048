@@ -1134,7 +1134,7 @@
 		score > 0;
 
 	const handleSubmitScore = async () => {
-		if (!boardId || !$userStore.username || !$userStore.passwordHash || !leaderboardId) return;
+		if (!boardId || !$userStore.username || !$userStore.passwordHash || !leaderboardId || !$userStore.chainId) return;
 		if (isSubmittingScore || scoreAlreadyBest || scoreSubmitCooldownRemaining > 0) return;
 
 		// Check if score would actually trigger a message (score > bestScore from leaderboard)
@@ -1150,8 +1150,18 @@
 		isSubmittingScore = true;
 
 		try {
+			// Must use player's chain client for score submission (not leaderboard chain)
+			console.log('🎯 Submit Score Debug:');
+			console.log('   userStore.chainId:', $userStore.chainId);
+			console.log('   userStore.username:', $userStore.username);
+			console.log('   boardId:', boardId);
+			console.log('   leaderboardId:', leaderboardId);
+			console.log('   current score:', score);
+			console.log('   bestScore:', bestScore);
+			
+			const playerClient = getClient($userStore.chainId);
 			const result = submitCurrentScore(
-				client,
+				playerClient,
 				boardId,
 				$userStore.username,
 				$userStore.passwordHash
@@ -1163,6 +1173,8 @@
 						if (res.fetching) return;
 						if (res.error) {
 							console.warn('❌ Score submission failed:', res.error.message);
+						} else {
+							console.log('✅ Score submission completed:', res.data);
 						}
 						resolve();
 					});

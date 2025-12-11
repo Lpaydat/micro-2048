@@ -110,6 +110,19 @@ impl QueryHandler {
         }
     }
 
+    /// 🎯 Get player's score from leaderboard (single source of truth)
+    /// Direct key lookup - O(1), no loop needed
+    /// Query this on the LEADERBOARD CHAIN (not player chain)
+    async fn player_best_score(&self, player: String) -> Option<u64> {
+        // Always use "" key - each chain stores its own leaderboard under empty string
+        if let Ok(Some(leaderboard)) = self.state.leaderboards.try_load_entry("").await {
+            // Direct lookup by player name - O(1)
+            leaderboard.score.get(&player).await.ok().flatten()
+        } else {
+            None
+        }
+    }
+
     async fn board(&self, board_id: Option<String>, move_offset: Option<u32>, move_limit: Option<u32>) -> Option<BoardState> {
         let board_id = board_id.unwrap_or(self.state.latest_board_id.get().to_string());
         if let Ok(Some(game)) = self.state.boards.try_load_entry(&board_id).await {
@@ -155,6 +168,7 @@ impl QueryHandler {
                 leaderboard_id: game.leaderboard_id.get().to_string(),
                 shard_id: game.shard_id.get().to_string(),
                 created_at: micros_to_millis(*game.created_at.get()),
+                start_time: micros_to_millis(*game.start_time.get()),
                 end_time: micros_to_millis(*game.end_time.get()),
                 move_history,
                 total_moves,
@@ -193,6 +207,7 @@ impl QueryHandler {
                     leaderboard_id: board.leaderboard_id.get().to_string(),
                     shard_id: board.shard_id.get().to_string(),
                     created_at: micros_to_millis(*board.created_at.get()),
+                    start_time: micros_to_millis(*board.start_time.get()),
                     end_time: micros_to_millis(*board.end_time.get()),
                     move_history: Vec::new(), // Empty for list queries
                     total_moves: *board.move_count.get(),
