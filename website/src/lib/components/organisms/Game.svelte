@@ -1436,10 +1436,20 @@
 					isFrozen = false;
 					lastHashMismatchTime = null;
 				} else {
-					// ❌ Backend has unknown state - wait with timeout
+					// ❌ Backend has unknown state - but we're awaiting sync
+					// This can happen when backend processed moves but we don't have all intermediate hashes
+					// Trust the backend during active sync - add its hash to valid set
+					if (awaitingBackendSync && lastSubmittedTimestamp > 0) {
+						// Backend is processing our submission - trust its current state
+						console.log(`🔄 Backend at intermediate state during sync, adding to valid set`);
+						validBoardHashes.add(backendHash);
+						// Don't desync yet - give it more time
+					}
+					
 					const syncWaitTime = Date.now() - syncingBackgroundStartTime;
 
-					if (syncWaitTime > 10000) {
+					if (syncWaitTime > 30000) {
+						// Extended timeout (30s) when awaiting sync - server can be slow under load
 						console.warn(`⚠️ Sync timeout after ${syncWaitTime}ms - backend at unknown state`);
 						syncingBackgroundStartTime = null;
 						handleDesync();
@@ -1475,7 +1485,7 @@
 				// - We just finished syncing (backend may be processing)
 				// - Local game is finished (don't overwrite game over state!)
 				// - 🔧 FIX: Recently synced (grace period for slow backend during peak load)
-				const SYNC_GRACE_PERIOD = 15000; // 15 seconds grace period after sync (increased for peak load)
+				const SYNC_GRACE_PERIOD = 30000; // 30 seconds grace period after sync (server can be slow under load)
 				const recentlySynced = lastSyncTime && (Date.now() - lastSyncTime < SYNC_GRACE_PERIOD);
 				
 				const shouldWaitForBackend = 
