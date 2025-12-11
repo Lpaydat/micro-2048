@@ -808,16 +808,11 @@
 				perfectCount++;
 				rhythmCombo++;
 				rhythmScore += rhythmFeedback.score * (1 + rhythmCombo * 0.1);
-
-			} else if (rhythmFeedback.accuracy === 'good') {
+			} else if (rhythmFeedback.accuracy === 'early' || rhythmFeedback.accuracy === 'late') {
+				// Within tolerance but not perfect - still good, maintains combo
 				goodCount++;
 				rhythmCombo++;
 				rhythmScore += rhythmFeedback.score * (1 + rhythmCombo * 0.05);
-
-			} else {
-				// early or late - still valid but breaks combo
-
-				// Don't increment combo for early/late, but don't reset it either
 			}
 
 			if (rhythmCombo > maxRhythmCombo) {

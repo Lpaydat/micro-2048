@@ -399,23 +399,23 @@ export class RhythmEngine {
 		const { diffMs, isLate } = this.getTimingFromNearestBeat();
 		const absDiff = Math.abs(diffMs);
 
-		// Determine accuracy based on timing
-		// Windows are relaxed for better feel (similar to Guitar Hero/NecroDancer casual)
+		// Determine accuracy based on timing (relative to tolerance setting)
+		// Perfect: within 50% of tolerance
+		// Good: within 100% of tolerance
+		// Miss: outside tolerance
+		const perfectWindow = this.tolerance * 0.5;
+		
 		let accuracy: RhythmFeedback['accuracy'];
 		let score: number;
 
-		if (absDiff <= 75) {
-			// Within 75ms = Perfect
+		if (absDiff <= perfectWindow) {
+			// Within 50% of tolerance = Perfect
 			accuracy = 'perfect';
 			score = 100;
-		} else if (absDiff <= 150) {
-			// Within 150ms = Good
-			accuracy = 'good';
-			score = 75;
 		} else if (absDiff <= this.tolerance) {
-			// Within tolerance = Early/Late
+			// Within tolerance = Good (early/late indicator)
 			accuracy = isLate ? 'late' : 'early';
-			score = 50;
+			score = 75;
 		} else {
 			// Outside tolerance = Miss
 			accuracy = 'miss';
