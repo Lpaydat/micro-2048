@@ -48,6 +48,9 @@
 	
 	// Extract rhythm settings for display
 	const rhythmSettings = $derived(() => RhythmEngine.getDisplayInfo(description));
+	
+	// Check if this is music mode (vs metronome mode)
+	const isMetronomeMode = $derived(isRhythmMode && rhythmSettings()?.useMusic === false);
 
 	// Clean description (remove rhythm settings tag)
 	const cleanDescription = $derived(RhythmEngine.cleanDescription(description));
@@ -69,21 +72,28 @@
 	});
 	const isPinnedAndActive = $derived(isPinned && isCurrentlyActive());
 	
-	// Rhythm mode styling - purple/violet gradient theme with pulse animation on hover
-	const rhythmClass = $derived(
-		isRhythmMode
-			? 'rhythm-item !bg-gradient-to-br !from-violet-100 !to-purple-100 !border-2 !border-violet-400'
-			: ''
-	);
+	// Rhythm mode styling
+	// Music mode: bright violet/purple gradient - fun, playful
+	// Metronome mode: deep indigo gradient - precise, focused
+	const rhythmClass = $derived(() => {
+		if (!isRhythmMode) return '';
+		if (isMetronomeMode) {
+			return 'metronome-item !bg-gradient-to-br !from-indigo-100 !to-slate-100 !border-2 !border-indigo-400';
+		}
+		return 'rhythm-item !bg-gradient-to-br !from-violet-100 !to-purple-100 !border-2 !border-violet-400';
+	});
 	
-	const activeClass = $derived(
-		isPinned && isCurrentlyActive()
-			? isRhythmMode
-				? '!bg-gradient-to-br !from-violet-200 !to-purple-200 !border-2 !border-violet-600 !ring-1 !ring-violet-600 shadow-[0_0_15px_rgba(139,92,246,0.5)]'
-				: '!bg-orange-200 !border-2 !border-orange-800 !ring-1 !ring-orange-800 shadow-[0_0_15px_rgba(234,88,12,0.5)]'
-			: ''
-	);
-	const itemClass = $derived(`${className} ${rhythmClass} ${activeClass}`);
+	const activeClass = $derived(() => {
+		if (!(isPinned && isCurrentlyActive())) return '';
+		if (isMetronomeMode) {
+			return '!bg-gradient-to-br !from-indigo-200 !to-slate-200 !border-2 !border-indigo-600 !ring-1 !ring-indigo-600 shadow-[0_0_15px_rgba(99,102,241,0.5)]';
+		}
+		if (isRhythmMode) {
+			return '!bg-gradient-to-br !from-violet-200 !to-purple-200 !border-2 !border-violet-600 !ring-1 !ring-violet-600 shadow-[0_0_15px_rgba(139,92,246,0.5)]';
+		}
+		return '!bg-orange-200 !border-2 !border-orange-800 !ring-1 !ring-orange-800 shadow-[0_0_15px_rgba(234,88,12,0.5)]';
+	});
+	const itemClass = $derived(`${className} ${rhythmClass()} ${activeClass()}`);
 
 	const modalStore = getModalStore();
 	const modal: ModalSettings = {
@@ -137,13 +147,17 @@
 
 <BaseListItem className={itemClass}>
 	{#snippet leftContent()}
-		<a href={`/events/${leaderboardId}`} class={isRhythmMode ? 'rhythm-link' : ''}>
+		<a href={`/events/${leaderboardId}`} class={isRhythmMode ? (isMetronomeMode ? 'metronome-link' : 'rhythm-link') : ''}>
 			<div class="flex w-full items-center justify-between pb-3">
 				<div class="flex flex-wrap items-center gap-2">
-					<h3 class="text-xl font-bold {isRhythmMode ? 'text-violet-800' : 'text-gray-800'}">{name}</h3>
+					<h3 class="text-xl font-bold {isMetronomeMode ? 'text-indigo-800' : isRhythmMode ? 'text-violet-800' : 'text-gray-800'}">{name}</h3>
 					{#if isRhythmMode}
-						<span class="inline-flex items-center gap-1 rounded-full bg-violet-600 px-2.5 py-0.5 text-xs font-medium text-white">
-							<Music size={12} />
+						<span class="inline-flex items-center gap-1 rounded-full {isMetronomeMode ? 'bg-indigo-600' : 'bg-violet-600'} px-2.5 py-0.5 text-xs font-medium text-white">
+							{#if isMetronomeMode}
+								🎯
+							{:else}
+								<Music size={12} />
+							{/if}
 							Rhythm
 						</span>
 					{/if}
@@ -152,7 +166,7 @@
 					{/if}
 				</div>
 			</div>
-			<div class="text-sm {isRhythmMode ? 'text-violet-700' : 'text-gray-600'}">
+			<div class="text-sm {isMetronomeMode ? 'text-indigo-700' : isRhythmMode ? 'text-violet-700' : 'text-gray-600'}">
 				<div class="pb-1">
 					<span class="me-1 font-semibold">Creator:</span><span>{host}</span>
 				</div>
@@ -166,17 +180,20 @@
 				</div>
 				{#if isRhythmMode && rhythmSettings()}
 					{@const settings = rhythmSettings()}
+					{@const badgeColors = isMetronomeMode 
+						? 'bg-indigo-100 text-indigo-700 ring-indigo-300' 
+						: 'bg-violet-100 text-violet-700 ring-violet-300'}
 					<div class="mt-2 flex flex-wrap gap-2">
 						{#if settings?.bpm && settings.bpm > 0}
-							<span class="inline-flex items-center rounded-md bg-violet-100 px-2 py-1 text-xs font-medium text-violet-700 ring-1 ring-inset ring-violet-300">
+							<span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset {badgeColors}">
 								{settings.bpm} BPM
 							</span>
 						{/if}
-						<span class="inline-flex items-center rounded-md bg-violet-100 px-2 py-1 text-xs font-medium text-violet-700 ring-1 ring-inset ring-violet-300">
+						<span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset {badgeColors}">
 							±{settings?.tolerance}ms
 						</span>
 						{#if settings?.useMusic}
-							<span class="inline-flex items-center gap-1 rounded-md bg-violet-100 px-2 py-1 text-xs font-medium text-violet-700 ring-1 ring-inset ring-violet-300">
+							<span class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset {badgeColors}">
 								<Music size={10} />
 								{#if settings.trackName}
 									{settings.trackName}
@@ -185,14 +202,14 @@
 								{/if}
 							</span>
 						{:else}
-							<span class="inline-flex items-center gap-1 rounded-md bg-violet-100 px-2 py-1 text-xs font-medium text-violet-700 ring-1 ring-inset ring-violet-300">
-								🔊 Metronome
+							<span class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset {badgeColors}">
+								🎯 Metronome
 							</span>
 						{/if}
 					</div>
 				{/if}
 				{#if cleanDescription}
-					<div class="mt-3 border-t-2 {isRhythmMode ? 'border-violet-200' : 'border-surface-200'} pt-4 {isRhythmMode ? 'text-violet-800' : 'text-gray-700'}">
+					<div class="mt-3 border-t-2 {isMetronomeMode ? 'border-indigo-200' : isRhythmMode ? 'border-violet-200' : 'border-surface-200'} pt-4 {isMetronomeMode ? 'text-indigo-800' : isRhythmMode ? 'text-violet-800' : 'text-gray-700'}">
 						{cleanDescription}
 					</div>
 				{/if}
@@ -216,6 +233,11 @@
 </BaseListItem>
 
 <style>
+	/* ========================================
+	 * MUSIC MODE - Violet/Purple Theme
+	 * Warm, playful, fun vibes
+	 * ======================================== */
+	
 	/* Rhythm mode hover effects - 65 BPM (923ms per beat) */
 	/* Single smooth pulse then rest */
 	:global(.rhythm-item) {
@@ -225,15 +247,11 @@
 
 	:global(.rhythm-item:hover) {
 		border-color: rgb(139, 92, 246) !important;
-		animation: pulse-beat 923ms ease-out infinite;
+		animation: pulse-beat-violet 923ms ease-out infinite;
 	}
 
-	/* Single beat: smooth rise, smooth fall, then rest
-	   0%: rest
-	   20%: peak
-	   45%: back to rest
-	   100%: rest continues */
-	@keyframes pulse-beat {
+	/* Single beat: smooth rise, smooth fall, then rest */
+	@keyframes pulse-beat-violet {
 		0% {
 			transform: scale(1);
 			box-shadow: 
@@ -284,15 +302,75 @@
 		100% { transform: scale(1); }
 	}
 
-	/* BPM/tolerance tags glow pulse */
+	/* BPM/tolerance tags glow pulse - violet */
 	:global(.rhythm-item:hover .ring-violet-300) {
-		animation: tag-pulse 923ms ease-out infinite;
+		animation: tag-pulse-violet 923ms ease-out infinite;
 	}
 
-	@keyframes tag-pulse {
+	@keyframes tag-pulse-violet {
 		0% { box-shadow: 0 0 0 rgba(139, 92, 246, 0); }
 		20% { box-shadow: 0 0 5px rgba(139, 92, 246, 0.35); }
 		45% { box-shadow: 0 0 0 rgba(139, 92, 246, 0); }
 		100% { box-shadow: 0 0 0 rgba(139, 92, 246, 0); }
+	}
+
+	/* ========================================
+	 * METRONOME MODE - Deep Indigo Theme
+	 * Precise, focused, serious vibes
+	 * ======================================== */
+	
+	:global(.metronome-item) {
+		position: relative;
+		overflow: hidden;
+	}
+
+	:global(.metronome-item:hover) {
+		border-color: rgb(99, 102, 241) !important;
+		animation: pulse-beat-indigo 923ms ease-out infinite;
+	}
+
+	/* Single beat: smooth rise, smooth fall, then rest - indigo version */
+	@keyframes pulse-beat-indigo {
+		0% {
+			transform: scale(1);
+			box-shadow: 
+				0 0 8px rgba(99, 102, 241, 0.15),
+				0 0 16px rgba(99, 102, 241, 0.08);
+		}
+		20% {
+			transform: scale(1.012);
+			box-shadow: 
+				0 0 18px rgba(99, 102, 241, 0.45),
+				0 0 35px rgba(99, 102, 241, 0.2);
+		}
+		45% {
+			transform: scale(1);
+			box-shadow: 
+				0 0 8px rgba(99, 102, 241, 0.15),
+				0 0 16px rgba(99, 102, 241, 0.08);
+		}
+		100% {
+			transform: scale(1);
+			box-shadow: 
+				0 0 8px rgba(99, 102, 241, 0.15),
+				0 0 16px rgba(99, 102, 241, 0.08);
+		}
+	}
+
+	/* Metronome badge pulse */
+	:global(.metronome-item:hover .badge) {
+		animation: badge-pulse 923ms ease-out infinite;
+	}
+
+	/* BPM/tolerance tags glow pulse - indigo */
+	:global(.metronome-item:hover .ring-indigo-300) {
+		animation: tag-pulse-indigo 923ms ease-out infinite;
+	}
+
+	@keyframes tag-pulse-indigo {
+		0% { box-shadow: 0 0 0 rgba(99, 102, 241, 0); }
+		20% { box-shadow: 0 0 5px rgba(99, 102, 241, 0.35); }
+		45% { box-shadow: 0 0 0 rgba(99, 102, 241, 0); }
+		100% { box-shadow: 0 0 0 rgba(99, 102, 241, 0); }
 	}
 </style>

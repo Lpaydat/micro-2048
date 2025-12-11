@@ -18,6 +18,7 @@
 		onReplayClick?: () => void;
 		hideOverlay?: boolean;
 		beatPhase?: number; // 🎵 0-1 for rhythm mode border pulse
+		useMusic?: boolean; // 🎵 true = music mode (violet), false = metronome mode (cyan)
 	}
 
 	let {
@@ -32,14 +33,17 @@
 		showReplayButton = false,
 		onReplayClick,
 		hideOverlay = false,
-		beatPhase = -1 // 🎵 -1 means rhythm mode disabled
+		beatPhase = -1, // 🎵 -1 means rhythm mode disabled
+		useMusic = true // 🎵 true = music mode (violet), false = metronome mode (cyan)
 	}: Props = $props();
 
 	// 🎵 Rhythm miss effect
 	let showMissEffect = $state(false);
 	
 	// 🎵 Rhythm border pulse - computed from beatPhase
-	// Border color pulses between dim and bright violet on beat
+	// Border color pulses between dim and bright on beat
+	// Music mode: violet (139, 92, 246)
+	// Metronome mode: indigo (99, 102, 241)
 	// No glow, no scale - clean and easy on the eyes
 	const rhythmBorderStyle = $derived(() => {
 		if (beatPhase < 0) return ''; // Rhythm mode disabled
@@ -55,7 +59,12 @@
 		// Border opacity: 0.2 (dim) -> 1.0 (bright) on beat
 		const borderOpacity = 0.2 + intensity * 0.8;
 		
-		return `border-color: rgba(139, 92, 246, ${borderOpacity});`;
+		// Color based on mode: violet for music, indigo for metronome
+		const color = useMusic 
+			? `rgba(139, 92, 246, ${borderOpacity})` // violet
+			: `rgba(99, 102, 241, ${borderOpacity})`; // indigo
+		
+		return `border-color: ${color};`;
 	});
 	
 	// Export function to trigger miss effect from parent
@@ -174,6 +183,7 @@
 		class="board-container relative w-full {$boardSize}"
 		class:miss-shake={showMissEffect}
 		class:rhythm-mode={beatPhase >= 0}
+		class:metronome-mode={beatPhase >= 0 && !useMusic}
 		style="touch-action: none; {rhythmBorderStyle()}"
 		ontouchstart={handleTouchStart}
 		ontouchmove={handleTouchMove}
@@ -242,11 +252,16 @@
 		position: relative;
 	}
 	
-	/* 🎵 Rhythm mode - pulsing violet border */
+	/* 🎵 Rhythm mode - pulsing violet border (music mode) */
 	.board-container.rhythm-mode {
 		border: 4px solid rgba(139, 92, 246, 0.2);
 		border-radius: 8px;
 		transition: border-color 0.08s ease-out;
+	}
+	
+	/* 🎵 Metronome mode - pulsing indigo border */
+	.board-container.metronome-mode {
+		border-color: rgba(99, 102, 241, 0.2);
 	}
 
 	.miss-shake {

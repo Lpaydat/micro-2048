@@ -43,6 +43,13 @@
 	const isRhythmMode = $derived(RhythmEngine.isRhythmMode(description));
 	const rhythmInfo = $derived(RhythmEngine.getDisplayInfo(description));
 	const cleanedDescription = $derived(RhythmEngine.cleanDescription(description));
+	const isMetronomeMode = $derived(isRhythmMode && rhythmInfo?.useMusic === false);
+	
+	// Badge colors based on mode
+	const badgeColors = $derived(isMetronomeMode 
+		? 'bg-indigo-600/30 text-indigo-300 ring-indigo-500/50' 
+		: 'bg-violet-600/30 text-violet-300 ring-violet-500/50');
+	const sidebarTextColor = $derived(isMetronomeMode ? 'text-indigo-300/80' : 'text-violet-300/80');
 
 	// Check if description should be shown (cleaned description or rhythm mode info)
 	const hasDescription = $derived(chainId && (cleanedDescription || isRhythmMode));
@@ -104,7 +111,11 @@
 					<div class="flex items-center justify-between">
 						<span class="flex items-center gap-2">
 							{#if isRhythmMode}
-								<Music size={14} class="text-violet-400" />
+								{#if isMetronomeMode}
+									<span class="text-indigo-400">🎯</span>
+								{:else}
+									<Music size={14} class="text-violet-400" />
+								{/if}
 							{/if}
 							Event Details
 						</span>
@@ -117,25 +128,25 @@
 					<div class="mt-2 rounded bg-black/40 p-3 text-xs leading-relaxed text-gray-300">
 						{#if isRhythmMode && rhythmInfo}
 							<div class="mb-3 flex flex-wrap gap-2">
-								<span class="inline-flex items-center rounded-md bg-violet-600/30 px-2 py-1 text-xs font-medium text-violet-300 ring-1 ring-inset ring-violet-500/50">
-									🎵 Rhythm Mode
+								<span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset {badgeColors}">
+									{isMetronomeMode ? '🎯' : '🎵'} Rhythm Mode
 								</span>
 								{#if rhythmInfo.bpm > 0}
-									<span class="inline-flex items-center rounded-md bg-violet-600/30 px-2 py-1 text-xs font-medium text-violet-300 ring-1 ring-inset ring-violet-500/50">
+									<span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset {badgeColors}">
 										{rhythmInfo.bpm} BPM
 									</span>
 								{/if}
-								<span class="inline-flex items-center rounded-md bg-violet-600/30 px-2 py-1 text-xs font-medium text-violet-300 ring-1 ring-inset ring-violet-500/50">
+								<span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset {badgeColors}">
 									±{rhythmInfo.tolerance}ms
 								</span>
 								{#if rhythmInfo.useMusic}
-									<span class="inline-flex items-center gap-1 rounded-md bg-violet-600/30 px-2 py-1 text-xs font-medium text-violet-300 ring-1 ring-inset ring-violet-500/50">
+									<span class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset {badgeColors}">
 										<Music size={10} />
 										{rhythmInfo.trackName || 'Random Track'}
 									</span>
 								{:else}
-									<span class="inline-flex items-center rounded-md bg-violet-600/30 px-2 py-1 text-xs font-medium text-violet-300 ring-1 ring-inset ring-violet-500/50">
-										🔊 Metronome
+									<span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset {badgeColors}">
+										🎯 Metronome
 									</span>
 								{/if}
 							</div>
@@ -185,7 +196,11 @@
 				<div class="flex-none border-b border-gray-700 px-6 py-4">
 					<h2 class="text-xl font-bold text-[#EEE4DA] flex items-center gap-2">
 						{#if isRhythmMode}
-							<Music size={20} class="text-violet-400" />
+							{#if isMetronomeMode}
+								<span class="text-indigo-400">🎯</span>
+							{:else}
+								<Music size={20} class="text-violet-400" />
+							{/if}
 						{/if}
 						Event Details
 					</h2>
@@ -193,29 +208,29 @@
 				<div class="flex-1 overflow-y-auto px-6 py-4">
 					{#if isRhythmMode && rhythmInfo}
 						<div class="mb-4 flex flex-wrap gap-2">
-							<span class="inline-flex items-center rounded-md bg-violet-600/30 px-2.5 py-1 text-sm font-medium text-violet-300 ring-1 ring-inset ring-violet-500/50">
-								🎵 Rhythm Mode
+							<span class="inline-flex items-center rounded-md px-2.5 py-1 text-sm font-medium ring-1 ring-inset {badgeColors}">
+								{isMetronomeMode ? '🎯' : '🎵'} Rhythm Mode
 							</span>
 							{#if rhythmInfo.bpm > 0}
-								<span class="inline-flex items-center rounded-md bg-violet-600/30 px-2.5 py-1 text-sm font-medium text-violet-300 ring-1 ring-inset ring-violet-500/50">
+								<span class="inline-flex items-center rounded-md px-2.5 py-1 text-sm font-medium ring-1 ring-inset {badgeColors}">
 									{rhythmInfo.bpm} BPM
 								</span>
 							{/if}
-							<span class="inline-flex items-center rounded-md bg-violet-600/30 px-2.5 py-1 text-sm font-medium text-violet-300 ring-1 ring-inset ring-violet-500/50">
+							<span class="inline-flex items-center rounded-md px-2.5 py-1 text-sm font-medium ring-1 ring-inset {badgeColors}">
 								±{rhythmInfo.tolerance}ms tolerance
 							</span>
 							{#if rhythmInfo.useMusic}
-								<span class="inline-flex items-center gap-1 rounded-md bg-violet-600/30 px-2.5 py-1 text-sm font-medium text-violet-300 ring-1 ring-inset ring-violet-500/50">
+								<span class="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-sm font-medium ring-1 ring-inset {badgeColors}">
 									<Music size={12} />
 									{rhythmInfo.trackName || 'Random Track'}
 								</span>
 							{:else}
-								<span class="inline-flex items-center rounded-md bg-violet-600/30 px-2.5 py-1 text-sm font-medium text-violet-300 ring-1 ring-inset ring-violet-500/50">
-									🔊 Metronome
+								<span class="inline-flex items-center rounded-md px-2.5 py-1 text-sm font-medium ring-1 ring-inset {badgeColors}">
+									🎯 Metronome
 								</span>
 							{/if}
 						</div>
-						<p class="mb-4 text-xs text-violet-300/80">
+						<p class="mb-4 text-xs {sidebarTextColor}">
 							Move on the beat! Off-beat moves won't count.
 						</p>
 					{/if}

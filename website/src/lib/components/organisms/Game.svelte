@@ -2086,7 +2086,7 @@
 		</div>
 	</div>
 {:else}
-<div class="game-container {$boardSize}">
+<div class="game-container {$boardSize}" class:rhythm-container={showRhythmIndicator}>
 	<div class="game-board">
 		<Board
 			bind:this={boardRef}
@@ -2106,6 +2106,7 @@
 			onReplayClick={handleReplayClick}
 			hideOverlay={hideInspectorOverlay}
 			{beatPhase}
+			useMusic={rhythmSettings?.useMusic ?? true}
 		>
 			<!-- {#snippet header(size)} -->
 			{#snippet header()}
@@ -2522,6 +2523,19 @@
 
 	.game-container.sm {
 		max-width: 370px;
+	}
+
+	/* 🎵 Rhythm mode - add extra width for 4px border on each side */
+	.game-container.rhythm-container.lg {
+		max-width: 563px; /* 555 + 8 */
+	}
+
+	.game-container.rhythm-container.md {
+		max-width: 468px; /* 460 + 8 */
+	}
+
+	.game-container.rhythm-container.sm {
+		max-width: 378px; /* 370 + 8 */
 	}
 
 	.game-board {
