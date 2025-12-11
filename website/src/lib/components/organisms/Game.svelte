@@ -478,6 +478,7 @@
 
 	$: if (
 		$game.data?.board &&
+		$game.data?.board?.boardId === boardId && // 🔧 FIX: Ensure data matches requested board (prevent stale data)
 		boardId &&
 		player &&
 		!isInspectorMode && // Don't auto-update in inspector mode
@@ -500,6 +501,17 @@
 			moveQueue = []; // Clear any queued moves from previous board
 			awaitingBackendSync = false; // 🔒 Reset awaiting state
 			
+			// 🔧 FIX: Reset inspector mode related state when switching boards
+			// Note: Don't set isInspectorMode directly here - let the reactive block at line ~287 handle it
+			// Just clear the cached state so inspector mode re-evaluates correctly
+			paginatedHistoryStore = null;
+			lastInspectedBoardId = undefined;
+			isUserControlledReplay = false;
+			inspectorCurrentMoveIndex = 0;
+			totalMoves = 0;
+			initialBoardCache = null;
+			inspectorMoveHistory = [];
+			
 			// 🎵 Reset rhythm stats for new board
 			rhythmScore = 0;
 			rhythmCombo = 0;
@@ -514,7 +526,7 @@
 	}
 
 	// Handle tournament ending while player was offline
-	$: if ($game.data?.board && boardId && player && !isInspectorMode && isInitialized) {
+	$: if ($game.data?.board && $game.data?.board?.boardId === boardId && boardId && player && !isInspectorMode && isInitialized) {
 		const tournamentEndTime = parseInt($game.data?.board?.endTime || '0');
 		const boardIsActive = !$game.data?.board?.isEnded;
 		const tournamentEnded = tournamentEndTime > 0 && tournamentEndTime <= Date.now();
