@@ -16,6 +16,7 @@
 	import SideLeaderboard from '$lib/components/organisms/SideLeaderboard.svelte';
 	import { getPlayerInfo } from '$lib/graphql/queries/getPlayerInfo';
 	import { logout } from '$lib/utils/logout';
+	import NetworkStatusIndicator from '$lib/components/atoms/NetworkStatusIndicator.svelte';
 
 	interface Props {
 		children: Snippet;
@@ -96,5 +97,8 @@
 		/>
 	{/if}
 </Drawer>
+
+<!-- Network Status Indicator (shows when degraded/offline) -->
+<NetworkStatusIndicator position="bottom-right" onlyShowProblems={true} />
 
 {@render children?.()}
