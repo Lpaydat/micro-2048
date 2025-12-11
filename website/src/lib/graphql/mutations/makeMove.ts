@@ -12,14 +12,26 @@ export interface MakeMoveResult {
 	error?: string;
 }
 
+// Timeout helper
+const withTimeout = <T>(promise: Promise<T>, timeoutMs: number, errorMessage: string): Promise<T> => {
+	return Promise.race([
+		promise,
+		new Promise<T>((_, reject) => 
+			setTimeout(() => reject(new Error(errorMessage)), timeoutMs)
+		)
+	]);
+};
+
 /**
  * Submit moves to the backend with proper error handling.
  * Returns a promise that resolves when the mutation completes.
+ * Includes a 30-second timeout to prevent hanging during peak load.
  */
 export const makeMoves = async (
 	client: Client,
 	moves: string,
-	boardId: string
+	boardId: string,
+	timeoutMs: number = 30000 // Default 30 second timeout
 ): Promise<MakeMoveResult> => {
 	const player = localStorage.getItem('username');
 	const passwordHash = localStorage.getItem('passwordHash');
@@ -30,7 +42,7 @@ export const makeMoves = async (
 	}
 
 	try {
-		const result: OperationResult = await client
+		const mutationPromise = client
 			.mutation(MAKE_MOVES, {
 				boardId,
 				moves,
@@ -38,6 +50,12 @@ export const makeMoves = async (
 				passwordHash
 			})
 			.toPromise();
+
+		const result: OperationResult = await withTimeout(
+			mutationPromise,
+			timeoutMs,
+			`makeMoves timeout after ${timeoutMs}ms`
+		);
 
 		if (result.error) {
 			console.error('makeMoves mutation error:', result.error);
