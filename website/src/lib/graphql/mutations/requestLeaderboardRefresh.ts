@@ -15,8 +15,6 @@ const UPDATE_LEADERBOARD = gql`
  * @returns Mutation store result
  */
 export const requestLeaderboardRefresh = (leaderboardClient: Client) => {
-	console.log('Triggering leaderboard update via direct operation');
-
 	return mutationStore({
 		client: leaderboardClient,
 		query: UPDATE_LEADERBOARD,
