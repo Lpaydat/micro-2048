@@ -31,8 +31,8 @@ interface CircuitStats {
 
 const DEFAULT_CONFIG: CircuitBreakerConfig = {
 	failureThreshold: 5,
-	resetTimeout: 30000, // 30 seconds
-	successThreshold: 2
+	resetTimeout: 10000, // 10 seconds (reduced from 30s for better UX)
+	successThreshold: 1 // Only need 1 success to recover (reduced from 2)
 };
 
 class CircuitBreaker {
@@ -175,11 +175,11 @@ class CircuitBreaker {
 // Singleton instance for the application
 export const circuitBreaker = new CircuitBreaker({
 	failureThreshold: 5,
-	resetTimeout: 30000,
-	successThreshold: 2,
+	resetTimeout: 10000, // 10 seconds - recover faster
+	successThreshold: 1, // Only 1 success needed
 	onStateChange: (state, endpoint) => {
 		if (state === 'open') {
-			console.warn(`⚠️ Circuit OPEN for ${endpoint} - requests will be blocked`);
+			console.warn(`⚠️ Circuit OPEN for ${endpoint} - requests will be blocked for 10s`);
 		} else if (state === 'closed') {
 			console.log(`✅ Circuit CLOSED for ${endpoint} - normal operation resumed`);
 		}

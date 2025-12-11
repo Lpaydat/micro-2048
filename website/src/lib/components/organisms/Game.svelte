@@ -1237,13 +1237,13 @@
 	};
 
 	// 🛡️ RESILIENCE: Adaptive polling with backoff
-	let initGameIntervalId: ReturnType<typeof setInterval> | null = null;
+	let initGameIntervalId: ReturnType<typeof setTimeout> | null = null;
 	let lastPolledBoardId: string | undefined = undefined;
-	let initPollInterval = 500; // Start at 500ms
 	let initPollConsecutiveFailures = 0;
+	let isInitPollInFlight = false; // 🔒 Prevent overlapping init polls
 	const INIT_POLL_MIN_INTERVAL = 500;
-	const INIT_POLL_MAX_INTERVAL = 5000; // Max 5 seconds between polls
-	const INIT_POLL_BACKOFF_FACTOR = 1.5;
+	const INIT_POLL_MAX_INTERVAL = 3000; // Max 3 seconds (reduced from 5s for better responsiveness)
+	const INIT_POLL_BACKOFF_FACTOR = 1.3; // Gentler backoff (reduced from 1.5)
 
 	// Adaptive interval calculation
 	const getAdaptiveInitPollInterval = () => {
@@ -1257,50 +1257,55 @@
 	// Schedule next init poll with adaptive interval
 	const scheduleNextInitPoll = () => {
 		if (initGameIntervalId) {
-			clearInterval(initGameIntervalId);
+			clearTimeout(initGameIntervalId);
 			initGameIntervalId = null;
 		}
 		
 		const interval = getAdaptiveInitPollInterval();
 		initGameIntervalId = setTimeout(() => {
 			doInitPoll();
-		}, interval) as unknown as ReturnType<typeof setInterval>;
+		}, interval);
 	};
 
 	// Actual polling logic
 	const doInitPoll = () => {
 		// Stop polling if board not found
 		if (isBoardNotFound) return;
+		
+		// 🔒 Skip if already fetching (prevents request pileup during slow responses)
+		if ($game.fetching || isInitPollInFlight) {
+			// Still schedule next poll, but don't start a new request
+			scheduleNextInitPoll();
+			return;
+		}
 
 		if (boardId && !$game.data?.board) {
-			// Board not found yet - only count failures when NOT actively fetching
-			// This prevents false positives when backend is slow/overloaded
-			if (!$game.fetching) {
-				boardNotFoundCount++;
-				initPollConsecutiveFailures++;
-				
-				// Check if we're still in grace period for newly created boards
-				const timeSinceCreation = boardCreationTime ? Date.now() - boardCreationTime : Infinity;
-				const isInGracePeriod = timeSinceCreation < NEW_BOARD_GRACE_PERIOD;
-				
-				// Only trigger "not found" if we've exceeded attempts AND grace period
-				if (boardNotFoundCount >= MAX_BOARD_NOT_FOUND_ATTEMPTS && !isInGracePeriod) {
-					isBoardNotFound = true;
-					// Start redirect countdown (clear any existing interval first)
-					if (boardRedirectCountdownInterval) {
-						clearInterval(boardRedirectCountdownInterval);
-					}
-					boardRedirectCountdownInterval = setInterval(() => {
-						boardRedirectCountdown--;
-						if (boardRedirectCountdown <= 0 && boardRedirectCountdownInterval) {
-							clearInterval(boardRedirectCountdownInterval);
-							boardRedirectCountdownInterval = null;
-							goto('/');
-						}
-					}, 1000);
-					return;
+			// Board not found yet - count as potential failure
+			boardNotFoundCount++;
+			initPollConsecutiveFailures++;
+			
+			// Check if we're still in grace period for newly created boards
+			const timeSinceCreation = boardCreationTime ? Date.now() - boardCreationTime : Infinity;
+			const isInGracePeriod = timeSinceCreation < NEW_BOARD_GRACE_PERIOD;
+			
+			// Only trigger "not found" if we've exceeded attempts AND grace period
+			if (boardNotFoundCount >= MAX_BOARD_NOT_FOUND_ATTEMPTS && !isInGracePeriod) {
+				isBoardNotFound = true;
+				// Start redirect countdown (clear any existing interval first)
+				if (boardRedirectCountdownInterval) {
+					clearInterval(boardRedirectCountdownInterval);
 				}
+				boardRedirectCountdownInterval = setInterval(() => {
+					boardRedirectCountdown--;
+					if (boardRedirectCountdown <= 0 && boardRedirectCountdownInterval) {
+						clearInterval(boardRedirectCountdownInterval);
+						boardRedirectCountdownInterval = null;
+						goto('/');
+					}
+				}, 1000);
+				return;
 			}
+			
 			game.reexecute({ requestPolicy: 'network-only' });
 			scheduleNextInitPoll();
 		} else if ($game.data?.board?.boardId === boardId) {
