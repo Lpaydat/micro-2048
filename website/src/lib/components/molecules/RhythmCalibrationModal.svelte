@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onDestroy } from 'svelte';
 	import { getModalStore } from '@skeletonlabs/skeleton';
 	import * as Tone from 'tone';
 	import { RhythmEngine } from '$lib/game/rhythmEngine.js';
@@ -22,7 +22,6 @@
 	// Visual state
 	let beatPhase = $state(0);
 	let showTapFeedback = $state(false);
-	let lastTapAccuracy: 'perfect' | 'good' | 'early' | 'late' | 'miss' | null = $state(null);
 
 	// Audio
 	let metronomeSynth: Tone.Synth | null = null;
@@ -99,7 +98,6 @@
 		// Ignore taps during warmup
 		if (beatCount < WARMUP_BEATS) {
 			showTapFeedback = true;
-			lastTapAccuracy = null;
 			setTimeout(() => (showTapFeedback = false), 150);
 			return;
 		}
@@ -121,23 +119,11 @@
 			offsetMs = -distToNext * 1000;
 		}
 
-		// Determine accuracy for feedback
-		const absOffset = Math.abs(offsetMs);
-		if (absOffset <= 50) {
-			lastTapAccuracy = 'perfect';
-		} else if (absOffset <= 100) {
-			lastTapAccuracy = 'good';
-		} else if (absOffset <= 150) {
-			lastTapAccuracy = offsetMs > 0 ? 'late' : 'early';
-		} else {
-			lastTapAccuracy = 'miss';
-		}
-
 		// Store offset (we want the pattern of how user taps)
 		offsets.push(offsetMs);
 		tapCount++;
 
-		// Show feedback
+		// Show visual feedback (just that we registered the tap)
 		showTapFeedback = true;
 		setTimeout(() => (showTapFeedback = false), 150);
 
@@ -195,40 +181,6 @@
 			$modalStore[0].response(calculatedOffset);
 		}
 		modalStore.close();
-	}
-
-	function getAccuracyColor(accuracy: typeof lastTapAccuracy) {
-		switch (accuracy) {
-			case 'perfect':
-				return 'text-green-500';
-			case 'good':
-				return 'text-blue-500';
-			case 'early':
-				return 'text-yellow-500';
-			case 'late':
-				return 'text-orange-500';
-			case 'miss':
-				return 'text-red-500';
-			default:
-				return 'text-gray-500';
-		}
-	}
-
-	function getAccuracyText(accuracy: typeof lastTapAccuracy) {
-		switch (accuracy) {
-			case 'perfect':
-				return 'Perfect!';
-			case 'good':
-				return 'Good!';
-			case 'early':
-				return 'Early';
-			case 'late':
-				return 'Late';
-			case 'miss':
-				return 'Miss';
-			default:
-				return 'Wait...';
-		}
 	}
 
 	onDestroy(() => {
@@ -311,8 +263,7 @@
 				<!-- Beat pulse ring -->
 				<div
 					class="absolute left-1/2 top-1/2 h-24 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-purple-500 transition-all duration-75"
-					style="transform: translate(-50%, -50%) scale({1 + (1 - beatPhase) * 0.5}); opacity: {1 -
-						beatPhase * 0.7}"
+					style="transform: translate(-50%, -50%) scale({1 + (1 - beatPhase) * 0.5}); opacity: {1 - beatPhase * 0.7}"
 				></div>
 
 				<!-- Center dot -->
@@ -321,14 +272,10 @@
 					style="transform: translate(-50%, -50%) scale({beatPhase < 0.1 ? 1.5 : 1})"
 				></div>
 
-				<!-- Feedback text -->
+				<!-- Tap registered feedback -->
 				{#if showTapFeedback}
-					<div
-						class="absolute left-1/2 top-3 -translate-x-1/2 text-lg font-bold {getAccuracyColor(
-							lastTapAccuracy
-						)}"
-					>
-						{getAccuracyText(lastTapAccuracy)}
+					<div class="absolute left-1/2 top-3 -translate-x-1/2 text-lg font-bold text-purple-300">
+						✓
 					</div>
 				{/if}
 			</div>
