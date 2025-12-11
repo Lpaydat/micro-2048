@@ -115,6 +115,17 @@
 									<li>{circuit}</li>
 								{/each}
 							</ul>
+							<button
+								type="button"
+								class="mt-2 rounded bg-yellow-600 px-2 py-1 text-xs text-white hover:bg-yellow-500"
+								onclick={async () => {
+									const { circuitBreaker } = await import('$lib/services/circuitBreaker');
+									circuitBreaker.resetAll();
+									networkHealth.setOpenCircuits([]);
+								}}
+							>
+								Reset All Circuits
+							</button>
 						</div>
 					{/if}
 
