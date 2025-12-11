@@ -307,54 +307,11 @@
 				{#if rhythmMode}
 					<div class="space-y-3 ml-6">
 						<p class="text-xs text-purple-700">
-							Players must move on the beat! Moves off-rhythm will have penalties or may not count.
+							Players must move on the beat! Moves off-rhythm won't count.
 						</p>
 						
-						<!-- BPM Field -->
-						<div>
-							<label for="rhythmBPM" class="block text-xs font-medium text-purple-900 mb-1">
-								Beats Per Minute (BPM): {rhythmBPM}
-							</label>
-							<input
-								id="rhythmBPM"
-								type="range"
-								min="60"
-								max="200"
-								bind:value={rhythmBPM}
-								disabled={loading}
-								class="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer"
-							/>
-							<div class="flex justify-between text-xs text-purple-600 mt-1">
-								<span>60 (Slow)</span>
-								<span>120 (Default)</span>
-								<span>200 (Fast)</span>
-							</div>
-						</div>
-						
-						<!-- Tolerance Field -->
-						<div>
-							<label for="rhythmTolerance" class="block text-xs font-medium text-purple-900 mb-1">
-								Timing Tolerance: {rhythmTolerance}ms
-							</label>
-							<input
-								id="rhythmTolerance"
-								type="range"
-								min="50"
-								max="500"
-								step="10"
-								bind:value={rhythmTolerance}
-								disabled={loading}
-								class="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer"
-							/>
-							<div class="flex justify-between text-xs text-purple-600 mt-1">
-								<span>50ms (Strict)</span>
-								<span>150ms (Normal)</span>
-								<span>500ms (Relaxed)</span>
-							</div>
-						</div>
-						
 						<!-- Music vs Metronome Toggle -->
-						<div class="mt-3 flex items-center gap-3">
+						<div class="flex items-center gap-3">
 							<label class="flex items-center gap-2 cursor-pointer">
 								<input
 									type="radio"
@@ -381,7 +338,7 @@
 						
 						<!-- Track Selection (only when music is enabled) -->
 						{#if rhythmUseMusic}
-							<div class="mt-3">
+							<div>
 								<label for="rhythmTrack" class="block text-xs font-medium text-purple-900 mb-1">
 									Music Track
 								</label>
@@ -400,17 +357,56 @@
 								</select>
 								<p class="text-xs text-purple-600 mt-1">
 									{#if rhythmTrack === 'random'}
-										Each player gets a random track. BPM setting above will be used.
+										Each player gets a random track with its own BPM.
 									{:else}
-										All players will play with the same track for fairness. BPM is set by the track.
+										All players play the same track ({MUSIC_TRACKS[parseInt(rhythmTrack)]?.bpm} BPM).
 									{/if}
 								</p>
 							</div>
 						{:else}
-							<p class="text-xs text-purple-600 mt-1">
-								Metronome mode uses the BPM setting above.
-							</p>
+							<!-- BPM Field (only for metronome mode) -->
+							<div>
+								<label for="rhythmBPM" class="block text-xs font-medium text-purple-900 mb-1">
+									Beats Per Minute (BPM): {rhythmBPM}
+								</label>
+								<input
+									id="rhythmBPM"
+									type="range"
+									min="60"
+									max="200"
+									bind:value={rhythmBPM}
+									disabled={loading}
+									class="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer"
+								/>
+								<div class="flex justify-between text-xs text-purple-600 mt-1">
+									<span>60 (Slow)</span>
+									<span>120 (Default)</span>
+									<span>200 (Fast)</span>
+								</div>
+							</div>
 						{/if}
+						
+						<!-- Tolerance Field -->
+						<div>
+							<label for="rhythmTolerance" class="block text-xs font-medium text-purple-900 mb-1">
+								Timing Tolerance: {rhythmTolerance}ms
+							</label>
+							<input
+								id="rhythmTolerance"
+								type="range"
+								min="50"
+								max="500"
+								step="10"
+								bind:value={rhythmTolerance}
+								disabled={loading}
+								class="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer"
+							/>
+							<div class="flex justify-between text-xs text-purple-600 mt-1">
+								<span>50ms (Strict)</span>
+								<span>150ms (Normal)</span>
+								<span>500ms (Relaxed)</span>
+							</div>
+						</div>
 					</div>
 				{:else}
 					<p class="text-xs text-purple-600 ml-6">
