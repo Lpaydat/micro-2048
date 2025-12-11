@@ -267,6 +267,10 @@
 	let goodCount = 0;
 	let missCount = 0;
 	let totalRhythmMoves = 0;
+	
+	// 🎵 Beat phase for board pulse animation (-1 = disabled)
+	let beatPhase = -1;
+	let beatPhaseAnimationId: number | null = null;
 
 	// GraphQL Queries and Subscriptions
 	// Note: moveHistory is fetched separately via pagination (getBoardPaginated)
@@ -436,7 +440,9 @@
 			displayBpm = rhythmEngine.getBpm();
 			const track = rhythmEngine.getCurrentTrack();
 			displayTrackName = track?.name || '';
-
+			
+			// 🎵 Start beat phase animation loop for board pulse
+			startBeatPhaseAnimation();
 			
 			rhythmEngine.debugState();
 			rhythmNeedsStart = false;
@@ -445,6 +451,31 @@
 			console.warn('🎵 Audio initialization failed:', err);
 			rhythmNeedsStart = false;
 		}
+	};
+	
+	// 🎵 Animation loop for beat phase (board pulse)
+	const startBeatPhaseAnimation = () => {
+		if (beatPhaseAnimationId !== null) return; // Already running
+		
+		const animate = () => {
+			if (rhythmEngine?.isRunning()) {
+				beatPhase = rhythmEngine.getBeatPhase();
+				beatPhaseAnimationId = requestAnimationFrame(animate);
+			} else {
+				beatPhase = -1;
+				beatPhaseAnimationId = null;
+			}
+		};
+		animate();
+	};
+	
+	// 🎵 Stop beat phase animation
+	const stopBeatPhaseAnimation = () => {
+		if (beatPhaseAnimationId !== null) {
+			cancelAnimationFrame(beatPhaseAnimationId);
+			beatPhaseAnimationId = null;
+		}
+		beatPhase = -1;
 	};
 
 	$: if (boardEnded) {
@@ -1959,6 +1990,9 @@
 			rhythmEngine = null;
 		}
 		
+		// 🎵 Stop beat phase animation
+		stopBeatPhaseAnimation();
+		
 		// 🧹 Clean up intervals that may still be running
 		if (scoreSubmitCooldownInterval) {
 			clearInterval(scoreSubmitCooldownInterval);
@@ -2076,6 +2110,7 @@
 			showReplayButton={true}
 			onReplayClick={handleReplayClick}
 			hideOverlay={hideInspectorOverlay}
+			{beatPhase}
 		>
 			<!-- {#snippet header(size)} -->
 			{#snippet header()}

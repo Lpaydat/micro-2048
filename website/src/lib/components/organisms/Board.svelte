@@ -17,6 +17,7 @@
 		showReplayButton?: boolean;
 		onReplayClick?: () => void;
 		hideOverlay?: boolean;
+		beatPhase?: number; // 🎵 0-1 for rhythm mode border pulse
 	}
 
 	let {
@@ -30,11 +31,32 @@
 		chainId,
 		showReplayButton = false,
 		onReplayClick,
-		hideOverlay = false
+		hideOverlay = false,
+		beatPhase = -1 // 🎵 -1 means rhythm mode disabled
 	}: Props = $props();
 
 	// 🎵 Rhythm miss effect
 	let showMissEffect = $state(false);
+	
+	// 🎵 Rhythm border pulse - computed from beatPhase
+	// Border color pulses between dim and bright violet on beat
+	// No glow, no scale - clean and easy on the eyes
+	const rhythmBorderStyle = $derived(() => {
+		if (beatPhase < 0) return ''; // Rhythm mode disabled
+		
+		// Calculate intensity: 1 at beat (phase 0), 0 at phase 0.45+
+		// Using cosine for smooth rise/fall
+		let intensity = 0;
+		if (beatPhase < 0.45) {
+			// Map 0-0.45 to 0-PI for cosine curve (1 -> -1, then we remap)
+			intensity = (Math.cos((beatPhase / 0.45) * Math.PI) + 1) / 2;
+		}
+		
+		// Border opacity: 0.2 (dim) -> 1.0 (bright) on beat
+		const borderOpacity = 0.2 + intensity * 0.8;
+		
+		return `border-color: rgba(139, 92, 246, ${borderOpacity});`;
+	});
 	
 	// Export function to trigger miss effect from parent
 	export function triggerMissEffect() {
@@ -151,7 +173,8 @@
 	<div
 		class="board-container relative w-full {$boardSize}"
 		class:miss-shake={showMissEffect}
-		style="touch-action: none;"
+		class:rhythm-mode={beatPhase >= 0}
+		style="touch-action: none; {rhythmBorderStyle()}"
 		ontouchstart={handleTouchStart}
 		ontouchmove={handleTouchMove}
 		ontouchend={handleTouchEnd}
@@ -217,6 +240,13 @@
 	/* 🎵 Rhythm miss effect - shake animation */
 	.board-container {
 		position: relative;
+	}
+	
+	/* 🎵 Rhythm mode - pulsing violet border */
+	.board-container.rhythm-mode {
+		border: 4px solid rgba(139, 92, 246, 0.2);
+		border-radius: 8px;
+		transition: border-color 0.08s ease-out;
 	}
 
 	.miss-shake {
