@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { isMobile } from '$lib/stores/isMobile';
 	import { formatBalance } from '$lib/utils/formatBalance';
+	import { RhythmEngine, MUSIC_TRACKS } from '$lib/game/rhythmEngine.js';
 	import LeaderboardDetails from '../molecules/LeaderboardDetails.svelte';
 	import RankerCard from '../molecules/RankerCard.svelte';
+	import Music from 'lucide-svelte/icons/music';
 
 	interface Props {
 		hasSubHeader?: boolean;
@@ -37,8 +39,13 @@
 	// Use leaderboardChainId if provided, otherwise fall back to leaderboardId from props
 	const chainId = $derived(leaderboardChainId || leaderboardId);
 
-	// Check if description should be shown
-	const hasDescription = $derived(chainId && description && description.trim());
+	// Rhythm mode detection and display
+	const isRhythmMode = $derived(RhythmEngine.isRhythmMode(description));
+	const rhythmInfo = $derived(RhythmEngine.getDisplayInfo(description));
+	const cleanedDescription = $derived(RhythmEngine.cleanDescription(description));
+
+	// Check if description should be shown (cleaned description or rhythm mode info)
+	const hasDescription = $derived(chainId && (cleanedDescription || isRhythmMode));
 
 	const height = $derived(
 		$isMobile
@@ -92,18 +99,48 @@
 			<div class="mb-3 mt-4 xl:hidden">
 				<button
 					onclick={() => (isDescriptionExpanded = !isDescriptionExpanded)}
-					class="w-full rounded bg-gray-700/60 px-3 py-1.5 text-left text-xs font-medium text-gray-300 transition-colors hover:bg-gray-700/80"
+					class="w-full rounded {isRhythmMode ? 'bg-violet-900/40' : 'bg-gray-700/60'} px-3 py-1.5 text-left text-xs font-medium {isRhythmMode ? 'text-violet-200' : 'text-gray-300'} transition-colors hover:{isRhythmMode ? 'bg-violet-900/60' : 'bg-gray-700/80'}"
 				>
 					<div class="flex items-center justify-between">
-						<span>Event Description</span>
+						<span class="flex items-center gap-2">
+							{#if isRhythmMode}
+								<Music size={14} class="text-violet-400" />
+							{/if}
+							Event Details
+						</span>
 						<span class="text-xs transition-transform {isDescriptionExpanded ? 'rotate-180' : ''}"
 							>▼</span
 						>
 					</div>
 				</button>
 				{#if isDescriptionExpanded}
-					<div class="mt-2 rounded bg-black/40 p-3 text-xs leading-relaxed text-gray-300">
-						{description}
+					<div class="mt-2 rounded {isRhythmMode ? 'bg-violet-950/40' : 'bg-black/40'} p-3 text-xs leading-relaxed {isRhythmMode ? 'text-violet-200' : 'text-gray-300'}">
+						{#if isRhythmMode && rhythmInfo}
+							<div class="mb-3 flex flex-wrap gap-2">
+								<span class="inline-flex items-center rounded-md bg-violet-600/30 px-2 py-1 text-xs font-medium text-violet-300 ring-1 ring-inset ring-violet-500/50">
+									🎵 Rhythm Mode
+								</span>
+								<span class="inline-flex items-center rounded-md bg-violet-600/30 px-2 py-1 text-xs font-medium text-violet-300 ring-1 ring-inset ring-violet-500/50">
+									{rhythmInfo.bpm} BPM
+								</span>
+								<span class="inline-flex items-center rounded-md bg-violet-600/30 px-2 py-1 text-xs font-medium text-violet-300 ring-1 ring-inset ring-violet-500/50">
+									±{rhythmInfo.tolerance}ms
+								</span>
+								{#if rhythmInfo.useMusic}
+									<span class="inline-flex items-center gap-1 rounded-md bg-violet-600/30 px-2 py-1 text-xs font-medium text-violet-300 ring-1 ring-inset ring-violet-500/50">
+										<Music size={10} />
+										{rhythmInfo.trackName || 'Random Track'}
+									</span>
+								{:else}
+									<span class="inline-flex items-center rounded-md bg-violet-600/30 px-2 py-1 text-xs font-medium text-violet-300 ring-1 ring-inset ring-violet-500/50">
+										🔊 Metronome
+									</span>
+								{/if}
+							</div>
+						{/if}
+						{#if cleanedDescription}
+							<p>{cleanedDescription}</p>
+						{/if}
 					</div>
 				{/if}
 			</div>
@@ -141,15 +178,48 @@
 	{#if hasDescription}
 		<aside class="hidden xl:block xl:w-96">
 			<div
-				class="sticky top-4 flex h-[calc(100vh-120px)] flex-col overflow-hidden rounded-lg bg-black/40 shadow-xl"
+				class="sticky top-4 flex h-[calc(100vh-120px)] flex-col overflow-hidden rounded-lg {isRhythmMode ? 'bg-violet-950/40' : 'bg-black/40'} shadow-xl"
 			>
-				<div class="flex-none border-b border-gray-700 px-6 py-4">
-					<h2 class="text-xl font-bold text-[#EEE4DA]">Event Description</h2>
+				<div class="flex-none border-b {isRhythmMode ? 'border-violet-700/50' : 'border-gray-700'} px-6 py-4">
+					<h2 class="text-xl font-bold {isRhythmMode ? 'text-violet-200' : 'text-[#EEE4DA]'} flex items-center gap-2">
+						{#if isRhythmMode}
+							<Music size={20} class="text-violet-400" />
+						{/if}
+						Event Details
+					</h2>
 				</div>
 				<div class="flex-1 overflow-y-auto px-6 py-4">
-					<p class="whitespace-pre-wrap text-sm leading-relaxed text-gray-300">
-						{description}
-					</p>
+					{#if isRhythmMode && rhythmInfo}
+						<div class="mb-4 flex flex-wrap gap-2">
+							<span class="inline-flex items-center rounded-md bg-violet-600/30 px-2.5 py-1 text-sm font-medium text-violet-300 ring-1 ring-inset ring-violet-500/50">
+								🎵 Rhythm Mode
+							</span>
+							<span class="inline-flex items-center rounded-md bg-violet-600/30 px-2.5 py-1 text-sm font-medium text-violet-300 ring-1 ring-inset ring-violet-500/50">
+								{rhythmInfo.bpm} BPM
+							</span>
+							<span class="inline-flex items-center rounded-md bg-violet-600/30 px-2.5 py-1 text-sm font-medium text-violet-300 ring-1 ring-inset ring-violet-500/50">
+								±{rhythmInfo.tolerance}ms tolerance
+							</span>
+							{#if rhythmInfo.useMusic}
+								<span class="inline-flex items-center gap-1 rounded-md bg-violet-600/30 px-2.5 py-1 text-sm font-medium text-violet-300 ring-1 ring-inset ring-violet-500/50">
+									<Music size={12} />
+									{rhythmInfo.trackName || 'Random Track'}
+								</span>
+							{:else}
+								<span class="inline-flex items-center rounded-md bg-violet-600/30 px-2.5 py-1 text-sm font-medium text-violet-300 ring-1 ring-inset ring-violet-500/50">
+									🔊 Metronome
+								</span>
+							{/if}
+						</div>
+						<p class="mb-4 text-xs text-violet-300/80">
+							Move on the beat! Off-beat moves won't count.
+						</p>
+					{/if}
+					{#if cleanedDescription}
+						<p class="whitespace-pre-wrap text-sm leading-relaxed {isRhythmMode ? 'text-violet-200' : 'text-gray-300'}">
+							{cleanedDescription}
+						</p>
+					{/if}
 				</div>
 			</div>
 		</aside>

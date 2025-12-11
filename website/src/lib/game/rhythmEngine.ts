@@ -610,11 +610,16 @@ export class RhythmEngine {
 	 * Format: [RHYTHM_MODE:true,BPM:120,TOLERANCE:150,MUSIC:true,TRACK:random]
 	 * or: [RHYTHM_MODE:true,BPM:100,TOLERANCE:150,MUSIC:true,TRACK:2]
 	 */
+	// Regex pattern for rhythm settings tag
+	private static readonly RHYTHM_TAG_REGEX = /\s*\[RHYTHM_MODE:true,BPM:(\d+),TOLERANCE:(\d+)(?:,MUSIC:(true|false))?(?:,TRACK:(\w+))?\]/;
+
+	/**
+	 * Parse rhythm settings from tournament description
+	 * Format: [RHYTHM_MODE:true,BPM:120,TOLERANCE:150,MUSIC:true,TRACK:random]
+	 * or: [RHYTHM_MODE:true,BPM:100,TOLERANCE:150,MUSIC:true,TRACK:2]
+	 */
 	static parseFromDescription(description: string): RhythmSettings | null {
-		// Updated regex to handle TRACK parameter
-		const match = description.match(
-			/\[RHYTHM_MODE:true,BPM:(\d+),TOLERANCE:(\d+)(?:,MUSIC:(true|false))?(?:,TRACK:(\w+))?\]/
-		);
+		const match = description.match(RhythmEngine.RHYTHM_TAG_REGEX);
 
 		if (!match) return null;
 
@@ -633,6 +638,54 @@ export class RhythmEngine {
 			tolerance: parseInt(match[2], 10),
 			useMusic: match[3] === 'true',
 			trackIndex
+		};
+	}
+
+	/**
+	 * Check if description contains rhythm mode settings
+	 */
+	static isRhythmMode(description: string | undefined | null): boolean {
+		if (!description) return false;
+		return description.includes('[RHYTHM_MODE:true');
+	}
+
+	/**
+	 * Remove rhythm settings tag from description for display
+	 * Returns the clean description text without the machine-readable tag
+	 */
+	static cleanDescription(description: string | undefined | null): string {
+		if (!description) return '';
+		return description.replace(RhythmEngine.RHYTHM_TAG_REGEX, '').trim();
+	}
+
+	/**
+	 * Get rhythm settings display info for UI
+	 * Returns null if not rhythm mode, otherwise returns formatted display info
+	 */
+	static getDisplayInfo(description: string | undefined | null): {
+		bpm: number;
+		tolerance: number;
+		useMusic: boolean;
+		trackIndex: number | 'random';
+		trackName: string | null;
+	} | null {
+		if (!description) return null;
+		
+		const settings = RhythmEngine.parseFromDescription(description);
+		if (!settings) return null;
+
+		// Get track name if specific track selected
+		let trackName: string | null = null;
+		if (typeof settings.trackIndex === 'number' && MUSIC_TRACKS[settings.trackIndex]) {
+			trackName = MUSIC_TRACKS[settings.trackIndex].name;
+		}
+
+		return {
+			bpm: settings.bpm,
+			tolerance: settings.tolerance,
+			useMusic: settings.useMusic ?? false,
+			trackIndex: settings.trackIndex ?? 'random',
+			trackName
 		};
 	}
 }

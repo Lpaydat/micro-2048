@@ -11,7 +11,7 @@
 	import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
 	import { onDestroy } from 'svelte';
 	import Music from 'lucide-svelte/icons/music';
-	import { MUSIC_TRACKS } from '$lib/game/rhythmEngine.js';
+	import { RhythmEngine } from '$lib/game/rhythmEngine.js';
 
 	interface Props {
 		leaderboardId: string;
@@ -44,39 +44,13 @@
 	}: Props = $props();
 
 	// Check if this is a rhythm mode tournament
-	const isRhythmMode = $derived(description?.includes('[RHYTHM_MODE:true') ?? false);
+	const isRhythmMode = $derived(RhythmEngine.isRhythmMode(description));
 	
-	// Extract rhythm settings from description (updated to include TRACK)
-	const rhythmSettings = $derived(() => {
-		if (!isRhythmMode || !description) return null;
-		const match = description.match(/\[RHYTHM_MODE:true,BPM:(\d+),TOLERANCE:(\d+)(?:,MUSIC:(true|false))?(?:,TRACK:(\w+))?\]/);
-		if (match) {
-			// Parse track index
-			let trackIndex: number | 'random' = 'random';
-			let trackName: string | null = null;
-			if (match[4] && match[4] !== 'random') {
-				const parsed = parseInt(match[4], 10);
-				if (!isNaN(parsed) && MUSIC_TRACKS[parsed]) {
-					trackIndex = parsed;
-					trackName = MUSIC_TRACKS[parsed].name;
-				}
-			}
-			
-			return {
-				bpm: parseInt(match[1]),
-				tolerance: parseInt(match[2]),
-				useMusic: match[3] === 'true',
-				trackIndex,
-				trackName
-			};
-		}
-		return null;
-	});
+	// Extract rhythm settings for display
+	const rhythmSettings = $derived(() => RhythmEngine.getDisplayInfo(description));
 
-	// Clean description (remove rhythm settings tag - updated regex)
-	const cleanDescription = $derived(
-		description?.replace(/\s*\[RHYTHM_MODE:true,BPM:\d+,TOLERANCE:\d+(?:,MUSIC:(?:true|false))?(?:,TRACK:\w+)?\]/, '').trim() || ''
-	);
+	// Clean description (remove rhythm settings tag)
+	const cleanDescription = $derived(RhythmEngine.cleanDescription(description));
 
 	// Add reactive timestamp and interval for active state updates
 	let now = $state(Date.now());
