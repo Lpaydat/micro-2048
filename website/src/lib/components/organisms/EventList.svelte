@@ -196,8 +196,6 @@
 						result.subscribe((res) => {
 							if (res.error) {
 								console.warn(`Leaderboard ${event.leaderboardId} initialization failed:`, res.error);
-							} else {
-								console.log(`🚀 Leaderboard ${event.leaderboardId} initialized`);
 							}
 						});
 					}
