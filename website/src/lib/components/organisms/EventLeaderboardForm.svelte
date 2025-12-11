@@ -130,8 +130,9 @@
 					baseTriggererCount: baseTriggererCount
 				}),
 				// Rhythm mode settings (stored in description for now since backend doesn't support them yet)
+				// For random track with music, BPM is determined by the track, not the slider
 				...(rhythmMode && {
-					description: `${description || ''} [RHYTHM_MODE:true,BPM:${rhythmBPM},TOLERANCE:${rhythmTolerance},MUSIC:${rhythmUseMusic},TRACK:${rhythmTrack}]`.trim()
+					description: `${description || ''} [RHYTHM_MODE:true,BPM:${rhythmUseMusic && rhythmTrack === 'random' ? 0 : rhythmBPM},TOLERANCE:${rhythmTolerance},MUSIC:${rhythmUseMusic},TRACK:${rhythmTrack}]`.trim()
 				})
 			};
 

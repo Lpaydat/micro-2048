@@ -13,7 +13,7 @@ const CONFIG = {
 		website: 'localhost',
 		port: '8088', // Linera node port (not 5173 which is SvelteKit dev server)
 		chainId: '6faec602f7602be59d77eacefb131993a4a644cad6691f0ce46a27aac5a27c99',
-		applicationId: '222588d1614d536230c23eb66def64cda80d8d7ac99593e877356fadf309000b'
+		applicationId: '4c8af5733cc55e2975ece34453eb04699b071ff2d67ee1e174d7c77543b82ad8'
 	},
 	production: {
 		website: 'api.micro2048.xyz',

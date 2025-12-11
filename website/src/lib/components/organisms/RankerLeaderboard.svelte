@@ -120,9 +120,11 @@
 								<span class="inline-flex items-center rounded-md bg-violet-600/30 px-2 py-1 text-xs font-medium text-violet-300 ring-1 ring-inset ring-violet-500/50">
 									🎵 Rhythm Mode
 								</span>
-								<span class="inline-flex items-center rounded-md bg-violet-600/30 px-2 py-1 text-xs font-medium text-violet-300 ring-1 ring-inset ring-violet-500/50">
-									{rhythmInfo.bpm} BPM
-								</span>
+								{#if rhythmInfo.bpm > 0}
+									<span class="inline-flex items-center rounded-md bg-violet-600/30 px-2 py-1 text-xs font-medium text-violet-300 ring-1 ring-inset ring-violet-500/50">
+										{rhythmInfo.bpm} BPM
+									</span>
+								{/if}
 								<span class="inline-flex items-center rounded-md bg-violet-600/30 px-2 py-1 text-xs font-medium text-violet-300 ring-1 ring-inset ring-violet-500/50">
 									±{rhythmInfo.tolerance}ms
 								</span>
@@ -194,9 +196,11 @@
 							<span class="inline-flex items-center rounded-md bg-violet-600/30 px-2.5 py-1 text-sm font-medium text-violet-300 ring-1 ring-inset ring-violet-500/50">
 								🎵 Rhythm Mode
 							</span>
-							<span class="inline-flex items-center rounded-md bg-violet-600/30 px-2.5 py-1 text-sm font-medium text-violet-300 ring-1 ring-inset ring-violet-500/50">
-								{rhythmInfo.bpm} BPM
-							</span>
+							{#if rhythmInfo.bpm > 0}
+								<span class="inline-flex items-center rounded-md bg-violet-600/30 px-2.5 py-1 text-sm font-medium text-violet-300 ring-1 ring-inset ring-violet-500/50">
+									{rhythmInfo.bpm} BPM
+								</span>
+							{/if}
 							<span class="inline-flex items-center rounded-md bg-violet-600/30 px-2.5 py-1 text-sm font-medium text-violet-300 ring-1 ring-inset ring-violet-500/50">
 								±{rhythmInfo.tolerance}ms tolerance
 							</span>

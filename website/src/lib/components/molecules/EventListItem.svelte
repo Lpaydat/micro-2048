@@ -167,9 +167,11 @@
 				{#if isRhythmMode && rhythmSettings()}
 					{@const settings = rhythmSettings()}
 					<div class="mt-2 flex flex-wrap gap-2">
-						<span class="inline-flex items-center rounded-md bg-violet-100 px-2 py-1 text-xs font-medium text-violet-700 ring-1 ring-inset ring-violet-300">
-							{settings?.bpm} BPM
-						</span>
+						{#if settings?.bpm && settings.bpm > 0}
+							<span class="inline-flex items-center rounded-md bg-violet-100 px-2 py-1 text-xs font-medium text-violet-700 ring-1 ring-inset ring-violet-300">
+								{settings.bpm} BPM
+							</span>
+						{/if}
 						<span class="inline-flex items-center rounded-md bg-violet-100 px-2 py-1 text-xs font-medium text-violet-700 ring-1 ring-inset ring-violet-300">
 							±{settings?.tolerance}ms
 						</span>
