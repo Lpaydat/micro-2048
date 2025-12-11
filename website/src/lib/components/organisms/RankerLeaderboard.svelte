@@ -99,7 +99,7 @@
 			<div class="mb-3 mt-4 xl:hidden">
 				<button
 					onclick={() => (isDescriptionExpanded = !isDescriptionExpanded)}
-					class="w-full rounded {isRhythmMode ? 'bg-violet-900/40' : 'bg-gray-700/60'} px-3 py-1.5 text-left text-xs font-medium {isRhythmMode ? 'text-violet-200' : 'text-gray-300'} transition-colors hover:{isRhythmMode ? 'bg-violet-900/60' : 'bg-gray-700/80'}"
+					class="w-full rounded bg-gray-700/60 px-3 py-1.5 text-left text-xs font-medium text-gray-300 transition-colors hover:bg-gray-700/80"
 				>
 					<div class="flex items-center justify-between">
 						<span class="flex items-center gap-2">
@@ -114,7 +114,7 @@
 					</div>
 				</button>
 				{#if isDescriptionExpanded}
-					<div class="mt-2 rounded {isRhythmMode ? 'bg-violet-950/40' : 'bg-black/40'} p-3 text-xs leading-relaxed {isRhythmMode ? 'text-violet-200' : 'text-gray-300'}">
+					<div class="mt-2 rounded bg-black/40 p-3 text-xs leading-relaxed text-gray-300">
 						{#if isRhythmMode && rhythmInfo}
 							<div class="mb-3 flex flex-wrap gap-2">
 								<span class="inline-flex items-center rounded-md bg-violet-600/30 px-2 py-1 text-xs font-medium text-violet-300 ring-1 ring-inset ring-violet-500/50">
@@ -178,10 +178,10 @@
 	{#if hasDescription}
 		<aside class="hidden xl:block xl:w-96">
 			<div
-				class="sticky top-4 flex h-[calc(100vh-120px)] flex-col overflow-hidden rounded-lg {isRhythmMode ? 'bg-violet-950/40' : 'bg-black/40'} shadow-xl"
+				class="sticky top-4 flex h-[calc(100vh-120px)] flex-col overflow-hidden rounded-lg bg-black/40 shadow-xl"
 			>
-				<div class="flex-none border-b {isRhythmMode ? 'border-violet-700/50' : 'border-gray-700'} px-6 py-4">
-					<h2 class="text-xl font-bold {isRhythmMode ? 'text-violet-200' : 'text-[#EEE4DA]'} flex items-center gap-2">
+				<div class="flex-none border-b border-gray-700 px-6 py-4">
+					<h2 class="text-xl font-bold text-[#EEE4DA] flex items-center gap-2">
 						{#if isRhythmMode}
 							<Music size={20} class="text-violet-400" />
 						{/if}
@@ -216,7 +216,7 @@
 						</p>
 					{/if}
 					{#if cleanedDescription}
-						<p class="whitespace-pre-wrap text-sm leading-relaxed {isRhythmMode ? 'text-violet-200' : 'text-gray-300'}">
+						<p class="whitespace-pre-wrap text-sm leading-relaxed text-gray-300">
 							{cleanedDescription}
 						</p>
 					{/if}
