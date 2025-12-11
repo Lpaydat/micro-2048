@@ -20,15 +20,9 @@
 	// Beat flash (triggered by transport beat event)
 	let showBeatFlash = false;
 	
-	// BPM measurement from visual (heart reaching center)
+	// Beat detection state
 	let lastCenterTime: number | null = null;
-	let visualBpmSamples: number[] = [];
 	let wasAtCenter = false;
-	
-	// Sync measurement: delta between transport and visual beats
-	let lastTransportBeatAt: number = 0;
-	let lastVisualBeatAt: number = 0;
-	let syncDeltaSamples: number[] = [];
 
 	/**
 	 * Animation loop - runs every frame
@@ -62,32 +56,10 @@
 				rightBarPos = 100 - (50 * t);    // 100→50
 			}
 			
-			// Measure visual BPM: detect when bars reach center (phase near 0 or 1)
+			// Detect when bars reach center (phase near 0 or 1)
 			const isAtCenter = beatPhase < 0.05 || beatPhase > 0.95;
 			if (isAtCenter && !wasAtCenter) {
 				const now = performance.now();
-				if (lastCenterTime !== null) {
-					const intervalMs = now - lastCenterTime;
-					const measuredBpm = 60000 / intervalMs;
-					visualBpmSamples.push(measuredBpm);
-					
-					// Keep last 10 samples
-					if (visualBpmSamples.length > 10) {
-						visualBpmSamples.shift();
-					}
-					
-					// Calculate average
-					const avgBpm = visualBpmSamples.reduce((a, b) => a + b, 0) / visualBpmSamples.length;
-					
-					// Calculate delta from last transport beat
-				const deltaFromTransport = now - lastTransportBeatAt;
-				syncDeltaSamples.push(deltaFromTransport);
-				if (syncDeltaSamples.length > 10) syncDeltaSamples.shift();
-				const avgDelta = syncDeltaSamples.reduce((a, b) => a + b, 0) / syncDeltaSamples.length;
-				
-				lastVisualBeatAt = now;
-				console.log(`🎯 [VISUAL] Beat! Interval: ${intervalMs.toFixed(0)}ms, BPM: ${measuredBpm.toFixed(1)}, Δ from transport: ${deltaFromTransport.toFixed(0)}ms (avg: ${avgDelta.toFixed(0)}ms)`);
-				}
 				lastCenterTime = now;
 			}
 			wasAtCenter = isAtCenter;
@@ -102,35 +74,10 @@
 		setTimeout(() => showMissFlash = false, 200);
 	}
 
-	// Transport beat timing measurement
-	let lastTransportBeatTime: number | null = null;
-	let transportBpmSamples: number[] = [];
-
-	// Called on actual transport beat (for debugging sync)
-	function onBeat(beatNumber: number) {
+	// Called on actual transport beat
+	function onBeat(_beatNumber: number) {
 		showBeatFlash = true;
 		setTimeout(() => showBeatFlash = false, 100);
-		
-		// Measure transport BPM
-		const now = performance.now();
-		lastTransportBeatAt = now; // Always update this
-		
-		// Log current visual phase at moment of transport beat
-		const currentPhase = beatPhase;
-		
-		if (lastTransportBeatTime !== null) {
-			const intervalMs = now - lastTransportBeatTime;
-			const measuredBpm = 60000 / intervalMs;
-			transportBpmSamples.push(measuredBpm);
-			
-			// Keep last 10 samples
-			if (transportBpmSamples.length > 10) {
-				transportBpmSamples.shift();
-			}
-			
-			console.log(`⚡ [TRANSPORT] Beat #${beatNumber}! Phase: ${currentPhase.toFixed(3)}, Interval: ${intervalMs.toFixed(0)}ms`);
-		}
-		lastTransportBeatTime = now;
 	}
 
 	onMount(() => {

@@ -107,11 +107,8 @@ export class RhythmEngine {
 	 * Initialize audio system - MUST be called after user interaction
 	 */
 	async init(): Promise<void> {
-		console.log(`🎵 [INIT] Starting with BPM: ${this.bpm}, useMusic: ${this.useMusic}`);
-
 		// Start Tone.js audio context (requires user gesture)
 		await Tone.start();
-		console.log('🎵 [INIT] Audio context started');
 
 		// Create metronome synths
 		this.metronomeHigh = new Tone.Synth({
@@ -129,13 +126,10 @@ export class RhythmEngine {
 		// Load music if enabled
 		if (this.useMusic) {
 			await this.loadTrack();
-			console.log(`🎵 [INIT] After loadTrack, BPM is now: ${this.bpm}`);
 		}
 
 		// Load calibration from localStorage
 		this.loadCalibration();
-
-		console.log(`🎵 [INIT] Init complete. Final BPM: ${this.bpm}`);
 	}
 
 	/**
@@ -146,22 +140,17 @@ export class RhythmEngine {
 
 		if (this.trackIndex === 'random') {
 			track = MUSIC_TRACKS[Math.floor(Math.random() * MUSIC_TRACKS.length)];
-			console.log(`🎵 [LOAD] Random track selected: ${track.name}`);
 		} else {
 			const index = typeof this.trackIndex === 'number' ? this.trackIndex : parseInt(this.trackIndex);
 			if (index >= 0 && index < MUSIC_TRACKS.length) {
 				track = MUSIC_TRACKS[index];
-				console.log(`🎵 [LOAD] Specific track selected: ${track.name} (index ${index})`);
 			} else {
-				console.warn(`🎵 [LOAD] Invalid track index ${index}, falling back to random`);
+				console.warn(`Invalid track index ${index}, falling back to random`);
 				track = MUSIC_TRACKS[Math.floor(Math.random() * MUSIC_TRACKS.length)];
 			}
 		}
 
 		this.currentTrack = track;
-
-		console.log(`🎵 [LOAD] Loading track: ${track.name} (track BPM: ${track.bpm})`);
-		console.log(`🎵 [LOAD] BPM before load: ${this.bpm}`);
 
 		try {
 			this.player = new Tone.Player({
@@ -171,17 +160,14 @@ export class RhythmEngine {
 
 			await Tone.loaded();
 
-			// CRITICAL: Set BPM and first beat offset from track
-			console.log(`🎵 [LOAD] Setting BPM from ${this.bpm} to ${track.bpm}`);
+			// Set BPM and first beat offset from track
 			this.bpm = track.bpm;
 			this.firstBeatOffset = track.firstBeatOffset;
 			
 			// Store music duration for loop handling
 			this.musicDuration = this.player.buffer.duration;
-
-			console.log(`🎵 [LOAD] Loaded: ${track.name}, BPM: ${this.bpm}, firstBeatOffset: ${this.firstBeatOffset}s, duration: ${this.musicDuration}s`);
 		} catch (error) {
-			console.error('🎵 [LOAD] Failed to load track:', error);
+			console.error('Failed to load track:', error);
 			this.useMusic = false;
 			this.player = null;
 		}
@@ -199,28 +185,18 @@ export class RhythmEngine {
 
 		const transport = Tone.getTransport();
 
-		console.log(`🎵 [START] BPM before start: ${this.bpm}`);
-		console.log(
-			`🎵 [START] useMusic: ${this.useMusic}, currentTrack: ${this.currentTrack?.name}, player: ${!!this.player}`
-		);
-
 		// Reset state
 		this.running = true;
 		this.beatCount = 0;
 
 		// If using music and track is loaded, use track BPM (override settings)
 		if (this.useMusic && this.currentTrack && this.player) {
-			console.log(
-				`🎵 [START] Overriding BPM from ${this.bpm} to track BPM: ${this.currentTrack.bpm}`
-			);
 			this.bpm = this.currentTrack.bpm;
 		}
 
 		// Configure transport with our BPM
 		transport.bpm.value = this.bpm;
 		transport.position = 0;
-
-		console.log(`🎵 [START] Final BPM: ${this.bpm}, Transport BPM: ${transport.bpm.value}`);
 
 		// Schedule beat events
 		// For music: schedule from firstBeatOffset so beats align with music
@@ -256,8 +232,6 @@ export class RhythmEngine {
 
 		// Start the transport (this starts EVERYTHING)
 		transport.start();
-
-		console.log(`🎵 Started @ ${this.bpm} BPM (music: ${this.useMusic && !!this.player})`);
 	}
 
 	/**
@@ -286,8 +260,6 @@ export class RhythmEngine {
 
 		this.running = false;
 		this.beatCount = 0;
-
-		console.log('🎵 Stopped');
 	}
 
 	/**
@@ -531,7 +503,6 @@ export class RhythmEngine {
 			const ms = parseFloat(stored);
 			if (!isNaN(ms)) {
 				this.calibrationOffset = ms / 1000;
-				console.log(`🎵 [CALIBRATION] Loaded offset: ${ms}ms`);
 			}
 		}
 	}
@@ -542,7 +513,6 @@ export class RhythmEngine {
 	static saveCalibration(ms: number): void {
 		if (typeof window === 'undefined') return;
 		localStorage.setItem(RhythmEngine.CALIBRATION_KEY, ms.toString());
-		console.log(`🎵 [CALIBRATION] Saved offset: ${ms}ms`);
 	}
 
 	/**
@@ -572,7 +542,6 @@ export class RhythmEngine {
 	 */
 	setCalibrationOffset(ms: number): void {
 		this.calibrationOffset = ms / 1000; // Convert to seconds
-		console.log(`🎵 Calibration: ${ms}ms`);
 	}
 
 	getCalibrationOffset(): number {
@@ -588,19 +557,18 @@ export class RhythmEngine {
 	}
 
 	/**
-	 * Debug: Log current state
+	 * Debug: Log current state (only logs if called explicitly)
 	 */
 	debugState(): void {
 		const transport = Tone.getTransport();
-		console.log('🎵 [DEBUG] RhythmEngine State:');
-		console.log(`  - this.bpm: ${this.bpm}`);
-		console.log(`  - Transport.bpm: ${transport.bpm.value}`);
-		console.log(`  - running: ${this.running}`);
-		console.log(`  - useMusic: ${this.useMusic}`);
-		console.log(
-			`  - currentTrack: ${this.currentTrack?.name || 'none'} (${this.currentTrack?.bpm || 'N/A'} BPM)`
-		);
-		console.log(`  - player loaded: ${!!this.player}`);
+		console.log('RhythmEngine State:', {
+			bpm: this.bpm,
+			transportBpm: transport.bpm.value,
+			running: this.running,
+			useMusic: this.useMusic,
+			currentTrack: this.currentTrack?.name || 'none',
+			playerLoaded: !!this.player
+		});
 	}
 
 	getTolerance(): number {

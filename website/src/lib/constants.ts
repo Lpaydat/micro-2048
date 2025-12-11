@@ -10,10 +10,3 @@ export const chainId = PUBLIC_CHAIN_ID;
 export const applicationId = PUBLIC_APPLICATION_ID;
 export const port = PUBLIC_PORT;
 export const website = PUBLIC_WEBSITE;
-
-console.log('🔧 Using Configuration:', {
-	chainId,
-	applicationId,
-	port,
-	website
-});
