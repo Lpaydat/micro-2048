@@ -215,6 +215,7 @@
 	let hideInspectorOverlay = true; // Control inspector overlay visibility (start hidden)
 	let lastInspectedBoardId: string | undefined = undefined; // Track board changes
 	let isUserControlledReplay = false; // Flag to prevent auto-positioning during user replay
+	let needsReinitAfterInspector = false; // 🔧 FIX: Track if we need to reinit when data arrives
 
 	// 🚀 Pagination System for move history
 	let paginatedHistoryStore: PaginatedMoveHistoryStore | null = null;
@@ -345,14 +346,18 @@
 			}
 		} else {
 			// 🔧 FIX: When exiting inspector mode, need to reinitialize board state
-			const wasInspectorMode = isInspectorMode;
+			// Set flag if we were in inspector mode - will reinit when data is valid
+			if (isInspectorMode) {
+				needsReinitAfterInspector = true;
+			}
+			
 			isInspectorMode = false;
 			lastInspectedBoardId = undefined;
 			isUserControlledReplay = false;
 			
-			// If we were in inspector mode and now we're not, we need to re-initialize
-			// This handles the case of clicking your own board after viewing another player
-			if (wasInspectorMode && isBoardDataValid) {
+			// If we need to reinit and data is now valid, do it
+			if (needsReinitAfterInspector && isBoardDataValid) {
+				needsReinitAfterInspector = false;
 				handleGameStateUpdate();
 			}
 		}
