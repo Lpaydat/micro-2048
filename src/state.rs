@@ -56,6 +56,8 @@ pub struct BoardState {
     pub created_at: RegisterView<u64>,
     pub move_history: CollectionView<u32, MoveRecord>, // move_index -> MoveRecord
     pub move_count: RegisterView<u32>,                 // Total number of moves made
+    // 🔒 DUPLICATE PREVENTION: Track last processed move timestamp
+    pub last_processed_timestamp: RegisterView<u64>,  // Last move timestamp processed (for duplicate detection)
     // 🚀 Hybrid score submission optimization
     pub highest_tile_sent: RegisterView<u64>,    // Highest tile we've sent to leaderboard
     pub last_score_sent_time: RegisterView<u64>, // Timestamp of last score submission (micros)

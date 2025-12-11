@@ -10,20 +10,32 @@ pub struct ProcessedMove {
 }
 
 impl GameMoveProcessor {
+    /// Process a batch of moves, skipping any that were already processed (duplicate detection).
+    /// 
+    /// # Arguments
+    /// * `board_id` - The board identifier
+    /// * `player` - The player making the moves
+    /// * `moves` - The moves to process (direction, timestamp in milliseconds)
+    /// * `initial_board` - Current board state
+    /// * `last_processed_timestamp` - Last timestamp that was successfully processed (for duplicate detection)
+    /// * `start_time` - Tournament start time in microseconds (None = unlimited)
+    /// * `end_time` - Tournament end time in microseconds (None = unlimited)
     pub fn process_moves(
         board_id: &str,
         player: &str,
         moves: &[(Direction, u64)],
         initial_board: u64,
+        last_processed_timestamp: u64, // 🔒 NEW: For duplicate detection
         start_time: Option<u64>,
         end_time: Option<u64>,
     ) -> GameMoveResult {
         let initial_highest_tile = Game::highest_tile(initial_board);
         let mut current_board = initial_board;
         let mut any_change = false;
-        let mut latest_timestamp = 0;
+        let mut latest_timestamp = last_processed_timestamp; // 🔒 FIX: Start from last processed
         let mut is_ended = false;
         let mut move_history: Vec<ProcessedMove> = Vec::new();
+        let mut skipped_duplicate_count = 0; // 🔒 NEW: Track skipped duplicates
 
         for (direction, timestamp) in moves.iter() {
             if is_ended {
@@ -50,10 +62,11 @@ impl GameMoveProcessor {
                 }
             }
 
-            if *timestamp < latest_timestamp {
-                return GameMoveResult::Error(
-                    "Timestamp must be after latest timestamp".to_string(),
-                );
+            // 🔒 DUPLICATE DETECTION: Skip moves that were already processed
+            // This handles retry scenarios where the same batch is sent multiple times
+            if *timestamp <= latest_timestamp {
+                skipped_duplicate_count += 1;
+                continue; // Skip this move, don't error - it was already processed
             }
             latest_timestamp = *timestamp;
 
@@ -89,6 +102,13 @@ impl GameMoveProcessor {
             }
         }
 
+        // 🔒 DUPLICATE DETECTION: If ALL moves were skipped (pure duplicate batch), return success with no changes
+        if !any_change && skipped_duplicate_count > 0 {
+            return GameMoveResult::NoNewMoves {
+                skipped_count: skipped_duplicate_count,
+            };
+        }
+
         if !any_change {
             return GameMoveResult::Error("No valid moves in the sequence".to_string());
         }
@@ -118,6 +138,11 @@ pub enum GameMoveResult {
         is_ended: bool,
         latest_timestamp: u64,
         move_history: Vec<ProcessedMove>,
+    },
+    /// 🔒 NEW: All moves in the batch were duplicates (already processed)
+    /// This is NOT an error - it means a retry succeeded but had no new moves
+    NoNewMoves {
+        skipped_count: usize,
     },
     Error(String),
 }
