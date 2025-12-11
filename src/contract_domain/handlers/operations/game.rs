@@ -53,6 +53,8 @@ impl GameOperationHandler {
 
         if !is_ended && !moves.is_empty() {
             let initial_board = *board.board.get();
+            // 🔒 DUPLICATE DETECTION: Get last processed timestamp
+            let last_processed_timestamp = *board.last_processed_timestamp.get();
 
             // FIXED: Convert string timestamps to u64 with error handling
             let mut moves_u64: Vec<(Direction, u64)> = Vec::new();
@@ -82,6 +84,7 @@ impl GameOperationHandler {
                 &player,
                 &moves_u64,
                 initial_board,
+                last_processed_timestamp, // 🔒 NEW: Pass for duplicate detection
                 start_time,
                 end_time,
             ) {
@@ -100,6 +103,9 @@ impl GameOperationHandler {
                     if is_ended {
                         board.is_ended.set(true);
                     }
+                    
+                    // 🔒 DUPLICATE PREVENTION: Update last processed timestamp
+                    board.last_processed_timestamp.set(latest_timestamp);
 
                     // 🎮 NEW: Store move history for replay feature
                     let current_move_count = *board.move_count.get();
@@ -232,6 +238,17 @@ impl GameOperationHandler {
                             .insert(&leaderboard_id, final_score)
                             .unwrap();
                     }
+                }
+                // 🔒 DUPLICATE DETECTION: All moves were already processed (retry scenario)
+                // This is NOT an error - silently succeed since moves were already applied
+                GameMoveResult::NoNewMoves { skipped_count } => {
+                    // Log for debugging but don't panic - this is expected during retries
+                    log::info!(
+                        "Duplicate batch detected: {} moves skipped for board {}",
+                        skipped_count,
+                        board_id
+                    );
+                    // No state changes needed - moves were already processed
                 }
                 GameMoveResult::Error(msg) => {
                     panic!("{}", msg);

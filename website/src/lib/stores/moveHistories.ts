@@ -70,6 +70,39 @@ export const flushNMoves = (boardId: string, count: number): MoveHistory[] => {
 	return flushedMoves;
 };
 
+/**
+ * Flush all moves with timestamp <= maxTimestamp.
+ * This is used when backend confirms processing - we flush moves up to the
+ * timestamp that was confirmed, keeping any newer moves that arrived after submission.
+ * 
+ * Returns the number of moves flushed.
+ */
+export const flushMovesUpToTimestamp = (boardId: string, maxTimestamp: number): number => {
+	let flushedCount = 0;
+	moveHistoryStore.update((map) => {
+		const moves = map.get(boardId) || [];
+		if (moves.length === 0) return map;
+		
+		// Find the split point - first move with timestamp > maxTimestamp
+		const splitIndex = moves.findIndex(m => parseInt(m.timestamp) > maxTimestamp);
+		
+		if (splitIndex === -1) {
+			// All moves have timestamp <= maxTimestamp, flush all
+			flushedCount = moves.length;
+			map.delete(boardId);
+		} else if (splitIndex === 0) {
+			// No moves to flush (all are newer than maxTimestamp)
+			flushedCount = 0;
+		} else {
+			// Flush moves up to splitIndex, keep the rest
+			flushedCount = splitIndex;
+			map.set(boardId, moves.slice(splitIndex));
+		}
+		return map;
+	});
+	return flushedCount;
+};
+
 export const getMoveBatchForSubmission = (moves: MoveHistory[]): string => {
 	const validMoves = moves.filter((m) =>
 		Object.values(directionList).includes(m.direction.replace('Arrow', ''))

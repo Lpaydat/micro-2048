@@ -19,6 +19,7 @@
 		addMoveToHistory,
 		flushMoveHistory,
 		flushNMoves,
+		flushMovesUpToTimestamp,
 		getMoveBatchForSubmission
 	} from '$lib/stores/moveHistories';
 	import { formatBalance } from '$lib/utils/formatBalance';
@@ -106,6 +107,15 @@
 	// Mutation "success" only means "accepted", not "processed"
 	// This flag prevents premature state reset while backend is processing
 	let awaitingBackendSync = false;
+	
+	// 🔒 DUPLICATE PREVENTION: Track the latest timestamp that was submitted
+	// When backend hash matches local, we flush all moves up to this timestamp
+	// This prevents flushing the wrong moves when multiple submissions overlap
+	let lastSubmittedTimestamp: number = 0; // Latest move timestamp we've submitted
+	
+	// 🔒 SYNC LOCK: Prevent concurrent submissions
+	// Only one submission should be in-flight at a time
+	let isSyncInFlight = false;
 
 	// 🔄 Background Sync: Valid board states tracking (hash-based validation)
 	let validBoardHashes: Set<number> = new Set(); // All board states we've seen locally
@@ -480,12 +490,15 @@
 			isInitialized = false;
 			validBoardHashes.clear();
 			pendingMoveCount = 0;
+			lastSubmittedTimestamp = 0; // 🔒 Reset submitted timestamp tracking
+			isSyncInFlight = false; // 🔒 Reset sync lock
 			syncStatus = 'ready';
 			lastHashMismatchTime = null;
 			lastBoardId = boardId;
 			isLeaderboardIdSet = false; // Reset so leaderboardId updates for new board
 			lastUsedTimestamp = 0; // Reset timestamp tracking for new board
 			moveQueue = []; // Clear any queued moves from previous board
+			awaitingBackendSync = false; // 🔒 Reset awaiting state
 			
 			// 🎵 Reset rhythm stats for new board
 			rhythmScore = 0;
@@ -862,39 +875,50 @@
 
 	// 🔄 Background Sync: Non-blocking sync with confirmation
 	const backgroundSync = async (boardId: string) => {
-		if (syncStatus === 'syncing' || syncStatus === 'syncing-bg' || syncStatus === 'desynced') {
-
+		// 🔒 SYNC LOCK: Prevent concurrent submissions
+		// This is the PRIMARY lock - if a sync is in-flight, don't start another
+		if (isSyncInFlight) {
+			console.log('🔒 Sync already in-flight, skipping');
+			return;
+		}
+		
+		if (syncStatus === 'desynced') {
 			return;
 		}
 
 		// Get moves to submit (but don't flush yet!)
-		// 🔧 FIX: Take a snapshot of the current moves to submit
-		// This way, moves added during sync won't be affected
 		const movesToSubmit = [...($moveHistoryStore.get(boardId) || [])];
 		if (movesToSubmit.length === 0) return;
 
-		// 🔒 Mark as syncing IMMEDIATELY to prevent race conditions
+		// 🔒 ACQUIRE LOCK immediately before any async operation
+		isSyncInFlight = true;
 		syncStatus = 'syncing-bg';
+		
+		// Get the latest timestamp from the batch we're submitting
+		const latestTimestampInBatch = Math.max(
+			...movesToSubmit.map(m => parseInt(m.timestamp))
+		);
+		
 		const moveBatch = getMoveBatchForSubmission(movesToSubmit);
 		const moveCount = movesToSubmit.length;
 		
 		// 🔧 FIX: Mark that we're waiting for backend to process submitted moves
-		// awaitingBackendSync prevents premature state reset while backend is processing
 		awaitingBackendSync = true;
-
 
 		try {
 			// Submit to backend and WAIT for confirmation (note: "success" = accepted, not processed)
 			const result: MakeMoveResult = await makeMoves(client, moveBatch, boardId);
 
 			if (result.success) {
-				// ✅ Mutation accepted - flush moves from local store
-				flushNMoves(boardId, moveCount);
-				// Sync pendingMoveCount with actual store state
-				const remainingMoves = $moveHistoryStore.get(boardId)?.length || 0;
-				pendingMoveCount = remainingMoves;
+				// 🔒 Track the latest timestamp we've submitted
+				// When backend confirms (hash match), we'll flush all moves up to this timestamp
+				lastSubmittedTimestamp = Math.max(lastSubmittedTimestamp, latestTimestampInBatch);
 				lastSyncTime = Date.now();
 				syncRetryCount = 0;
+				
+				console.log(`📤 Submitted ${moveCount} moves (latest ts: ${latestTimestampInBatch})`);
+				
+				// DON'T flush yet - wait for backend confirmation via hash match
 				// awaitingBackendSync will be cleared by periodic checker when backend matches local state
 			} else {
 				// Submission failed - keep moves for retry
@@ -902,7 +926,6 @@
 				syncStatus = 'failed';
 				syncRetryCount++;
 				awaitingBackendSync = false;
-				
 				
 				// Schedule retry if under limit
 				if (syncRetryCount < MAX_SYNC_RETRIES) {
@@ -922,7 +945,6 @@
 			syncRetryCount++;
 			awaitingBackendSync = false;
 			
-			
 			// Schedule retry if under limit
 			if (syncRetryCount < MAX_SYNC_RETRIES) {
 				setTimeout(() => {
@@ -931,6 +953,9 @@
 					}
 				}, SYNC_RETRY_DELAY);
 			}
+		} finally {
+			// 🔒 RELEASE LOCK - always release even on error
+			isSyncInFlight = false;
 		}
 	};
 
@@ -995,17 +1020,19 @@
 			
 			if (backendHash === localHash) {
 				// ✅ Perfect match - backend caught up to our local state
-
+				console.log('✅ handleDesync: Backend matched local state, flushing all moves');
 				flushMoveHistory(boardId!);
+				lastSubmittedTimestamp = 0;
 			} else if (backendIsValid && remainingMoves.length === 0) {
 				// Backend is at valid state and no pending moves - sync with backend
+				console.log('✅ handleDesync: Backend at valid state, syncing');
 				const newState = createState($game.data.board.board, 4, boardId!, player);
 				if ($game.data.board.isEnded) {
 					newState.finished = true;
 				}
 				state = newState;
 				score = $game.data.board.score || 0;
-
+				lastSubmittedTimestamp = 0;
 			} else if (remainingMoves.length > 0) {
 				// We have pending moves - DON'T reset, keep local state
 				// Backend will eventually process our submitted moves
@@ -1034,6 +1061,8 @@
 		isFrozen = false;
 		syncStatus = 'ready';
 		pendingMoveCount = 0;
+		lastSubmittedTimestamp = 0; // 🔒 Reset submitted timestamp
+		isSyncInFlight = false; // 🔒 Release sync lock
 		syncRetryCount = 0;
 		overlayMessage = undefined;
 		
@@ -1044,10 +1073,13 @@
 
 	// Submit function (used for idle sync and game end)
 	const submitMoves = async (boardId: string, force = false) => {
-		// 🔒 RACE CONDITION FIX: Don't submit if already syncing or desyncing
-		// This prevents duplicate submissions that cause board state divergence
-		if (syncStatus === 'syncing' || syncStatus === 'syncing-bg' || syncStatus === 'desynced') {
-
+		// 🔒 SYNC LOCK: Prevent concurrent submissions
+		if (isSyncInFlight) {
+			console.log('🔒 Sync already in-flight, skipping submitMoves');
+			return;
+		}
+		
+		if (syncStatus === 'desynced') {
 			return;
 		}
 
@@ -1059,43 +1091,48 @@
 			return;
 		}
 
-		// 🔒 Set syncStatus IMMEDIATELY to prevent race conditions
-		// This must happen before any await to block other sync attempts
+		// 🔒 ACQUIRE LOCK immediately before any async operation
+		isSyncInFlight = true;
 		syncStatus = 'syncing-bg';
+		
+		// Get the latest timestamp from the batch we're submitting
+		const latestTimestampInBatch = moves.length > 0 
+			? Math.max(...moves.map(m => parseInt(m.timestamp)))
+			: 0;
+		
 		const moveBatch = getMoveBatchForSubmission(moves);
 		const moveCount = moves.length;
 		
 		// 🔧 FIX: Mark that we're waiting for backend to process submitted moves
 		awaitingBackendSync = true;
-
 		
 		try {
 			// Wait for confirmation (note: "success" = accepted, not processed)
 			const result = await makeMoves(client, moveBatch, boardId);
 			
 			if (result.success) {
-				// ✅ Mutation accepted - flush moves from local store
-				flushNMoves(boardId, moveCount);
+				// 🔒 Track the latest timestamp we've submitted
+				lastSubmittedTimestamp = Math.max(lastSubmittedTimestamp, latestTimestampInBatch);
 				const newTablet = boardToString(state?.tablet);
 				stateHash = newTablet ?? '';
-				// Sync pendingMoveCount with actual store state
-				const remainingMoves = $moveHistoryStore.get(boardId)?.length || 0;
-				pendingMoveCount = remainingMoves;
 				lastSyncTime = Date.now();
 				syncRetryCount = 0;
-				// awaitingBackendSync will be cleared by periodic checker when backend matches local state
+				
+				console.log(`📤 Submitted ${moveCount} moves via submitMoves (latest ts: ${latestTimestampInBatch})`);
+				
+				// DON'T flush yet - wait for backend confirmation via hash match
 			} else {
 				console.error('Submit moves failed:', result.error);
 				syncStatus = 'failed';
 				awaitingBackendSync = false;
-				
 			}
 		} catch (error: unknown) {
 			console.error('Submit moves exception:', error);
 			syncStatus = 'failed';
 			awaitingBackendSync = false;
-			
 		} finally {
+			// 🔒 RELEASE LOCK - always release even on error
+			isSyncInFlight = false;
 			activityDetected = false;
 		}
 	};
@@ -1345,34 +1382,51 @@
 
 				if (backendMatchesLocal) {
 					// ✅ PERFECT: Backend has caught up completely to our current state
+					// 🔒 NOW it's safe to flush - backend has confirmed ALL submitted moves
+					
+					if (lastSubmittedTimestamp > 0) {
+						const flushedCount = flushMovesUpToTimestamp(boardId!, lastSubmittedTimestamp);
+						console.log(`✅ Backend confirmed! Flushed ${flushedCount} moves (up to ts: ${lastSubmittedTimestamp})`);
+						lastSubmittedTimestamp = 0; // Reset after successful flush
+					}
+					
+					// Update pending count from actual store state
+					const remainingMoves = $moveHistoryStore.get(boardId!)?.length || 0;
+					pendingMoveCount = remainingMoves;
 
 					awaitingBackendSync = false;
 					syncingBackgroundStartTime = null;
-					
-					if (pendingMoveCount === 0) {
-						syncStatus = 'ready';
-					} else {
-						syncStatus = 'pending';
-					}
+					syncStatus = remainingMoves > 0 ? 'pending' : 'ready';
 					isFrozen = false;
 					lastHashMismatchTime = null;
 				} else if (backendInValidSet) {
 					// ✅ GOOD: Backend processed our submitted moves (reached a valid state)
-					// Clear awaitingBackendSync - the submitted batch was processed
-					// But backend may still be behind if user made more moves
-					if (awaitingBackendSync) {
-
-						awaitingBackendSync = false;
+					// This means backend processed SOME moves but user made more while syncing
+					// 🔒 Flush confirmed moves by timestamp, keep newer ones
+					
+					if (lastSubmittedTimestamp > 0 && awaitingBackendSync) {
+						// Backend is at a valid intermediate state
+						// Flush all moves up to the timestamp we submitted
+						const flushedCount = flushMovesUpToTimestamp(boardId!, lastSubmittedTimestamp);
+						console.log(`✅ Backend at valid state, flushed ${flushedCount} moves (up to ts: ${lastSubmittedTimestamp})`);
+						lastSubmittedTimestamp = 0; // Reset after flush
+						
+						const remainingMoves = $moveHistoryStore.get(boardId!)?.length || 0;
+						pendingMoveCount = remainingMoves;
 					}
+					
+					awaitingBackendSync = false;
 					syncingBackgroundStartTime = null;
 					
 					// Transition based on whether we have more pending moves
-					if (pendingMoveCount > 0) {
+					const currentRemainingMoves = $moveHistoryStore.get(boardId!)?.length || 0;
+					if (currentRemainingMoves > 0) {
 						syncStatus = 'pending';
 					} else {
 						syncStatus = 'synced';
 						setTimeout(() => {
-							if (pendingMoveCount === 0 && syncStatus === 'synced') {
+							const checkMoves = $moveHistoryStore.get(boardId!)?.length || 0;
+							if (checkMoves === 0 && syncStatus === 'synced') {
 								syncStatus = 'ready';
 							} else if (syncStatus === 'synced') {
 								syncStatus = 'pending';
@@ -1415,7 +1469,8 @@
 				// ❌ Backend state not in our valid hash set
 				// Wait for backend to catch up if:
 				// - We have pending moves locally
-				// - We're awaiting backend sync (submitted but not yet confirmed)
+				// - We have moves submitted but not yet confirmed (lastSubmittedTimestamp > 0)
+				// - We're awaiting backend sync
 				// - Sync is in progress
 				// - We just finished syncing (backend may be processing)
 				// - Local game is finished (don't overwrite game over state!)
@@ -1425,7 +1480,9 @@
 				
 				const shouldWaitForBackend = 
 					pendingMoveCount > 0 || 
-					awaitingBackendSync ||  // 🔧 FIX: Primary check - waiting for backend to process submitted moves
+					lastSubmittedTimestamp > 0 ||  // 🔒 Moves submitted but not yet confirmed by backend
+					isSyncInFlight ||  // 🔒 Sync operation in progress
+					awaitingBackendSync ||  // Waiting for backend to process
 					syncStatus === 'syncing-bg' || 
 					syncStatus === 'syncing' ||
 					syncStatus === 'synced' ||  // Just finished sync, backend catching up
@@ -1457,6 +1514,7 @@
 						
 						// Clear awaiting state since we're resetting
 						awaitingBackendSync = false;
+						lastSubmittedTimestamp = 0;  // 🔒 Reset submitted timestamp
 						
 						// Ensure we're in a clean sync state
 						syncStatus = 'ready';
