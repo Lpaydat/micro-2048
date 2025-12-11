@@ -82,6 +82,9 @@ export class RhythmEngine {
 	// First beat offset for current track (seconds from file start to first beat)
 	private firstBeatOffset: number = 0;
 
+	// Music duration for loop handling
+	private musicDuration: number = 0;
+
 	// REMOVED: VISUAL_PHASE_ADVANCE was a magic number measured on one device
 	// Now we rely ONLY on calibrationOffset (user-measured) for timing adjustment
 	// This is cleaner and more accurate across different devices/browsers
@@ -172,8 +175,11 @@ export class RhythmEngine {
 			console.log(`🎵 [LOAD] Setting BPM from ${this.bpm} to ${track.bpm}`);
 			this.bpm = track.bpm;
 			this.firstBeatOffset = track.firstBeatOffset;
+			
+			// Store music duration for loop handling
+			this.musicDuration = this.player.buffer.duration;
 
-			console.log(`🎵 [LOAD] Loaded: ${track.name}, BPM: ${this.bpm}, firstBeatOffset: ${this.firstBeatOffset}s`);
+			console.log(`🎵 [LOAD] Loaded: ${track.name}, BPM: ${this.bpm}, firstBeatOffset: ${this.firstBeatOffset}s, duration: ${this.musicDuration}s`);
 		} catch (error) {
 			console.error('🎵 [LOAD] Failed to load track:', error);
 			this.useMusic = false;
@@ -319,6 +325,24 @@ export class RhythmEngine {
 	// ========================================================================
 
 	/**
+	 * Get effective time within music loop
+	 * 
+	 * When music loops, transport keeps counting but music restarts.
+	 * This returns the time position relative to the current loop iteration.
+	 */
+	private getEffectiveTime(): number {
+		const transport = Tone.getTransport();
+		let seconds = transport.seconds;
+		
+		// If using music with a known duration, wrap time to account for loops
+		if (this.useMusic && this.player && this.musicDuration > 0) {
+			seconds = seconds % this.musicDuration;
+		}
+		
+		return seconds;
+	}
+
+	/**
 	 * Get the current beat phase (0 to 1)
 	 *
 	 * This is THE function for visual sync.
@@ -332,15 +356,15 @@ export class RhythmEngine {
 	getBeatPhase(): number {
 		if (!this.running) return 0;
 
-		const transport = Tone.getTransport();
 		const beatLength = 60 / this.bpm;
 		
+		// Get effective time (accounts for music loops)
 		// Adjust for:
 		// - firstBeatOffset: when music beat actually starts in the file
 		// - calibrationOffset: user's device latency adjustment (the ONLY timing adjustment)
 		//   SUBTRACT calibration because: if user taps late (positive offset), we need to
 		//   shift the visual earlier (subtract from time) so beats align with when they hear it
-		let seconds = transport.seconds - this.firstBeatOffset - this.calibrationOffset;
+		let seconds = this.getEffectiveTime() - this.firstBeatOffset - this.calibrationOffset;
 		
 		// Handle negative time (before first beat)
 		if (seconds < 0) {
@@ -361,12 +385,12 @@ export class RhythmEngine {
 	 * Negative = early (before beat), Positive = late (after beat)
 	 */
 	private getTimingFromNearestBeat(): { diffMs: number; isLate: boolean } {
-		const transport = Tone.getTransport();
 		const beatLength = 60 / this.bpm;
 		
+		// Get effective time (accounts for music loops)
 		// Adjust for first beat offset and calibration
 		// SUBTRACT calibration: if user taps late (positive offset), shift window earlier
-		let seconds = transport.seconds - this.firstBeatOffset - this.calibrationOffset;
+		let seconds = this.getEffectiveTime() - this.firstBeatOffset - this.calibrationOffset;
 		
 		// Handle negative time
 		if (seconds < 0) {
