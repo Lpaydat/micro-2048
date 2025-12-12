@@ -117,8 +117,10 @@
 	const REFRESH_COOLDOWN_MS = 15000; // 15 seconds cooldown
 	
 	// Not found tracking - stop polling after consecutive failures
+	// Only triggers "not found" if we've NEVER successfully loaded the tournament
 	let notFoundCount = $state(0);
 	let isNotFound = $state(false);
+	let hasEverLoadedSuccessfully = $state(false); // Track if we've ever seen valid data
 	let redirectCountdown = $state(5);
 	let redirectCountdownInterval: ReturnType<typeof setInterval> | null = null; // Track interval for cleanup
 	let leaderboardLoadStartTime: number | null = $state(null); // Track when we started looking
@@ -422,34 +424,39 @@
 			// Check if leaderboard data exists - only count when NOT fetching
 			if (!$leaderboard.fetching) {
 				if ($leaderboard.data?.leaderboard?.leaderboardId) {
-					// Found - reset counter
+					// Found - reset counter and mark as successfully loaded
 					notFoundCount = 0;
+					hasEverLoadedSuccessfully = true;
 					leaderboardLoadStartTime = null;
 				} else {
-					// Not found - increment counter
-					notFoundCount++;
-					
-					// Check if we're still in grace period for newly created tournaments
-					const timeSinceStart = leaderboardLoadStartTime ? Date.now() - leaderboardLoadStartTime : Infinity;
-					const isInGracePeriod = timeSinceStart < NEW_LEADERBOARD_GRACE_PERIOD;
-					
-					// Only trigger "not found" if we've exceeded attempts AND grace period
-					if (notFoundCount >= MAX_NOT_FOUND_ATTEMPTS && !isInGracePeriod) {
-						isNotFound = true;
-						// Start redirect countdown (clear any existing interval first)
-						if (redirectCountdownInterval) {
-							clearInterval(redirectCountdownInterval);
-						}
-						redirectCountdownInterval = setInterval(() => {
-							redirectCountdown--;
-							if (redirectCountdown <= 0 && redirectCountdownInterval) {
+					// Data not available - but only count as "not found" if we've NEVER loaded successfully
+					// This prevents false "not found" triggers from temporary network issues or re-fetch timing
+					if (!hasEverLoadedSuccessfully) {
+						notFoundCount++;
+						
+						// Check if we're still in grace period for newly created tournaments
+						const timeSinceStart = leaderboardLoadStartTime ? Date.now() - leaderboardLoadStartTime : Infinity;
+						const isInGracePeriod = timeSinceStart < NEW_LEADERBOARD_GRACE_PERIOD;
+						
+						// Only trigger "not found" if we've exceeded attempts AND grace period
+						if (notFoundCount >= MAX_NOT_FOUND_ATTEMPTS && !isInGracePeriod) {
+							isNotFound = true;
+							// Start redirect countdown (clear any existing interval first)
+							if (redirectCountdownInterval) {
 								clearInterval(redirectCountdownInterval);
-								redirectCountdownInterval = null;
-								goto('/');
 							}
-						}, 1000);
-						return;
+							redirectCountdownInterval = setInterval(() => {
+								redirectCountdown--;
+								if (redirectCountdown <= 0 && redirectCountdownInterval) {
+									clearInterval(redirectCountdownInterval);
+									redirectCountdownInterval = null;
+									goto('/');
+								}
+							}, 1000);
+							return;
+						}
 					}
+					// If we have loaded successfully before, just silently retry - don't trigger "not found"
 				}
 			}
 
