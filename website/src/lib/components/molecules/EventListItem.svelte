@@ -212,6 +212,8 @@
 								<Music size={10} />
 								{#if settings.trackName}
 									{settings.trackName}
+								{:else if settings.trackIndex === 'selectable'}
+									Player's Choice
 								{:else}
 									Random Track
 								{/if}

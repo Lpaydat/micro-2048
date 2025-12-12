@@ -3,9 +3,11 @@
 Music tracks from Crypt of the NecroDancer OST by Danny Baranowsky.
 
 ## Current Tracks
-- `track1.mp3` - Watch Your Step (Training) - 60 BPM
-- `track2.mp3` - Crypteque (1-2) - 65 BPM
-- `track3.mp3` - Tombtorial (Tutorial) - 50 BPM
+- `track1.mp3` - Watch Your Step (Training) - 120 BPM
+- `track2.mp3` - Crypteque (1-2) - 130 BPM
+- `track3.mp3` - Tombtorial (Tutorial) - 100 BPM
+- `track4.mp3` - Disco Descent (1-1) - 115 BPM
+- `track5.mp3` - Mausoleum Mash (1-3) - 140 BPM
 
 ## How It Works
 - A random track is selected when rhythm mode game starts

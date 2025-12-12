@@ -143,7 +143,7 @@
 								{#if rhythmInfo.useMusic}
 									<span class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset {badgeColors}">
 										<Music size={10} />
-										{rhythmInfo.trackName || 'Random Track'}
+										{rhythmInfo.trackName || (rhythmInfo.trackIndex === 'selectable' ? "Player's Choice" : 'Random Track')}
 									</span>
 								{:else}
 									<span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset {badgeColors}">
@@ -226,7 +226,7 @@
 							{#if rhythmInfo.useMusic}
 								<span class="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-sm font-medium ring-1 ring-inset {badgeColors}">
 									<Music size={12} />
-									{rhythmInfo.trackName || 'Random Track'}
+									{rhythmInfo.trackName || (rhythmInfo.trackIndex === 'selectable' ? "Player's Choice" : 'Random Track')}
 								</span>
 							{:else}
 								<span class="inline-flex items-center rounded-md px-2.5 py-1 text-sm font-medium ring-1 ring-inset {badgeColors}">

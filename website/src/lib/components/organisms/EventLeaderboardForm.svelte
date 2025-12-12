@@ -348,16 +348,21 @@
 									disabled={loading}
 									class="w-full rounded-md border border-purple-300 bg-white px-3 py-2 text-sm text-purple-900 focus:border-purple-500 focus:ring-purple-500"
 								>
-									<option value="random">🎲 Random (different for each player)</option>
-									{#each MUSIC_TRACKS as track, index}
-										<option value={index.toString()}>
-											🎵 {track.name} ({track.bpm} BPM)
-										</option>
-									{/each}
+									<option value="random">🎲 Random (forced)</option>
+									<option value="selectable">🎛️ Player's Choice (random default)</option>
+									<optgroup label="── Fixed Track ──">
+										{#each MUSIC_TRACKS as track, index}
+											<option value={index.toString()}>
+												🎵 {track.name} ({track.bpm} BPM)
+											</option>
+										{/each}
+									</optgroup>
 								</select>
 								<p class="text-xs text-purple-600 mt-1">
 									{#if rhythmTrack === 'random'}
-										Each player gets a random track with its own BPM.
+										Each player gets a random track - luck of the draw!
+									{:else if rhythmTrack === 'selectable'}
+										Players can choose their track before starting (random by default).
 									{:else}
 										All players play the same track ({MUSIC_TRACKS[parseInt(rhythmTrack)]?.bpm} BPM).
 									{/if}

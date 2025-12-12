@@ -30,6 +30,7 @@
 	import { submitCurrentScore } from '$lib/graphql/mutations/submitCurrentScore';
 	import { getPlayerBestScore } from '$lib/graphql/queries/getPlayerLeaderboardStats';
 	import { RhythmEngine, MUSIC_TRACKS } from '$lib/game/rhythmEngine';
+	import TrackSelectionModal from '../molecules/TrackSelectionModal.svelte';
 
 	interface Props {
 		leaderboardId?: string;
@@ -266,40 +267,78 @@
 		return () => clearInterval(interval);
 	});
 
-	const newEventGame = async () => {
-		if (isNewGameCreated || isCreatingNewGame) return;
-		if (!leaderboardId || !$userStore.username) return;
-
+	// Create game with a specific track index
+	const createGameWithTrack = async (rhythmTrackIndex: number | undefined) => {
 		isCreatingNewGame = true;
 		newGameAt = Date.now();
 		isNewGameCreated = true;
 
 		try {
-			// 🎵 Parse rhythm settings from tournament description
-			const description = $leaderboard?.data?.leaderboard?.description ?? '';
-			const rhythmSettings = RhythmEngine.parseFromDescription(description);
-			
-			let rhythmTrackIndex: number | undefined = undefined;
-			
-			if (rhythmSettings?.useMusic) {
-				// Music mode - resolve track index
-				if (rhythmSettings.trackIndex === 'random') {
-					// Resolve random to a specific track index
-					rhythmTrackIndex = Math.floor(Math.random() * MUSIC_TRACKS.length);
-					console.log('🎵 Resolved random track to index:', rhythmTrackIndex, MUSIC_TRACKS[rhythmTrackIndex]?.name);
-				} else if (typeof rhythmSettings.trackIndex === 'number') {
-					rhythmTrackIndex = rhythmSettings.trackIndex;
-					console.log('🎵 Using specific track index:', rhythmTrackIndex, MUSIC_TRACKS[rhythmTrackIndex]?.name);
-				}
-			}
-			// Note: For metronome mode (useMusic=false), rhythmTrackIndex remains undefined (-1 in contract)
-			
 			await newGameBoard(leaderboardId, newGameAt.toString(), rhythmTrackIndex);
 		} catch (error) {
 			console.error('Failed to create new game:', error);
 			isCreatingNewGame = false;
 			isNewGameCreated = false;
 		}
+	};
+
+	// Show track selection modal and create game with selected track
+	const showTrackSelectionModal = () => {
+		modalStore.trigger({
+			type: 'component',
+			component: { ref: TrackSelectionModal },
+			response: (selectedTrack: number | 'random' | null) => {
+				if (selectedTrack === null) {
+					// User cancelled
+					return;
+				}
+				
+				let rhythmTrackIndex: number;
+				if (selectedTrack === 'random') {
+					// Resolve random to a specific track index
+					rhythmTrackIndex = Math.floor(Math.random() * MUSIC_TRACKS.length);
+					console.log('🎵 Player chose random, resolved to:', rhythmTrackIndex, MUSIC_TRACKS[rhythmTrackIndex]?.name);
+				} else {
+					rhythmTrackIndex = selectedTrack;
+					console.log('🎵 Player selected track:', rhythmTrackIndex, MUSIC_TRACKS[rhythmTrackIndex]?.name);
+				}
+				
+				createGameWithTrack(rhythmTrackIndex);
+			}
+		});
+	};
+
+	const newEventGame = async () => {
+		if (isNewGameCreated || isCreatingNewGame) return;
+		if (!leaderboardId || !$userStore.username) return;
+
+		// 🎵 Parse rhythm settings from tournament description
+		const description = $leaderboard?.data?.leaderboard?.description ?? '';
+		const rhythmSettings = RhythmEngine.parseFromDescription(description);
+		
+		// Check if track is selectable - show modal
+		if (rhythmSettings?.useMusic && rhythmSettings.trackIndex === 'selectable') {
+			showTrackSelectionModal();
+			return;
+		}
+		
+		// Determine track index for non-selectable modes
+		let rhythmTrackIndex: number | undefined = undefined;
+		
+		if (rhythmSettings?.useMusic) {
+			// Music mode - resolve track index
+			if (rhythmSettings.trackIndex === 'random') {
+				// Resolve random to a specific track index
+				rhythmTrackIndex = Math.floor(Math.random() * MUSIC_TRACKS.length);
+				console.log('🎵 Resolved random track to index:', rhythmTrackIndex, MUSIC_TRACKS[rhythmTrackIndex]?.name);
+			} else if (typeof rhythmSettings.trackIndex === 'number') {
+				rhythmTrackIndex = rhythmSettings.trackIndex;
+				console.log('🎵 Using specific track index:', rhythmTrackIndex, MUSIC_TRACKS[rhythmTrackIndex]?.name);
+			}
+		}
+		// Note: For metronome mode (useMusic=false), rhythmTrackIndex remains undefined (-1 in contract)
+		
+		createGameWithTrack(rhythmTrackIndex);
 	};
 
 	const deleteEventGame = () => {

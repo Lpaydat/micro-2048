@@ -522,15 +522,20 @@
 				console.log('🎵 Rhythm engine created with trackIndex:', effectiveTrackIndex, 
 					storedTrackIndex !== undefined ? '(from stored board)' : '(from tournament)');
 			} else {
-				// Engine already exists - check if we need to recreate with stored track
-				// This happens when board data arrives after engine was created
+				// Engine already exists - check if we need to recreate with a different track
+				// This happens when:
+				// 1. Board data arrives after engine was created
+				// 2. User starts a new game with a different track (engine still running)
 				const currentTrack = rhythmEngine.getCurrentTrack();
 				const targetTrackIndex = typeof effectiveTrackIndex === 'number' ? effectiveTrackIndex : -1;
 				const currentTrackIndex = currentTrack ? MUSIC_TRACKS.indexOf(currentTrack) : -1;
 				
-				if (targetTrackIndex >= 0 && currentTrackIndex !== targetTrackIndex && !rhythmEngine.isRunning()) {
+				// 🎵 FIX: Recreate engine even if running, when track changes
+				if (targetTrackIndex >= 0 && currentTrackIndex !== targetTrackIndex) {
 					console.log('🎵 Recreating rhythm engine with correct track:', targetTrackIndex, 
-						'(was:', currentTrackIndex, ')');
+						'(was:', currentTrackIndex, ', wasRunning:', rhythmEngine.isRunning(), ')');
+					// Stop and dispose the old engine first
+					stopBeatPhaseAnimation();
 					rhythmEngine.dispose();
 					rhythmEngine = new RhythmEngine(rhythmSettings);
 					rhythmNeedsStart = true;
@@ -711,6 +716,16 @@
 			missCount = 0;
 			displayBpm = 0;
 			totalRhythmMoves = 0;
+			
+			// 🎵 Stop and dispose old rhythm engine when board changes
+			// The reactive block will recreate it with the correct track for the new board
+			if (rhythmEngine) {
+				console.log('🎵 Stopping rhythm engine due to board change');
+				stopBeatPhaseAnimation();
+				rhythmEngine.dispose();
+				rhythmEngine = null;
+				rhythmNeedsStart = false;
+			}
 		}
 		handleGameStateUpdate();
 	}
@@ -2387,6 +2402,8 @@
 						<div class="rhythm-track-info">
 							{#if rhythmSettings.trackIndex === 'random' || rhythmSettings.trackIndex === undefined}
 								<span class="track-label">🎲 Random Track</span>
+							{:else if rhythmSettings.trackIndex === 'selectable'}
+								<span class="track-label">🎛️ Player's Choice</span>
 							{:else}
 								{@const trackIdx = typeof rhythmSettings.trackIndex === 'number' ? rhythmSettings.trackIndex : parseInt(rhythmSettings.trackIndex)}
 								{@const track = MUSIC_TRACKS[trackIdx]}

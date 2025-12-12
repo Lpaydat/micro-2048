@@ -21,7 +21,7 @@ export interface RhythmSettings {
 	bpm: number;
 	tolerance: number; // milliseconds - window for valid hits
 	useMusic?: boolean;
-	trackIndex?: number | 'random'; // specific track index or 'random'
+	trackIndex?: number | 'random' | 'selectable'; // specific track index, 'random' (forced), or 'selectable' (player choice)
 }
 
 export interface RhythmFeedback {
@@ -49,7 +49,9 @@ export interface MusicTrack {
 export const MUSIC_TRACKS: MusicTrack[] = [
 	{ name: 'Watch Your Step', url: '/music/track1.mp3', bpm: 120, firstBeatOffset: 0 },
 	{ name: 'Crypteque', url: '/music/track2.mp3', bpm: 130, firstBeatOffset: 0 },
-	{ name: 'Tombtorial', url: '/music/track3.mp3', bpm: 100, firstBeatOffset: 0 }
+	{ name: 'Tombtorial', url: '/music/track3.mp3', bpm: 100, firstBeatOffset: 0 },
+	{ name: 'Disco Descent', url: '/music/track4.mp3', bpm: 115, firstBeatOffset: 0 },
+	{ name: 'Mausoleum Mash', url: '/music/track5.mp3', bpm: 140, firstBeatOffset: 0 }
 ];
 
 // ============================================================================
@@ -61,7 +63,7 @@ export class RhythmEngine {
 	private bpm: number;
 	private tolerance: number;
 	private useMusic: boolean;
-	private trackIndex: number | 'random';
+	private trackIndex: number | 'random' | 'selectable';
 
 	// State
 	private running: boolean = false;
@@ -623,12 +625,16 @@ export class RhythmEngine {
 
 		if (!match) return null;
 
-		// Parse track index
-		let trackIndex: number | 'random' = 'random';
-		if (match[4] && match[4] !== 'random') {
-			const parsed = parseInt(match[4], 10);
-			if (!isNaN(parsed)) {
-				trackIndex = parsed;
+		// Parse track index: 'random', 'selectable', or a number
+		let trackIndex: number | 'random' | 'selectable' = 'random';
+		if (match[4]) {
+			if (match[4] === 'selectable') {
+				trackIndex = 'selectable';
+			} else if (match[4] !== 'random') {
+				const parsed = parseInt(match[4], 10);
+				if (!isNaN(parsed)) {
+					trackIndex = parsed;
+				}
 			}
 		}
 
@@ -666,7 +672,7 @@ export class RhythmEngine {
 		bpm: number;
 		tolerance: number;
 		useMusic: boolean;
-		trackIndex: number | 'random';
+		trackIndex: number | 'random' | 'selectable';
 		trackName: string | null;
 	} | null {
 		if (!description) return null;
@@ -687,5 +693,14 @@ export class RhythmEngine {
 			trackIndex: settings.trackIndex ?? 'random',
 			trackName
 		};
+	}
+
+	/**
+	 * Check if track selection is player's choice
+	 */
+	static isTrackSelectable(description: string | undefined | null): boolean {
+		if (!description) return false;
+		const settings = RhythmEngine.parseFromDescription(description);
+		return settings?.trackIndex === 'selectable';
 	}
 }
