@@ -2699,12 +2699,13 @@
 		transition: all 0.2s ease-in-out;
 	}
 
+	/* Tablet sizes: xs=288, sm=370, md=462.5, lg=555 (4*tile + 3*gap + 2*padding) */
 	.game-container.lg {
 		max-width: 555px;
 	}
 
 	.game-container.md {
-		max-width: 460px;
+		max-width: 463px; /* 462.5 rounded up */
 	}
 
 	.game-container.sm {
@@ -2712,12 +2713,14 @@
 	}
 
 	/* 🎵 Rhythm mode - add extra width for 4px border on each side */
+	/* Tablet sizes: xs=288, sm=370, md=462.5, lg=555 (4*tile + 3*gap + 2*padding) */
+	/* With 4px border on each side: +8px total */
 	.game-container.rhythm-container.lg {
 		max-width: 563px; /* 555 + 8 */
 	}
 
 	.game-container.rhythm-container.md {
-		max-width: 468px; /* 460 + 8 */
+		max-width: 471px; /* 462.5 + 8, rounded up */
 	}
 
 	.game-container.rhythm-container.sm {

@@ -180,7 +180,7 @@
 {@render header?.()}
 {#if isRendered}
 	<div
-		class="board-container relative w-full {$boardSize}"
+		class="board-container relative mx-auto w-fit {$boardSize}"
 		class:miss-shake={showMissEffect}
 		class:rhythm-mode={beatPhase >= 0}
 		class:metronome-mode={beatPhase >= 0 && !useMusic}
@@ -240,7 +240,6 @@
 
 	.md.overlay {
 		font-size: 1.35em;
-		width: 462.5px;
 	}
 
 	.lg.overlay {
