@@ -45,6 +45,7 @@ impl MessageDispatcher {
                 shard_id,
                 start_time,
                 end_time,
+                rhythm_track_index,
             } => {
                 GameMessageHandler::handle_create_new_board(
                     contract,
@@ -55,6 +56,7 @@ impl MessageDispatcher {
                     shard_id,
                     start_time,
                     end_time,
+                    rhythm_track_index,
                 )
                 .await;
             }

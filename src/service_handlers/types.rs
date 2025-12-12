@@ -43,6 +43,8 @@ pub struct BoardState {
     pub move_offset: u32,
     pub move_limit: u32,
     pub has_more_moves: bool,
+    // 🎵 Rhythm mode: which music track was used (-1 = no rhythm/metronome, 0+ = track index)
+    pub rhythm_track_index: i16,
 }
 
 #[derive(SimpleObject)]
@@ -119,6 +121,8 @@ pub struct MoveHistoryRecord {
     pub timestamp: String, // milliseconds
     pub board_after: [[u16; 4]; 4],
     pub score_after: u64,
+    // 🎵 Rhythm mode: which beat this move was on (0 = miss/off-beat, >0 = on-beat)
+    pub beat_number: u32,
 }
 
 /// 🚀 CHAIN POOL: Status information for monitoring

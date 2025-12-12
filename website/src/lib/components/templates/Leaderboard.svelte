@@ -29,6 +29,7 @@
 	import { requestLeaderboardRefresh } from '$lib/graphql/mutations/requestLeaderboardRefresh';
 	import { submitCurrentScore } from '$lib/graphql/mutations/submitCurrentScore';
 	import { getPlayerBestScore } from '$lib/graphql/queries/getPlayerLeaderboardStats';
+	import { RhythmEngine, MUSIC_TRACKS } from '$lib/game/rhythmEngine';
 
 	interface Props {
 		leaderboardId?: string;
@@ -272,7 +273,26 @@
 		isNewGameCreated = true;
 
 		try {
-			await newGameBoard(leaderboardId, newGameAt.toString());
+			// 🎵 Parse rhythm settings from tournament description
+			const description = $leaderboard?.data?.leaderboard?.description ?? '';
+			const rhythmSettings = RhythmEngine.parseFromDescription(description);
+			
+			let rhythmTrackIndex: number | undefined = undefined;
+			
+			if (rhythmSettings?.useMusic) {
+				// Music mode - resolve track index
+				if (rhythmSettings.trackIndex === 'random') {
+					// Resolve random to a specific track index
+					rhythmTrackIndex = Math.floor(Math.random() * MUSIC_TRACKS.length);
+					console.log('🎵 Resolved random track to index:', rhythmTrackIndex, MUSIC_TRACKS[rhythmTrackIndex]?.name);
+				} else if (typeof rhythmSettings.trackIndex === 'number') {
+					rhythmTrackIndex = rhythmSettings.trackIndex;
+					console.log('🎵 Using specific track index:', rhythmTrackIndex, MUSIC_TRACKS[rhythmTrackIndex]?.name);
+				}
+			}
+			// Note: For metronome mode (useMusic=false), rhythmTrackIndex remains undefined (-1 in contract)
+			
+			await newGameBoard(leaderboardId, newGameAt.toString(), rhythmTrackIndex);
 		} catch (error) {
 			console.error('Failed to create new game:', error);
 			isCreatingNewGame = false;

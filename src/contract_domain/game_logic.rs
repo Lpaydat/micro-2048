@@ -7,6 +7,8 @@ pub struct ProcessedMove {
     pub timestamp: u64,
     pub board_after: u64,
     pub score_after: u64,
+    // 🎵 Rhythm mode: which beat this move was on (0 = miss/off-beat, >0 = on-beat)
+    pub beat_number: u32,
 }
 
 impl GameMoveProcessor {
@@ -15,7 +17,8 @@ impl GameMoveProcessor {
     /// # Arguments
     /// * `board_id` - The board identifier
     /// * `player` - The player making the moves
-    /// * `moves` - The moves to process (direction, timestamp in milliseconds)
+    /// * `moves` - The moves to process (direction, timestamp in milliseconds, beat_number)
+    ///   - beat_number: 0 = miss/off-beat, >0 = on-beat (which beat number)
     /// * `initial_board` - Current board state
     /// * `last_processed_timestamp` - Last timestamp that was successfully processed (for duplicate detection)
     /// * `start_time` - Tournament start time in microseconds (None = unlimited)
@@ -23,7 +26,7 @@ impl GameMoveProcessor {
     pub fn process_moves(
         board_id: &str,
         player: &str,
-        moves: &[(Direction, u64)],
+        moves: &[(Direction, u64, u32)],  // 🎵 Added beat_number
         initial_board: u64,
         last_processed_timestamp: u64, // 🔒 NEW: For duplicate detection
         start_time: Option<u64>,
@@ -37,7 +40,7 @@ impl GameMoveProcessor {
         let mut move_history: Vec<ProcessedMove> = Vec::new();
         let mut skipped_duplicate_count = 0; // 🔒 NEW: Track skipped duplicates
 
-        for (direction, timestamp) in moves.iter() {
+        for (direction, timestamp, beat_number) in moves.iter() {
             if is_ended {
                 break;
             }
@@ -88,11 +91,13 @@ impl GameMoveProcessor {
             let current_score = Game::score(current_board);
 
             // Store this move in history
+            // 🎵 beat_number from input: 0 = miss/off-beat, >0 = on-beat
             move_history.push(ProcessedMove {
                 direction: *direction,
                 timestamp: *timestamp,
                 board_after: current_board,
                 score_after: current_score,
+                beat_number: *beat_number,
             });
 
             is_ended = Game::is_ended(current_board);

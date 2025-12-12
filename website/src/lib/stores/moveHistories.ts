@@ -22,6 +22,8 @@ export type MoveHistory = {
 	direction: GameKeys;
 	timestamp: string;
 	boardId: string;
+	// 🎵 Rhythm mode: which beat this move was on (0 = miss/off-beat, >0 = on-beat)
+	beatNumber?: number;
 };
 
 // Use Map for O(1) lookups and batch operations
@@ -109,12 +111,14 @@ export const getMoveBatchForSubmission = (moves: MoveHistory[]): string => {
 	);
 
 	// Pre-allocate array using valid moves length
+	// 🎵 Format: [direction, timestamp, beatNumber]
 	const batch = new Array(validMoves.length);
 
 	for (let i = 0; i < validMoves.length; i++) {
 		const dir = getDirection(validMoves[i].direction);
 		if (!dir) continue;
-		batch[i] = [dir, validMoves[i].timestamp];
+		// 🎵 Include beatNumber (default to 0 for non-rhythm moves)
+		batch[i] = [dir, validMoves[i].timestamp, validMoves[i].beatNumber ?? 0];
 	}
 
 	const result = JSON.stringify(batch.filter(Boolean));

@@ -32,7 +32,9 @@ impl GameOperationHandler {
             panic!("You can only make move on your own board");
         }
 
-        type MoveInput = (Direction, String);
+        // 🎵 Move format: (Direction, timestamp_string, beat_number)
+        // beat_number: 0 = miss/off-beat, >0 = on-beat (which beat number)
+        type MoveInput = (Direction, String, u32);
         let moves: Vec<MoveInput> =
             serde_json::from_str(&moves).unwrap_or_else(|_| panic!("Invalid moves format"));
 
@@ -57,24 +59,25 @@ impl GameOperationHandler {
             let last_processed_timestamp = *board.last_processed_timestamp.get();
 
             // FIXED: Convert string timestamps to u64 with error handling
-            let mut moves_u64: Vec<(Direction, u64)> = Vec::new();
-            for (dir, ts) in moves {
+            // 🎵 Now includes beat_number for rhythm mode
+            let mut moves_u64: Vec<(Direction, u64, u32)> = Vec::new();
+            for (dir, ts, beat_number) in moves {
                 match ts.parse::<u64>() {
                     Ok(timestamp) => {
                         // Additional validation: ensure timestamp is reasonable
                         if timestamp > 0 && timestamp < 1_000_000_000_000_000 {
                             // Max ~31 years in microseconds
-                            moves_u64.push((dir, timestamp));
+                            moves_u64.push((dir, timestamp, beat_number));
                         } else {
                             // Use current time if timestamp is invalid
                             let current_time = contract.runtime.system_time().micros();
-                            moves_u64.push((dir, current_time));
+                            moves_u64.push((dir, current_time, beat_number));
                         }
                     }
                     Err(_) => {
                         // FIXED: Use current system time instead of panicking
                         let current_time = contract.runtime.system_time().micros();
-                        moves_u64.push((dir, current_time));
+                        moves_u64.push((dir, current_time, beat_number));
                     }
                 }
             }
@@ -129,6 +132,8 @@ impl GameOperationHandler {
                         move_record.timestamp.set(processed_move.timestamp);
                         move_record.board_after.set(processed_move.board_after);
                         move_record.score_after.set(processed_move.score_after);
+                        // 🎵 Rhythm mode: store beat number for replay
+                        move_record.beat_number.set(processed_move.beat_number);
                     }
                     board
                         .move_count
@@ -353,6 +358,8 @@ impl GameOperationHandler {
         timestamp: u64,
         password_hash: String,
         leaderboard_id: String,
+        // 🎵 Rhythm mode: which music track was used (-1 = no rhythm/metronome, 0+ = track index)
+        rhythm_track_index: i16,
     ) {
         // Validate password
         contract
@@ -410,6 +417,8 @@ impl GameOperationHandler {
         game.created_at.set(timestamp);
         game.start_time.set(tournament_start_time);
         game.end_time.set(tournament_end_time);
+        // 🎵 Rhythm mode: store track index for replay (-1 = no rhythm/metronome)
+        game.rhythm_track_index.set(rhythm_track_index);
 
         contract.state.nonce.set(nonce + 1);
         contract.state.latest_board_id.set(board_id);

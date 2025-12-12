@@ -152,6 +152,8 @@ impl QueryHandler {
                         timestamp: move_record.timestamp.get().to_string(), // Already in milliseconds, no conversion
                         board_after: Game::convert_to_matrix(*move_record.board_after.get()),
                         score_after: *move_record.score_after.get(),
+                        // 🎵 Rhythm mode: which beat this move was on
+                        beat_number: *move_record.beat_number.get(),
                     });
                 }
             }
@@ -175,6 +177,8 @@ impl QueryHandler {
                 move_offset: offset,
                 move_limit: limit,
                 has_more_moves,
+                // 🎵 Rhythm mode: which music track was used
+                rhythm_track_index: *game.rhythm_track_index.get(),
             };
             Some(game_state)
         } else {
@@ -214,6 +218,8 @@ impl QueryHandler {
                     move_offset: 0,
                     move_limit: 0, // 0 indicates no pagination for list queries
                     has_more_moves: false,
+                    // 🎵 Rhythm mode: which music track was used
+                    rhythm_track_index: *board.rhythm_track_index.get(),
                 });
             }
         }

@@ -7,6 +7,8 @@ export interface MoveHistoryRecord {
 	timestamp: string; // milliseconds
 	boardAfter: number[][]; // 4x4 board
 	scoreAfter: number;
+	// 🎵 Rhythm mode: which beat this move was on (0 = miss/off-beat, >0 = on-beat)
+	beatNumber: number;
 }
 
 // Types for move history pagination

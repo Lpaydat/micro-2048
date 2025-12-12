@@ -48,6 +48,8 @@ pub enum Operation {
         timestamp: u64,
         password_hash: String,
         leaderboard_id: String, // Must specify leaderboard
+        // 🎵 Rhythm mode: which music track was used (-1 = no rhythm/metronome, 0+ = track index)
+        rhythm_track_index: i16,
     },
     NewShard,
     MakeMoves {
@@ -138,6 +140,8 @@ pub enum Message {
         shard_id: String,
         start_time: u64, // Tournament start time (0 = unlimited)
         end_time: u64,   // Tournament end time (0 = unlimited)
+        // 🎵 Rhythm mode: which music track was used (-1 = no rhythm/metronome, 0+ = track index)
+        rhythm_track_index: i16,
     },
     CreateLeaderboard {
         leaderboard_id: String,

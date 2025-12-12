@@ -28,6 +28,8 @@ impl MutationHandler {
         password_hash: String,
         timestamp: String,
         leaderboard_id: String, // Leaderboard ID parameter
+        // 🎵 Rhythm mode: which music track was used (-1 = no rhythm/metronome, 0+ = track index)
+        rhythm_track_index: Option<i32>,
     ) -> [u8; 0] {
         // Validate player exists and password is correct
         self.validate_player_password(&player, &password_hash).await;
@@ -40,6 +42,7 @@ impl MutationHandler {
             timestamp: timestamp_micros,
             password_hash,
             leaderboard_id, // Use provided leaderboard ID
+            rhythm_track_index: rhythm_track_index.unwrap_or(-1) as i16,
         };
         self.runtime.schedule_operation(&operation);
         []

@@ -12,6 +12,7 @@
 	import { getClient } from '$lib/client';
 	import { queryStore } from '@urql/svelte';
 	import { getBoard, getBoards } from '$lib/graphql/queries/getBoard';
+	import { RhythmEngine, MUSIC_TRACKS } from '$lib/game/rhythmEngine';
 
 	interface Props {
 		player: string;
@@ -37,6 +38,7 @@
 		query Leaderboard {
 			leaderboard {
 				leaderboardId
+				description
 				shardIds
 			}
 		}
@@ -108,7 +110,25 @@
 			boardCreationStartTime = Date.now();
 			newGameAt = Date.now();
 
-			const result = await newGameBoard(leaderboardId, newGameAt.toString());
+			// 🎵 Parse rhythm settings from tournament description
+			const description = $leaderboard?.data?.leaderboard?.description ?? '';
+			const rhythmSettings = RhythmEngine.parseFromDescription(description);
+			
+			let rhythmTrackIndex: number | undefined = undefined;
+			
+			if (rhythmSettings?.useMusic) {
+				// Music mode - resolve track index
+				if (rhythmSettings.trackIndex === 'random') {
+					// Resolve random to a specific track index
+					rhythmTrackIndex = Math.floor(Math.random() * MUSIC_TRACKS.length);
+					console.log('🎵 Resolved random track to index:', rhythmTrackIndex, MUSIC_TRACKS[rhythmTrackIndex]?.name);
+				} else if (typeof rhythmSettings.trackIndex === 'number') {
+					rhythmTrackIndex = rhythmSettings.trackIndex;
+					console.log('🎵 Using specific track index:', rhythmTrackIndex, MUSIC_TRACKS[rhythmTrackIndex]?.name);
+				}
+			}
+
+			const result = await newGameBoard(leaderboardId, newGameAt.toString(), rhythmTrackIndex);
 
 			if (result) {
 				result.subscribe(($result: any) => {

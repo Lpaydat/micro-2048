@@ -58,6 +58,7 @@ impl OperationDispatcher {
                 timestamp,
                 password_hash,
                 leaderboard_id,
+                rhythm_track_index,
             } => {
                 GameOperationHandler::handle_new_board(
                     contract,
@@ -65,6 +66,7 @@ impl OperationDispatcher {
                     timestamp,
                     password_hash,
                     leaderboard_id,
+                    rhythm_track_index,
                 )
                 .await;
             }

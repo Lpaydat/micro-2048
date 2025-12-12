@@ -75,6 +75,7 @@
 				createdAt
 				endTime
 				totalMoves
+				rhythmTrackIndex
 			}
 			balance
 		}
@@ -199,7 +200,8 @@
 
 	// Add new move processing flag and queue
 	let isProcessingMove = false;
-	let moveQueue: Array<{ direction: GameKeys; timestamp: string }> = [];
+	// 🎵 Added beatNumber for rhythm mode replay
+	let moveQueue: Array<{ direction: GameKeys; timestamp: string; beatNumber?: number }> = [];
 
 	// Add new balance view state
 	let showBalance = false;
@@ -271,6 +273,92 @@
 	// 🎵 Beat phase for board pulse animation (-1 = disabled)
 	let beatPhase = -1;
 	let beatPhaseAnimationId: number | null = null;
+
+	// 🎵 Replay Mode: Use RhythmEngine for music + board pulse (but no BeatIndicator)
+	let replayRhythmEngine: RhythmEngine | null = null;
+	let isReplayMusicPlaying = false;
+	let replayTrackName = '';
+
+	// Start replay music with rhythm engine (for board pulse sync)
+	const startReplayMusic = async (trackIndex: number) => {
+		if (trackIndex < 0 || trackIndex >= MUSIC_TRACKS.length) return;
+		
+		// 🎵 Stop gameplay rhythm engine if still running
+		if (rhythmEngine?.isRunning()) {
+			console.log('🎵 Stopping gameplay rhythm engine before replay');
+			rhythmEngine.stop();
+			stopBeatPhaseAnimation();
+		}
+		
+		// Stop any existing replay playback
+		stopReplayMusic();
+		
+		const track = MUSIC_TRACKS[trackIndex];
+		
+		// Create rhythm settings for replay
+		const replaySettings: RhythmSettings = {
+			enabled: true,
+			bpm: track.bpm,
+			tolerance: 200,
+			useMusic: true,
+			trackIndex: trackIndex
+		};
+		
+		try {
+			// Import and start Tone.js (required for audio context)
+			const Tone = await import('tone');
+			await Tone.start();
+			
+			// Create and initialize the rhythm engine
+			replayRhythmEngine = new RhythmEngine(replaySettings);
+			await replayRhythmEngine.init();
+			replayRhythmEngine.start();
+			
+			isReplayMusicPlaying = true;
+			replayTrackName = track.name;
+			displayBpm = track.bpm;
+			displayTrackName = track.name;
+			
+			// Start beat phase animation for board pulse
+			startReplayBeatPhaseAnimation();
+			
+			console.log('🎵 Replay: Started music with board pulse -', track.name, track.bpm, 'BPM');
+		} catch (err) {
+			console.error('🎵 Replay: Failed to start music', err);
+			replayRhythmEngine = null;
+			isReplayMusicPlaying = false;
+		}
+	};
+
+	// Stop replay music and clean up
+	const stopReplayMusic = () => {
+		if (replayRhythmEngine) {
+			stopBeatPhaseAnimation();
+			replayRhythmEngine.dispose();
+			replayRhythmEngine = null;
+			isReplayMusicPlaying = false;
+			replayTrackName = '';
+			displayBpm = 0;
+			displayTrackName = '';
+			console.log('🎵 Replay: Stopped music');
+		}
+	};
+	
+	// 🎵 Animation loop for beat phase during replay (board pulse only)
+	const startReplayBeatPhaseAnimation = () => {
+		if (beatPhaseAnimationId !== null) return; // Already running
+		
+		const animate = () => {
+			if (replayRhythmEngine?.isRunning()) {
+				beatPhase = replayRhythmEngine.getBeatPhase();
+				beatPhaseAnimationId = requestAnimationFrame(animate);
+			} else {
+				beatPhase = -1;
+				beatPhaseAnimationId = null;
+			}
+		};
+		animate();
+	};
 
 	// GraphQL Queries and Subscriptions
 	// Note: moveHistory is fetched separately via pagination (getBoardPaginated)
@@ -379,6 +467,7 @@
 	$: loadedRanges = paginatedHistoryStore ? paginatedHistoryStore.getLoadedRanges() : [];
 
 	// 🎵 Initialize Rhythm System from tournament description
+	// BUT use stored trackIndex from board if available (for resume consistency)
 	$: {
 		// Use tournament description for rhythm settings (passed from leaderboard)
 		const parsedRhythm = RhythmEngine.parseFromDescription(tournamentDescription);
@@ -389,13 +478,40 @@
 		// 2. Not in inspector mode
 		// Note: We DON'T require $game.data?.board - rhythm UI should show immediately
 		if (parsedRhythm && !isInspectorMode) {
-			rhythmSettings = parsedRhythm;
+			// 🎵 FIX: Use stored trackIndex from board if available
+			// This ensures resuming a game uses the SAME track that was selected at creation
+			const storedTrackIndex = $game.data?.board?.rhythmTrackIndex;
+			const effectiveTrackIndex = (typeof storedTrackIndex === 'number' && storedTrackIndex >= 0) 
+				? storedTrackIndex 
+				: parsedRhythm.trackIndex;
+			
+			// Create settings with the correct track index
+			rhythmSettings = {
+				...parsedRhythm,
+				trackIndex: effectiveTrackIndex
+			};
+			
 			if (!rhythmEngine) {
 				// Create engine but don't start yet - wait for user interaction
 				rhythmEngine = new RhythmEngine(rhythmSettings);
 				rhythmNeedsStart = true;
 				showRhythmIndicator = true;
-
+				console.log('🎵 Rhythm engine created with trackIndex:', effectiveTrackIndex, 
+					storedTrackIndex !== undefined ? '(from stored board)' : '(from tournament)');
+			} else {
+				// Engine already exists - check if we need to recreate with stored track
+				// This happens when board data arrives after engine was created
+				const currentTrack = rhythmEngine.getCurrentTrack();
+				const targetTrackIndex = typeof effectiveTrackIndex === 'number' ? effectiveTrackIndex : -1;
+				const currentTrackIndex = currentTrack ? MUSIC_TRACKS.indexOf(currentTrack) : -1;
+				
+				if (targetTrackIndex >= 0 && currentTrackIndex !== targetTrackIndex && !rhythmEngine.isRunning()) {
+					console.log('🎵 Recreating rhythm engine with correct track:', targetTrackIndex, 
+						'(was:', currentTrackIndex, ')');
+					rhythmEngine.dispose();
+					rhythmEngine = new RhythmEngine(rhythmSettings);
+					rhythmNeedsStart = true;
+				}
 			}
 			// Note: New engine doesn't support updateSettings - settings are immutable
 			// If settings change, we'd need to recreate the engine
@@ -484,6 +600,13 @@
 		deleteBoardId(leaderboardId);
 		if (offlineMode) {
 			toggleOfflineMode();
+		}
+
+		// 🎵 Stop rhythm engine music when game ends
+		if (rhythmEngine) {
+			console.log('🎵 Game ended - stopping rhythm engine');
+			rhythmEngine.stop();
+			stopBeatPhaseAnimation();
 		}
 
 		const endTime = parseInt($game.data?.board?.endTime);
@@ -670,7 +793,8 @@
 	let lastUsedTimestamp = 0;
 
 	// Movement Functions
-	const move = async (boardId: string, direction: GameKeys, inputTimestamp?: string) => {
+	// 🎵 beatNumber: 0 = miss/off-beat or non-rhythm, >0 = on-beat (which beat number)
+	const move = async (boardId: string, direction: GameKeys, inputTimestamp?: string, beatNumber?: number) => {
 		if (!canMakeMove || boardEnded || !state || isProcessingMove) return;
 
 		const tournamentEndTime = parseInt($game.data?.board?.endTime || '0');
@@ -721,7 +845,9 @@
 			addMoveToHistory({
 				direction,
 				timestamp,
-				boardId
+				boardId,
+				// 🎵 Rhythm mode: store beat number for replay
+				beatNumber: beatNumber ?? 0
 			});
 
 			// Dispatch game over event if state changed to finished
@@ -749,7 +875,8 @@
 		const nextMove = moveQueue.shift();
 		if (nextMove && !boardEnded) {
 			// 🔧 FIX: Pass the original timestamp from when user pressed the key
-			await move(boardId, nextMove.direction, nextMove.timestamp);
+			// 🎵 Also pass beatNumber for rhythm mode
+			await move(boardId, nextMove.direction, nextMove.timestamp, nextMove.beatNumber);
 		}
 	};
 
@@ -779,6 +906,9 @@
 			return; // Block this move, let them try again after audio starts
 		}
 
+		// 🎵 Rhythm mode beat number (0 = non-rhythm or miss, >0 = on-beat)
+		let beatNumber = 0;
+		
 		// 🎵 Rhythm Mode Check - BLOCK moves if not on beat
 		if (rhythmEngine && rhythmSettings?.enabled) {
 			const rhythmFeedback = rhythmEngine.checkRhythm();
@@ -801,8 +931,9 @@
 				return;
 			}
 			
-			// Valid move - update stats
+			// Valid move - update stats and capture beat number
 			totalRhythmMoves++;
+			beatNumber = rhythmFeedback.beatNumber; // 🎵 Capture for storage
 			
 			if (rhythmFeedback.accuracy === 'perfect') {
 				perfectCount++;
@@ -822,11 +953,11 @@
 
 		// Queue move if currently processing, otherwise execute immediately
 		// 🔧 FIX: Always pass the timestamp to preserve timing information
+		// 🎵 Also pass beatNumber for rhythm mode replay
 		if (isProcessingMove) {
-
-			moveQueue.push({ direction, timestamp });
+			moveQueue.push({ direction, timestamp, beatNumber });
 		} else {
-			move(boardId, direction, timestamp);
+			move(boardId, direction, timestamp, beatNumber);
 		}
 
 		dispatch('move', { direction, timestamp });
@@ -1699,10 +1830,23 @@
 	});
 
 	// 🔍 Inspector Auto-Play Functions
-	const toggleAutoPlay = () => {
+	const toggleAutoPlay = async () => {
 		autoPlayEnabled = !autoPlayEnabled;
 
 		if (autoPlayEnabled) {
+			// 🎵 Restart music if board has rhythm track
+			const boardTrackIndex = $game.data?.board?.rhythmTrackIndex;
+			if (typeof boardTrackIndex === 'number' && boardTrackIndex >= 0 && !isReplayMusicPlaying) {
+				// Need to start Tone.js from user gesture
+				try {
+					const Tone = await import('tone');
+					await Tone.start();
+					await startReplayMusic(boardTrackIndex);
+				} catch (err) {
+					console.error('🎵 Failed to restart replay music', err);
+				}
+			}
+			
 			// Start playing if not already playing
 			if (!isInspectorPlaying) {
 				playInspectorMoves();
@@ -1775,6 +1919,8 @@
 			clearTimeout(inspectorPlayTimeout);
 			inspectorPlayTimeout = null;
 		}
+		// 🎵 Stop replay music when stopping playback
+		stopReplayMusic();
 	};
 
 	const restartInspector = async () => {
@@ -1794,9 +1940,28 @@
 	const showOverlayAtEnd = () => {
 		hideInspectorOverlay = false;
 		autoPlayEnabled = false;
+		// 🎵 Stop replay music when reaching end
+		stopReplayMusic();
 	};
 
 	const handleReplayClick = async () => {
+		// Check if this board has music mode
+		const boardTrackIndex = $game.data?.board?.rhythmTrackIndex;
+		console.log('🎵 Replay: Board rhythmTrackIndex =', boardTrackIndex);
+		
+		const hasRhythmMusic = typeof boardTrackIndex === 'number' && boardTrackIndex >= 0;
+		
+		// Pre-start Tone.js in click handler (user gesture required)
+		if (hasRhythmMusic) {
+			try {
+				const Tone = await import('tone');
+				await Tone.start();
+				console.log('🎵 Replay: Tone.js started');
+			} catch (err) {
+				console.error('🎵 Replay: Failed to start Tone.js', err);
+			}
+		}
+		
 		// Set user controlled flag to prevent auto-positioning
 		isUserControlledReplay = true;
 
@@ -1822,6 +1987,11 @@
 		// Start from the beginning for replay (position 0 = initial state)
 		inspectorCurrentMoveIndex = 0;
 		await handleSliderChange(0);
+
+		// 🎵 Start replay music if this board was played with music mode
+		if (hasRhythmMusic) {
+			startReplayMusic(boardTrackIndex);
+		}
 
 		// Enable auto-play when replay button is clicked
 		if (!autoPlayEnabled) {
@@ -1988,6 +2158,9 @@
 		// 🎵 Stop beat phase animation
 		stopBeatPhaseAnimation();
 		
+		// 🎵 Stop replay music
+		stopReplayMusic();
+		
 		// 🧹 Clean up intervals that may still be running
 		if (scoreSubmitCooldownInterval) {
 			clearInterval(scoreSubmitCooldownInterval);
@@ -2104,9 +2277,9 @@
 			{chainId}
 			showReplayButton={true}
 			onReplayClick={handleReplayClick}
-			hideOverlay={hideInspectorOverlay}
+			hideOverlay={isInspectorMode && hideInspectorOverlay}
 			{beatPhase}
-			useMusic={rhythmSettings?.useMusic ?? true}
+			useMusic={rhythmSettings?.useMusic ?? (isReplayMusicPlaying ? true : true)}
 		>
 			<!-- {#snippet header(size)} -->
 			{#snippet header()}
@@ -2120,7 +2293,8 @@
 						{score}
 						{bestScore}
 					/>
-					{#if showRhythmIndicator && rhythmEngine}
+					{#if showRhythmIndicator && rhythmEngine && !isInspectorMode}
+						<!-- Beat indicator and stats during gameplay -->
 						<div class="rhythm-indicator-wrapper">
 							<BeatIndicator 
 								{rhythmEngine} 
@@ -2143,6 +2317,18 @@
 							<span class="stat">
 								<span class="label">BPM</span>
 								<span class="value text-yellow-400">{displayBpm || rhythmEngine?.getBpm() || '?'}</span>
+							</span>
+						</div>
+					{:else if isReplayMusicPlaying && isInspectorMode}
+						<!-- Show track info during replay (no BeatIndicator, just board pulse) -->
+						<div class="rhythm-stats">
+							<span class="stat">
+								<span class="label">🎵 Now Playing</span>
+								<span class="value text-violet-400">{replayTrackName}</span>
+							</span>
+							<span class="stat">
+								<span class="label">BPM</span>
+								<span class="value text-yellow-400">{displayBpm}</span>
 							</span>
 						</div>
 					{/if}

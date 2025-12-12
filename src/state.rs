@@ -28,6 +28,8 @@ pub struct MoveRecord {
     pub timestamp: RegisterView<u64>,
     pub board_after: RegisterView<u64>,
     pub score_after: RegisterView<u64>,
+    // 🎵 Rhythm mode: which beat this move was on (0 = miss/off-beat, >0 = on-beat)
+    pub beat_number: RegisterView<u32>,
 }
 
 #[derive(View, SimpleObject)]
@@ -58,6 +60,8 @@ pub struct BoardState {
     pub move_count: RegisterView<u32>,                 // Total number of moves made
     // 🔒 DUPLICATE PREVENTION: Track last processed move timestamp
     pub last_processed_timestamp: RegisterView<u64>,  // Last move timestamp processed (for duplicate detection)
+    // 🎵 Rhythm mode: which music track was used (-1 = no rhythm/metronome, 0+ = track index)
+    pub rhythm_track_index: RegisterView<i16>,
     // 🚀 Hybrid score submission optimization
     pub highest_tile_sent: RegisterView<u64>,    // Highest tile we've sent to leaderboard
     pub last_score_sent_time: RegisterView<u64>, // Timestamp of last score submission (micros)

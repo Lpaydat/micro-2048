@@ -18,6 +18,8 @@ impl GameMessageHandler {
         shard_id: String,
         start_time: u64,
         end_time: u64,
+        // 🎵 Rhythm mode: which music track was used (-1 = no rhythm/metronome, 0+ = track index)
+        rhythm_track_index: i16,
     ) {
         contract
             .check_player_registered(&player, RegistrationCheck::EnsureRegistered)
@@ -54,6 +56,8 @@ impl GameMessageHandler {
         game.start_time.set(start_time);
         game.end_time.set(end_time);
         game.created_at.set(timestamp);
+        // 🎵 Rhythm mode: store track index for replay (-1 = no rhythm/metronome)
+        game.rhythm_track_index.set(rhythm_track_index);
 
         contract.state.latest_board_id.set(board_id);
 

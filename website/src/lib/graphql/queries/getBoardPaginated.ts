@@ -15,11 +15,13 @@ export const GET_BOARD_PAGINATED = gql`
 			moveOffset
 			moveLimit
 			hasMoreMoves
+			rhythmTrackIndex
 			moveHistory {
 				direction
 				timestamp
 				boardAfter
 				scoreAfter
+				beatNumber
 			}
 		}
 	}
