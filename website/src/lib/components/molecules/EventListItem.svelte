@@ -1,6 +1,7 @@
 <script lang="ts">
 	import BaseListItem from './BaseListItem.svelte';
 	import ActionButton from '../atoms/ActionButton.svelte';
+	import FormattedText from '../atoms/FormattedText.svelte';
 	import {
 		deleteLeaderboard,
 		togglePinLeaderboard

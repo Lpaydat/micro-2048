@@ -4,6 +4,7 @@
 	import { RhythmEngine, MUSIC_TRACKS } from '$lib/game/rhythmEngine.js';
 	import LeaderboardDetails from '../molecules/LeaderboardDetails.svelte';
 	import RankerCard from '../molecules/RankerCard.svelte';
+	import FormattedText from '../atoms/FormattedText.svelte';
 	import Music from 'lucide-svelte/icons/music';
 
 	interface Props {
@@ -152,7 +153,10 @@
 							</div>
 						{/if}
 						{#if cleanedDescription}
-							<p class="whitespace-pre-wrap">{cleanedDescription}</p>
+							<FormattedText 
+								text={cleanedDescription} 
+								linkClass="{isMetronomeMode ? 'text-indigo-400 hover:text-indigo-300' : isRhythmMode ? 'text-violet-400 hover:text-violet-300' : 'text-blue-400 hover:text-blue-300'} hover:underline"
+							/>
 						{/if}
 					</div>
 				{/if}
@@ -235,9 +239,11 @@
 						</p>
 					{/if}
 					{#if cleanedDescription}
-						<p class="whitespace-pre-wrap text-sm leading-relaxed text-gray-300">
-							{cleanedDescription}
-						</p>
+						<FormattedText 
+							text={cleanedDescription} 
+							class="text-sm leading-relaxed text-gray-300"
+							linkClass="{isMetronomeMode ? 'text-indigo-400 hover:text-indigo-300' : isRhythmMode ? 'text-violet-400 hover:text-violet-300' : 'text-blue-400 hover:text-blue-300'} hover:underline"
+						/>
 					{/if}
 				</div>
 			</div>

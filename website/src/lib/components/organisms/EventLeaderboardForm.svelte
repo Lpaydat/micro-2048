@@ -427,10 +427,10 @@
 				placeholder="Describe your tournament...
 
 Examples:
-• Weekly speedrun challenge - highest score wins!
-• Practice tournament for beginners
-• Prize: Top 3 get special Discord roles
-• Rules: Must reach 2048 tile to qualify"
+- **Weekly Challenge** - highest score wins!
+- Prize: Top 3 get *special* Discord roles
+- Join our [Discord](https://discord.gg/example)
+- Rules: Must reach 2048 tile"
 				class="w-full rounded-md border border-gray-300 p-3 text-sm min-h-[120px] resize-y focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
 				maxlength={2000}
 				disabled={loading}
@@ -441,7 +441,7 @@ Examples:
 					{#if rhythmMode}
 						<span class="text-purple-600">Rhythm settings will be added automatically.</span>
 					{:else}
-						<span>Add rules, prizes, or any details for participants.</span>
+						<span>Supports **bold**, *italic*, [links](url), and - bullet lists.</span>
 					{/if}
 				</div>
 				<span class="text-xs {description.length > 1800 ? 'text-amber-600' : 'text-gray-400'}">
