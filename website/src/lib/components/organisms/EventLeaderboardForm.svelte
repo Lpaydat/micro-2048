@@ -418,19 +418,36 @@
 
 		<!-- Description Field -->
 		<div class="form-field">
+			<label for="description" class="block text-sm font-medium text-gray-700 mb-1">
+				Description (optional)
+			</label>
 			<textarea
 				id="description"
 				bind:value={description}
-				placeholder="Enter description (max 500 chars)"
-				class="w-full rounded-md border p-2"
-				maxlength="500"
+				placeholder="Describe your tournament...
+
+Examples:
+• Weekly speedrun challenge - highest score wins!
+• Practice tournament for beginners
+• Prize: Top 3 get special Discord roles
+• Rules: Must reach 2048 tile to qualify"
+				class="w-full rounded-md border border-gray-300 p-3 text-sm min-h-[120px] resize-y focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+				maxlength={2000}
 				disabled={loading}
+				rows={5}
 			></textarea>
-			{#if rhythmMode}
-				<p class="mt-1 text-xs text-purple-600">
-					Note: Rhythm mode settings will be appended to description automatically.
-				</p>
-			{/if}
+			<div class="mt-1 flex justify-between items-center">
+				<div class="text-xs text-gray-500">
+					{#if rhythmMode}
+						<span class="text-purple-600">Rhythm settings will be added automatically.</span>
+					{:else}
+						<span>Add rules, prizes, or any details for participants.</span>
+					{/if}
+				</div>
+				<span class="text-xs {description.length > 1800 ? 'text-amber-600' : 'text-gray-400'}">
+					{description.length}/2000
+				</span>
+			</div>
 		</div>
 
 		<!-- Error Message -->

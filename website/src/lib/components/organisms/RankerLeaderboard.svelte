@@ -152,7 +152,7 @@
 							</div>
 						{/if}
 						{#if cleanedDescription}
-							<p>{cleanedDescription}</p>
+							<p class="whitespace-pre-wrap">{cleanedDescription}</p>
 						{/if}
 					</div>
 				{/if}
