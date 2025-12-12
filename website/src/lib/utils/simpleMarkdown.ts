@@ -122,3 +122,30 @@ export function hasMarkdownFormatting(text: string): boolean {
 	// Check for **bold**, *italic*, [links](url), or bullet points
 	return /\*\*.+?\*\*|\*.+?\*|\[.+?\]\(.+?\)|^[-•*]\s+/m.test(text);
 }
+
+/**
+ * Strip markdown syntax from text, returning plain text.
+ * Useful for previews/truncated text where formatting would look broken.
+ * 
+ * - **bold** → bold
+ * - *italic* → italic
+ * - [text](url) → text
+ * - Bullet points (- or •) → removed
+ */
+export function stripMarkdown(text: string): string {
+	if (!text) return '';
+	
+	return text
+		// Remove **bold** → bold
+		.replace(/\*\*(.+?)\*\*/g, '$1')
+		// Remove *italic* → italic
+		.replace(/\*(.+?)\*/g, '$1')
+		// Remove [text](url) → text
+		.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+		// Remove bullet point markers at start of lines
+		.replace(/^[-•*]\s+/gm, '')
+		// Collapse multiple spaces/newlines
+		.replace(/\n+/g, ' ')
+		.replace(/\s+/g, ' ')
+		.trim();
+}

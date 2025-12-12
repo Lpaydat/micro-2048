@@ -1,7 +1,6 @@
 <script lang="ts">
 	import BaseListItem from './BaseListItem.svelte';
 	import ActionButton from '../atoms/ActionButton.svelte';
-	import FormattedText from '../atoms/FormattedText.svelte';
 	import {
 		deleteLeaderboard,
 		togglePinLeaderboard
@@ -13,6 +12,7 @@
 	import { onDestroy } from 'svelte';
 	import Music from 'lucide-svelte/icons/music';
 	import { RhythmEngine } from '$lib/game/rhythmEngine.js';
+	import { stripMarkdown } from '$lib/utils/simpleMarkdown';
 
 	interface Props {
 		leaderboardId: string;
@@ -56,17 +56,19 @@
 	// Clean description (remove rhythm settings tag)
 	const cleanDescription = $derived(RhythmEngine.cleanDescription(description));
 	
-	// Truncate description for list view (max ~150 chars)
+	// Strip markdown and truncate for list view preview (max ~150 chars)
+	// Full markdown formatting is shown on the tournament detail page
 	const MAX_DESCRIPTION_LENGTH = 150;
+	const plainDescription = $derived(stripMarkdown(cleanDescription || ''));
 	const truncatedDescription = $derived(() => {
-		if (!cleanDescription) return '';
-		if (cleanDescription.length <= MAX_DESCRIPTION_LENGTH) return cleanDescription;
+		if (!plainDescription) return '';
+		if (plainDescription.length <= MAX_DESCRIPTION_LENGTH) return plainDescription;
 		// Find the last space before the limit to avoid cutting words
-		const truncated = cleanDescription.substring(0, MAX_DESCRIPTION_LENGTH);
+		const truncated = plainDescription.substring(0, MAX_DESCRIPTION_LENGTH);
 		const lastSpace = truncated.lastIndexOf(' ');
 		return (lastSpace > MAX_DESCRIPTION_LENGTH * 0.7 ? truncated.substring(0, lastSpace) : truncated) + '…';
 	});
-	const isDescriptionTruncated = $derived(cleanDescription && cleanDescription.length > MAX_DESCRIPTION_LENGTH);
+	const isDescriptionTruncated = $derived(plainDescription && plainDescription.length > MAX_DESCRIPTION_LENGTH);
 
 	// Add reactive timestamp and interval for active state updates
 	let now = $state(Date.now());
@@ -221,9 +223,9 @@
 						{/if}
 					</div>
 				{/if}
-				{#if cleanDescription}
+				{#if plainDescription}
 					<div class="mt-3 border-t-2 {isMetronomeMode ? 'border-indigo-200' : isRhythmMode ? 'border-violet-200' : 'border-surface-200'} pt-4 {isMetronomeMode ? 'text-indigo-800' : isRhythmMode ? 'text-violet-800' : 'text-gray-700'} text-sm">
-						<span class="whitespace-pre-line">{truncatedDescription()}</span>
+						<span>{truncatedDescription()}</span>
 						{#if isDescriptionTruncated}
 							<span class="ml-1 text-xs font-medium {isMetronomeMode ? 'text-indigo-600' : isRhythmMode ? 'text-violet-600' : 'text-blue-600'} hover:underline">
 								View more →
