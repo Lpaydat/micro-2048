@@ -6,8 +6,10 @@ todo.md
 .archive/
 
 # BMAD and Claude directories
+.bmad/
 .bmad-core/
 .claude/
+.opencode/
 AGENTS.md
 
 # OpenCode config
