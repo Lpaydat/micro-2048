@@ -166,7 +166,6 @@ class CircuitBreaker {
 		circuit.state = state;
 
 		if (previousState !== state) {
-			console.log(`🔌 Circuit [${endpoint}]: ${previousState} → ${state}`);
 			this.config.onStateChange?.(state, endpoint);
 		}
 	}
@@ -176,14 +175,7 @@ class CircuitBreaker {
 export const circuitBreaker = new CircuitBreaker({
 	failureThreshold: 5,
 	resetTimeout: 10000, // 10 seconds - recover faster
-	successThreshold: 1, // Only 1 success needed
-	onStateChange: (state, endpoint) => {
-		if (state === 'open') {
-			console.warn(`⚠️ Circuit OPEN for ${endpoint} - requests will be blocked for 10s`);
-		} else if (state === 'closed') {
-			console.log(`✅ Circuit CLOSED for ${endpoint} - normal operation resumed`);
-		}
-	}
+	successThreshold: 1 // Only 1 success needed
 });
 
 export default CircuitBreaker;

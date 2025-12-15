@@ -110,7 +110,6 @@ class CacheService {
 
 				request.onsuccess = () => {
 					this.db = request.result;
-					console.log('✅ IndexedDB cache initialized');
 					resolve(true);
 				};
 
@@ -485,7 +484,6 @@ class CacheService {
 			});
 		}
 
-		console.log('🗑️ Cache cleared');
 	}
 
 	/**

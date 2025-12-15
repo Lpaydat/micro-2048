@@ -104,7 +104,6 @@ class PollingManager {
 		};
 
 		this.tasks.set(id, task);
-		console.log(`📊 Polling task registered: ${id}`);
 	}
 
 	/**
@@ -121,7 +120,6 @@ class PollingManager {
 
 		task.isRunning = true;
 		task.isPaused = false;
-		console.log(`▶️ Polling started: ${id}`);
 
 		if (task.config.immediate) {
 			this.executePoll(task);
@@ -144,7 +142,6 @@ class PollingManager {
 
 		task.isRunning = false;
 		task.isPaused = false;
-		console.log(`⏹️ Polling stopped: ${id}`);
 	}
 
 	/**
@@ -160,7 +157,6 @@ class PollingManager {
 		}
 
 		task.isPaused = true;
-		console.log(`⏸️ Polling paused: ${id}`);
 	}
 
 	/**
@@ -172,7 +168,6 @@ class PollingManager {
 
 		task.isPaused = false;
 		this.scheduleNextPoll(task);
-		console.log(`▶️ Polling resumed: ${id}`);
 	}
 
 	/**
@@ -266,12 +261,7 @@ class PollingManager {
 	 * Set global throttle multiplier
 	 */
 	setGlobalThrottle(multiplier: number): void {
-		const previous = this.globalThrottleMultiplier;
 		this.globalThrottleMultiplier = Math.max(0.5, Math.min(10, multiplier));
-
-		if (previous !== this.globalThrottleMultiplier) {
-			console.log(`🌐 Global polling throttle: ${this.globalThrottleMultiplier}x`);
-		}
 	}
 
 	/**

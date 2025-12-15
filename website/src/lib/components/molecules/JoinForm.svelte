@@ -64,11 +64,6 @@
 	);
 
 	const registerPlayer = async () => {
-		console.log('👤 Register Player Mutation Variables:', {
-			username,
-			passwordHash: passwordHash.substring(0, 10) + '...'
-		});
-
 		const store = mutationStore({
 			client,
 			query: REGISTER_PLAYER,
@@ -78,10 +73,6 @@
 		return new Promise((resolve) => {
 			const unsubscribe = store.subscribe((result) => {
 				if (!result.fetching) {
-					console.log('📋 Register Player Result:', result);
-					if (result.error) {
-						console.error('❌ Register Player Error:', result.error);
-					}
 					unsubscribe();
 					resolve(result);
 				}
@@ -170,8 +161,8 @@
 						canLogin = true;
 						await handleRegisterPlayer();
 					}
-				} catch (error) {
-					console.error(error);
+				} catch {
+					// Error handling
 				}
 			}
 		})();
@@ -193,16 +184,13 @@
 					await new Promise((resolve) => {
 						const unsubscribe = claim.subscribe((result) => {
 							if (!result.fetching) {
-								if (result.error) {
-									console.error('Failed to claim chain:', result.error);
-								}
 								unsubscribe();
 								resolve(result);
 							}
 						});
 					});
-				} catch (error) {
-					console.error('Failed to claim chain:', error);
+				} catch {
+					// Failed to claim chain
 				}
 				
 				localStorage.setItem('username', username);

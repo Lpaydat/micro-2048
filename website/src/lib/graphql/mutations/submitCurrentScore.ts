@@ -22,8 +22,6 @@ export const submitCurrentScore = (
 	player: string,
 	passwordHash: string
 ) => {
-	console.log('Submitting current score for board:', boardId);
-
 	return mutationStore({
 		client: playerClient,
 		query: SUBMIT_CURRENT_SCORE,

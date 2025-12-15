@@ -109,7 +109,6 @@
 			if (result) {
 				result.subscribe(($result: any) => {
 					if ($result.error) {
-						console.error('Board creation error:', $result.error);
 						alert('Failed to create board. Please try again.');
 						boardCreationStartTime = null;
 					} else if ($result.data) {
@@ -120,8 +119,7 @@
 					}
 				});
 			}
-		} catch (error) {
-			console.error('Board creation failed:', error);
+		} catch {
 			alert('Failed to create board. Please make sure you are logged in.');
 			boardCreationStartTime = null;
 			isNewGameCreated = false;
@@ -143,10 +141,8 @@
 				if (selectedTrack === 'random') {
 					// Resolve random to a specific track index
 					rhythmTrackIndex = Math.floor(Math.random() * MUSIC_TRACKS.length);
-					console.log('🎵 Player chose random, resolved to:', rhythmTrackIndex, MUSIC_TRACKS[rhythmTrackIndex]?.name);
 				} else {
 					rhythmTrackIndex = selectedTrack;
-					console.log('🎵 Player selected track:', rhythmTrackIndex, MUSIC_TRACKS[rhythmTrackIndex]?.name);
 				}
 				
 				createGameWithTrack(rhythmTrackIndex);
@@ -183,10 +179,8 @@
 			if (rhythmSettings.trackIndex === 'random') {
 				// Resolve random to a specific track index
 				rhythmTrackIndex = Math.floor(Math.random() * MUSIC_TRACKS.length);
-				console.log('🎵 Resolved random track to index:', rhythmTrackIndex, MUSIC_TRACKS[rhythmTrackIndex]?.name);
 			} else if (typeof rhythmSettings.trackIndex === 'number') {
 				rhythmTrackIndex = rhythmSettings.trackIndex;
-				console.log('🎵 Using specific track index:', rhythmTrackIndex, MUSIC_TRACKS[rhythmTrackIndex]?.name);
 			}
 		}
 

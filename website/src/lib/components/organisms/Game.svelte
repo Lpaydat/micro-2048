@@ -291,7 +291,6 @@
 		
 		// 🎵 Stop gameplay rhythm engine if still running
 		if (rhythmEngine?.isRunning()) {
-			console.log('🎵 Stopping gameplay rhythm engine before replay');
 			rhythmEngine.stop();
 			stopBeatPhaseAnimation();
 		}
@@ -342,9 +341,6 @@
 			
 			// Start beat phase animation for board pulse
 			startReplayBeatPhaseAnimation();
-			
-			console.log('🎵 Replay: Started', isMetronomeMode ? 'metronome' : 'music', 
-				'with board pulse -', replayTrackName, displayBpm, 'BPM');
 		} catch (err) {
 			console.error('🎵 Replay: Failed to start rhythm', err);
 			replayRhythmEngine = null;
@@ -363,7 +359,6 @@
 			replayIsMetronome = false;
 			displayBpm = 0;
 			displayTrackName = '';
-			console.log('🎵 Replay: Stopped rhythm');
 		}
 	};
 	
@@ -519,8 +514,6 @@
 				rhythmEngine = new RhythmEngine(rhythmSettings);
 				rhythmNeedsStart = true;
 				showRhythmIndicator = true;
-				console.log('🎵 Rhythm engine created with trackIndex:', effectiveTrackIndex, 
-					storedTrackIndex !== undefined ? '(from stored board)' : '(from tournament)');
 			} else {
 				// Engine already exists - check if we need to recreate with a different track
 				// This happens when:
@@ -532,8 +525,6 @@
 				
 				// 🎵 FIX: Recreate engine even if running, when track changes
 				if (targetTrackIndex >= 0 && currentTrackIndex !== targetTrackIndex) {
-					console.log('🎵 Recreating rhythm engine with correct track:', targetTrackIndex, 
-						'(was:', currentTrackIndex, ', wasRunning:', rhythmEngine.isRunning(), ')');
 					// Stop and dispose the old engine first
 					stopBeatPhaseAnimation();
 					rhythmEngine.dispose();
@@ -632,7 +623,6 @@
 
 		// 🎵 Stop rhythm engine music when game ends
 		if (rhythmEngine) {
-			console.log('🎵 Game ended - stopping rhythm engine');
 			rhythmEngine.stop();
 			stopBeatPhaseAnimation();
 		}
@@ -720,7 +710,6 @@
 			// 🎵 Stop and dispose old rhythm engine when board changes
 			// The reactive block will recreate it with the correct track for the new board
 			if (rhythmEngine) {
-				console.log('🎵 Stopping rhythm engine due to board change');
 				stopBeatPhaseAnimation();
 				rhythmEngine.dispose();
 				rhythmEngine = null;
@@ -1098,7 +1087,6 @@
 		// 🔒 SYNC LOCK: Prevent concurrent submissions
 		// This is the PRIMARY lock - if a sync is in-flight, don't start another
 		if (isSyncInFlight) {
-			console.log('🔒 Sync already in-flight, skipping');
 			return;
 		}
 		
@@ -1132,8 +1120,7 @@
 			if (result.success) {
 				// 🔧 FIX: Optimistic flush - if backend accepted, trust it will process
 				// During peak load, hash confirmation may never come, causing infinite resubmission
-				const flushedCount = flushMovesUpToTimestamp(boardId, latestTimestampInBatch);
-				console.log(`📤 Submitted ${moveCount} moves, flushed ${flushedCount} (latest ts: ${latestTimestampInBatch})`);
+				flushMovesUpToTimestamp(boardId, latestTimestampInBatch);
 				
 				// Update pending count
 				const remainingMoves = $moveHistoryStore.get(boardId)?.length || 0;
@@ -1255,12 +1242,10 @@
 			
 			if (backendHash === localHash) {
 				// ✅ Perfect match - backend caught up to our local state
-				console.log('✅ handleDesync: Backend matched local state, flushing all moves');
 				flushMoveHistory(boardId!);
 				lastSubmittedTimestamp = 0;
 			} else if (backendIsValid && remainingMoves.length === 0) {
 				// Backend is at valid state and no pending moves - sync with backend
-				console.log('✅ handleDesync: Backend at valid state, syncing');
 				const newState = createState($game.data.board.board, 4, boardId!, player);
 				if ($game.data.board.isEnded) {
 					newState.finished = true;
@@ -1310,7 +1295,6 @@
 	const submitMoves = async (boardId: string, force = false) => {
 		// 🔒 SYNC LOCK: Prevent concurrent submissions
 		if (isSyncInFlight) {
-			console.log('🔒 Sync already in-flight, skipping submitMoves');
 			return;
 		}
 		
@@ -1347,8 +1331,7 @@
 			
 			if (result.success) {
 				// 🔧 FIX: Optimistic flush - if backend accepted, trust it will process
-				const flushedCount = flushMovesUpToTimestamp(boardId, latestTimestampInBatch);
-				console.log(`📤 Submitted ${moveCount} moves via submitMoves, flushed ${flushedCount} (latest ts: ${latestTimestampInBatch})`);
+				flushMovesUpToTimestamp(boardId, latestTimestampInBatch);
 				
 				// Update pending count
 				const remainingMoves = $moveHistoryStore.get(boardId)?.length || 0;
@@ -1439,13 +1422,6 @@
 
 		try {
 			// Must use player's chain client for score submission (not leaderboard chain)
-			console.log('🎯 Submit Score Debug:');
-			console.log('   userStore.chainId:', $userStore.chainId);
-			console.log('   userStore.username:', $userStore.username);
-			console.log('   boardId:', boardId);
-			console.log('   leaderboardId:', leaderboardId);
-			console.log('   current score:', score);
-			console.log('   bestScore:', bestScore);
 			
 			const playerClient = getClient($userStore.chainId);
 			const result = submitCurrentScore(
@@ -1462,7 +1438,6 @@
 						if (res.error) {
 							console.warn('❌ Score submission failed:', res.error.message);
 						} else {
-							console.log('✅ Score submission completed:', res.data);
 						}
 						resolve();
 					});
@@ -1704,8 +1679,7 @@
 					// 🔒 NOW it's safe to flush - backend has confirmed ALL submitted moves
 					
 					if (lastSubmittedTimestamp > 0) {
-						const flushedCount = flushMovesUpToTimestamp(boardId!, lastSubmittedTimestamp);
-						console.log(`✅ Backend confirmed! Flushed ${flushedCount} moves (up to ts: ${lastSubmittedTimestamp})`);
+						flushMovesUpToTimestamp(boardId!, lastSubmittedTimestamp);
 						lastSubmittedTimestamp = 0; // Reset after successful flush
 					}
 					
@@ -1726,8 +1700,7 @@
 					if (lastSubmittedTimestamp > 0 && awaitingBackendSync) {
 						// Backend is at a valid intermediate state
 						// Flush all moves up to the timestamp we submitted
-						const flushedCount = flushMovesUpToTimestamp(boardId!, lastSubmittedTimestamp);
-						console.log(`✅ Backend at valid state, flushed ${flushedCount} moves (up to ts: ${lastSubmittedTimestamp})`);
+						flushMovesUpToTimestamp(boardId!, lastSubmittedTimestamp);
 						lastSubmittedTimestamp = 0; // Reset after flush
 						
 						const remainingMoves = $moveHistoryStore.get(boardId!)?.length || 0;
@@ -1760,7 +1733,6 @@
 					// Trust the backend during active sync - add its hash to valid set
 					if (awaitingBackendSync && lastSubmittedTimestamp > 0) {
 						// Backend is processing our submission - trust its current state
-						console.log(`🔄 Backend at intermediate state during sync, adding to valid set`);
 						validBoardHashes.add(backendHash);
 						// Don't desync yet - give it more time
 					}
@@ -1995,7 +1967,6 @@
 	const handleReplayClick = async () => {
 		// Check if this board has rhythm mode (music or metronome)
 		const boardTrackIndex = $game.data?.board?.rhythmTrackIndex;
-		console.log('🎵 Replay: Board rhythmTrackIndex =', boardTrackIndex);
 		
 		const hasRhythmMusic = typeof boardTrackIndex === 'number' && boardTrackIndex >= 0;
 		// Check for metronome mode: trackIndex === -1 AND tournament has rhythm settings
@@ -2008,7 +1979,6 @@
 			try {
 				const Tone = await import('tone');
 				await Tone.start();
-				console.log('🎵 Replay: Tone.js started');
 			} catch (err) {
 				console.error('🎵 Replay: Failed to start Tone.js', err);
 			}

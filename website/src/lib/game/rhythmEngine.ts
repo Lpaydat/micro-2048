@@ -559,18 +559,25 @@ export class RhythmEngine {
 	}
 
 	/**
-	 * Debug: Log current state (only logs if called explicitly)
+	 * Debug: Get current state (for debugging)
 	 */
-	debugState(): void {
+	debugState(): {
+		bpm: number;
+		transportBpm: number;
+		running: boolean;
+		useMusic: boolean;
+		currentTrack: string;
+		playerLoaded: boolean;
+	} {
 		const transport = Tone.getTransport();
-		console.log('RhythmEngine State:', {
+		return {
 			bpm: this.bpm,
 			transportBpm: transport.bpm.value,
 			running: this.running,
 			useMusic: this.useMusic,
 			currentTrack: this.currentTrack?.name || 'none',
 			playerLoaded: !!this.player
-		});
+		};
 	}
 
 	getTolerance(): number {

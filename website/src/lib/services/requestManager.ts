@@ -84,7 +84,6 @@ class RequestManager {
 		if (dedupKey) {
 			const existing = this.pendingRequests.get(dedupKey);
 			if (existing) {
-				console.log(`🔄 Deduplicating request: ${dedupKey}`);
 				return existing.promise as Promise<T>;
 			}
 		}
@@ -216,7 +215,6 @@ class RequestManager {
 				// Don't retry on timeout if it's the last attempt
 				if (attempt < opts.retries) {
 					const delay = opts.retryDelay * Math.pow(2, attempt);
-					console.log(`⚠️ Request failed, retrying in ${delay}ms (attempt ${attempt + 1}/${opts.retries})`);
 					await this.sleep(delay);
 
 					// Re-check circuit breaker before retry

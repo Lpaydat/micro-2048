@@ -37,17 +37,8 @@ export const newGame = (
 	const passwordHash = localStorage.getItem('passwordHash');
 
 	if (!player || !passwordHash) {
-		console.error('Player or password hash not found');
 		return null;
 	}
-
-	console.log('🎮 New Board Mutation Variables:', {
-		player,
-		passwordHash: passwordHash.substring(0, 10) + '...',
-		timestamp,
-		leaderboardId,
-		rhythmTrackIndex: rhythmTrackIndex ?? 'none (no rhythm)'
-	});
 
 	const mutation = mutationStore({
 		client,
@@ -58,14 +49,6 @@ export const newGame = (
 			timestamp,
 			leaderboardId,
 			rhythmTrackIndex: rhythmTrackIndex ?? null
-		}
-	});
-
-	// Log the mutation result
-	mutation.subscribe((result) => {
-		console.log('📊 New Board Mutation Result:', result);
-		if (result.error) {
-			console.error('❌ New Board Mutation Error:', result.error);
 		}
 	});
 

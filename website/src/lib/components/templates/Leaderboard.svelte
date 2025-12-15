@@ -193,20 +193,8 @@
 		try {
 			// 🚀 Step 1: Submit current score from player's board (if applicable)
 			// Only send if score > playerLeaderboardScore (player's best on leaderboard)
-			console.log('🔄 [LB Refresh] Debug:', {
-				currentBoardId,
-				username: $userStore.username,
-				hasPasswordHash: !!$userStore.passwordHash,
-				chainId: $userStore.chainId,
-				hasPlayerClient: !!playerClient,
-				currentBoardScore,
-				playerLeaderboardScore,
-				shouldSubmit: currentBoardScore > playerLeaderboardScore
-			});
-			
 			if (currentBoardId && $userStore.username && $userStore.passwordHash && $userStore.chainId && playerClient) {
 				if (currentBoardScore > playerLeaderboardScore) {
-					console.log('🎯 [LB Refresh] Submitting score...');
 					const scoreResult = submitCurrentScore(
 						playerClient,
 						currentBoardId,
@@ -218,9 +206,7 @@
 							scoreResult.subscribe((res) => {
 								if (res.fetching) return;
 								if (res.error) {
-									console.warn('❌ Score submission failed:', res.error.message);
-								} else {
-									console.log('✅ [LB Refresh] Score submitted:', res.data);
+									// Score submission failed
 								}
 								resolve();
 							});
@@ -228,11 +214,7 @@
 					}
 					// Wait for message to propagate
 					await new Promise(resolve => setTimeout(resolve, 1500));
-				} else {
-					console.log('⏭️ [LB Refresh] Skipping score submit - not higher than leaderboard score');
 				}
-			} else {
-				console.log('⏭️ [LB Refresh] Skipping score submit - missing required data');
 			}
 
 			// 🚀 Step 2: Call updateLeaderboard mutation directly on leaderboard chain
@@ -275,8 +257,7 @@
 
 		try {
 			await newGameBoard(leaderboardId, newGameAt.toString(), rhythmTrackIndex);
-		} catch (error) {
-			console.error('Failed to create new game:', error);
+		} catch {
 			isCreatingNewGame = false;
 			isNewGameCreated = false;
 		}
@@ -297,10 +278,8 @@
 				if (selectedTrack === 'random') {
 					// Resolve random to a specific track index
 					rhythmTrackIndex = Math.floor(Math.random() * MUSIC_TRACKS.length);
-					console.log('🎵 Player chose random, resolved to:', rhythmTrackIndex, MUSIC_TRACKS[rhythmTrackIndex]?.name);
 				} else {
 					rhythmTrackIndex = selectedTrack;
-					console.log('🎵 Player selected track:', rhythmTrackIndex, MUSIC_TRACKS[rhythmTrackIndex]?.name);
 				}
 				
 				createGameWithTrack(rhythmTrackIndex);
@@ -330,10 +309,8 @@
 			if (rhythmSettings.trackIndex === 'random') {
 				// Resolve random to a specific track index
 				rhythmTrackIndex = Math.floor(Math.random() * MUSIC_TRACKS.length);
-				console.log('🎵 Resolved random track to index:', rhythmTrackIndex, MUSIC_TRACKS[rhythmTrackIndex]?.name);
 			} else if (typeof rhythmSettings.trackIndex === 'number') {
 				rhythmTrackIndex = rhythmSettings.trackIndex;
-				console.log('🎵 Using specific track index:', rhythmTrackIndex, MUSIC_TRACKS[rhythmTrackIndex]?.name);
 			}
 		}
 		// Note: For metronome mode (useMusic=false), rhythmTrackIndex remains undefined (-1 in contract)
