@@ -2011,10 +2011,12 @@
 		await handleSliderChange(0);
 
 		// 🎵 Start replay rhythm (music or metronome)
+		// IMPORTANT: Must await to ensure music is loaded before auto-play starts
+		// Otherwise moves will be desynced from music on first replay (before audio is cached)
 		if (hasRhythmMusic) {
-			startReplayRhythm(boardTrackIndex);
+			await startReplayRhythm(boardTrackIndex);
 		} else if (hasMetronome && parsedRhythm) {
-			startReplayRhythm(-1, parsedRhythm.bpm);
+			await startReplayRhythm(-1, parsedRhythm.bpm);
 		}
 
 		// Enable auto-play when replay button is clicked
